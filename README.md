@@ -315,6 +315,45 @@ Deploy n8n-MCP to Railway's cloud platform with zero configuration:
 
 > 📚 **For detailed setup instructions, troubleshooting, and configuration examples, see our [Railway Deployment Guide](./docs/RAILWAY_DEPLOYMENT.md)**
 
+### Option 5: Render.com Deployment (Modern Cloud Platform) 🚀
+
+**Prerequisites:** Render.com account (free tier available)
+
+Deploy n8n-MCP to Render.com's modern cloud platform with Docker support:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/adedara1/render-n8n-mcp)
+
+**Benefits:**
+- 🆓 **Generous free tier** - 750 hours/month included
+- 🐳 **Native Docker support** - Optimized containers
+- 🔒 **Auto HTTPS/SSL** - Secure by default
+- ⚡ **Fast deployments** - Built-in CI/CD
+- 🌍 **Global CDN** - Fast worldwide access
+- 📊 **Monitoring included** - Logs and metrics
+
+**Quick Setup:**
+1. **One-click deploy**: Use the button above or manual setup below
+2. **Connect repository**: Link your GitHub account
+3. **Auto-deploy**: Pushes trigger automatic deployments
+4. **Copy URL**: Get your service URL from Render dashboard
+5. **Configure Claude**: Add HTTPS URL to Claude Desktop config
+
+**Manual Setup:**
+```bash
+# Clone and deploy
+git clone https://github.com/adedara1/render-n8n-mcp.git
+cd render-n8n-mcp
+./deploy/deploy-render.sh
+```
+
+**Key Features:**
+- ✅ **Dockerfile.render** - Optimized for Render.com
+- ✅ **render.yaml** - Infrastructure as code
+- ✅ **Auto-scaling** - Handles traffic spikes
+- ✅ **Zero-downtime deploys** - Seamless updates
+
+> 📚 **For detailed setup instructions and configuration, see our [Render.com Deployment Guide](./RENDER.md)**
+
 **Configuration file locations:**
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
