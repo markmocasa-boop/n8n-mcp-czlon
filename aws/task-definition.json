@@ -1,0 +1,29 @@
+{
+  "family": "arbio-n8n-mcp",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::785747132622:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "arbio-n8n-mcp",
+      "image": "785747132622.dkr.ecr.eu-central-1.amazonaws.com/arbio/n8n-mcp:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/arbio-n8n-mcp",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "arbio-flow"
+        }
+      }
+    }
+  ]
+}
