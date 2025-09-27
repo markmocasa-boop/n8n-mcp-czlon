@@ -1,0 +1,79 @@
+{
+  "variables": [
+    {
+      "key": "ADOBE_CLIENT_ID",
+      "value": "20d5d9e976c94738998950425f1bb743",
+      "type": "string"
+    },
+    {
+      "key": "ADOBE_CLIENT_SECRET",
+      "value": "p8e-MwBTUYlpJ0B0K-Nd7FwCrqU8ekKQtVWu",
+      "type": "string"
+    },
+    {
+      "key": "ADOBE_ACCESS_TOKEN",
+      "value": "YOUR_ADOBE_ACCESS_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "ADOBE_PDF_SERVICES_BASE_URL",
+      "value": "https://pdf-services.adobe.io/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "OPENAI_API_KEY",
+      "value": "YOUR_OPENAI_API_KEY_HERE",
+      "type": "string"
+    },
+    {
+      "key": "OPENAI_API_BASE_URL",
+      "value": "https://api.openai.com",
+      "type": "string"
+    },
+    {
+      "key": "OPENAI_PRIMARY_MODEL",
+      "value": "gpt-4o-mini",
+      "type": "string"
+    },
+    {
+      "key": "SUPABASE_URL",
+      "value": "https://YOUR_PROJECT.supabase.co",
+      "type": "string"
+    },
+    {
+      "key": "SUPABASE_SERVICE_KEY",
+      "value": "YOUR_SUPABASE_SERVICE_KEY_HERE",
+      "type": "string"
+    },
+    {
+      "key": "SUPABASE_ANON_KEY",
+      "value": "YOUR_SUPABASE_ANON_KEY_HERE",
+      "type": "string"
+    },
+    {
+      "key": "SCAN_INPUT_DIRECTORY",
+      "value": "/Users/Stefan/Documents/SCAN/input",
+      "type": "string"
+    },
+    {
+      "key": "SCAN_OUTPUT_DIRECTORY",
+      "value": "/Users/Stefan/Documents/SCAN/output",
+      "type": "string"
+    },
+    {
+      "key": "FEEDBACK_EMAIL_RECIPIENT",
+      "value": "stefan@example.com",
+      "type": "string"
+    },
+    {
+      "key": "CONFIDENCE_THRESHOLD",
+      "value": "0.99",
+      "type": "number"
+    },
+    {
+      "key": "DEFAULT_OCR_LANGUAGE",
+      "value": "de-DE",
+      "type": "string"
+    }
+  ]
+}

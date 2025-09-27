@@ -1,0 +1,884 @@
+{
+  "meta": {
+    "instanceId": "scan-enhanced-v2-3"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "path": "={{$vars.SCAN_INPUT_DIRECTORY}}",
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "options": {
+          "include": "**.pdf"
+        }
+      },
+      "id": "1",
+      "name": "PDF File Trigger",
+      "type": "n8n-nodes-base.fileSystemTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "scan-pdf-trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "document_id",
+              "name": "document_id",
+              "value": "={{new Date().getTime()}}_{{$json.name.replace('.pdf', '')}}"
+            },
+            {
+              "id": "original_filename",
+              "name": "original_filename",
+              "value": "={{$json.name}}"
+            },
+            {
+              "id": "file_path",
+              "name": "file_path",
+              "value": "={{$json.path}}"
+            },
+            {
+              "id": "processing_start_time",
+              "name": "processing_start_time",
+              "value": "={{new Date().toISOString()}}"
+            },
+            {
+              "id": "workflow_version",
+              "name": "workflow_version",
+              "value": "SCAN_v2.0.3_Enhanced_N8N"
+            }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Initialize Document Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$vars.SUPABASE_URL}}/rest/v1/scan_documents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "apikey",
+              "value": "{{$vars.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "filename",
+              "value": "={{$json.original_filename}}"
+            },
+            {
+              "name": "original_filename",
+              "value": "={{$json.original_filename}}"
+            },
+            {
+              "name": "file_path",
+              "value": "={{$json.file_path}}"
+            },
+            {
+              "name": "file_size_bytes",
+              "value": "={{$json.size || 0}}"
+            },
+            {
+              "name": "file_hash",
+              "value": "={{$json.document_id}}_hash"
+            },
+            {
+              "name": "processing_status",
+              "value": "pending"
+            },
+            {
+              "name": "workflow_version",
+              "value": "={{$json.workflow_version}}"
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Create Supabase Document Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "supabase_document_id",
+              "name": "supabase_document_id",
+              "value": "={{$json.id}}"
+            }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Store Document ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$vars.ADOBE_PDF_SERVICES_BASE_URL}}/operation/extractpdf",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.ADOBE_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "x-api-key",
+              "value": "{{$vars.ADOBE_CLIENT_ID}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "assetID",
+              "value": "={{$json.adobe_asset_id}}"
+            },
+            {
+              "name": "getCharBounds",
+              "value": "false"
+            },
+            {
+              "name": "includeStyling",
+              "value": "false"
+            },
+            {
+              "name": "elementsToExtract",
+              "value": "=[\"text\", \"tables\"]"
+            }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Adobe PDF Extract API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$vars.ADOBE_PDF_SERVICES_BASE_URL}}/operation/ocr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.ADOBE_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "x-api-key",
+              "value": "{{$vars.ADOBE_CLIENT_ID}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "assetID",
+              "value": "={{$json.adobe_asset_id}}"
+            },
+            {
+              "name": "ocrLang",
+              "value": "={{$vars.DEFAULT_OCR_LANGUAGE || 'de-DE'}}"
+            },
+            {
+              "name": "ocrType",
+              "value": "SEARCHABLE_IMAGE_EXACT"
+            }
+          ]
+        }
+      },
+      "id": "6",
+      "name": "Adobe OCR API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$vars.ADOBE_PDF_SERVICES_BASE_URL}}/assets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.ADOBE_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "x-api-key",
+              "value": "{{$vars.ADOBE_CLIENT_ID}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "raw",
+        "body": "={{$binary.data}}"
+      },
+      "id": "7",
+      "name": "Upload PDF to Adobe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "adobe_asset_id",
+              "name": "adobe_asset_id",
+              "value": "={{$json.assetID}}"
+            }
+          ]
+        }
+      },
+      "id": "8",
+      "name": "Store Adobe Asset ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Adobe Results Combiner for SCAN v2.0.3 Enhanced\nconst extractResult = items[0].json || {};\nconst ocrResult = items[1].json || {};\n\n// Combine extracted text\nlet combinedText = '';\nif (extractResult.text) {\n  combinedText += extractResult.text;\n}\nif (ocrResult.text && ocrResult.text !== extractResult.text) {\n  combinedText += '\\n' + ocrResult.text;\n}\n\n// Process tables\nconst tables = extractResult.tables || [];\n\n// Enhanced metadata extraction\nconst enhancedMetadata = {\n  extraction_method: 'adobe_pdf_services_combined',\n  adobe_job_ids: {\n    extract: extractResult.jobId,\n    ocr: ocrResult.jobId\n  },\n  text_length: combinedText.length,\n  tables_count: tables.length,\n  pages_count: extractResult.pages || 1,\n  language_detected: ocrResult.detectedLanguage || 'de-DE',\n  processing_timestamp: new Date().toISOString(),\n  \n  // Medical metadata patterns\n  contains_medical_terms: /apotheke|arzt|therapie|patient|versichert/i.test(combinedText),\n  \n  // Business metadata patterns  \n  rechnungsnummer: extractRechnungsnummer(combinedText),\n  betrag: extractBetrag(combinedText),\n  datum: extractDatum(combinedText),\n  absender: extractAbsender(combinedText),\n  empfaenger: extractEmpfaenger(combinedText),\n  \n  // Medical specific extractions\n  versicherte_person: extractVersichertePerson(combinedText),\n  apotheke_name: extractApothekeName(combinedText),\n  arzt_name: extractArztName(combinedText),\n  abrechnungsstelle: extractAbrechnungsstelle(combinedText)\n};\n\n// Helper functions for metadata extraction\nfunction extractRechnungsnummer(text) {\n  const patterns = [\n    /(?:rechnung(?:s)?(?:nummer)?[:\\s#-]*)(\\w+\\d+)/i,\n    /(?:invoice[\\s#-]*(?:no\\.?|number)?[:\\s#-]*)(\\w+\\d+)/i,\n    /(?:beleg[\\s#-]*(?:nr\\.?|nummer)?[:\\s#-]*)(\\w+\\d+)/i\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1];\n  }\n  return null;\n}\n\nfunction extractBetrag(text) {\n  const patterns = [\n    /(?:summe|total|betrag|gesamt)[:\\s]*([0-9]+[,.]?[0-9]*)[\\s]*€?/i,\n    /([0-9]+[,.]?[0-9]*)[\\s]*€/,\n    /€[\\s]*([0-9]+[,.]?[0-9]*)/\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return parseFloat(match[1].replace(',', '.'));\n  }\n  return null;\n}\n\nfunction extractDatum(text) {\n  const patterns = [\n    /(\\d{1,2}[.\\/\\-]\\d{1,2}[.\\/\\-]\\d{2,4})/,\n    /(\\d{2,4}[.\\/\\-]\\d{1,2}[.\\/\\-]\\d{1,2})/\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1];\n  }\n  return null;\n}\n\nfunction extractAbsender(text) {\n  // Extract company/sender name from header\n  const lines = text.split('\\n');\n  for (let i = 0; i < Math.min(5, lines.length); i++) {\n    const line = lines[i].trim();\n    if (line.length > 3 && line.length < 50 && !/^\\d/.test(line)) {\n      return line;\n    }\n  }\n  return null;\n}\n\nfunction extractEmpfaenger(text) {\n  // Extract recipient from address section\n  const empfaengerMatch = text.match(/(?:an|empfänger|kunde)[:\\s]*([^\\n]{5,40})/i);\n  return empfaengerMatch ? empfaengerMatch[1].trim() : null;\n}\n\nfunction extractVersichertePerson(text) {\n  const patterns = [\n    /(?:versichert[e]?[r]?[\\s:]*(?:person)?[:\\s]*)([A-Za-zäöüÄÖÜß\\s]{5,40})/i,\n    /(?:patient[:\\s]*)([A-Za-zäöüÄÖÜß\\s]{5,40})/i\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1].trim();\n  }\n  return null;\n}\n\nfunction extractApothekeName(text) {\n  const patterns = [\n    /([A-Za-zäöüÄÖÜß\\s-]+apotheke[A-Za-zäöüÄÖÜß\\s]*)/i,\n    /apotheke[\\s:]([A-Za-zäöüÄÖÜß\\s-]+)/i\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1].trim();\n  }\n  return null;\n}\n\nfunction extractArztName(text) {\n  const patterns = [\n    /(?:dr\\.?[\\s]+(?:med\\.?[\\s]+)?)?([A-Za-zäöüÄÖÜß\\s-]+)(?:[\\s,]+arzt)/i,\n    /arzt[:\\s]*(?:dr\\.?[\\s]+(?:med\\.?[\\s]+)?)?([A-Za-zäöüÄÖÜß\\s-]+)/i\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1].trim();\n  }\n  return null;\n}\n\nfunction extractAbrechnungsstelle(text) {\n  const patterns = [\n    /abrechnungsstelle[:\\s]*([A-Za-zäöüÄÖÜß\\s-]+)/i,\n    /abrechnung[:\\s]*([A-Za-zäöüÄÖÜß\\s-]+)/i\n  ];\n  \n  for (const pattern of patterns) {\n    const match = text.match(pattern);\n    if (match) return match[1].trim();\n  }\n  return null;\n}\n\nreturn [{\n  success: true,\n  text: combinedText,\n  tables: tables,\n  enhanced_metadata: enhancedMetadata,\n  extraction_method: 'adobe_pdf_services_combined',\n  adobe_results: {\n    extract: extractResult,\n    ocr: ocrResult\n  }\n}];"
+      },
+      "id": "9",
+      "name": "Combine Adobe Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$vars.OPENAI_API_BASE_URL || 'https://api.openai.com'}}/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{$vars.OPENAI_PRIMARY_MODEL || 'gpt-4o-mini'}}"
+            },
+            {
+              "name": "messages",
+              "value": "=[\n  {\n    \"role\": \"system\",\n    \"content\": \"Du bist ein Experte für deutsche Steuerdokument-Kategorisierung. Antworte IMMER in validem JSON Format.\"\n  },\n  {\n    \"role\": \"user\", \n    \"content\": `Du bist ein Experte für deutsche Dokumentenkategorisierung im Steuerkontext. Analysiere das folgende Dokument und kategorisiere es EXAKT nach dem SCAN v2.0.3 Enhanced Schema.\n\nKATEGORIEN (HIERARCHISCH):\n{\n  \"BETRIEBLICH\": {\n    \"subcategories\": {\n      \"Eingangsrechnung\": \"Incoming business invoices from suppliers\",\n      \"Ausgangsrechnung\": \"Outgoing business invoices to customers\",\n      \"Quittung\": \"Business receipts and small purchases\",\n      \"Bewirtungsbeleg_ausgefüllt\": \"Complete hospitality receipts with all details\",\n      \"Bewirtungsbeleg_nicht_ausgefüllt\": \"Incomplete hospitality receipts requiring completion\",\n      \"Versicherung\": \"Business insurance policies and payments\",\n      \"Sonstiges\": \"Other business-related documents\",\n      \"Parktickets\": \"Business parking tickets and fees\",\n      \"Finanzamt\": \"Tax office documents (Gewerbesteuer, Körperschaftsteuer, Umsatzsteuer)\",\n      \"Behörden\": \"Government and authority documents\",\n      \"KFZ\": \"Business vehicle costs and documents\",\n      \"Betriebliche_Immobilien\": \"Business real estate costs and documents\"\n    }\n  },\n  \"PRIVAT\": {\n    \"subcategories\": {\n      \"Rechnung\": \"Private invoices and bills\",\n      \"Quittung\": \"Private receipts and purchases\",\n      \"KFZ\": \"Private vehicle costs\",\n      \"Finanzamt\": \"Tax office documents (Einkommensteuer, Lohnsteuer)\",\n      \"Versicherung\": \"Private insurance policies\",\n      \"Sonstiges\": \"Other private documents\"\n    }\n  },\n  \"MEDIZIN\": {\n    \"subcategories\": {\n      \"Arztrechnung\": \"Doctor bills and medical treatments\",\n      \"Apothekenrechnung\": \"Pharmacy receipts and medication costs\",\n      \"Therapierechnung\": \"Therapy bills (Heilpraktiker, not business coaching)\",\n      \"Kontoauszüge\": \"Medical account statements\",\n      \"Krankenversicherung\": \"Health insurance documents\"\n    }\n  }\n}\n\nDOKUMENT ANALYSIS:\nFilename: ${$json.original_filename}\nExtracted Text:\n${$json.text.substring(0, 2000)}${$json.text.length > 2000 ? '...' : ''}\n\nVORHANDENE METADATEN:\n${JSON.stringify($json.enhanced_metadata, null, 2)}\n\nMEDIZINISCHE DOKUMENTE - SPEZIELLE REGELN:\n- Apothekenrechnung: Patient + Apotheke (NICHT Arzt) - Arzt stellt nur Rezept aus\n- Arztrechnung: Patient + Arzt + Abrechnungsstelle - alle drei Akteure wichtig\n- Therapierechnung: Heilpraktiker/Physiotherapie (NICHT Business-Coaching)\n\nBEWIRTUNGSBELEG DETECTION:\n- Ausgefüllt: Alle Felder (Teilnehmer, Anlass, Ort) vollständig\n- Nicht ausgefüllt: Fehlende oder unvollständige Angaben\n\nRETURN FORMAT (STRICT JSON):\n{\n  \"hauptkategorie\": \"BETRIEBLICH|PRIVAT|MEDIZIN\",\n  \"unterkategorie\": \"exact_subcategory_name\",\n  \"confidence\": 0.95,\n  \"reasoning\": \"Detailed German explanation\",\n  \"bewirtungsbeleg_ausgefuellt\": true|false|null,\n  \"medical_entities\": {\n    \"versicherte_person\": \"patient_name\",\n    \"apotheke_name\": \"pharmacy_name\",\n    \"arzt_name\": \"doctor_name\",\n    \"abrechnungsstelle\": \"billing_service\"\n  },\n  \"key_indicators\": [\"list\", \"of\", \"key\", \"terms\"]\n}`\n  }\n]"
+            },
+            {
+              "name": "temperature",
+              "value": "=0.1"
+            },
+            {
+              "name": "max_tokens",
+              "value": "=1000"
+            },
+            {
+              "name": "response_format",
+              "value": "={\"type\": \"json_object\"}"
+            }
+          ]
+        }
+      },
+      "id": "10",
+      "name": "OpenAI Categorization",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        240
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced Filename Generator for SCAN v2.0.3\nconst categorization = JSON.parse(items[0].json.choices[0].message.content);\nconst metadata = items[0].json.enhanced_metadata;\nconst originalFilename = items[0].json.original_filename;\n\n// Extract date (prefer metadata, fallback to extracted date, then current)\nfunction getDocumentDate() {\n  if (metadata.datum) {\n    // Parse German date format\n    const dateStr = metadata.datum.toString();\n    const dateParts = dateStr.match(/(\\d{1,2})[.\\/\\-](\\d{1,2})[.\\/\\-](\\d{2,4})/);\n    if (dateParts) {\n      const day = dateParts[1].padStart(2, '0');\n      const month = dateParts[2].padStart(2, '0');\n      let year = dateParts[3];\n      if (year.length === 2) year = '20' + year;\n      return `${year}-${month}-${day}`;\n    }\n  }\n  \n  // Fallback to current date\n  const now = new Date();\n  return now.toISOString().split('T')[0];\n}\n\n// Clean names for filename\nfunction cleanName(name, maxLength = 15) {\n  if (!name) return 'Unknown';\n  \n  return name.toString()\n    .replace(/[^a-zA-ZäöüÄÖÜß0-9\\s-]/g, '') // Remove special chars\n    .replace(/\\s+/g, '_') // Replace spaces with underscores\n    .substring(0, maxLength)\n    .replace(/_+$/, ''); // Remove trailing underscores\n}\n\n// Handle medical document naming\nfunction handleMedicalNames(metadata, subcategory) {\n  let empfaenger = 'Unknown';\n  let absender = 'Unknown';\n  \n  if (subcategory === 'Apothekenrechnung') {\n    // Apothekenbeleg: versicherte Person + Apotheke (NICHT Arzt)\n    empfaenger = cleanName(metadata.versicherte_person || 'Patient');\n    absender = cleanName(metadata.apotheke_name || 'Apotheke');\n  } else if (subcategory === 'Arztrechnung') {\n    // Arztbeleg: versicherte Person + Arzt + Abrechnungsstelle\n    empfaenger = cleanName(metadata.versicherte_person || 'Patient');\n    const arztName = cleanName(metadata.arzt_name || 'Arzt', 10);\n    const abrechnungsstelle = cleanName(metadata.abrechnungsstelle || '', 8);\n    absender = abrechnungsstelle ? `${arztName}-${abrechnungsstelle}` : arztName;\n  } else if (subcategory === 'Therapierechnung') {\n    empfaenger = cleanName(metadata.versicherte_person || 'Patient');\n    absender = cleanName(metadata.absender || metadata.arzt_name || 'Therapeut');\n  } else {\n    // Other medical documents\n    empfaenger = cleanName(metadata.empfaenger || metadata.versicherte_person || 'Patient');\n    absender = cleanName(metadata.absender || 'Medizin');\n  }\n  \n  return { empfaenger, absender };\n}\n\n// Handle regular document naming\nfunction handleRegularNames(metadata) {\n  const empfaenger = cleanName(metadata.empfaenger || 'Unknown');\n  const absender = cleanName(metadata.absender || 'Unknown');\n  return { empfaenger, absender };\n}\n\n// Generate enhanced filename\nfunction generateEnhancedFilename() {\n  const datum = getDocumentDate();\n  const hauptkategorie = categorization.hauptkategorie || 'UNBEKANNT';\n  const unterkategorie = categorization.unterkategorie || 'Unknown';\n  \n  // Handle names based on category\n  let empfaenger, absender;\n  if (hauptkategorie === 'MEDIZIN') {\n    ({ empfaenger, absender } = handleMedicalNames(metadata, unterkategorie));\n  } else {\n    ({ empfaenger, absender } = handleRegularNames(metadata));\n  }\n  \n  // Get document number (Belegnummer or Rechnungsnummer)\n  const belegnummer = cleanName(\n    metadata.rechnungsnummer || metadata.belegnummer || 'No-Nr', 12\n  );\n  \n  // Get amount\n  let betrag = 'No-Amount';\n  if (metadata.betrag && typeof metadata.betrag === 'number') {\n    betrag = metadata.betrag.toFixed(2).replace('.', ',') + 'EUR';\n  }\n  \n  // Construct filename: YYYY-MM-DD_Kategorie_Unterkategorie_Empfänger_Absender_Belegnummer_Betrag.pdf\n  const filenameParts = [\n    datum,\n    hauptkategorie,\n    unterkategorie,\n    empfaenger,\n    absender, \n    belegnummer,\n    betrag\n  ];\n  \n  const enhancedFilename = filenameParts.join('_') + '.pdf';\n  \n  // Ensure filename is not too long (max 255 chars)\n  if (enhancedFilename.length > 250) {\n    // Truncate parts if needed\n    const truncatedParts = [\n      datum,\n      hauptkategorie.substring(0, 10),\n      unterkategorie.substring(0, 15),\n      empfaenger.substring(0, 12),\n      absender.substring(0, 12),\n      belegnummer.substring(0, 10),\n      betrag.substring(0, 15)\n    ];\n    return truncatedParts.join('_') + '.pdf';\n  }\n  \n  return enhancedFilename;\n}\n\nconst enhancedFilename = generateEnhancedFilename();\n\nreturn [{\n  success: true,\n  enhanced_filename: enhancedFilename,\n  filename_components: {\n    datum: getDocumentDate(),\n    hauptkategorie: categorization.hauptkategorie,\n    unterkategorie: categorization.unterkategorie,\n    empfaenger: handleMedicalNames(metadata, categorization.unterkategorie).empfaenger,\n    absender: handleMedicalNames(metadata, categorization.unterkategorie).absender,\n    belegnummer: metadata.rechnungsnummer || metadata.belegnummer || 'No-Nr',\n    betrag: metadata.betrag || 'No-Amount'\n  },\n  categorization_result: categorization,\n  generation_method: 'n8n_enhanced_generator'\n}];"
+      },
+      "id": "11",
+      "name": "Generate Enhanced Filename",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PDF Metadata Embedder for N8N\nconst fs = require('fs');\nconst PDFLib = require('pdf-lib');\n\nconst categorization = items[0].json.categorization_result;\nconst metadata = items[0].json.enhanced_metadata || {};\nconst extractedText = items[0].json.text || '';\nconst filePath = items[0].json.file_path;\n\n// Create complete metadata structure\nfunction createCompleteMetadata() {\n  const coreMetadata = {\n    scan_version: 'SCAN_v2.0.3_Enhanced_N8N',\n    processing_timestamp: new Date().toISOString(),\n    extraction_method: metadata.extraction_method || 'adobe_pdf_services',\n    confidence_level: categorization.confidence || 0.0,\n    document_type: 'pdf',\n    hauptkategorie: categorization.hauptkategorie,\n    unterkategorie: categorization.unterkategorie\n  };\n\n  const financialMetadata = {\n    empfaenger: metadata.empfaenger,\n    absender: metadata.absender,\n    rechnungsnummer: metadata.rechnungsnummer,\n    belegnummer: metadata.belegnummer,\n    betrag: metadata.betrag,\n    datum: metadata.datum,\n    waehrung: 'EUR'\n  };\n\n  const medicalMetadata = {};\n  if (categorization.hauptkategorie === 'MEDIZIN') {\n    medicalMetadata.versicherte_person = metadata.versicherte_person;\n    medicalMetadata.apotheke_name = metadata.apotheke_name;\n    medicalMetadata.arzt_name = metadata.arzt_name;\n    medicalMetadata.abrechnungsstelle = metadata.abrechnungsstelle;\n  }\n\n  const bewirtungMetadata = {};\n  if (categorization.unterkategorie && categorization.unterkategorie.includes('Bewirtungsbeleg')) {\n    bewirtungMetadata.ausgefuellt_status = categorization.bewirtungsbeleg_ausgefuellt || false;\n  }\n\n  return {\n    scan_metadata: {\n      core: coreMetadata,\n      financial: financialMetadata,\n      medical: medicalMetadata,\n      bewirtung: bewirtungMetadata\n    }\n  };\n}\n\n// Create subject content with metadata and full text\nfunction createSubjectContent() {\n  const completeMetadata = createCompleteMetadata();\n  const metadataJson = JSON.stringify(completeMetadata, null, 0);\n  \n  const subjectParts = [\n    '=== SCAN v2.0.3 ENHANCED METADATA ===',\n    metadataJson,\n    '=== EXTRACTED FULL TEXT ===',\n    extractedText.trim()\n  ];\n  \n  let fullSubject = subjectParts.join('\\n');\n  \n  // Truncate if exceeds PDF Subject field limit (65535 chars)\n  if (fullSubject.length > 65535) {\n    const metadataSection = `${subjectParts[0]}\\n${subjectParts[1]}\\n${subjectParts[2]}\\n`;\n    const availableTextLength = 65535 - metadataSection.length - 100; // Safety margin\n    \n    if (availableTextLength > 0) {\n      const truncatedText = extractedText.substring(0, availableTextLength) + '...[TRUNCATED]';\n      fullSubject = metadataSection + truncatedText;\n    } else {\n      fullSubject = `${subjectParts[0]}\\n${metadataJson}`;\n    }\n  }\n  \n  return fullSubject;\n}\n\n// Since we can't directly modify PDFs in N8N Code node,\n// we'll prepare the metadata for the next node\nconst pdfMetadata = {\n  title: `${categorization.hauptkategorie} - ${categorization.unterkategorie}`,\n  author: 'SCAN v2.0.3 Enhanced Processing System',\n  subject: createSubjectContent(),\n  keywords: `SCAN,${categorization.hauptkategorie},${categorization.unterkategorie},${metadata.absender || ''},${metadata.datum || ''}`,\n  creator: 'SCAN v2.0.3 Enhanced - Adobe PDF Services + OpenAI',\n  producer: 'N8N + SCAN Enhanced Processing'\n};\n\nreturn [{\n  success: true,\n  pdf_metadata: pdfMetadata,\n  subject_length: pdfMetadata.subject.length,\n  metadata_embedded: true,\n  embedding_method: 'n8n_pdf_metadata_embedder'\n}];"
+      },
+      "id": "12",
+      "name": "Prepare PDF Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "confidence_check",
+              "leftValue": "={{$json.categorization_result.confidence}}",
+              "rightValue": "={{parseFloat($vars.CONFIDENCE_THRESHOLD) || 0.99}}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true
+      },
+      "id": "13",
+      "name": "Check Universal Feedback Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "bewirtung_check",
+              "leftValue": "={{$json.categorization_result.unterkategorie}}",
+              "rightValue": "Bewirtungsbeleg",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "incomplete_check",
+              "leftValue": "={{$json.categorization_result.bewirtungsbeleg_ausgefuellt}}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "14",
+      "name": "Check Bewirtungsbeleg Feedback Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2",
+        "sendTo": "={{$vars.FEEDBACK_EMAIL_RECIPIENT}}",
+        "subject": "🔍 SCAN v2.0.3 - Universal Feedback Required: {{$json.enhanced_filename}}",
+        "emailFormat": "html",
+        "message": "=<h2>🔍 SCAN v2.0.3 Enhanced - Universal Feedback Required</h2>\n\n<p><strong>Document:</strong> {{$json.enhanced_filename}}</p>\n<p><strong>AI Confidence:</strong> {{($json.categorization_result.confidence * 100).toFixed(1)}}%</p>\n<p><strong>Suggested Category:</strong> {{$json.categorization_result.hauptkategorie}} / {{$json.categorization_result.unterkategorie}}</p>\n\n<h3>AI Reasoning:</h3>\n<p>{{$json.categorization_result.reasoning}}</p>\n\n<h3>📱 Quick Feedback (Reply to this email):</h3>\n<p><strong>Format:</strong> FEEDBACK:{{$json.document_id}}:CATEGORY:HAUPTKATEGORIE/UNTERKATEGORIE</p>\n\n<p><strong>Examples:</strong></p>\n<ul>\n<li>FEEDBACK:{{$json.document_id}}:CATEGORY:BETRIEBLICH/Eingangsrechnung</li>\n<li>FEEDBACK:{{$json.document_id}}:CATEGORY:MEDIZIN/Apothekenrechnung</li>\n<li>FEEDBACK:{{$json.document_id}}:CATEGORY:PRIVAT/Quittung</li>\n</ul>\n\n<h3>Available Categories:</h3>\n<p><strong>BETRIEBLICH:</strong> Eingangsrechnung, Ausgangsrechnung, Quittung, Bewirtungsbeleg_ausgefüllt, Bewirtungsbeleg_nicht_ausgefüllt, Versicherung, Sonstiges, Parktickets, Finanzamt, Behörden, KFZ, Betriebliche_Immobilien</p>\n<p><strong>PRIVAT:</strong> Rechnung, Quittung, KFZ, Finanzamt, Versicherung, Sonstiges</p>\n<p><strong>MEDIZIN:</strong> Arztrechnung, Apothekenrechnung, Therapierechnung, Kontoauszüge, Krankenversicherung</p>\n\n<hr>\n<p><small>🤖 Generated by SCAN v2.0.3 Enhanced on {{new Date().toLocaleString('de-DE')}}</small></p>",
+        "attachments": "={{$vars.SCAN_OUTPUT_DIRECTORY}}/{{$json.enhanced_filename}}",
+        "options": {}
+      },
+      "id": "15",
+      "name": "Send Universal Feedback Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2",
+        "sendTo": "={{$vars.FEEDBACK_EMAIL_RECIPIENT}}",
+        "subject": "📝 SCAN v2.0.3 - Bewirtungsbeleg Completion Required: {{$json.enhanced_filename}}",
+        "emailFormat": "html",
+        "message": "=<h2>📝 SCAN v2.0.3 Enhanced - Bewirtungsbeleg Completion Required</h2>\n\n<p><strong>Document:</strong> {{$json.enhanced_filename}}</p>\n<p><strong>Category:</strong> {{$json.categorization_result.hauptkategorie}} / {{$json.categorization_result.unterkategorie}}</p>\n<p><strong>Status:</strong> Unvollständiger Bewirtungsbeleg</p>\n\n<h3>📱 Quick Completion (Reply to this email):</h3>\n<p><strong>Format:</strong> BEWIRTUNG:{{$json.document_id}}:TEILNEHMER:Namen der Teilnehmer:ANLASS:Geschäftlicher Anlass:ORT:Ort der Bewirtung</p>\n\n<p><strong>Example:</strong></p>\n<p>BEWIRTUNG:{{$json.document_id}}:TEILNEHMER:Max Mustermann, Anna Schmidt:ANLASS:Geschäftsessen Projektbesprechung:ORT:Restaurant Zur Post, München</p>\n\n<h3>Required Information:</h3>\n<ul>\n<li><strong>TEILNEHMER:</strong> Namen aller Teilnehmer (kommagetrennt)</li>\n<li><strong>ANLASS:</strong> Geschäftlicher Anlass der Bewirtung</li>\n<li><strong>ORT:</strong> Ort/Restaurant der Bewirtung</li>\n</ul>\n\n<p><em>Nach der Vervollständigung wird das Dokument automatisch als \"Bewirtungsbeleg_ausgefüllt\" kategorisiert.</em></p>\n\n<hr>\n<p><small>🤖 Generated by SCAN v2.0.3 Enhanced on {{new Date().toLocaleString('de-DE')}}</small></p>",
+        "attachments": "={{$vars.SCAN_OUTPUT_DIRECTORY}}/{{$json.enhanced_filename}}",
+        "options": {}
+      },
+      "id": "16",
+      "name": "Send Bewirtungsbeleg Completion Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$vars.SUPABASE_URL}}/rest/v1/scan_documents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$vars.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "apikey",
+              "value": "{{$vars.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "=eq.{{$json.supabase_document_id}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "processing_status",
+              "value": "completed"
+            },
+            {
+              "name": "smart_filename",
+              "value": "={{$json.enhanced_filename}}"
+            },
+            {
+              "name": "category",
+              "value": "={{$json.categorization_result.hauptkategorie}}/{{$json.categorization_result.unterkategorie}}"
+            },
+            {
+              "name": "ai_confidence",
+              "value": "={{$json.categorization_result.confidence}}"
+            },
+            {
+              "name": "ai_reasoning",
+              "value": "={{$json.categorization_result.reasoning}}"
+            },
+            {
+              "name": "metadata_embedded",
+              "value": "={{$json.metadata_embedded}}"
+            },
+            {
+              "name": "completed_at",
+              "value": "={{new Date().toISOString()}}"
+            },
+            {
+              "name": "updated_at",
+              "value": "={{new Date().toISOString()}}"
+            }
+          ]
+        }
+      },
+      "id": "17",
+      "name": "Update Supabase Final Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "command": "mv \"{{$json.file_path}}\" \"{{$vars.SCAN_OUTPUT_DIRECTORY}}/{{$json.enhanced_filename}}\""
+      },
+      "id": "18",
+      "name": "Move & Rename File",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final_result",
+              "name": "final_result",
+              "value": "={\n  \"success\": true,\n  \"workflow_version\": \"SCAN_v2.0.3_Enhanced_N8N\",\n  \"document_id\": $json.supabase_document_id,\n  \"original_filename\": $json.original_filename,\n  \"final_filename\": $json.enhanced_filename,\n  \"final_path\": `${$vars.SCAN_OUTPUT_DIRECTORY}/${$json.enhanced_filename}`,\n  \"processing_duration_seconds\": (new Date() - new Date($json.processing_start_time)) / 1000,\n  \"categorization\": {\n    \"hauptkategorie\": $json.categorization_result.hauptkategorie,\n    \"unterkategorie\": $json.categorization_result.unterkategorie,\n    \"confidence\": $json.categorization_result.confidence,\n    \"reasoning\": $json.categorization_result.reasoning\n  },\n  \"feedback_sent\": {\n    \"universal\": $json.categorization_result.confidence < ($vars.CONFIDENCE_THRESHOLD || 0.99),\n    \"bewirtungsbeleg\": ($json.categorization_result.unterkategorie || '').includes('Bewirtungsbeleg') && !$json.categorization_result.bewirtungsbeleg_ausgefuellt\n  },\n  \"metadata_embedded\": $json.metadata_embedded,\n  \"processed_at\": new Date().toISOString()\n}"
+            }
+          ]
+        }
+      },
+      "id": "19",
+      "name": "Create Final Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3300,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "PDF File Trigger": {
+      "main": [
+        [
+          {
+            "node": "Initialize Document Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Document Variables": {
+      "main": [
+        [
+          {
+            "node": "Create Supabase Document Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Supabase Document Record": {
+      "main": [
+        [
+          {
+            "node": "Store Document ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Document ID": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to Adobe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to Adobe": {
+      "main": [
+        [
+          {
+            "node": "Store Adobe Asset ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Adobe Asset ID": {
+      "main": [
+        [
+          {
+            "node": "Adobe PDF Extract API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Adobe OCR API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adobe PDF Extract API": {
+      "main": [
+        [
+          {
+            "node": "Combine Adobe Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adobe OCR API": {
+      "main": [
+        [
+          {
+            "node": "Combine Adobe Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine Adobe Results": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Categorization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Categorization": {
+      "main": [
+        [
+          {
+            "node": "Generate Enhanced Filename",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Enhanced Filename": {
+      "main": [
+        [
+          {
+            "node": "Prepare PDF Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare PDF Metadata": {
+      "main": [
+        [
+          {
+            "node": "Check Universal Feedback Required",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Bewirtungsbeleg Feedback Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Universal Feedback Required": {
+      "main": [
+        [
+          {
+            "node": "Send Universal Feedback Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Supabase Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Bewirtungsbeleg Feedback Required": {
+      "main": [
+        [
+          {
+            "node": "Send Bewirtungsbeleg Completion Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Supabase Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Universal Feedback Email": {
+      "main": [
+        [
+          {
+            "node": "Update Supabase Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Bewirtungsbeleg Completion Email": {
+      "main": [
+        [
+          {
+            "node": "Update Supabase Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Supabase Final Status": {
+      "main": [
+        [
+          {
+            "node": "Move & Rename File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move & Rename File": {
+      "main": [
+        [
+          {
+            "node": "Create Final Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "scan-enhanced",
+      "name": "SCAN Enhanced v2.0.3"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1",
+  "name": "SCAN v2.0.3 Enhanced"
+}
