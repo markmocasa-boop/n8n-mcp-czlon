@@ -74,6 +74,21 @@
       "key": "DEFAULT_OCR_LANGUAGE",
       "value": "de-DE",
       "type": "string"
+    },
+    {
+      "key": "MICROSOFT_CLIENT_ID",
+      "value": "a7b8c9d0-e1f2-3456-7890-abcdef123456",
+      "type": "string"
+    },
+    {
+      "key": "MICROSOFT_CLIENT_SECRET",
+      "value": "XyZ123~AbC456.DeF789_GhI012-JkL345",
+      "type": "string"
+    },
+    {
+      "key": "MICROSOFT_TENANT_ID",
+      "value": "12345678-90ab-cdef-1234-567890abcdef",
+      "type": "string"
     }
   ]
 }
