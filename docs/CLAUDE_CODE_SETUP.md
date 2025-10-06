@@ -4,7 +4,7 @@ Connect n8n-MCP to Claude Code CLI for enhanced n8n workflow development from th
 
 ## Quick Setup via CLI
 
-### Basic configuration (documentation tools only):
+### Basic configuration (documentation tools only)
 
 **For Linux, macOS, or Windows (WSL/Git Bash):**
 ```bash
@@ -17,6 +17,7 @@ claude mcp add n8n-mcp \
 
 **For native Windows PowerShell:**
 ```powershell
+# Note: The backtick ` is PowerShell's line continuation character.
 claude mcp add n8n-mcp `
   '-e MCP_MODE=stdio' `
   '-e LOG_LEVEL=error' `
@@ -26,7 +27,7 @@ claude mcp add n8n-mcp `
 
 ![Adding n8n-MCP server in Claude Code](./img/cc_command.png)
 
-### Full configuration (with n8n management tools):
+### Full configuration (with n8n management tools)
 
 **For Linux, macOS, or Windows (WSL/Git Bash):**
 ```bash
@@ -41,6 +42,7 @@ claude mcp add n8n-mcp \
 
 **For native Windows PowerShell:**
 ```powershell
+# Note: The backtick ` is PowerShell's line continuation character.
 claude mcp add n8n-mcp `
   '-e MCP_MODE=stdio' `
   '-e LOG_LEVEL=error' `
@@ -110,12 +112,11 @@ For optimal results, create a `CLAUDE.md` file in your project root with the ins
 
 ## Tips
 
-- If you're running n8n locally, use `http://localhost:5678` as the N8N_API_URL
-- The n8n API credentials are optional - without them, you'll have documentation and validation tools only
-- With API credentials, you'll get full workflow management capabilities
-- Use `--scope local` (default) to keep your API credentials private
-- Use `--scope project` to share configuration with your team (put credentials in environment variables)
-- By default, the Quick Setup commands save the configuration to the the `project` scope.
-- To switch an existing server's scope, the cleanest method is to `remove` it and then `add` it back with the desired `--scope` flag (e.g., `--scope project`).
-- **For manual switching:** You can cut and paste the `"n8n-mcp": { ... }` block within your `.claude.json` file (e.g., `C:\Users\YourName\.claude.json`). Move it from the top-level `"mcpServers"` object (user scope) to the nested `"mcpServers"` object under your project's path key (project scope), or vice versa.
-- Claude Code will automatically start the MCP server when you begin a conversation
+- If you're running n8n locally, use `http://localhost:5678` as the `N8N_API_URL`.
+- The n8n API credentials are optional. Without them, you'll only have access to documentation and validation tools. With credentials, you get full workflow management capabilities.
+- **Scope Management:**
+    - By default, `claude mcp add` uses `--scope local` (also called "user scope"), which saves the configuration to your global user settings and keeps API keys private.
+    - To share the configuration with your team, use `--scope project`. This saves the configuration to a `.mcp.json` file in your project's root directory.
+- **Switching Scope:** The cleanest method is to `remove` the server and then `add` it back with the desired scope flag (e.g., `claude mcp remove n8n-mcp` followed by `claude mcp add n8n-mcp --scope project`).
+- **Manual Switching (Advanced):** You can manually edit your `.claude.json` file (e.g., `C:\Users\YourName\.claude.json`). To switch, cut the `"n8n-mcp": { ... }` block from the top-level `"mcpServers"` object (user scope) and paste it into the nested `"mcpServers"` object under your project's path key (project scope), or vice versa. **Important:** You may need to restart Claude Code for manual changes to take effect.
+- Claude Code will automatically start the MCP server when you begin a conversation.
