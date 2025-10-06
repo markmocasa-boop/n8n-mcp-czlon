@@ -5,6 +5,8 @@ Connect n8n-MCP to Claude Code CLI for enhanced n8n workflow development from th
 ## Quick Setup via CLI
 
 ### Basic configuration (documentation tools only):
+
+**For Linux, macOS, or Windows (WSL/Git Bash):**
 ```bash
 claude mcp add n8n-mcp \
   -e MCP_MODE=stdio \
@@ -13,9 +15,20 @@ claude mcp add n8n-mcp \
   -- npx n8n-mcp
 ```
 
+**For native Windows PowerShell:**
+```powershell
+claude mcp add n8n-mcp `
+  '-e MCP_MODE=stdio' `
+  '-e LOG_LEVEL=error' `
+  '-e DISABLE_CONSOLE_OUTPUT=true' `
+  -- npx n8n-mcp
+```
+
 ![Adding n8n-MCP server in Claude Code](./img/cc_command.png)
 
 ### Full configuration (with n8n management tools):
+
+**For Linux, macOS, or Windows (WSL/Git Bash):**
 ```bash
 claude mcp add n8n-mcp \
   -e MCP_MODE=stdio \
@@ -23,6 +36,17 @@ claude mcp add n8n-mcp \
   -e DISABLE_CONSOLE_OUTPUT=true \
   -e N8N_API_URL=https://your-n8n-instance.com \
   -e N8N_API_KEY=your-api-key \
+  -- npx n8n-mcp
+```
+
+**For native Windows PowerShell:**
+```powershell
+claude mcp add n8n-mcp `
+  '-e MCP_MODE=stdio' `
+  '-e LOG_LEVEL=error' `
+  '-e DISABLE_CONSOLE_OUTPUT=true' `
+  '-e N8N_API_URL=https://your-n8n-instance.com' `
+  '-e N8N_API_KEY=your-api-key' `
   -- npx n8n-mcp
 ```
 
@@ -91,4 +115,7 @@ For optimal results, create a `CLAUDE.md` file in your project root with the ins
 - With API credentials, you'll get full workflow management capabilities
 - Use `--scope local` (default) to keep your API credentials private
 - Use `--scope project` to share configuration with your team (put credentials in environment variables)
+- By default, the Quick Setup commands save the configuration to the the `project` scope.
+- To switch an existing server's scope, the cleanest method is to `remove` it and then `add` it back with the desired `--scope` flag (e.g., `--scope project`).
+- **For manual switching:** You can cut and paste the `"n8n-mcp": { ... }` block within your `.claude.json` file (e.g., `C:\Users\YourName\.claude.json`). Move it from the top-level `"mcpServers"` object (user scope) to the nested `"mcpServers"` object under your project's path key (project scope), or vice versa.
 - Claude Code will automatically start the MCP server when you begin a conversation
