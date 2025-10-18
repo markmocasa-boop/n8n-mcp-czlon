@@ -13,9 +13,9 @@ permissions:
   issues: write
   pull-requests: write
 
-# Prevent concurrent releases
+# Prevent concurrent releases and race conditions with docker-build.yml
 concurrency:
-  group: release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -435,7 +435,39 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
+
+      - name: Verify multi-arch manifest for latest tag
+        run: |
+          echo "Verifying multi-arch manifest for latest tag..."
+          sleep 5  # Brief pause to ensure registry has processed the push
+          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest)
+          echo "$MANIFEST"
+
+          # Check for both platforms
+          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+            echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
+          else
+            echo "❌ ERROR: Multi-arch manifest incomplete!"
+            echo "$MANIFEST"
+            exit 1
+          fi
+
+      - name: Verify multi-arch manifest for version tag
+        run: |
+          VERSION="${{ needs.detect-version-change.outputs.new-version }}"
+          echo "Verifying multi-arch manifest for version $VERSION..."
+          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION)
+          echo "$MANIFEST"
+
+          # Check for both platforms
+          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+            echo "✅ Multi-arch manifest verified for $VERSION: both amd64 and arm64 present"
+          else
+            echo "❌ ERROR: Multi-arch manifest incomplete for version $VERSION!"
+            echo "$MANIFEST"
+            exit 1
+          fi
+
       - name: Extract metadata for Railway image
         id: meta-railway
         uses: docker/metadata-action@v5

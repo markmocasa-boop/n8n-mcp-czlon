@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
     paths-ignore:
       - '**.md'
       - '**.txt'
@@ -37,6 +35,11 @@ on:
       - 'SECURITY.md'
       - 'CODE_OF_CONDUCT.md'
   workflow_dispatch:
+
+# Prevent concurrent builds on the same branch
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -89,12 +92,30 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          no-cache: true
+          no-cache: false
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
+
+      - name: Verify multi-arch manifest for latest tag
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Verifying multi-arch manifest for latest tag..."
+          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest)
+          echo "$MANIFEST"
+
+          # Check for both platforms
+          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+            echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
+          else
+            echo "❌ ERROR: Multi-arch manifest incomplete!"
+            echo "$MANIFEST"
+            exit 1
+          fi
 
   build-railway:
     name: Build Railway Docker Image
