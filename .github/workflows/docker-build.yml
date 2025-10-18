@@ -36,9 +36,10 @@ on:
       - 'CODE_OF_CONDUCT.md'
   workflow_dispatch:
 
-# Prevent concurrent builds on the same branch
+# Prevent concurrent Docker pushes across all workflows (shared with release.yml)
+# This ensures docker-build.yml and release.yml never push to 'latest' simultaneously
 concurrency:
-  group: docker-build-${{ github.ref }}
+  group: docker-push-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -105,21 +106,41 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           echo "Verifying multi-arch manifest for latest tag..."
-          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest)
-          echo "$MANIFEST"
 
-          # Check for both platforms
-          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
-            echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
-          else
-            echo "❌ ERROR: Multi-arch manifest incomplete!"
-            echo "$MANIFEST"
-            exit 1
-          fi
+          # Retry with exponential backoff (registry propagation can take time)
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          WAIT_TIME=2
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+            MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>&1 || true)
+
+            # Check for both platforms
+            if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+              echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
+              echo "$MANIFEST"
+              exit 0
+            fi
+
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "⏳ Registry still propagating, waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+              WAIT_TIME=$((WAIT_TIME * 2))  # Exponential backoff: 2s, 4s, 8s, 16s
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          echo "❌ ERROR: Multi-arch manifest incomplete after $MAX_ATTEMPTS attempts!"
+          echo "$MANIFEST"
+          exit 1
 
   build-railway:
     name: Build Railway Docker Image
     runs-on: ubuntu-latest
+    needs: build
     permissions:
       contents: read
       packages: write
@@ -164,11 +185,13 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.railway
-          no-cache: true
+          no-cache: false
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-railway.outputs.tags }}
           labels: ${{ steps.meta-railway.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
 
   # Nginx build commented out until Phase 2

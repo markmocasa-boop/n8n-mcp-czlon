@@ -13,9 +13,10 @@ permissions:
   issues: write
   pull-requests: write
 
-# Prevent concurrent releases and race conditions with docker-build.yml
+# Prevent concurrent Docker pushes across all workflows (shared with docker-build.yml)
+# This ensures release.yml and docker-build.yml never push to 'latest' simultaneously
 concurrency:
-  group: release-${{ github.ref }}
+  group: docker-push-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -439,34 +440,71 @@ jobs:
       - name: Verify multi-arch manifest for latest tag
         run: |
           echo "Verifying multi-arch manifest for latest tag..."
-          sleep 5  # Brief pause to ensure registry has processed the push
-          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest)
-          echo "$MANIFEST"
 
-          # Check for both platforms
-          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
-            echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
-          else
-            echo "❌ ERROR: Multi-arch manifest incomplete!"
-            echo "$MANIFEST"
-            exit 1
-          fi
+          # Retry with exponential backoff (registry propagation can take time)
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          WAIT_TIME=2
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+            MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>&1 || true)
+
+            # Check for both platforms
+            if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+              echo "✅ Multi-arch manifest verified: both amd64 and arm64 present"
+              echo "$MANIFEST"
+              exit 0
+            fi
+
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "⏳ Registry still propagating, waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+              WAIT_TIME=$((WAIT_TIME * 2))  # Exponential backoff: 2s, 4s, 8s, 16s
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          echo "❌ ERROR: Multi-arch manifest incomplete after $MAX_ATTEMPTS attempts!"
+          echo "$MANIFEST"
+          exit 1
 
       - name: Verify multi-arch manifest for version tag
         run: |
           VERSION="${{ needs.detect-version-change.outputs.new-version }}"
-          echo "Verifying multi-arch manifest for version $VERSION..."
-          MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION)
-          echo "$MANIFEST"
+          echo "Verifying multi-arch manifest for version tag :$VERSION (without 'v' prefix)..."
 
-          # Check for both platforms
-          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
-            echo "✅ Multi-arch manifest verified for $VERSION: both amd64 and arm64 present"
-          else
-            echo "❌ ERROR: Multi-arch manifest incomplete for version $VERSION!"
-            echo "$MANIFEST"
-            exit 1
-          fi
+          # Retry with exponential backoff (registry propagation can take time)
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          WAIT_TIME=2
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+            MANIFEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION 2>&1 || true)
+
+            # Check for both platforms
+            if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+              echo "✅ Multi-arch manifest verified for $VERSION: both amd64 and arm64 present"
+              echo "$MANIFEST"
+              exit 0
+            fi
+
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "⏳ Registry still propagating, waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+              WAIT_TIME=$((WAIT_TIME * 2))  # Exponential backoff: 2s, 4s, 8s, 16s
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          echo "❌ ERROR: Multi-arch manifest incomplete for version $VERSION after $MAX_ATTEMPTS attempts!"
+          echo "$MANIFEST"
+          exit 1
 
       - name: Extract metadata for Railway image
         id: meta-railway
