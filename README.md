@@ -586,6 +586,56 @@ n8n_update_partial_workflow({id: "wf-123", operations: [{...}]})
 n8n_update_partial_workflow({id: "wf-123", operations: [{...}]})
 ```
 
+###   CRITICAL: addConnection Syntax
+
+The `addConnection` operation requires **four separate string parameters**. Common mistakes cause misleading errors.
+
+❌ WRONG - Object format (fails with "Expected string, received object"):
+```json
+{
+  "type": "addConnection",
+  "connection": {
+    "source": {"nodeId": "node-1", "outputIndex": 0},
+    "destination": {"nodeId": "node-2", "inputIndex": 0}
+  }
+}
+```
+
+❌ WRONG - Combined string (fails with "Source node not found"):
+```json
+{
+  "type": "addConnection",
+  "source": "node-1:main:0",
+  "target": "node-2:main:0"
+}
+```
+
+✅ CORRECT - Four separate string parameters:
+```json
+{
+  "type": "addConnection",
+  "source": "node-id-string",
+  "target": "target-node-id-string",
+  "sourcePort": "main",
+  "targetPort": "main"
+}
+```
+
+**Reference**: [GitHub Issue #327](https://github.com/czlonkowski/n8n-mcp/issues/327)
+
+### removeConnection Syntax
+
+Use the same four-parameter format:
+```json
+{
+  "type": "removeConnection",
+  "source": "source-node-id",
+  "target": "target-node-id",
+  "sourcePort": "main",
+  "targetPort": "main"
+}
+```
+
 ## Example Workflow
 
 ### Template-First Approach
