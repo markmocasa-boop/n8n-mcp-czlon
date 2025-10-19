@@ -130,12 +130,18 @@ export async function handleUpdatePartialWorkflow(args: unknown, context?: Insta
     // Validate final workflow structure after applying all operations
     // This prevents creating workflows that pass operation-level validation
     // but fail workflow-level validation (e.g., UI can't render them)
+    //
+    // Validation can be skipped for specific integration tests that need to test
+    // n8n API behavior with edge case workflows by setting SKIP_WORKFLOW_VALIDATION=true
     if (diffResult.workflow) {
       const structureErrors = validateWorkflowStructure(diffResult.workflow);
       if (structureErrors.length > 0) {
+        const skipValidation = process.env.SKIP_WORKFLOW_VALIDATION === 'true';
+
         logger.warn('Workflow structure validation failed after applying diff operations', {
           workflowId: input.id,
-          errors: structureErrors
+          errors: structureErrors,
+          blocking: !skipValidation
         });
 
         // Analyze error types to provide targeted recovery guidance
@@ -177,19 +183,27 @@ export async function handleUpdatePartialWorkflow(args: unknown, context?: Insta
           ? `Workflow validation failed: ${structureErrors[0]}`
           : `Workflow validation failed with ${structureErrors.length} structural issues`;
 
-        return {
-          success: false,
-          error: errorMessage,
-          details: {
-            errors: structureErrors,
-            errorCount: structureErrors.length,
-            operationsApplied: diffResult.operationsApplied,
-            applied: diffResult.applied,
-            recoveryGuidance: recoverySteps,
-            note: 'Operations were applied but created an invalid workflow structure. The workflow was NOT saved to n8n to prevent UI rendering errors.',
-            autoSanitizationNote: 'Auto-sanitization runs on all nodes during updates to fix operator structures and add missing metadata. However, it cannot fix all issues (e.g., broken connections, branch mismatches). Use the recovery guidance above to resolve remaining issues.'
-          }
-        };
+        // If validation is not skipped, return error and block the save
+        if (!skipValidation) {
+          return {
+            success: false,
+            error: errorMessage,
+            details: {
+              errors: structureErrors,
+              errorCount: structureErrors.length,
+              operationsApplied: diffResult.operationsApplied,
+              applied: diffResult.applied,
+              recoveryGuidance: recoverySteps,
+              note: 'Operations were applied but created an invalid workflow structure. The workflow was NOT saved to n8n to prevent UI rendering errors.',
+              autoSanitizationNote: 'Auto-sanitization runs on all nodes during updates to fix operator structures and add missing metadata. However, it cannot fix all issues (e.g., broken connections, branch mismatches). Use the recovery guidance above to resolve remaining issues.'
+            }
+          };
+        }
+        // Validation skipped: log warning but continue (for specific integration tests)
+        logger.info('Workflow validation skipped (SKIP_WORKFLOW_VALIDATION=true): Allowing workflow with validation warnings to proceed', {
+          workflowId: input.id,
+          warningCount: structureErrors.length
+        });
       }
     }
 

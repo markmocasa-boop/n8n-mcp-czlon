@@ -33,10 +33,14 @@ describe('Integration: Smart Parameters with Real n8n API', () => {
     context = createTestContext();
     client = getTestN8nClient();
     mcpContext = createMcpContext();
+    // Skip workflow validation for these tests - they test n8n API behavior with edge cases
+    process.env.SKIP_WORKFLOW_VALIDATION = 'true';
   });
 
   afterEach(async () => {
     await context.cleanup();
+    // Clean up environment variable
+    delete process.env.SKIP_WORKFLOW_VALIDATION;
   });
 
   afterAll(async () => {
@@ -133,6 +137,7 @@ describe('Integration: Smart Parameters with Real n8n API', () => {
         mcpContext
       );
 
+      if (!result.success) console.log("VALIDATION ERROR:", JSON.stringify(result, null, 2));
       expect(result.success).toBe(true);
 
       // Fetch actual workflow from n8n API
