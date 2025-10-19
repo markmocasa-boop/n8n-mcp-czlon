@@ -9,34 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
-**Issue #331: Prevent Broken Workflows via Partial Updates**
+**Issue #331: Prevent Broken Workflows via Partial Updates (Enhanced)**
 
-Fixed critical issue where `n8n_update_partial_workflow` could create corrupted workflows that n8n API accepts but UI cannot render.
+Fixed critical issue where `n8n_update_partial_workflow` could create corrupted workflows that n8n API accepts but UI cannot render. **Enhanced validation to detect ALL disconnected nodes**, not just workflows with zero connections.
 
 #### Problem
 - Partial workflow updates validated individual operations but not final workflow structure
 - Users could inadvertently create invalid workflows:
   - Multi-node workflows with no connections
   - Single non-webhook node workflows
+  - **Disconnected nodes when building incrementally** (original fix missed this)
   - Workflows with broken connection graphs
 - Result: Workflows existed in API but showed "Workflow not found" in UI
 
-#### Solution
+#### Solution (Two-Phase Fix)
+
+**Phase 1 - Basic Validation**:
 - ✅ Added final workflow structure validation after applying all diff operations
 - ✅ Improved error messages with actionable examples showing correct syntax
 - ✅ Reject updates that would create invalid workflows with clear feedback
 - ✅ Updated tests to create valid workflows and verify prevention of invalid ones
 
+**Phase 2 - Enhanced Validation** (discovered via real-world testing):
+- ✅ Detects ALL disconnected nodes, not just empty connection objects
+- ✅ Identifies each disconnected node by name and type
+- ✅ Provides specific fix suggestions naming the actual nodes
+- ✅ Handles webhook/trigger nodes correctly (can be source-only)
+- ✅ Tested against real incremental workflow building scenarios
+
 #### Changes
 - `src/mcp/handlers-workflow-diff.ts`: Added `validateWorkflowStructure()` call after diff application
-- `src/services/n8n-validation.ts`: Enhanced error messages with operation examples
-- Tests: Fixed 3 existing tests creating invalid workflows, added 3 new validation tests
+- `src/services/n8n-validation.ts`:
+  - Enhanced error messages with operation examples
+  - **Added comprehensive disconnected node detection** (Phase 2)
+  - Builds connection graph and identifies orphaned nodes
+  - Suggests specific connection operations with actual node names
+- Tests:
+  - Fixed 3 existing tests creating invalid workflows
+  - Added 4 new validation tests (3 in Phase 1, 1 in Phase 2)
+  - Test for incremental node addition without connections
+
+#### Real-World Testing
+Tested against actual workflow building scenario (`chat_workflows_phase1.md`):
+- Agent building 28-node workflow incrementally
+- Validation correctly detected node added without connection
+- Error message provided exact fix with node names
+- Prevents UI from showing "Workflow not found" error
 
 #### Impact
 - 🎯 **Prevention**: Impossible to create workflows that UI cannot render
 - 📝 **Feedback**: Clear error messages explaining why workflow is invalid
 - ✅ **Compatibility**: All existing valid workflows continue to work
 - 🔒 **Safety**: Validates before API call, prevents corruption at source
+- 🏗️ **Incremental Building**: Safe to build workflows step-by-step with validation at each step
 
 ## [2.20.2] - 2025-10-18
 

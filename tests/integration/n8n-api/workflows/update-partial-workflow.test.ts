@@ -1014,5 +1014,53 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
       expect(updated.nodes).toHaveLength(5); // Original 4 + 1 new
       expect(updated.nodes.find((n: any) => n.name === 'Process Data')).toBeDefined();
     });
+
+    it('should reject adding node without connecting it (disconnected node)', async () => {
+      // Create workflow with 2 connected nodes
+      const workflow = {
+        ...SIMPLE_HTTP_WORKFLOW,
+        name: createTestWorkflowName('Partial - Reject Disconnected Node'),
+        tags: ['mcp-integration-test']
+      };
+
+      const created = await client.createWorkflow(workflow);
+      expect(created.id).toBeTruthy();
+      if (!created.id) throw new Error('Workflow ID is missing');
+      context.trackWorkflow(created.id);
+
+      // Try to add a third node WITHOUT connecting it - should be rejected
+      const response = await handleUpdatePartialWorkflow(
+        {
+          id: created.id,
+          operations: [
+            {
+              type: 'addNode',
+              node: {
+                name: 'Disconnected Set',
+                type: 'n8n-nodes-base.set',
+                typeVersion: 3.4,
+                position: [800, 300],
+                parameters: {
+                  assignments: {
+                    assignments: []
+                  }
+                }
+              }
+              // Note: No connection operation - this creates a disconnected node
+            }
+          ]
+        },
+        mcpContext
+      );
+
+      // Should fail validation - disconnected node detected
+      expect(response.success).toBe(false);
+      expect(response.error).toContain('Workflow validation failed');
+      expect(response.details?.errors).toBeDefined();
+      expect(Array.isArray(response.details?.errors)).toBe(true);
+      const errorMessage = (response.details?.errors as string[])[0];
+      expect(errorMessage).toContain('Disconnected nodes detected');
+      expect(errorMessage).toContain('Disconnected Set');
+    });
   });
 });

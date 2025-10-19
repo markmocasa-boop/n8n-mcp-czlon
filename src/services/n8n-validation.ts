@@ -209,13 +209,60 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
     }
   }
 
-  // Check for empty connections in multi-node workflows
+  // Check for disconnected nodes in multi-node workflows
   if (workflow.nodes && workflow.nodes.length > 1 && workflow.connections) {
     const connectionCount = Object.keys(workflow.connections).length;
 
+    // First check: workflow has no connections at all
     if (connectionCount === 0) {
       const nodeNames = workflow.nodes.slice(0, 2).map(n => n.name);
       errors.push(`Multi-node workflow has no connections between nodes. Add a connection using: {type: 'addConnection', source: '${nodeNames[0]}', target: '${nodeNames[1]}', sourcePort: 'main', targetPort: 'main'}`);
+    } else {
+      // Second check: detect disconnected nodes (nodes with no incoming or outgoing connections)
+      const connectedNodes = new Set<string>();
+
+      // Collect all nodes that appear in connections (as source or target)
+      Object.entries(workflow.connections).forEach(([sourceName, connection]) => {
+        connectedNodes.add(sourceName); // Node has outgoing connection
+
+        if (connection.main && Array.isArray(connection.main)) {
+          connection.main.forEach((outputs) => {
+            if (Array.isArray(outputs)) {
+              outputs.forEach((target) => {
+                connectedNodes.add(target.node); // Node has incoming connection
+              });
+            }
+          });
+        }
+      });
+
+      // Find disconnected nodes (excluding webhook triggers which can be source-only)
+      const webhookTypes = new Set([
+        'n8n-nodes-base.webhook',
+        'n8n-nodes-base.webhookTrigger',
+        'n8n-nodes-base.manualTrigger'
+      ]);
+
+      const disconnectedNodes = workflow.nodes.filter(node => {
+        const isConnected = connectedNodes.has(node.name);
+        const isWebhookOrTrigger = webhookTypes.has(node.type);
+
+        // Webhook/trigger nodes only need outgoing connections
+        if (isWebhookOrTrigger) {
+          return !workflow.connections?.[node.name]; // Disconnected if no outgoing connections
+        }
+
+        // Regular nodes need at least one connection (incoming or outgoing)
+        return !isConnected;
+      });
+
+      if (disconnectedNodes.length > 0) {
+        const disconnectedList = disconnectedNodes.map(n => `"${n.name}" (${n.type})`).join(', ');
+        const firstDisconnected = disconnectedNodes[0];
+        const suggestedSource = workflow.nodes.find(n => connectedNodes.has(n.name))?.name || workflow.nodes[0].name;
+
+        errors.push(`Disconnected nodes detected: ${disconnectedList}. Each node must have at least one connection. Add a connection: {type: 'addConnection', source: '${suggestedSource}', target: '${firstDisconnected.name}', sourcePort: 'main', targetPort: 'main'}`);
+      }
     }
   }
 
