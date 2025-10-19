@@ -53,8 +53,8 @@ describe('handlers-workflow-diff', () => {
       },
     ],
     connections: {
-      node1: {
-        main: [[{ node: 'node2', type: 'main', index: 0 }]],
+      'Start': {
+        main: [[{ node: 'HTTP Request', type: 'main', index: 0 }]],
       },
     },
     createdAt: '2024-01-01T00:00:00Z',
@@ -104,6 +104,12 @@ describe('handlers-workflow-diff', () => {
             parameters: {},
           },
         ],
+        connections: {
+          ...testWorkflow.connections,
+          'HTTP Request': {
+            main: [[{ node: 'New Node', type: 'main', index: 0 }]],
+          },
+        },
       };
 
       const diffRequest = {
@@ -227,7 +233,27 @@ describe('handlers-workflow-diff', () => {
       mockApiClient.getWorkflow.mockResolvedValue(testWorkflow);
       mockDiffEngine.applyDiff.mockResolvedValue({
         success: true,
-        workflow: { ...testWorkflow, nodes: [...testWorkflow.nodes, {}] },
+        workflow: {
+          ...testWorkflow,
+          nodes: [
+            { ...testWorkflow.nodes[0], name: 'Updated Start' },
+            testWorkflow.nodes[1],
+            {
+              id: 'node3',
+              name: 'Set Node',
+              type: 'n8n-nodes-base.set',
+              typeVersion: 1,
+              position: [500, 100],
+              parameters: {},
+            }
+          ],
+          connections: {
+            'Updated Start': testWorkflow.connections['Start'],
+            'HTTP Request': {
+              main: [[{ node: 'Set Node', type: 'main', index: 0 }]],
+            },
+          },
+        },
         operationsApplied: 3,
         message: 'Successfully applied 3 operations',
         errors: [],

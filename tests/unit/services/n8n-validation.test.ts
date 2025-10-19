@@ -540,7 +540,7 @@ describe('n8n-validation', () => {
       };
 
       const errors = validateWorkflowStructure(workflow);
-      expect(errors).toContain('Single-node workflows are only valid for webhooks. Add at least one more node and connect them. Example: Manual Trigger → Set node');
+      expect(errors.some(e => e.includes('Single non-webhook node workflow is invalid'))).toBe(true);
     });
 
     it('should detect empty connections in multi-node workflow', () => {
@@ -568,7 +568,7 @@ describe('n8n-validation', () => {
       };
 
       const errors = validateWorkflowStructure(workflow);
-      expect(errors).toContain('Multi-node workflow has empty connections. Connect nodes like this: connections: { "Node1 Name": { "main": [[{ "node": "Node2 Name", "type": "main", "index": 0 }]] } }');
+      expect(errors.some(e => e.includes('Multi-node workflow has no connections between nodes'))).toBe(true);
     });
 
     it('should validate node type format - missing package prefix', () => {
