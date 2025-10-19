@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+**Issue #331: Prevent Broken Workflows via Partial Updates**
+
+Fixed critical issue where `n8n_update_partial_workflow` could create corrupted workflows that n8n API accepts but UI cannot render.
+
+#### Problem
+- Partial workflow updates validated individual operations but not final workflow structure
+- Users could inadvertently create invalid workflows:
+  - Multi-node workflows with no connections
+  - Single non-webhook node workflows
+  - Workflows with broken connection graphs
+- Result: Workflows existed in API but showed "Workflow not found" in UI
+
+#### Solution
+- ✅ Added final workflow structure validation after applying all diff operations
+- ✅ Improved error messages with actionable examples showing correct syntax
+- ✅ Reject updates that would create invalid workflows with clear feedback
+- ✅ Updated tests to create valid workflows and verify prevention of invalid ones
+
+#### Changes
+- `src/mcp/handlers-workflow-diff.ts`: Added `validateWorkflowStructure()` call after diff application
+- `src/services/n8n-validation.ts`: Enhanced error messages with operation examples
+- Tests: Fixed 3 existing tests creating invalid workflows, added 3 new validation tests
+
+#### Impact
+- 🎯 **Prevention**: Impossible to create workflows that UI cannot render
+- 📝 **Feedback**: Clear error messages explaining why workflow is invalid
+- ✅ **Compatibility**: All existing valid workflows continue to work
+- 🔒 **Safety**: Validates before API call, prevents corruption at source
+
 ## [2.20.2] - 2025-10-18
 
 ### 🐛 Critical Bug Fixes

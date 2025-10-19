@@ -201,20 +201,21 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
   // Check for minimum viable workflow
   if (workflow.nodes && workflow.nodes.length === 1) {
     const singleNode = workflow.nodes[0];
-    const isWebhookOnly = singleNode.type === 'n8n-nodes-base.webhook' || 
+    const isWebhookOnly = singleNode.type === 'n8n-nodes-base.webhook' ||
                          singleNode.type === 'n8n-nodes-base.webhookTrigger';
-    
+
     if (!isWebhookOnly) {
-      errors.push('Single-node workflows are only valid for webhooks. Add at least one more node and connect them. Example: Manual Trigger → Set node');
+      errors.push(`Single non-webhook node workflow is invalid. Current node: "${singleNode.name}" (${singleNode.type}). Add another node using: {type: 'addNode', node: {name: 'Process Data', type: 'n8n-nodes-base.set', typeVersion: 3.4, position: [450, 300], parameters: {}}}`);
     }
   }
 
   // Check for empty connections in multi-node workflows
   if (workflow.nodes && workflow.nodes.length > 1 && workflow.connections) {
     const connectionCount = Object.keys(workflow.connections).length;
-    
+
     if (connectionCount === 0) {
-      errors.push('Multi-node workflow has empty connections. Connect nodes like this: connections: { "Node1 Name": { "main": [[{ "node": "Node2 Name", "type": "main", "index": 0 }]] } }');
+      const nodeNames = workflow.nodes.slice(0, 2).map(n => n.name);
+      errors.push(`Multi-node workflow has no connections between nodes. Add a connection using: {type: 'addConnection', source: '${nodeNames[0]}', target: '${nodeNames[1]}', sourcePort: 'main', targetPort: 'main'}`);
     }
   }
 

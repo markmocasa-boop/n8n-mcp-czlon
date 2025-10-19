@@ -11,6 +11,7 @@ import { getN8nApiClient } from './handlers-n8n-manager';
 import { N8nApiError, getUserFriendlyErrorMessage } from '../utils/n8n-errors';
 import { logger } from '../utils/logger';
 import { InstanceContext } from '../types/instance-context';
+import { validateWorkflowStructure } from '../services/n8n-validation';
 
 // Zod schema for the diff request
 const workflowDiffSchema = z.object({
@@ -125,7 +126,31 @@ export async function handleUpdatePartialWorkflow(args: unknown, context?: Insta
         }
       };
     }
-    
+
+    // Validate final workflow structure after applying all operations
+    // This prevents creating workflows that pass operation-level validation
+    // but fail workflow-level validation (e.g., UI can't render them)
+    if (diffResult.workflow) {
+      const structureErrors = validateWorkflowStructure(diffResult.workflow);
+      if (structureErrors.length > 0) {
+        logger.warn('Workflow structure validation failed after applying diff operations', {
+          workflowId: input.id,
+          errors: structureErrors
+        });
+
+        return {
+          success: false,
+          error: 'Workflow validation failed after applying operations',
+          details: {
+            errors: structureErrors,
+            hint: 'Operations were valid individually but created an invalid workflow structure. This prevents corrupted workflows that the n8n UI cannot render.',
+            operationsApplied: diffResult.operationsApplied,
+            applied: diffResult.applied
+          }
+        };
+      }
+    }
+
     // Update workflow via API
     try {
       const updatedWorkflow = await client.updateWorkflow(input.id, diffResult.workflow!);
