@@ -284,6 +284,16 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
     });
   }
 
+  // Validate filter-based nodes (IF v2.2+, Switch v3.2+) have complete metadata
+  if (workflow.nodes) {
+    workflow.nodes.forEach((node, index) => {
+      const filterErrors = validateFilterBasedNodeMetadata(node);
+      if (filterErrors.length > 0) {
+        errors.push(...filterErrors.map(err => `Node "${node.name}" (index ${index}): ${err}`));
+      }
+    });
+  }
+
   // Validate connections
   if (workflow.connections) {
     try {
@@ -293,12 +303,66 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
     }
   }
 
+  // Validate Switch and IF node connection structures match their rules
+  if (workflow.nodes && workflow.connections) {
+    const switchNodes = workflow.nodes.filter(n => {
+      if (n.type !== 'n8n-nodes-base.switch') return false;
+      const mode = (n.parameters as any)?.mode;
+      return !mode || mode === 'rules'; // Default mode is 'rules'
+    });
+
+    for (const switchNode of switchNodes) {
+      const params = switchNode.parameters as any;
+      const rules = params?.rules?.rules || [];
+      const nodeConnections = workflow.connections[switchNode.name];
+
+      if (rules.length > 0 && nodeConnections?.main) {
+        const outputBranches = nodeConnections.main.length;
+
+        // Switch nodes in "rules" mode need output branches matching rules count
+        if (outputBranches !== rules.length) {
+          const ruleNames = rules.map((r: any, i: number) =>
+            r.outputKey ? `"${r.outputKey}" (index ${i})` : `Rule ${i}`
+          ).join(', ');
+
+          errors.push(
+            `Switch node "${switchNode.name}" has ${rules.length} rules [${ruleNames}] ` +
+            `but only ${outputBranches} output branch${outputBranches !== 1 ? 'es' : ''} in connections. ` +
+            `Each rule needs its own output branch. When connecting to Switch outputs, specify sourceIndex: ` +
+            rules.map((_: any, i: number) => i).join(', ') +
+            ` (or use case parameter for clarity).`
+          );
+        }
+
+        // Check for empty output branches (except trailing ones)
+        const nonEmptyBranches = nodeConnections.main.filter((branch: any[]) => branch.length > 0).length;
+        if (nonEmptyBranches < rules.length) {
+          const emptyIndices = nodeConnections.main
+            .map((branch: any[], i: number) => branch.length === 0 ? i : -1)
+            .filter((i: number) => i !== -1 && i < rules.length);
+
+          if (emptyIndices.length > 0) {
+            const ruleInfo = emptyIndices.map((i: number) => {
+              const rule = rules[i];
+              return rule.outputKey ? `"${rule.outputKey}" (index ${i})` : `Rule ${i}`;
+            }).join(', ');
+
+            errors.push(
+              `Switch node "${switchNode.name}" has unconnected output${emptyIndices.length !== 1 ? 's' : ''}: ${ruleInfo}. ` +
+              `Add connection${emptyIndices.length !== 1 ? 's' : ''} using sourceIndex: ${emptyIndices.join(' or ')}.`
+            );
+          }
+        }
+      }
+    }
+  }
+
   // Validate that all connection references exist and use node NAMES (not IDs)
   if (workflow.nodes && workflow.connections) {
     const nodeNames = new Set(workflow.nodes.map(node => node.name));
     const nodeIds = new Set(workflow.nodes.map(node => node.id));
     const nodeIdToName = new Map(workflow.nodes.map(node => [node.id, node.name]));
-    
+
     Object.entries(workflow.connections).forEach(([sourceName, connection]) => {
       // Check if source exists by name (correct)
       if (!nodeNames.has(sourceName)) {
@@ -337,10 +401,175 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
 
 // Check if workflow has webhook trigger
 export function hasWebhookTrigger(workflow: Workflow): boolean {
-  return workflow.nodes.some(node => 
-    node.type === 'n8n-nodes-base.webhook' || 
+  return workflow.nodes.some(node =>
+    node.type === 'n8n-nodes-base.webhook' ||
     node.type === 'n8n-nodes-base.webhookTrigger'
   );
+}
+
+/**
+ * Validate filter-based node metadata (IF v2.2+, Switch v3.2+)
+ * Returns array of error messages
+ */
+export function validateFilterBasedNodeMetadata(node: WorkflowNode): string[] {
+  const errors: string[] = [];
+
+  // Check if node is filter-based
+  const isIFNode = node.type === 'n8n-nodes-base.if' && node.typeVersion >= 2.2;
+  const isSwitchNode = node.type === 'n8n-nodes-base.switch' && node.typeVersion >= 3.2;
+
+  if (!isIFNode && !isSwitchNode) {
+    return errors; // Not a filter-based node
+  }
+
+  // Validate IF node
+  if (isIFNode) {
+    const conditions = (node.parameters.conditions as any);
+
+    // Check conditions.options exists
+    if (!conditions?.options) {
+      errors.push(
+        'Missing required "conditions.options". ' +
+        'IF v2.2+ requires: {version: 2, leftValue: "", caseSensitive: true, typeValidation: "strict"}'
+      );
+    } else {
+      // Validate required fields
+      const requiredFields = {
+        version: 2,
+        leftValue: '',
+        caseSensitive: 'boolean',
+        typeValidation: 'strict'
+      };
+
+      for (const [field, expectedValue] of Object.entries(requiredFields)) {
+        if (!(field in conditions.options)) {
+          errors.push(
+            `Missing required field "conditions.options.${field}". ` +
+            `Expected value: ${typeof expectedValue === 'string' ? `"${expectedValue}"` : expectedValue}`
+          );
+        }
+      }
+    }
+
+    // Validate operators in conditions
+    if (conditions?.conditions && Array.isArray(conditions.conditions)) {
+      conditions.conditions.forEach((condition: any, i: number) => {
+        const operatorErrors = validateOperatorStructure(condition.operator, `conditions.conditions[${i}].operator`);
+        errors.push(...operatorErrors);
+      });
+    }
+  }
+
+  // Validate Switch node
+  if (isSwitchNode) {
+    const rules = (node.parameters.rules as any);
+
+    if (rules?.rules && Array.isArray(rules.rules)) {
+      rules.rules.forEach((rule: any, ruleIndex: number) => {
+        // Check rule.conditions.options
+        if (!rule.conditions?.options) {
+          errors.push(
+            `Missing required "rules.rules[${ruleIndex}].conditions.options". ` +
+            'Switch v3.2+ requires: {version: 2, leftValue: "", caseSensitive: true, typeValidation: "strict"}'
+          );
+        } else {
+          // Validate required fields
+          const requiredFields = {
+            version: 2,
+            leftValue: '',
+            caseSensitive: 'boolean',
+            typeValidation: 'strict'
+          };
+
+          for (const [field, expectedValue] of Object.entries(requiredFields)) {
+            if (!(field in rule.conditions.options)) {
+              errors.push(
+                `Missing required field "rules.rules[${ruleIndex}].conditions.options.${field}". ` +
+                `Expected value: ${typeof expectedValue === 'string' ? `"${expectedValue}"` : expectedValue}`
+              );
+            }
+          }
+        }
+
+        // Validate operators in rule conditions
+        if (rule.conditions?.conditions && Array.isArray(rule.conditions.conditions)) {
+          rule.conditions.conditions.forEach((condition: any, condIndex: number) => {
+            const operatorErrors = validateOperatorStructure(
+              condition.operator,
+              `rules.rules[${ruleIndex}].conditions.conditions[${condIndex}].operator`
+            );
+            errors.push(...operatorErrors);
+          });
+        }
+      });
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Validate operator structure
+ * Ensures operator has correct format: {type, operation, singleValue?}
+ */
+export function validateOperatorStructure(operator: any, path: string): string[] {
+  const errors: string[] = [];
+
+  if (!operator || typeof operator !== 'object') {
+    errors.push(`${path}: operator is missing or not an object`);
+    return errors;
+  }
+
+  // Check required field: type (data type, not operation name)
+  if (!operator.type) {
+    errors.push(
+      `${path}: missing required field "type". ` +
+      'Must be a data type: "string", "number", "boolean", "dateTime", "array", or "object"'
+    );
+  } else {
+    const validTypes = ['string', 'number', 'boolean', 'dateTime', 'array', 'object'];
+    if (!validTypes.includes(operator.type)) {
+      errors.push(
+        `${path}: invalid type "${operator.type}". ` +
+        `Type must be a data type (${validTypes.join(', ')}), not an operation name. ` +
+        'Did you mean to use the "operation" field?'
+      );
+    }
+  }
+
+  // Check required field: operation
+  if (!operator.operation) {
+    errors.push(
+      `${path}: missing required field "operation". ` +
+      'Operation specifies the comparison type (e.g., "equals", "contains", "isNotEmpty")'
+    );
+  }
+
+  // Check singleValue based on operator type
+  if (operator.operation) {
+    const unaryOperators = ['isEmpty', 'isNotEmpty', 'true', 'false', 'isNumeric'];
+    const isUnary = unaryOperators.includes(operator.operation);
+
+    if (isUnary) {
+      // Unary operators MUST have singleValue: true
+      if (operator.singleValue !== true) {
+        errors.push(
+          `${path}: unary operator "${operator.operation}" requires "singleValue: true". ` +
+          'Unary operators do not use rightValue.'
+        );
+      }
+    } else {
+      // Binary operators should NOT have singleValue: true
+      if (operator.singleValue === true) {
+        errors.push(
+          `${path}: binary operator "${operator.operation}" should not have "singleValue: true". ` +
+          'Only unary operators (isEmpty, isNotEmpty, true, false, isNumeric) need this property.'
+        );
+      }
+    }
+  }
+
+  return errors;
 }
 
 // Get webhook URL from workflow

@@ -11,7 +11,8 @@ export const n8nCreateWorkflowDoc: ToolDocumentation = {
     tips: [
       'Workflow created inactive',
       'Returns ID for future updates',
-      'Validate first with validate_workflow'
+      'Validate first with validate_workflow',
+      'Auto-sanitization fixes operator structures and missing metadata during creation'
     ]
   },
   full: {
@@ -90,7 +91,9 @@ n8n_create_workflow({
       'Workflows created in INACTIVE state - must activate separately',
       'Node IDs must be unique within workflow',
       'Credentials must be configured separately in n8n',
-      'Node type names must include package prefix (e.g., "n8n-nodes-base.slack")'
+      'Node type names must include package prefix (e.g., "n8n-nodes-base.slack")',
+      '**Auto-sanitization runs on creation**: All nodes sanitized before workflow created (operator structures fixed, missing metadata added)',
+      '**Auto-sanitization cannot prevent all failures**: Broken connections or invalid node configurations may still cause creation to fail'
     ],
     relatedTools: ['validate_workflow', 'n8n_update_partial_workflow', 'n8n_trigger_webhook_workflow']
   }

@@ -11,7 +11,8 @@ export const validateNodeOperationDoc: ToolDocumentation = {
     tips: [
       'Profile choices: minimal (editing), runtime (execution), ai-friendly (balanced), strict (deployment)',
       'Returns fixes you can apply directly',
-      'Operation-aware - knows Slack post needs text'
+      'Operation-aware - knows Slack post needs text',
+      'Validates operator structures for IF v2.2+ and Switch v3.2+ nodes'
     ]
   },
   full: {
@@ -71,7 +72,9 @@ export const validateNodeOperationDoc: ToolDocumentation = {
       'Validate configuration before workflow execution',
       'Debug why a node isn\'t working as expected',
       'Generate configuration fixes automatically',
-      'Different validation for editing vs production'
+      'Different validation for editing vs production',
+      'Check IF/Switch operator structures (binary vs unary operators)',
+      'Validate conditions.options metadata for filter-based nodes'
     ],
     performance: '<100ms for most nodes, <200ms for complex nodes with many conditions',
     bestPractices: [
@@ -85,7 +88,10 @@ export const validateNodeOperationDoc: ToolDocumentation = {
     pitfalls: [
       'Must include operation fields for multi-operation nodes',
       'Fixes are suggestions - review before applying',
-      'Profile affects what\'s validated - minimal skips many checks'
+      'Profile affects what\'s validated - minimal skips many checks',
+      '**Binary vs Unary operators**: Binary operators (equals, contains, greaterThan) must NOT have singleValue:true. Unary operators (isEmpty, isNotEmpty, true, false) REQUIRE singleValue:true',
+      '**IF v2.2+ and Switch v3.2+ nodes**: Must have complete conditions.options structure: {version: 2, leftValue: "", caseSensitive: true/false, typeValidation: "strict"}',
+      '**Operator type field**: Must be data type (string/number/boolean/dateTime/array/object), NOT operation name (e.g., use type:"string" operation:"equals", not type:"equals")'
     ],
     relatedTools: ['validate_node_minimal for quick checks', 'get_node_essentials for valid examples', 'validate_workflow for complete workflow validation']
   }

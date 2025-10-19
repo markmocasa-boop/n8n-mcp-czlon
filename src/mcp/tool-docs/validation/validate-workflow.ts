@@ -11,7 +11,8 @@ export const validateWorkflowDoc: ToolDocumentation = {
     tips: [
       'Always validate before n8n_create_workflow to catch errors early',
       'Use options.profile="minimal" for quick checks during development',
-      'AI tool connections are automatically validated for proper node references'
+      'AI tool connections are automatically validated for proper node references',
+      'Detects operator structure issues (binary vs unary, singleValue requirements)'
     ]
   },
   full: {
@@ -67,7 +68,9 @@ export const validateWorkflowDoc: ToolDocumentation = {
       'Use minimal profile during development, strict profile before production',
       'Pay attention to warnings - they often indicate potential runtime issues',
       'Validate after any workflow modifications, especially connection changes',
-      'Check statistics to understand workflow complexity'
+      'Check statistics to understand workflow complexity',
+      '**Auto-sanitization runs during create/update**: Operator structures and missing metadata are automatically fixed when workflows are created or updated, but validation helps catch issues before they reach n8n',
+      'If validation detects operator issues, they will be auto-fixed during n8n_create_workflow or n8n_update_partial_workflow'
     ],
     pitfalls: [
       'Large workflows (100+ nodes) may take longer to validate',

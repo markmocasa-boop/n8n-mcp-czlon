@@ -7,6 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.3] - 2025-10-19
+
+### 🔍 Enhanced Error Messages & Documentation
+
+**Issue #331: Enhanced Workflow Validation Error Messages**
+
+Significantly improved error messages and recovery guidance for workflow validation failures, making it easier for AI agents to diagnose and fix workflow issues.
+
+#### Problem
+
+When workflow validation failed after applying diff operations, error messages were generic and unhelpful:
+- Simple "Workflow validation failed after applying operations" message
+- No categorization of error types
+- No recovery guidance for AI agents
+- Difficult to understand what went wrong and how to fix it
+
+#### Fixed
+
+**1. Enhanced Error Messages (handlers-workflow-diff.ts:130-193)**
+- **Error Categorization**: Analyzes errors and categorizes them by type (operator issues, connection issues, missing metadata, branch mismatches)
+- **Targeted Recovery Guidance**: Provides specific, actionable steps based on error type
+- **Clear Error Messages**: Shows single error or count with detailed context
+- **Auto-Sanitization Notes**: Explains what auto-sanitization can and cannot fix
+
+**Example Error Response**:
+```json
+{
+  "success": false,
+  "error": "Workflow validation failed: Disconnected nodes detected: \"Node Name\" (node-type)",
+  "details": {
+    "errors": ["Disconnected nodes detected..."],
+    "errorCount": 1,
+    "recoveryGuidance": [
+      "Connection validation failed. Check all node connections reference existing nodes.",
+      "Use cleanStaleConnections operation to remove connections to non-existent nodes."
+    ],
+    "note": "Operations were applied but workflow was NOT saved to prevent UI errors.",
+    "autoSanitizationNote": "Auto-sanitization runs on all nodes to fix operators/metadata..."
+  }
+}
+```
+
+**2. Comprehensive Documentation Updates**
+
+Updated 4 tool documentation files to explain auto-sanitization system:
+
+- **n8n-update-partial-workflow.ts**: Added comprehensive "Auto-Sanitization System" section
+  - Explains what gets auto-fixed (operator structures, missing metadata)
+  - Describes sanitization scope (runs on ALL nodes)
+  - Lists limitations (cannot fix broken connections, branch mismatches)
+  - Provides recovery guidance for issues beyond auto-sanitization
+
+- **n8n-create-workflow.ts**: Added tips and pitfalls about auto-sanitization during workflow creation
+
+- **validate-node-operation.ts**: Added guidance for IF/Switch operator validation
+  - Binary vs unary operator rules
+  - conditions.options metadata requirements
+  - Operator type field usage
+
+- **validate-workflow.ts**: Added best practices about auto-sanitization and validation
+
+#### Impact
+
+**AI Agent Experience**:
+- ✅ **Clear Error Messages**: Specific errors with exact problem identification
+- ✅ **Actionable Recovery**: Step-by-step guidance to fix issues
+- ✅ **Error Categorization**: Understand error type immediately
+- ✅ **Example Code**: Error responses include fix suggestions with code snippets
+
+**Documentation Quality**:
+- ✅ **Comprehensive**: Auto-sanitization system fully documented
+- ✅ **Accurate**: All technical claims verified by tests
+- ✅ **Helpful**: Clear explanations of what can/cannot be auto-fixed
+
+**Error Response Structure**:
+- `details.errors` - Array of specific error messages
+- `details.errorCount` - Number of errors found
+- `details.recoveryGuidance` - Actionable steps to fix issues
+- `details.note` - Explanation of what happened
+- `details.autoSanitizationNote` - Auto-sanitization limitations
+
+#### Testing
+
+- ✅ All 26 update-partial-workflow tests passing
+- ✅ All 14 node-sanitizer tests passing
+- ✅ Backward compatibility maintained (details.errors field preserved)
+- ✅ Integration tested with n8n-mcp-tester agent
+- ✅ Code review approved (no critical issues)
+
+#### Files Changed
+
+**Code (1 file)**:
+- `src/mcp/handlers-workflow-diff.ts` - Enhanced error messages with categorization and recovery guidance
+
+**Documentation (4 files)**:
+- `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts` - Auto-sanitization section
+- `src/mcp/tool-docs/workflow_management/n8n-create-workflow.ts` - Auto-sanitization tips
+- `src/mcp/tool-docs/validation/validate-node-operation.ts` - Operator validation guidance
+- `src/mcp/tool-docs/validation/validate-workflow.ts` - Auto-sanitization best practices
+
+---
+
+## [2.20.2] - 2025-10-18
+
 ### 🐛 Bug Fixes
 
 **Issue #331: Prevent Broken Workflows via Partial Updates (Enhanced)**

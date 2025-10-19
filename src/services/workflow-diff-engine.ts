@@ -31,6 +31,7 @@ import {
 import { Workflow, WorkflowNode, WorkflowConnection } from '../types/n8n-api';
 import { Logger } from '../utils/logger';
 import { validateWorkflowNode, validateWorkflowConnections } from './n8n-validation';
+import { sanitizeNode, sanitizeWorkflowNodes } from './node-sanitizer';
 
 const logger = new Logger({ prefix: '[WorkflowDiffEngine]' });
 
@@ -173,6 +174,13 @@ export class WorkflowDiffEngine {
             };
           }
         }
+
+        // Sanitize ALL nodes in the workflow after operations are applied
+        // This ensures existing invalid nodes (e.g., binary operators with singleValue: true)
+        // are fixed automatically when any update is made to the workflow
+        workflowCopy.nodes = workflowCopy.nodes.map((node: WorkflowNode) => sanitizeNode(node));
+
+        logger.debug('Applied full-workflow sanitization to all nodes');
 
         // If validateOnly flag is set, return success without applying
         if (request.validateOnly) {
@@ -526,8 +534,11 @@ export class WorkflowDiffEngine {
       alwaysOutputData: operation.node.alwaysOutputData,
       executeOnce: operation.node.executeOnce
     };
-    
-    workflow.nodes.push(newNode);
+
+    // Sanitize node to ensure complete metadata (filter options, operator structure, etc.)
+    const sanitizedNode = sanitizeNode(newNode);
+
+    workflow.nodes.push(sanitizedNode);
   }
 
   private applyRemoveNode(workflow: Workflow, operation: RemoveNodeOperation): void {
@@ -567,11 +578,17 @@ export class WorkflowDiffEngine {
   private applyUpdateNode(workflow: Workflow, operation: UpdateNodeOperation): void {
     const node = this.findNode(workflow, operation.nodeId, operation.nodeName);
     if (!node) return;
-    
+
     // Apply updates using dot notation
     Object.entries(operation.updates).forEach(([path, value]) => {
       this.setNestedProperty(node, path, value);
     });
+
+    // Sanitize node after updates to ensure metadata is complete
+    const sanitized = sanitizeNode(node);
+
+    // Update the node in-place
+    Object.assign(node, sanitized);
   }
 
   private applyMoveNode(workflow: Workflow, operation: MoveNodeOperation): void {

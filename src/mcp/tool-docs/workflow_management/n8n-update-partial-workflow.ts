@@ -17,7 +17,8 @@ export const n8nUpdatePartialWorkflowDoc: ToolDocumentation = {
       'Use continueOnError mode for best-effort bulk operations',
       'Validate with validateOnly first',
       'For AI connections, specify sourceOutput type (ai_languageModel, ai_tool, etc.)',
-      'Batch AI component connections for atomic updates'
+      'Batch AI component connections for atomic updates',
+      'Auto-sanitization: ALL nodes auto-fixed during updates (operator structures, missing metadata)'
     ]
   },
   full: {
@@ -94,7 +95,41 @@ The **cleanStaleConnections** operation automatically removes broken connection 
 Set **continueOnError: true** to apply valid operations even if some fail. Returns detailed results showing which operations succeeded/failed. Perfect for bulk cleanup operations.
 
 ### Graceful Error Handling
-Add **ignoreErrors: true** to removeConnection operations to prevent failures when connections don't exist.`,
+Add **ignoreErrors: true** to removeConnection operations to prevent failures when connections don't exist.
+
+## Auto-Sanitization System
+
+### What Gets Auto-Fixed
+When ANY workflow update is made, ALL nodes in the workflow are automatically sanitized to ensure complete metadata and correct structure:
+
+1. **Operator Structure Fixes**:
+   - Binary operators (equals, contains, greaterThan, etc.) automatically have \`singleValue\` removed
+   - Unary operators (isEmpty, isNotEmpty, true, false) automatically get \`singleValue: true\` added
+   - Invalid operator structures (e.g., \`{type: "isNotEmpty"}\`) are corrected to \`{type: "boolean", operation: "isNotEmpty"}\`
+
+2. **Missing Metadata Added**:
+   - IF v2.2+ nodes get complete \`conditions.options\` structure if missing
+   - Switch v3.2+ nodes get complete \`conditions.options\` for all rules
+   - Required fields: \`{version: 2, leftValue: "", caseSensitive: true, typeValidation: "strict"}\`
+
+### Sanitization Scope
+- Runs on **ALL nodes** in the workflow, not just modified ones
+- Triggered by ANY update operation (addNode, updateNode, addConnection, etc.)
+- Prevents workflow corruption that would make UI unrenderable
+
+### Limitations
+Auto-sanitization CANNOT fix:
+- Broken connections (connections referencing non-existent nodes) - use \`cleanStaleConnections\`
+- Branch count mismatches (e.g., Switch with 3 rules but only 2 outputs) - requires manual connection fixes
+- Workflows in paradoxical corrupt states (API returns corrupt data, API rejects updates) - must recreate workflow
+
+### Recovery Guidance
+If validation still fails after auto-sanitization:
+1. Check error details for specific issues
+2. Use \`validate_workflow\` to see all validation errors
+3. For connection issues, use \`cleanStaleConnections\` operation
+4. For branch mismatches, add missing output connections
+5. For paradoxical corrupted workflows, create new workflow and migrate nodes`,
     parameters: {
       id: { type: 'string', required: true, description: 'Workflow ID to update' },
       operations: {
@@ -181,7 +216,11 @@ Add **ignoreErrors: true** to removeConnection operations to prevent failures wh
       'Smart parameters (branch, case) only work with IF and Switch nodes - ignored for other node types',
       'Explicit sourceIndex overrides smart parameters (branch, case) if both provided',
       'cleanStaleConnections removes ALL broken connections - cannot be selective',
-      'replaceConnections overwrites entire connections object - all previous connections lost'
+      'replaceConnections overwrites entire connections object - all previous connections lost',
+      '**Auto-sanitization behavior**: Binary operators (equals, contains) automatically have singleValue removed; unary operators (isEmpty, isNotEmpty) automatically get singleValue:true added',
+      '**Auto-sanitization runs on ALL nodes**: When ANY update is made, ALL nodes in the workflow are sanitized (not just modified ones)',
+      '**Auto-sanitization cannot fix everything**: It fixes operator structures and missing metadata, but cannot fix broken connections or branch mismatches',
+      '**Corrupted workflows beyond repair**: Workflows in paradoxical states (API returns corrupt, API rejects updates) cannot be fixed via API - must be recreated'
     ],
     relatedTools: ['n8n_update_full_workflow', 'n8n_get_workflow', 'validate_workflow', 'tools_documentation']
   }

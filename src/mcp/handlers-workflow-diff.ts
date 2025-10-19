@@ -138,14 +138,56 @@ export async function handleUpdatePartialWorkflow(args: unknown, context?: Insta
           errors: structureErrors
         });
 
+        // Analyze error types to provide targeted recovery guidance
+        const errorTypes = new Set<string>();
+        structureErrors.forEach(err => {
+          if (err.includes('operator') || err.includes('singleValue')) errorTypes.add('operator_issues');
+          if (err.includes('connection') || err.includes('referenced')) errorTypes.add('connection_issues');
+          if (err.includes('Missing') || err.includes('missing')) errorTypes.add('missing_metadata');
+          if (err.includes('branch') || err.includes('output')) errorTypes.add('branch_mismatch');
+        });
+
+        // Build recovery guidance based on error types
+        const recoverySteps = [];
+        if (errorTypes.has('operator_issues')) {
+          recoverySteps.push('Operator structure issue detected. Use validate_node_operation to check specific nodes.');
+          recoverySteps.push('Binary operators (equals, contains, greaterThan, etc.) must NOT have singleValue:true');
+          recoverySteps.push('Unary operators (isEmpty, isNotEmpty, true, false) REQUIRE singleValue:true');
+        }
+        if (errorTypes.has('connection_issues')) {
+          recoverySteps.push('Connection validation failed. Check all node connections reference existing nodes.');
+          recoverySteps.push('Use cleanStaleConnections operation to remove connections to non-existent nodes.');
+        }
+        if (errorTypes.has('missing_metadata')) {
+          recoverySteps.push('Missing metadata detected. Ensure filter-based nodes (IF v2.2+, Switch v3.2+) have complete conditions.options.');
+          recoverySteps.push('Required options: {version: 2, leftValue: "", caseSensitive: true, typeValidation: "strict"}');
+        }
+        if (errorTypes.has('branch_mismatch')) {
+          recoverySteps.push('Branch count mismatch. Ensure Switch nodes have outputs for all rules (e.g., 3 rules = 3 output branches).');
+        }
+
+        // Add generic recovery steps if no specific guidance
+        if (recoverySteps.length === 0) {
+          recoverySteps.push('Review the validation errors listed above');
+          recoverySteps.push('Fix issues using updateNode or cleanStaleConnections operations');
+          recoverySteps.push('Run validate_workflow again to verify fixes');
+        }
+
+        const errorMessage = structureErrors.length === 1
+          ? `Workflow validation failed: ${structureErrors[0]}`
+          : `Workflow validation failed with ${structureErrors.length} structural issues`;
+
         return {
           success: false,
-          error: 'Workflow validation failed after applying operations',
+          error: errorMessage,
           details: {
             errors: structureErrors,
-            hint: 'Operations were valid individually but created an invalid workflow structure. This prevents corrupted workflows that the n8n UI cannot render.',
+            errorCount: structureErrors.length,
             operationsApplied: diffResult.operationsApplied,
-            applied: diffResult.applied
+            applied: diffResult.applied,
+            recoveryGuidance: recoverySteps,
+            note: 'Operations were applied but created an invalid workflow structure. The workflow was NOT saved to n8n to prevent UI rendering errors.',
+            autoSanitizationNote: 'Auto-sanitization runs on all nodes during updates to fix operator structures and add missing metadata. However, it cannot fix all issues (e.g., broken connections, branch mismatches). Use the recovery guidance above to resolve remaining issues.'
           }
         };
       }
