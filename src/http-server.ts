@@ -404,16 +404,25 @@ export async function startFixedHTTPServer() {
               
               try {
                 const result = await mcpServer.executeTool(toolName, toolArgs);
+                
+                // Build MCP-compliant response with structuredContent for validation tools
+                const mcpResult: any = {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify(result, null, 2)
+                    }
+                  ]
+                };
+                
+                // Add structuredContent for validation tools (they have outputSchema)
+                if (toolName.startsWith('validate_')) {
+                  mcpResult.structuredContent = result;
+                }
+                
                 response = {
                   jsonrpc: '2.0',
-                  result: {
-                    content: [
-                      {
-                        type: 'text',
-                        text: JSON.stringify(result, null, 2)
-                      }
-                    ]
-                  },
+                  result: mcpResult,
                   id: jsonRpcRequest.id
                 };
               } catch (error) {
