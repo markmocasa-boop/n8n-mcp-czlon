@@ -467,6 +467,15 @@ export class EnhancedConfigValidator extends ConfigValidator {
   }
   
   /**
+   * Check if a warning should be filtered out (hardcoded credentials shown only in strict mode)
+   */
+  private static shouldFilterCredentialWarning(warning: ValidationWarning): boolean {
+    return warning.type === 'security' &&
+           warning.message !== undefined &&
+           warning.message.includes('Hardcoded nodeCredentialType');
+  }
+
+  /**
    * Apply profile-based filtering to validation results
    */
   private static applyProfileFilters(
@@ -478,9 +487,13 @@ export class EnhancedConfigValidator extends ConfigValidator {
         // Only keep missing required errors
         result.errors = result.errors.filter(e => e.type === 'missing_required');
         // Keep ONLY critical warnings (security and deprecated)
-        result.warnings = result.warnings.filter(w =>
-          w.type === 'security' || w.type === 'deprecated'
-        );
+        // But filter out hardcoded credential type warnings (only show in strict mode)
+        result.warnings = result.warnings.filter(w => {
+          if (this.shouldFilterCredentialWarning(w)) {
+            return false;
+          }
+          return w.type === 'security' || w.type === 'deprecated';
+        });
         result.suggestions = [];
         break;
 
@@ -493,6 +506,10 @@ export class EnhancedConfigValidator extends ConfigValidator {
         );
         // Keep security and deprecated warnings, REMOVE property visibility warnings
         result.warnings = result.warnings.filter(w => {
+          // Filter out hardcoded credential type warnings (only show in strict mode)
+          if (this.shouldFilterCredentialWarning(w)) {
+            return false;
+          }
           if (w.type === 'security' || w.type === 'deprecated') return true;
           // FILTER OUT property visibility warnings (too noisy)
           if (w.type === 'inefficient' && w.message && w.message.includes('not visible')) {
@@ -518,6 +535,10 @@ export class EnhancedConfigValidator extends ConfigValidator {
         // Current behavior - balanced for AI agents
         // Filter out noise but keep helpful warnings
         result.warnings = result.warnings.filter(w => {
+          // Filter out hardcoded credential type warnings (only show in strict mode)
+          if (this.shouldFilterCredentialWarning(w)) {
+            return false;
+          }
           // Keep security and deprecated warnings
           if (w.type === 'security' || w.type === 'deprecated') return true;
           // Keep missing common properties

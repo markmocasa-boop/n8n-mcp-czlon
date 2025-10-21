@@ -1,9 +1,11 @@
 /**
  * Configuration Validator Service
- * 
+ *
  * Validates node configurations to catch errors before execution.
  * Provides helpful suggestions and identifies missing or misconfigured properties.
  */
+
+import { shouldSkipLiteralValidation } from '../utils/expression-utils.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -381,13 +383,16 @@ export class ConfigValidator {
   ): void {
     // URL validation
     if (config.url && typeof config.url === 'string') {
-      if (!config.url.startsWith('http://') && !config.url.startsWith('https://')) {
-        errors.push({
-          type: 'invalid_value',
-          property: 'url',
-          message: 'URL must start with http:// or https://',
-          fix: 'Add https:// to the beginning of your URL'
-        });
+      // Skip validation for expressions - they will be evaluated at runtime
+      if (!shouldSkipLiteralValidation(config.url)) {
+        if (!config.url.startsWith('http://') && !config.url.startsWith('https://')) {
+          errors.push({
+            type: 'invalid_value',
+            property: 'url',
+            message: 'URL must start with http:// or https://',
+            fix: 'Add https:// to the beginning of your URL'
+          });
+        }
       }
     }
     
@@ -417,15 +422,19 @@ export class ConfigValidator {
     
     // JSON body validation
     if (config.sendBody && config.contentType === 'json' && config.jsonBody) {
-      try {
-        JSON.parse(config.jsonBody);
-      } catch (e) {
-        errors.push({
-          type: 'invalid_value',
-          property: 'jsonBody',
-          message: 'jsonBody contains invalid JSON',
-          fix: 'Ensure jsonBody contains valid JSON syntax'
-        });
+      // Skip validation for expressions - they will be evaluated at runtime
+      if (!shouldSkipLiteralValidation(config.jsonBody)) {
+        try {
+          JSON.parse(config.jsonBody);
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : 'Unknown parsing error';
+          errors.push({
+            type: 'invalid_value',
+            property: 'jsonBody',
+            message: `jsonBody contains invalid JSON: ${errorMsg}`,
+            fix: 'Fix JSON syntax error and ensure valid JSON format'
+          });
+        }
       }
     }
   }

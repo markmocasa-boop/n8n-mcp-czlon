@@ -1292,6 +1292,15 @@ export class WorkflowValidator {
 
   /**
    * Check node-level error handling configuration for a single node
+   *
+   * Validates error handling properties (onError, continueOnFail, retryOnFail)
+   * and provides warnings for error-prone nodes (HTTP, webhooks, databases)
+   * that lack proper error handling. Delegates webhook-specific validation
+   * to checkWebhookErrorHandling() for clearer logic.
+   *
+   * @param node - The workflow node to validate
+   * @param workflow - The complete workflow for context
+   * @param result - Validation result to add errors/warnings to
    */
   private checkNodeErrorHandling(
     node: WorkflowNode,
@@ -1502,12 +1511,8 @@ export class WorkflowValidator {
             message: 'HTTP Request node without error handling. Consider adding "onError: \'continueRegularOutput\'" for non-critical requests or "retryOnFail: true" for transient failures.'
           });
         } else if (normalizedType.includes('webhook')) {
-          result.warnings.push({
-            type: 'warning',
-            nodeId: node.id,
-            nodeName: node.name,
-            message: 'Webhook node without error handling. Consider adding "onError: \'continueRegularOutput\'" to prevent workflow failures from blocking webhook responses.'
-          });
+          // Delegate to specialized webhook validation helper
+          this.checkWebhookErrorHandling(node, normalizedType, result);
         } else if (errorProneNodeTypes.some(db => normalizedType.includes(db) && ['postgres', 'mysql', 'mongodb'].includes(db))) {
           result.warnings.push({
             type: 'warning',
@@ -1596,6 +1601,52 @@ export class WorkflowValidator {
         }
       }
 
+  }
+
+  /**
+   * Check webhook-specific error handling requirements
+   *
+   * Webhooks have special error handling requirements:
+   * - respondToWebhook nodes (response nodes) don't need error handling
+   * - Webhook nodes with responseNode mode REQUIRE onError to ensure responses
+   * - Regular webhook nodes should have error handling to prevent blocking
+   *
+   * @param node - The webhook node to check
+   * @param normalizedType - Normalized node type for comparison
+   * @param result - Validation result to add errors/warnings to
+   */
+  private checkWebhookErrorHandling(
+    node: WorkflowNode,
+    normalizedType: string,
+    result: WorkflowValidationResult
+  ): void {
+    // respondToWebhook nodes are response nodes (endpoints), not triggers
+    // They're the END of execution, not controllers of flow - skip error handling check
+    if (normalizedType.includes('respondtowebhook')) {
+      return;
+    }
+
+    // Check for responseNode mode specifically
+    // responseNode mode requires onError to ensure response is sent even on error
+    if (node.parameters?.responseMode === 'responseNode') {
+      if (!node.onError && !node.continueOnFail) {
+        result.errors.push({
+          type: 'error',
+          nodeId: node.id,
+          nodeName: node.name,
+          message: 'responseNode mode requires onError: "continueRegularOutput"'
+        });
+      }
+      return;
+    }
+
+    // Regular webhook nodes without responseNode mode
+    result.warnings.push({
+      type: 'warning',
+      nodeId: node.id,
+      nodeName: node.name,
+      message: 'Webhook node without error handling. Consider adding "onError: \'continueRegularOutput\'" to prevent workflow failures from blocking webhook responses.'
+    });
   }
 
   /**

@@ -207,8 +207,14 @@ export class ExpressionValidator {
     expr: string,
     result: ExpressionValidationResult
   ): void {
-    // Check for missing $ prefix - but exclude cases where $ is already present
-    const missingPrefixPattern = /(?<!\$)\b(json|node|input|items|workflow|execution)\b(?!\s*:)/;
+    // Check for missing $ prefix - but exclude cases where $ is already present OR it's property access (e.g., .json)
+    // The pattern now excludes:
+    // - Immediately preceded by $ (e.g., $json) - handled by (?<!\$)
+    // - Preceded by a dot (e.g., .json in $('Node').item.json.field) - handled by (?<!\.)
+    // - Inside word characters (e.g., myJson) - handled by (?<!\w)
+    // - Inside bracket notation (e.g., ['json']) - handled by (?<![)
+    // - After opening bracket or quote (e.g., "json" or ['json'])
+    const missingPrefixPattern = /(?<![.$\w['])\b(json|node|input|items|workflow|execution)\b(?!\s*[:''])/;
     if (expr.match(missingPrefixPattern)) {
       result.warnings.push(
         'Possible missing $ prefix for variable (e.g., use $json instead of json)'

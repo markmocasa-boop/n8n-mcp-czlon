@@ -1038,16 +1038,9 @@ export class NodeSpecificValidators {
       delete autofix.continueOnFail;
     }
     
-    // Response mode validation
-    if (responseMode === 'responseNode' && !config.onError && !config.continueOnFail) {
-      errors.push({
-        type: 'invalid_configuration',
-        property: 'responseMode',
-        message: 'responseNode mode requires onError: "continueRegularOutput"',
-        fix: 'Set onError to ensure response is always sent'
-      });
-    }
-    
+    // Note: responseNode mode validation moved to workflow-validator.ts
+    // where it has access to node-level onError property (not just config/parameters)
+
     // Always output data for debugging
     if (!config.alwaysOutputData) {
       suggestions.push('Enable alwaysOutputData to debug webhook payloads');
