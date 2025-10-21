@@ -1610,15 +1610,20 @@ describe('NodeSpecificValidators', () => {
     });
 
     describe('response mode validation', () => {
-      it('should error on responseNode without error handling', () => {
+      // NOTE: responseNode mode validation was moved to workflow-validator.ts in Phase 5
+      // because it requires access to node-level onError property, not just config/parameters.
+      // See workflow-validator.ts checkWebhookErrorHandling() method for the actual implementation.
+      // The validation cannot be performed at the node-specific-validator level.
+
+      it.skip('should error on responseNode without error handling - MOVED TO WORKFLOW VALIDATOR', () => {
         context.config = {
           path: 'my-webhook',
           httpMethod: 'POST',
           responseMode: 'responseNode'
         };
-        
+
         NodeSpecificValidators.validateWebhook(context);
-        
+
         expect(context.errors).toContainEqual({
           type: 'invalid_configuration',
           property: 'responseMode',
@@ -1627,14 +1632,14 @@ describe('NodeSpecificValidators', () => {
         });
       });
 
-      it('should not error on responseNode with proper error handling', () => {
+      it.skip('should not error on responseNode with proper error handling - MOVED TO WORKFLOW VALIDATOR', () => {
         context.config = {
           path: 'my-webhook',
           httpMethod: 'POST',
           responseMode: 'responseNode',
           onError: 'continueRegularOutput'
         };
-        
+
         NodeSpecificValidators.validateWebhook(context);
         
         const responseModeErrors = context.errors.filter(e => e.property === 'responseMode');
