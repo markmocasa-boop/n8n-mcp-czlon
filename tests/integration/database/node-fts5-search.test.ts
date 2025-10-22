@@ -143,18 +143,18 @@ describe('Node FTS5 Search Integration Tests', () => {
         JOIN nodes_fts ON n.rowid = nodes_fts.rowid
         WHERE nodes_fts MATCH 'webhook'
         ORDER BY
-          rank,
           CASE
-            WHEN n.display_name = 'webhook' THEN 0
-            WHEN n.display_name LIKE '%webhook%' THEN 1
-            WHEN n.node_type LIKE '%webhook%' THEN 2
+            WHEN LOWER(n.display_name) = LOWER('webhook') THEN 0
+            WHEN LOWER(n.display_name) LIKE LOWER('%webhook%') THEN 1
+            WHEN LOWER(n.node_type) LIKE LOWER('%webhook%') THEN 2
             ELSE 3
-          END
+          END,
+          rank
         LIMIT 10
       `).all();
 
       expect(results.length).toBeGreaterThan(0);
-      // Exact match should be in top results (using production boosting logic)
+      // Exact match should be in top results (using production boosting logic with CASE-first ordering)
       const topResults = results.slice(0, 3).map((r: any) => r.node_type);
       expect(topResults).toContain('nodes-base.webhook');
     });

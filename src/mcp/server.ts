@@ -1276,20 +1276,20 @@ export class N8NDocumentationMCPServer {
     try {
       // Use FTS5 with ranking
       const nodes = this.db.prepare(`
-        SELECT 
+        SELECT
           n.*,
           rank
         FROM nodes n
         JOIN nodes_fts ON n.rowid = nodes_fts.rowid
         WHERE nodes_fts MATCH ?
-        ORDER BY 
-          rank,
-          CASE 
-            WHEN n.display_name = ? THEN 0
-            WHEN n.display_name LIKE ? THEN 1
-            WHEN n.node_type LIKE ? THEN 2
+        ORDER BY
+          CASE
+            WHEN LOWER(n.display_name) = LOWER(?) THEN 0
+            WHEN LOWER(n.display_name) LIKE LOWER(?) THEN 1
+            WHEN LOWER(n.node_type) LIKE LOWER(?) THEN 2
             ELSE 3
           END,
+          rank,
           n.display_name
         LIMIT ?
       `).all(ftsQuery, cleanedQuery, `%${cleanedQuery}%`, `%${cleanedQuery}%`, limit) as (NodeRow & { rank: number })[];
