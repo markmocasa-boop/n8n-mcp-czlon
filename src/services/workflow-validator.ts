@@ -11,6 +11,7 @@ import { NodeSimilarityService, NodeSuggestion } from './node-similarity-service
 import { NodeTypeNormalizer } from '../utils/node-type-normalizer';
 import { Logger } from '../utils/logger';
 import { validateAISpecificNodes, hasAINodes } from './ai-node-validator';
+import { isNonExecutableNode } from '../utils/node-classification';
 const logger = new Logger({ prefix: '[WorkflowValidator]' });
 
 interface WorkflowNode {
@@ -85,17 +86,8 @@ export class WorkflowValidator {
     this.similarityService = new NodeSimilarityService(nodeRepository);
   }
 
-  /**
-   * Check if a node is a Sticky Note or other non-executable node
-   */
-  private isStickyNote(node: WorkflowNode): boolean {
-    const stickyNoteTypes = [
-      'n8n-nodes-base.stickyNote',
-      'nodes-base.stickyNote',
-      '@n8n/n8n-nodes-base.stickyNote'
-    ];
-    return stickyNoteTypes.includes(node.type);
-  }
+  // Note: isStickyNote logic moved to shared utility: src/utils/node-classification.ts
+  // Use isNonExecutableNode(node.type) instead
 
   /**
    * Validate a complete workflow
@@ -146,7 +138,7 @@ export class WorkflowValidator {
       }
 
       // Update statistics after null check (exclude sticky notes from counts)
-      const executableNodes = Array.isArray(workflow.nodes) ? workflow.nodes.filter(n => !this.isStickyNote(n)) : [];
+      const executableNodes = Array.isArray(workflow.nodes) ? workflow.nodes.filter(n => !isNonExecutableNode(n.type)) : [];
       result.statistics.totalNodes = executableNodes.length;
       result.statistics.enabledNodes = executableNodes.filter(n => !n.disabled).length;
 
@@ -356,7 +348,7 @@ export class WorkflowValidator {
     profile: string
   ): Promise<void> {
     for (const node of workflow.nodes) {
-      if (node.disabled || this.isStickyNote(node)) continue;
+      if (node.disabled || isNonExecutableNode(node.type)) continue;
 
       try {
         // Validate node name length
@@ -632,7 +624,7 @@ export class WorkflowValidator {
 
     // Check for orphaned nodes (exclude sticky notes)
     for (const node of workflow.nodes) {
-      if (node.disabled || this.isStickyNote(node)) continue;
+      if (node.disabled || isNonExecutableNode(node.type)) continue;
 
       const normalizedType = NodeTypeNormalizer.normalizeToFullForm(node.type);
       const isTrigger = normalizedType.toLowerCase().includes('trigger') ||
@@ -877,7 +869,7 @@ export class WorkflowValidator {
     
     // Build node type map (exclude sticky notes)
     workflow.nodes.forEach(node => {
-      if (!this.isStickyNote(node)) {
+      if (!isNonExecutableNode(node.type)) {
         nodeTypeMap.set(node.name, node.type);
       }
     });
@@ -945,7 +937,7 @@ export class WorkflowValidator {
 
     // Check from all executable nodes (exclude sticky notes)
     for (const node of workflow.nodes) {
-      if (!this.isStickyNote(node) && !visited.has(node.name)) {
+      if (!isNonExecutableNode(node.type) && !visited.has(node.name)) {
         if (hasCycleDFS(node.name)) return true;
       }
     }
@@ -964,7 +956,7 @@ export class WorkflowValidator {
     const nodeNames = workflow.nodes.map(n => n.name);
 
     for (const node of workflow.nodes) {
-      if (node.disabled || this.isStickyNote(node)) continue;
+      if (node.disabled || isNonExecutableNode(node.type)) continue;
 
       // Skip expression validation for langchain nodes
       // They have AI-specific validators and different expression rules
@@ -1111,7 +1103,7 @@ export class WorkflowValidator {
 
     // Check node-level error handling properties for ALL executable nodes
     for (const node of workflow.nodes) {
-      if (!this.isStickyNote(node)) {
+      if (!isNonExecutableNode(node.type)) {
         this.checkNodeErrorHandling(node, workflow, result);
       }
     }
