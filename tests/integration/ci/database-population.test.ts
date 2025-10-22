@@ -205,9 +205,20 @@ describe.skipIf(!dbExists)('Database Content Validation', () => {
 
     it('MUST have FTS5 index properly ranked', () => {
       const results = db.prepare(`
-        SELECT node_type, rank FROM nodes_fts
+        SELECT
+          n.node_type,
+          rank
+        FROM nodes n
+        JOIN nodes_fts ON n.rowid = nodes_fts.rowid
         WHERE nodes_fts MATCH 'webhook'
-        ORDER BY rank
+        ORDER BY
+          rank,
+          CASE
+            WHEN n.display_name = 'webhook' THEN 0
+            WHEN n.display_name LIKE '%webhook%' THEN 1
+            WHEN n.node_type LIKE '%webhook%' THEN 2
+            ELSE 3
+          END
         LIMIT 5
       `).all();
 
@@ -215,7 +226,7 @@ describe.skipIf(!dbExists)('Database Content Validation', () => {
         'CRITICAL: FTS5 ranking not working. Search quality will be degraded.'
       ).toBeGreaterThan(0);
 
-      // Exact match should be in top results
+      // Exact match should be in top results (using production boosting logic)
       const topNodes = results.slice(0, 3).map((r: any) => r.node_type);
       expect(topNodes,
         'WARNING: Exact match "nodes-base.webhook" not in top 3 ranked results'
