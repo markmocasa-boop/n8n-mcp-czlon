@@ -12,7 +12,7 @@ import {
   AddConnectionOperation,
   RemoveConnectionOperation
 } from '@/types/workflow-diff';
-import { Workflow } from '@/types/n8n-api';
+import { Workflow, WorkflowNode } from '@/types/n8n-api';
 
 describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename', () => {
   let diffEngine: WorkflowDiffEngine;
@@ -78,7 +78,7 @@ describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename'
       expect(result.workflow).toBeDefined();
 
       // Node should be renamed
-      const renamedNode = result.workflow!.nodes.find(n => n.id === 'http-1');
+      const renamedNode = result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'http-1');
       expect(renamedNode?.name).toBe('HTTP Request Renamed');
 
       // Connection should reference new name
@@ -107,7 +107,7 @@ describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename'
       expect(result.workflow).toBeDefined();
 
       // Node should be renamed
-      const renamedNode = result.workflow!.nodes.find(n => n.id === 'webhook-1');
+      const renamedNode = result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'webhook-1');
       expect(renamedNode?.name).toBe('Webhook Renamed');
 
       // Connection key should use new name
@@ -692,9 +692,9 @@ describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename'
       expect(result.workflow).toBeDefined();
 
       // All nodes should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'webhook-1')?.name).toBe('Webhook Trigger');
-      expect(result.workflow!.nodes.find(n => n.id === 'http-1')?.name).toBe('API Call');
-      expect(result.workflow!.nodes.find(n => n.id === 'slack-1')?.name).toBe('Slack Notification');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'webhook-1')?.name).toBe('Webhook Trigger');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'http-1')?.name).toBe('API Call');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'slack-1')?.name).toBe('Slack Notification');
 
       // All connections should be updated
       expect(result.workflow!.connections['Webhook Trigger']).toBeDefined();
@@ -804,7 +804,7 @@ describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename'
       expect(result.workflow).toBeUndefined();
 
       // Original workflow should remain unchanged
-      const httpNode = baseWorkflow.nodes.find(n => n.id === 'http-1');
+      const httpNode = baseWorkflow.nodes.find((n: WorkflowNode) => n.id === 'http-1');
       expect(httpNode?.name).toBe('HTTP Request');
       expect(baseWorkflow.connections['Webhook'].main[0][0].node).toBe('HTTP Request');
     });
@@ -983,7 +983,7 @@ describe('WorkflowDiffEngine - Auto-Update Connection References on Node Rename'
       expect(result.workflow).toBeDefined();
 
       // Node should be renamed
-      const renamedNode = result.workflow!.nodes.find(n => n.id === '8546d741-1af1-4aa0-bf11-af6c926c0008');
+      const renamedNode = result.workflow!.nodes.find((n: WorkflowNode) => n.id === '8546d741-1af1-4aa0-bf11-af6c926c0008');
       expect(renamedNode?.name).toBe('Return 404 Not Found');
 
       // Parameters should be updated

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { WorkflowDiffEngine } from '@/services/workflow-diff-engine';
 import { validateWorkflowStructure } from '@/services/n8n-validation';
 import { WorkflowDiffRequest, UpdateNodeOperation } from '@/types/workflow-diff';
-import { Workflow } from '@/types/n8n-api';
+import { Workflow, WorkflowNode } from '@/types/n8n-api';
 
 describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
   let diffEngine: WorkflowDiffEngine;
@@ -168,7 +168,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // Node should be renamed
-      const renamedNode = result.workflow!.nodes.find(n => n.id === 'return-forbidden');
+      const renamedNode = result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'return-forbidden');
       expect(renamedNode?.name).toBe('Return 404 Not Found');
       expect(renamedNode?.parameters.options?.responseCode).toBe(404);
 
@@ -210,9 +210,9 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // All nodes should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'return-forbidden')?.name).toBe('Return 404 Not Found');
-      expect(result.workflow!.nodes.find(n => n.id === 'return-success')?.name).toBe('Return 201 Created');
-      expect(result.workflow!.nodes.find(n => n.id === 'return-error')?.name).toBe('Return 500 Internal Server Error');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'return-forbidden')?.name).toBe('Return 404 Not Found');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'return-success')?.name).toBe('Return 201 Created');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'return-error')?.name).toBe('Return 500 Internal Server Error');
 
       // All connections should be updated
       expect(result.workflow!.connections['Check Authorization'].main[1][0].node).toBe('Return 404 Not Found');
@@ -338,7 +338,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // Agent should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'agent-1')?.name).toBe('AI Support Assistant');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'agent-1')?.name).toBe('AI Support Assistant');
 
       // All connections should be updated
       expect(result.workflow!.connections['AI Support Assistant']).toBeDefined();
@@ -370,7 +370,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // Tool should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'tool-http')?.name).toBe('Documentation Search');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'tool-http')?.name).toBe('Documentation Search');
 
       // AI tool connection should reference new name
       expect(result.workflow!.connections['Support Agent'].ai_tool[0][0].node).toBe('Documentation Search');
@@ -487,7 +487,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // IF node should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'if-1')?.name).toBe('Validate Payment');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'if-1')?.name).toBe('Validate Payment');
 
       // Both branches should be updated
       expect(result.workflow!.connections['Validate Payment']).toBeDefined();
@@ -517,7 +517,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // Switch node should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'switch-1')?.name).toBe('Order Type Router');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'switch-1')?.name).toBe('Order Type Router');
 
       // All three cases should be updated
       expect(result.workflow!.connections['Order Type Router']).toBeDefined();
@@ -549,7 +549,7 @@ describe('WorkflowDiffEngine - Node Rename Integration Tests', () => {
       expect(result.workflow).toBeDefined();
 
       // Digital order node should be renamed
-      expect(result.workflow!.nodes.find(n => n.id === 'process-digital')?.name).toBe('Send Digital Download Link');
+      expect(result.workflow!.nodes.find((n: WorkflowNode) => n.id === 'process-digital')?.name).toBe('Send Digital Download Link');
 
       // Case 0 connection should be updated
       expect(result.workflow!.connections['Route by Order Type'].main[0][0].node).toBe('Send Digital Download Link');
