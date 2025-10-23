@@ -206,7 +206,7 @@ describe('Validation System Fixes', () => {
       const result = await workflowValidator.validateWorkflow(workflow);
 
       expect(result).toBeDefined();
-      expect(result.statistics.totalNodes).toBe(1); // Only webhook, sticky note excluded
+      expect(result.statistics.totalNodes).toBe(1); // Only webhook, non-executable nodes excluded
       expect(result.statistics.enabledNodes).toBe(1);
     });
 

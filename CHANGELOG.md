@@ -11,138 +11,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
-**Issue #351: Recognize All Trigger Node Types Including Execute Workflow Trigger**
+This release includes two critical bug fixes that improve workflow validation for sticky notes and trigger nodes.
+
+**Fix #1: Sticky Notes Validation - Disconnected Node False Positives (PR #350)**
+
+Fixed bug where sticky notes (UI-only annotation nodes) were incorrectly triggering "disconnected node" validation errors when updating workflows via MCP tools.
+
+#### Problem
+- Workflows with sticky notes failed validation with "Node is disconnected" errors
+- Validation logic was inconsistent between `workflow-validator.ts` and `n8n-validation.ts`
+- Sticky notes are UI-only annotations and should never trigger connection validation
+
+#### Fixed
+- **Created Shared Utility Module** (`src/utils/node-classification.ts`):
+  - `isStickyNote()`: Identifies all sticky note type variations
+  - `isTriggerNode()`: Identifies trigger nodes (webhook, manual, cron, schedule)
+  - `isNonExecutableNode()`: Identifies UI-only nodes
+  - `requiresIncomingConnection()`: Determines if node needs incoming connections
+- **Updated Validators**: Both validation files now properly skip sticky notes
+
+**Fix #2: Issue #351 - Recognize All Trigger Node Types Including Execute Workflow Trigger (PR #352)**
 
 Fixed validation logic that was incorrectly treating Execute Workflow Trigger and other trigger nodes as regular nodes, causing "disconnected node" errors during partial workflow updates.
 
 #### Problem
+The workflow validation system used a hardcoded list of only 5 trigger types, missing 200+ trigger nodes including `executeWorkflowTrigger`.
 
-The workflow validation system used a hardcoded list of only 3 trigger types:
-- `n8n-nodes-base.webhook`
-- `n8n-nodes-base.webhookTrigger`
-- `n8n-nodes-base.manualTrigger`
-
-This caused two issues:
-
-1. **Execute Workflow Trigger Not Recognized**: Workflows using `executeWorkflowTrigger` (for sub-workflow patterns) were flagged as having "disconnected nodes" because the trigger wasn't in the hardcoded list.
-
-2. **Missing Many Trigger Types**: Schedule triggers, email triggers, Slack triggers, and dozens of other triggers were also not recognized.
-
-3. **Active Workflow Validation Gap**: No validation prevented users from activating workflows that only have `executeWorkflowTrigger` nodes (which cannot activate workflows - they can only be invoked by other workflows).
+Additionally, no validation prevented users from activating workflows that only have `executeWorkflowTrigger` nodes (which cannot activate workflows - they can only be invoked by other workflows).
 
 #### Fixed
+- **Enhanced Trigger Detection** (`src/utils/node-type-utils.ts`):
+  - `isTriggerNode()`: Flexible pattern matching recognizes ALL triggers (200+)
+  - `isActivatableTrigger()`: Distinguishes triggers that can activate workflows
+  - `getTriggerTypeDescription()`: Human-readable trigger descriptions
 
-**1. Created Shared Trigger Detection Utilities** (`src/utils/node-type-utils.ts`)
+- **Active Workflow Validation** (`src/services/n8n-validation.ts`):
+  - Prevents activation of workflows with only `executeWorkflowTrigger` nodes
+  - Clear error messages guide users to add activatable triggers or deactivate the workflow
 
-Added three new functions for consistent trigger detection across the codebase:
-
-- `isTriggerNode(nodeType: string): boolean`
-  - Returns `true` for ALL trigger types (including `executeWorkflowTrigger`)
-  - Uses flexible pattern matching: checks if type contains "trigger" or "webhook"
-  - Used for disconnection validation (triggers don't need incoming connections)
-
-- `isActivatableTrigger(nodeType: string): boolean`
-  - Returns `true` only for triggers that can activate a workflow
-  - Returns `false` for `executeWorkflowTrigger` (can only be invoked by other workflows)
-  - Used for active workflow validation
-
-- `getTriggerTypeDescription(nodeType: string): string`
-  - Provides human-readable descriptions of trigger types
-  - Helps users understand what triggers each node
-
-**2. Updated Workflow Structure Validation** (`src/services/n8n-validation.ts`)
-
-- Replaced hardcoded `webhookTypes` Set with `isTriggerNode()` function call
-- Now recognizes ALL trigger types (200+ triggers across n8n packages)
-- Added validation for active workflows:
-  - If `workflow.active === true` and only has `executeWorkflowTrigger` nodes
-  - Returns clear error: "Cannot activate workflow with only Execute Workflow Trigger nodes. Either deactivate the workflow or add a webhook/schedule/polling trigger."
-
-**3. Updated Workflow Validator** (`src/services/workflow-validator.ts`)
-
-- Replaced inline trigger detection logic with shared `isTriggerNode()` function
-- Ensures consistency across all validation code paths
-- Simplified code and eliminated duplication
-
-**4. Comprehensive Test Coverage**
-
-Added 30+ new tests in `tests/unit/utils/node-type-utils.test.ts`:
-- Tests for `isTriggerNode()`: Verifies all trigger types recognized
-- Tests for `isActivatableTrigger()`: Confirms `executeWorkflowTrigger` is non-activatable
-- Tests for `getTriggerTypeDescription()`: Validates descriptions
-- Integration tests: Ensures trigger classification consistency
+- **Comprehensive Test Coverage**: 30+ new tests for trigger detection
 
 #### Impact
 
 **Before Fix:**
-- ❌ Execute Workflow Trigger flagged as "disconnected node"
-- ❌ Schedule triggers, email triggers, and 100+ other triggers also rejected
-- ❌ Users forced to keep unnecessary webhook triggers for testing
-- ❌ Prevented proper sub-workflow management
+- ❌ Execute Workflow Trigger and 195+ other triggers flagged as "disconnected nodes"
+- ❌ Sticky notes triggered false positive validation errors
 - ❌ Could activate workflows with only `executeWorkflowTrigger` (n8n API would reject)
 
 **After Fix:**
 - ✅ ALL trigger types recognized (executeWorkflowTrigger, scheduleTrigger, emailTrigger, etc.)
-- ✅ No "disconnected node" errors for ANY trigger type
-- ✅ Proper sub-workflow support (Execute Workflow pattern)
+- ✅ Sticky notes properly excluded from validation
 - ✅ Clear error messages when trying to activate workflow with only `executeWorkflowTrigger`
 - ✅ Future-proof (new trigger nodes automatically supported)
-- ✅ Consistent trigger detection across entire codebase
-
-#### Trigger Types Now Supported
-
-The flexible pattern matching now recognizes:
-
-**Time-based Triggers:**
-- Schedule Trigger, Cron Trigger
-
-**Webhook Triggers:**
-- Webhook, Webhook Trigger
-
-**Manual Triggers:**
-- Manual Trigger, Start, Form Trigger
-
-**Email Triggers:**
-- Email Trigger, IMAP Trigger, Gmail Trigger
-
-**Service Triggers:**
-- Slack Trigger, GitHub Trigger, Twilio Trigger, Discord Trigger, etc.
-
-**Sub-workflow Triggers:**
-- Execute Workflow Trigger (recognized as trigger, but NOT activatable)
-
-**And 100+ more trigger nodes** - any node with "trigger" or "webhook" in its type name.
-
-#### Error Messages
-
-**Example: Active workflow with only Execute Workflow Trigger**
-
-```
-Cannot activate workflow with only Execute Workflow Trigger nodes (Execute Workflow).
-Execute Workflow Trigger can only be invoked by other workflows, not activated.
-Either deactivate the workflow or add a webhook/schedule/polling trigger.
-```
-
-This provides clear, actionable guidance for users and AI assistants.
+- ✅ Consistent node classification across entire codebase
 
 #### Technical Details
 
 **Files Modified:**
-- `src/utils/node-type-utils.ts` - Added trigger detection functions
-- `src/services/n8n-validation.ts` - Updated validation logic
-- `src/services/workflow-validator.ts` - Removed inline trigger detection
+- `src/utils/node-classification.ts` - NEW: Shared node classification utilities
+- `src/utils/node-type-utils.ts` - Enhanced trigger detection functions
+- `src/services/n8n-validation.ts` - Updated to use shared utilities
+- `src/services/workflow-validator.ts` - Updated to use shared utilities
 - `tests/unit/utils/node-type-utils.test.ts` - Added 30+ tests
 - `package.json` - Version bump to 2.20.8
 
-**Backward Compatibility:**
-- ✅ 100% backward compatible
-- ✅ More permissive (accepts previously rejected valid triggers)
-- ✅ Better error messages for invalid scenarios
-
 **Related:**
 - **Issue:** #351 - Execute Workflow Trigger not recognized as valid trigger
-- **Pattern:** Sub-workflow execution using Execute Workflow Trigger
-- **Impact:** Enables proper sub-workflow architecture in n8n
+- **PR:** #350 - Sticky notes validation fix
+- **PR:** #352 - Comprehensive trigger detection
 
 Conceived by Romuald Członkowski - [www.aiadvisors.pl/en](https://www.aiadvisors.pl/en)
 

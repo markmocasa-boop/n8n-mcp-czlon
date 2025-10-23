@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { WorkflowNode, WorkflowConnection, Workflow } from '../types/n8n-api';
 import { isTriggerNode, isActivatableTrigger } from '../utils/node-type-utils';
+import { isNonExecutableNode } from '../utils/node-classification';
 
 // Zod schemas for n8n API validation
 
@@ -195,6 +196,14 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
     errors.push('Workflow must have at least one node');
   }
 
+  // Check if workflow has only non-executable nodes (sticky notes)
+  if (workflow.nodes && workflow.nodes.length > 0) {
+    const hasExecutableNodes = workflow.nodes.some(node => !isNonExecutableNode(node.type));
+    if (!hasExecutableNodes) {
+      errors.push('Workflow must have at least one executable node. Sticky notes alone cannot form a valid workflow.');
+    }
+  }
+
   if (!workflow.connections) {
     errors.push('Workflow connections are required');
   }
@@ -212,13 +221,15 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
 
   // Check for disconnected nodes in multi-node workflows
   if (workflow.nodes && workflow.nodes.length > 1 && workflow.connections) {
+    // Filter out non-executable nodes (sticky notes) when counting nodes
+    const executableNodes = workflow.nodes.filter(node => !isNonExecutableNode(node.type));
     const connectionCount = Object.keys(workflow.connections).length;
 
-    // First check: workflow has no connections at all
-    if (connectionCount === 0) {
-      const nodeNames = workflow.nodes.slice(0, 2).map(n => n.name);
+    // First check: workflow has no connections at all (only check if there are multiple executable nodes)
+    if (connectionCount === 0 && executableNodes.length > 1) {
+      const nodeNames = executableNodes.slice(0, 2).map(n => n.name);
       errors.push(`Multi-node workflow has no connections between nodes. Add a connection using: {type: 'addConnection', source: '${nodeNames[0]}', target: '${nodeNames[1]}', sourcePort: 'main', targetPort: 'main'}`);
-    } else {
+    } else if (connectionCount > 0 || executableNodes.length > 1) {
       // Second check: detect disconnected nodes (nodes with no incoming or outgoing connections)
       const connectedNodes = new Set<string>();
 
@@ -237,9 +248,15 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
         }
       });
 
-      // Find disconnected nodes (excluding triggers which can be source-only)
-      // Triggers don't need incoming connections, only outgoing connections
+      // Find disconnected nodes (excluding non-executable nodes and triggers)
+      // Non-executable nodes (sticky notes) are UI-only and don't need connections
+      // Trigger nodes only need outgoing connections
       const disconnectedNodes = workflow.nodes.filter(node => {
+        // Skip non-executable nodes (sticky notes, etc.) - they're UI-only annotations
+        if (isNonExecutableNode(node.type)) {
+          return false;
+        }
+
         const isConnected = connectedNodes.has(node.name);
         const isNodeTrigger = isTriggerNode(node.type);
 
