@@ -7,6 +7,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.1] - 2025-10-23
+
+### 🐛 Bug Fixes
+
+**Issue #357: Fix AI Node Connection Validation in Partial Workflow Updates**
+
+Fixed critical validation issue where `n8n_update_partial_workflow` incorrectly required `main` connections for AI nodes that exclusively use AI-specific connection types (`ai_languageModel`, `ai_memory`, `ai_embedding`, `ai_vectorStore`, `ai_tool`).
+
+#### Problem
+
+Workflows containing AI nodes (OpenAI Chat Model, Postgres Chat Memory, Embeddings OpenAI, Supabase Vector Store) could not be updated via `n8n_update_partial_workflow`, even for trivial changes to unrelated nodes. The validation logic incorrectly expected ALL nodes to have `main` connections, causing false positive errors:
+
+```
+Invalid connections: [
+  {
+    "code": "invalid_type",
+    "expected": "array",
+    "received": "undefined",
+    "path": ["OpenAI Chat Model", "main"],
+    "message": "Required"
+  }
+]
+```
+
+**Impact**: Users could not update any workflows containing AI Agent nodes via MCP tools, forcing manual updates through the n8n UI.
+
+#### Root Cause
+
+The Zod schema in `src/services/n8n-validation.ts` (lines 27-39) defined `main` connections as a **required field** for all nodes, without support for AI-specific connection types:
+
+```typescript
+// BEFORE (Broken):
+export const workflowConnectionSchema = z.record(
+  z.object({
+    main: z.array(...), // Required - WRONG for AI nodes!
+  })
+);
+```
+
+AI nodes use specialized connection types exclusively:
+- **ai_languageModel** - Language models (OpenAI, Anthropic, etc.)
+- **ai_memory** - Memory systems (Postgres Chat Memory, etc.)
+- **ai_embedding** - Embedding models (Embeddings OpenAI, etc.)
+- **ai_vectorStore** - Vector stores (Supabase Vector Store, etc.)
+- **ai_tool** - Tools for AI agents
+
+These nodes **never have `main` connections** - they only have their AI-specific connection types.
+
+#### Fixed
+
+**1. Updated Zod Schema** (`src/services/n8n-validation.ts` lines 27-49):
+```typescript
+// AFTER (Fixed):
+const connectionArraySchema = z.array(
+  z.array(
+    z.object({
+      node: z.string(),
+      type: z.string(),
+      index: z.number(),
+    })
+  )
+);
+
+export const workflowConnectionSchema = z.record(
+  z.object({
+    main: connectionArraySchema.optional(),              // Now optional
+    error: connectionArraySchema.optional(),              // Error connections
+    ai_tool: connectionArraySchema.optional(),            // AI tool connections
+    ai_languageModel: connectionArraySchema.optional(),   // Language model connections
+    ai_memory: connectionArraySchema.optional(),          // Memory connections
+    ai_embedding: connectionArraySchema.optional(),       // Embedding connections
+    ai_vectorStore: connectionArraySchema.optional(),     // Vector store connections
+  })
+);
+```
+
+**2. Comprehensive Test Suite** (New file: `tests/integration/workflow-diff/ai-node-connection-validation.test.ts`):
+- 13 test scenarios covering all AI connection types
+- Tests for AI nodes with ONLY AI-specific connections (no `main`)
+- Tests for mixed workflows (regular nodes + AI nodes)
+- Tests for the exact scenario from issue #357
+- All tests passing ✅
+
+**3. Updated Documentation** (`src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts`):
+- Added clarification that AI nodes do NOT require `main` connections
+- Documented fix for issue #357
+- Updated best practices for AI workflows
+
+#### Testing
+
+**Before Fix**:
+- ❌ `n8n_validate_workflow`: Returns `valid: true` (correct)
+- ❌ `n8n_update_partial_workflow`: FAILS with "main connections required" errors
+- ❌ Cannot update workflows containing AI nodes at all
+
+**After Fix**:
+- ✅ `n8n_validate_workflow`: Returns `valid: true` (still correct)
+- ✅ `n8n_update_partial_workflow`: SUCCEEDS without validation errors
+- ✅ AI nodes correctly recognized with AI-specific connection types only
+- ✅ All 13 new integration tests passing
+- ✅ Tested with actual workflow `019Vrw56aROeEzVj` from issue #357
+
+#### Impact
+
+**Zero Breaking Changes**:
+- Making required fields optional is always backward compatible
+- All existing workflows continue working
+- Validation now correctly matches n8n's actual connection model
+
+**Fixes**:
+- Users can now update AI workflows via `n8n_update_partial_workflow`
+- AI nodes no longer generate false positive validation errors
+- Consistent validation between `n8n_validate_workflow` and `n8n_update_partial_workflow`
+
+#### Files Changed
+
+**Modified (3 files)**:
+- `src/services/n8n-validation.ts` - Fixed Zod schema to support all connection types
+- `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts` - Updated documentation
+- `package.json` - Version bump to 2.21.1
+
+**Added (1 file)**:
+- `tests/integration/workflow-diff/ai-node-connection-validation.test.ts` - Comprehensive test suite (13 tests)
+
+#### References
+
+- **Issue**: #357 - n8n_update_partial_workflow incorrectly validates AI nodes requiring 'main' connections
+- **Workflow**: `019Vrw56aROeEzVj` (WOO_Workflow_21_POST_Chat_Send_AI_Agent)
+- **Investigation**: Deep code analysis by Explore agent identified exact root cause in Zod schema
+- **Confirmation**: n8n-mcp-tester agent verified fix with real workflow
+
+Conceived by Romuald Członkowski - [www.aiadvisors.pl/en](https://www.aiadvisors.pl/en)
+
 ## [2.21.0] - 2025-10-23
 
 ### ✨ Features

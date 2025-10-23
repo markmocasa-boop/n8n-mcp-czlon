@@ -24,17 +24,27 @@ export const workflowNodeSchema = z.object({
   executeOnce: z.boolean().optional(),
 });
 
+// Connection array schema used by all connection types
+const connectionArraySchema = z.array(
+  z.array(
+    z.object({
+      node: z.string(),
+      type: z.string(),
+      index: z.number(),
+    })
+  )
+);
+
+// Workflow connection schema supporting all connection types (main, error, AI-specific)
 export const workflowConnectionSchema = z.record(
   z.object({
-    main: z.array(
-      z.array(
-        z.object({
-          node: z.string(),
-          type: z.string(),
-          index: z.number(),
-        })
-      )
-    ),
+    main: connectionArraySchema.optional(),
+    error: connectionArraySchema.optional(),
+    ai_tool: connectionArraySchema.optional(),
+    ai_languageModel: connectionArraySchema.optional(),
+    ai_memory: connectionArraySchema.optional(),
+    ai_embedding: connectionArraySchema.optional(),
+    ai_vectorStore: connectionArraySchema.optional(),
   })
 );
 
