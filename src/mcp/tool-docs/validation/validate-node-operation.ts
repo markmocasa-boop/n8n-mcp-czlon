@@ -12,7 +12,7 @@ export const validateNodeOperationDoc: ToolDocumentation = {
       'Profile choices: minimal (editing), runtime (execution), ai-friendly (balanced), strict (deployment)',
       'Returns fixes you can apply directly',
       'Operation-aware - knows Slack post needs text',
-      'Validates operator structures for IF v2.2+ and Switch v3.2+ nodes'
+      'Validates operator structures for IF and Switch nodes with conditions'
     ]
   },
   full: {
@@ -90,7 +90,7 @@ export const validateNodeOperationDoc: ToolDocumentation = {
       'Fixes are suggestions - review before applying',
       'Profile affects what\'s validated - minimal skips many checks',
       '**Binary vs Unary operators**: Binary operators (equals, contains, greaterThan) must NOT have singleValue:true. Unary operators (isEmpty, isNotEmpty, true, false) REQUIRE singleValue:true',
-      '**IF v2.2+ and Switch v3.2+ nodes**: Must have complete conditions.options structure: {version: 2, leftValue: "", caseSensitive: true/false, typeValidation: "strict"}',
+      '**IF and Switch nodes with conditions**: Must have complete conditions.options structure: {version: 2, leftValue: "", caseSensitive: true/false, typeValidation: "strict"}',
       '**Operator type field**: Must be data type (string/number/boolean/dateTime/array/object), NOT operation name (e.g., use type:"string" operation:"equals", not type:"equals")'
     ],
     relatedTools: ['validate_node_minimal for quick checks', 'get_node_essentials for valid examples', 'validate_workflow for complete workflow validation']

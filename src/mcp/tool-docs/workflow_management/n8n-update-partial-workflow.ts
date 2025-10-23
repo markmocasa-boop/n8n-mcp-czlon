@@ -109,8 +109,8 @@ When ANY workflow update is made, ALL nodes in the workflow are automatically sa
    - Invalid operator structures (e.g., \`{type: "isNotEmpty"}\`) are corrected to \`{type: "boolean", operation: "isNotEmpty"}\`
 
 2. **Missing Metadata Added**:
-   - IF v2.2+ nodes get complete \`conditions.options\` structure if missing
-   - Switch v3.2+ nodes get complete \`conditions.options\` for all rules
+   - IF nodes with conditions get complete \`conditions.options\` structure if missing
+   - Switch nodes with conditions get complete \`conditions.options\` for all rules
    - Required fields: \`{version: 2, leftValue: "", caseSensitive: true, typeValidation: "strict"}\`
 
 ### Sanitization Scope
@@ -215,7 +215,7 @@ Please choose a different name.
       '// Connect memory to AI Agent\nn8n_update_partial_workflow({id: "ai3", operations: [{type: "addConnection", source: "Window Buffer Memory", target: "AI Agent", sourceOutput: "ai_memory"}]})',
       '// Connect output parser to AI Agent\nn8n_update_partial_workflow({id: "ai4", operations: [{type: "addConnection", source: "Structured Output Parser", target: "AI Agent", sourceOutput: "ai_outputParser"}]})',
       '// Complete AI Agent setup: Add language model, tools, and memory\nn8n_update_partial_workflow({id: "ai5", operations: [\n  {type: "addConnection", source: "OpenAI Chat Model", target: "AI Agent", sourceOutput: "ai_languageModel"},\n  {type: "addConnection", source: "HTTP Request Tool", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "Code Tool", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "Window Buffer Memory", target: "AI Agent", sourceOutput: "ai_memory"}\n]})',
-      '// Add fallback model to AI Agent (requires v2.1+)\nn8n_update_partial_workflow({id: "ai6", operations: [\n  {type: "addConnection", source: "OpenAI Chat Model", target: "AI Agent", sourceOutput: "ai_languageModel", targetIndex: 0},\n  {type: "addConnection", source: "Anthropic Chat Model", target: "AI Agent", sourceOutput: "ai_languageModel", targetIndex: 1}\n]})',
+      '// Add fallback model to AI Agent for reliability\nn8n_update_partial_workflow({id: "ai6", operations: [\n  {type: "addConnection", source: "OpenAI Chat Model", target: "AI Agent", sourceOutput: "ai_languageModel", targetIndex: 0},\n  {type: "addConnection", source: "Anthropic Chat Model", target: "AI Agent", sourceOutput: "ai_languageModel", targetIndex: 1}\n]})',
       '// Vector Store setup: Connect embeddings and documents\nn8n_update_partial_workflow({id: "ai7", operations: [\n  {type: "addConnection", source: "Embeddings OpenAI", target: "Pinecone Vector Store", sourceOutput: "ai_embedding"},\n  {type: "addConnection", source: "Default Data Loader", target: "Pinecone Vector Store", sourceOutput: "ai_document"}\n]})',
       '// Connect Vector Store Tool to AI Agent (retrieval setup)\nn8n_update_partial_workflow({id: "ai8", operations: [\n  {type: "addConnection", source: "Pinecone Vector Store", target: "Vector Store Tool", sourceOutput: "ai_vectorStore"},\n  {type: "addConnection", source: "Vector Store Tool", target: "AI Agent", sourceOutput: "ai_tool"}\n]})',
       '// Rewire AI Agent to use different language model\nn8n_update_partial_workflow({id: "ai9", operations: [{type: "rewireConnection", source: "AI Agent", from: "OpenAI Chat Model", to: "Anthropic Chat Model", sourceOutput: "ai_languageModel"}]})',
