@@ -35,7 +35,11 @@ const connectionArraySchema = z.array(
   )
 );
 
-// Workflow connection schema supporting all connection types (main, error, AI-specific)
+/**
+ * Workflow connection schema supporting all connection types.
+ * Note: 'main' is optional because AI nodes exclusively use AI-specific
+ * connection types (ai_languageModel, ai_memory, etc.) without main connections.
+ */
 export const workflowConnectionSchema = z.record(
   z.object({
     main: connectionArraySchema.optional(),

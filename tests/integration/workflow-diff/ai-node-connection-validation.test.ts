@@ -43,7 +43,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -81,7 +84,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -119,7 +125,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -157,7 +166,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -195,7 +207,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -261,7 +276,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -325,7 +343,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -444,7 +465,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -500,6 +524,7 @@ describe('AI Node Connection Validation', () => {
 
       // Update the webhook node (unrelated to AI nodes)
       const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
         operations: [
           {
             type: 'updateNode',
@@ -555,7 +580,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -595,7 +623,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -635,7 +666,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
@@ -675,7 +709,10 @@ describe('AI Node Connection Validation', () => {
       };
 
       const engine = new WorkflowDiffEngine();
-      const result = await engine.applyDiff(workflow as any, { operations: [] });
+      const result = await engine.applyDiff(workflow as any, {
+        id: workflow.id,
+        operations: []
+      });
 
       expect(result.success).toBe(true);
       expect(result.workflow).toBeDefined();
