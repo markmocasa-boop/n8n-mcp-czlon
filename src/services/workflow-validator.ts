@@ -11,6 +11,7 @@ import { NodeSimilarityService, NodeSuggestion } from './node-similarity-service
 import { NodeTypeNormalizer } from '../utils/node-type-normalizer';
 import { Logger } from '../utils/logger';
 import { validateAISpecificNodes, hasAINodes } from './ai-node-validator';
+import { isTriggerNode } from '../utils/node-type-utils';
 const logger = new Logger({ prefix: '[WorkflowValidator]' });
 
 interface WorkflowNode {
@@ -326,16 +327,8 @@ export class WorkflowValidator {
       nodeIds.add(node.id);
     }
 
-    // Count trigger nodes - normalize type names first
-    const triggerNodes = workflow.nodes.filter(n => {
-      const normalizedType = NodeTypeNormalizer.normalizeToFullForm(n.type);
-      const lowerType = normalizedType.toLowerCase();
-      return lowerType.includes('trigger') ||
-             (lowerType.includes('webhook') && !lowerType.includes('respond')) ||
-             normalizedType === 'nodes-base.start' ||
-             normalizedType === 'nodes-base.manualTrigger' ||
-             normalizedType === 'nodes-base.formTrigger';
-    });
+    // Count trigger nodes using shared trigger detection
+    const triggerNodes = workflow.nodes.filter(n => isTriggerNode(n.type));
     result.statistics.triggerNodes = triggerNodes.length;
 
     // Check for at least one trigger node
@@ -634,14 +627,10 @@ export class WorkflowValidator {
     for (const node of workflow.nodes) {
       if (node.disabled || this.isStickyNote(node)) continue;
 
-      const normalizedType = NodeTypeNormalizer.normalizeToFullForm(node.type);
-      const isTrigger = normalizedType.toLowerCase().includes('trigger') ||
-                       normalizedType.toLowerCase().includes('webhook') ||
-                       normalizedType === 'nodes-base.start' ||
-                       normalizedType === 'nodes-base.manualTrigger' ||
-                       normalizedType === 'nodes-base.formTrigger';
-      
-      if (!connectedNodes.has(node.name) && !isTrigger) {
+      // Use shared trigger detection function for consistency
+      const isNodeTrigger = isTriggerNode(node.type);
+
+      if (!connectedNodes.has(node.name) && !isNodeTrigger) {
         result.warnings.push({
           type: 'warning',
           nodeId: node.id,
