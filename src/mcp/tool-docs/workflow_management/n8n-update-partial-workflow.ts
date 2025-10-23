@@ -18,7 +18,8 @@ export const n8nUpdatePartialWorkflowDoc: ToolDocumentation = {
       'Validate with validateOnly first',
       'For AI connections, specify sourceOutput type (ai_languageModel, ai_tool, etc.)',
       'Batch AI component connections for atomic updates',
-      'Auto-sanitization: ALL nodes auto-fixed during updates (operator structures, missing metadata)'
+      'Auto-sanitization: ALL nodes auto-fixed during updates (operator structures, missing metadata)',
+      'Node renames: Connections automatically update (v2.21.0+) - no manual connection operations needed'
     ]
   },
   full: {
@@ -129,7 +130,82 @@ If validation still fails after auto-sanitization:
 2. Use \`validate_workflow\` to see all validation errors
 3. For connection issues, use \`cleanStaleConnections\` operation
 4. For branch mismatches, add missing output connections
-5. For paradoxical corrupted workflows, create new workflow and migrate nodes`,
+5. For paradoxical corrupted workflows, create new workflow and migrate nodes
+
+## Automatic Connection Reference Updates (v2.21.0+)
+
+### What Happens Automatically
+When you rename a node using the **updateNode** operation, **all connection references are automatically updated throughout the workflow**. This matches how the n8n UI handles node renaming.
+
+### What Gets Updated
+1. **Connection Source Keys**: If a source node is renamed, its connections key is updated
+2. **Connection Target References**: If a target node is renamed, all connections pointing to it are updated
+3. **All Connection Types**: Works with main, error, ai_tool, ai_languageModel, ai_memory, and other connection types
+4. **All Branch Types**: IF node branches, Switch node cases, and error outputs
+
+### Examples
+
+**Before (v2.20.8 and earlier):**
+\`\`\`javascript
+// Renaming would fail with validation errors
+n8n_update_partial_workflow({
+  id: "wf_123",
+  operations: [{
+    type: "updateNode",
+    nodeId: "node_abc",
+    updates: { name: "New Name" }
+  }]
+});
+// Error: "Connection references non-existent target node: Old Name"
+\`\`\`
+
+**After (v2.21.0+):**
+\`\`\`javascript
+// Same operation now works automatically!
+n8n_update_partial_workflow({
+  id: "wf_123",
+  operations: [{
+    type: "updateNode",
+    nodeId: "node_abc",
+    updates: { name: "New Name" }
+  }]
+});
+// Success! All connections automatically updated
+\`\`\`
+
+### Real-World Example (Issue #353)
+\`\`\`javascript
+// Rename error response from 403 to 404
+n8n_update_partial_workflow({
+  id: "workflow_id",
+  operations: [{
+    type: "updateNode",
+    nodeId: "8546d741-1af1-4aa0-bf11-af6c926c0008",
+    updates: {
+      name: "Return 404 Not Found",  // Renamed from "Return 403 Forbidden"
+      parameters: {
+        responseBody: '={{ {"error": "Not Found"} }}',
+        options: { responseCode: 404 }
+      }
+    }
+  }]
+});
+// All connections from IF nodes automatically point to new name
+// No manual connection operations needed!
+\`\`\`
+
+### Name Collision Detection
+If you try to rename a node to a name that already exists, you'll get a clear error:
+\`\`\`
+Cannot rename node "Old Name" to "New Name": A node with that name already exists (id: abc123...).
+Please choose a different name.
+\`\`\`
+
+### Best Practices
+- **No workaround needed**: Simply rename nodes with updateNode - connections update automatically
+- **Batch renames**: Multiple rename operations in one call work perfectly
+- **Chain operations**: You can rename a node and then add/remove connections using the new name in the same batch
+- **Validate first**: Use \`validateOnly: true\` to preview rename effects before applying`,
     parameters: {
       id: { type: 'string', required: true, description: 'Workflow ID to update' },
       operations: {

@@ -36,6 +36,9 @@ import { sanitizeNode, sanitizeWorkflowNodes } from './node-sanitizer';
 const logger = new Logger({ prefix: '[WorkflowDiffEngine]' });
 
 export class WorkflowDiffEngine {
+  // Track node name changes during operations for connection reference updates
+  private renameMap: Map<string, string> = new Map();
+
   /**
    * Apply diff operations to a workflow
    */
@@ -44,6 +47,9 @@ export class WorkflowDiffEngine {
     request: WorkflowDiffRequest
   ): Promise<WorkflowDiffResult> {
     try {
+      // Reset rename tracking for this diff operation
+      this.renameMap.clear();
+
       // Clone workflow to avoid modifying original
       const workflowCopy = JSON.parse(JSON.stringify(workflow));
 
@@ -92,6 +98,12 @@ export class WorkflowDiffEngine {
             });
             failedIndices.push(index);
           }
+        }
+
+        // Update connection references after all node renames (even in continueOnError mode)
+        if (this.renameMap.size > 0 && appliedIndices.length > 0) {
+          this.updateConnectionReferences(workflowCopy);
+          logger.debug(`Auto-updated ${this.renameMap.size} node name references in connections (continueOnError mode)`);
         }
 
         // If validateOnly flag is set, return success without applying
@@ -145,6 +157,12 @@ export class WorkflowDiffEngine {
               }]
             };
           }
+        }
+
+        // Update connection references after all node renames
+        if (this.renameMap.size > 0) {
+          this.updateConnectionReferences(workflowCopy);
+          logger.debug(`Auto-updated ${this.renameMap.size} node name references in connections`);
         }
 
         // Pass 2: Validate and apply other operations (connections, metadata)
@@ -353,6 +371,23 @@ export class WorkflowDiffEngine {
     if (!node) {
       return this.formatNodeNotFoundError(workflow, operation.nodeId || operation.nodeName || '', 'updateNode');
     }
+
+    // Check for name collision if renaming
+    if (operation.updates.name && operation.updates.name !== node.name) {
+      const normalizedNewName = this.normalizeNodeName(operation.updates.name);
+      const normalizedCurrentName = this.normalizeNodeName(node.name);
+
+      // Only check collision if the names are actually different after normalization
+      if (normalizedNewName !== normalizedCurrentName) {
+        const collision = workflow.nodes.find(n =>
+          n.id !== node.id && this.normalizeNodeName(n.name) === normalizedNewName
+        );
+        if (collision) {
+          return `Cannot rename node "${node.name}" to "${operation.updates.name}": A node with that name already exists (id: ${collision.id.substring(0, 8)}...). Please choose a different name.`;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -578,6 +613,14 @@ export class WorkflowDiffEngine {
   private applyUpdateNode(workflow: Workflow, operation: UpdateNodeOperation): void {
     const node = this.findNode(workflow, operation.nodeId, operation.nodeName);
     if (!node) return;
+
+    // Track node renames for connection reference updates
+    if (operation.updates.name && operation.updates.name !== node.name) {
+      const oldName = node.name;
+      const newName = operation.updates.name;
+      this.renameMap.set(oldName, newName);
+      logger.debug(`Tracking rename: "${oldName}" → "${newName}"`);
+    }
 
     // Apply updates using dot notation
     Object.entries(operation.updates).forEach(([path, value]) => {
@@ -895,6 +938,59 @@ export class WorkflowDiffEngine {
 
   private applyReplaceConnections(workflow: Workflow, operation: ReplaceConnectionsOperation): void {
     workflow.connections = operation.connections;
+  }
+
+  /**
+   * Update all connection references when nodes are renamed.
+   * This method is called after node operations to ensure connection integrity.
+   *
+   * Updates:
+   * - Connection object keys (source node names)
+   * - Connection target.node values (target node names)
+   * - All output types (main, error, ai_tool, ai_languageModel, etc.)
+   *
+   * @param workflow - The workflow to update
+   */
+  private updateConnectionReferences(workflow: Workflow): void {
+    if (this.renameMap.size === 0) return;
+
+    logger.debug(`Updating connection references for ${this.renameMap.size} renamed nodes`);
+
+    // Create a mapping of all renames (old → new)
+    const renames = new Map(this.renameMap);
+
+    // Step 1: Update connection object keys (source node names)
+    const updatedConnections: WorkflowConnection = {};
+    for (const [sourceName, outputs] of Object.entries(workflow.connections)) {
+      // Check if this source node was renamed
+      const newSourceName = renames.get(sourceName) || sourceName;
+      updatedConnections[newSourceName] = outputs;
+    }
+
+    // Step 2: Update target node references within connections
+    for (const [sourceName, outputs] of Object.entries(updatedConnections)) {
+      // Iterate through all output types (main, error, ai_tool, ai_languageModel, etc.)
+      for (const [outputType, connections] of Object.entries(outputs)) {
+        // connections is Array<Array<{node, type, index}>>
+        for (let outputIndex = 0; outputIndex < connections.length; outputIndex++) {
+          const connectionsAtIndex = connections[outputIndex];
+          for (let connIndex = 0; connIndex < connectionsAtIndex.length; connIndex++) {
+            const connection = connectionsAtIndex[connIndex];
+            // Check if target node was renamed
+            if (renames.has(connection.node)) {
+              const newTargetName = renames.get(connection.node)!;
+              connection.node = newTargetName;
+              logger.debug(`Updated connection: ${sourceName}[${outputType}][${outputIndex}][${connIndex}].node: "${connection.node}" → "${newTargetName}"`);
+            }
+          }
+        }
+      }
+    }
+
+    // Replace workflow connections with updated connections
+    workflow.connections = updatedConnections;
+
+    logger.info(`Auto-updated ${this.renameMap.size} node name references in connections`);
   }
 
   // Helper methods

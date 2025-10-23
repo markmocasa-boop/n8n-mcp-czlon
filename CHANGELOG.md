@@ -7,6 +7,220 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.0] - 2025-10-23
+
+### ✨ Features
+
+**Issue #353: Auto-Update Connection References on Node Rename**
+
+Enhanced `n8n_update_partial_workflow` to automatically update all connection references when renaming nodes, matching n8n UI behavior and eliminating the need for complex manual workarounds.
+
+#### Problem
+When renaming a node using the `updateNode` operation, connections still referenced the old node name, causing validation errors:
+```
+"Connection references non-existent target node: Old Name"
+```
+
+This forced users to manually remove and re-add all connections, requiring:
+- 3+ operations instead of 1 simple rename
+- Manual tracking of all connection details (source, branch/case, indices)
+- Error-prone connection management
+- Inconsistent behavior compared to n8n UI
+
+#### Solution: Automatic Connection Reference Updates
+
+When you rename a node, **all connection references are automatically updated throughout the entire workflow**. The system:
+1. Detects name changes during `updateNode` operations
+2. Tracks old→new name mappings
+3. Updates all connection references after node operations complete
+4. Handles all connection types and branch configurations
+
+#### What Gets Updated Automatically
+
+**Connection Source Keys:**
+- If a source node is renamed, its connections object key is updated
+- Example: `connections['Old Name']` → `connections['New Name']`
+
+**Connection Target References:**
+- If a target node is renamed, all connections pointing to it are updated
+- Example: `{node: 'Old Name', type: 'main', index: 0}` → `{node: 'New Name', type: 'main', index: 0}`
+
+**All Connection Types:**
+- `main` - Standard connections
+- `error` - Error output connections
+- `ai_tool` - AI tool connections
+- `ai_languageModel` - AI language model connections
+- `ai_memory` - AI memory connections
+- All other connection types
+
+**All Branch Configurations:**
+- IF node branches (true/false outputs)
+- Switch node cases (multiple numbered outputs)
+- Error output branches
+- AI-specific connection routing
+
+#### Examples
+
+**Before (v2.20.8 and earlier) - Failed:**
+```javascript
+// Attempting to rename would fail
+n8n_update_partial_workflow({
+  id: "workflow_id",
+  operations: [{
+    type: "updateNode",
+    nodeId: "8546d741-1af1-4aa0-bf11-af6c926c0008",
+    updates: {
+      name: "Return 404 Not Found"  // Rename from "Return 403 Forbidden"
+    }
+  }]
+});
+
+// Result: ERROR
+// "Workflow validation failed with 2 structural issues"
+// "Connection references non-existent target node: Return 403 Forbidden"
+
+// Required workaround (3 operations):
+operations: [
+  {type: "removeConnection", source: "IF", target: "Return 403 Forbidden", branch: "false"},
+  {type: "updateNode", nodeId: "...", updates: {name: "Return 404 Not Found"}},
+  {type: "addConnection", source: "IF", target: "Return 404 Not Found", branch: "false"}
+]
+```
+
+**After (v2.21.0) - Works Automatically:**
+```javascript
+// Same operation now succeeds automatically!
+n8n_update_partial_workflow({
+  id: "workflow_id",
+  operations: [{
+    type: "updateNode",
+    nodeId: "8546d741-1af1-4aa0-bf11-af6c926c0008",
+    updates: {
+      name: "Return 404 Not Found",  // Connections auto-update!
+      parameters: {
+        responseBody: '={{ {"error": "Not Found"} }}',
+        options: { responseCode: 404 }
+      }
+    }
+  }]
+});
+
+// Result: SUCCESS
+// All connections automatically point to "Return 404 Not Found"
+// Single operation instead of 3+
+```
+
+#### Additional Features
+
+**Name Collision Detection:**
+```javascript
+// Attempting to rename to existing name
+{type: "updateNode", nodeId: "abc", updates: {name: "Existing Name"}}
+
+// Result: Clear error message
+"Cannot rename node 'Old Name' to 'Existing Name': A node with that name
+already exists (id: xyz123...). Please choose a different name."
+```
+
+**Batch Rename Support:**
+```javascript
+// Multiple renames in single call - all connections update correctly
+operations: [
+  {type: "updateNode", nodeId: "node1", updates: {name: "New Name 1"}},
+  {type: "updateNode", nodeId: "node2", updates: {name: "New Name 2"}},
+  {type: "updateNode", nodeId: "node3", updates: {name: "New Name 3"}}
+]
+```
+
+**Chain Operations:**
+```javascript
+// Rename then immediately use new name in subsequent operations
+operations: [
+  {type: "updateNode", nodeId: "abc", updates: {name: "New Name"}},
+  {type: "addConnection", source: "New Name", target: "Other Node"}
+]
+```
+
+#### Technical Implementation
+
+**Files Modified:**
+- `src/services/workflow-diff-engine.ts` - Core auto-update logic
+  - Added `renameMap` property to track name changes
+  - Added `updateConnectionReferences()` method (lines 943-994)
+  - Enhanced `validateUpdateNode()` with name collision detection (lines 369-392)
+  - Modified `applyUpdateNode()` to track renames (lines 613-635)
+  - Connection updates applied after Pass 1 node operations (lines 156-160)
+
+- `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts`
+  - Added comprehensive "Automatic Connection Reference Updates" section
+  - Added to tips: "Node renames: Connections automatically update"
+  - Includes before/after examples and best practices
+
+**New Test Files:**
+- `tests/unit/services/workflow-diff-node-rename.test.ts` (925 lines, 14 scenarios)
+- `tests/integration/workflow-diff/node-rename-integration.test.ts` (4 real-world workflows)
+
+**Test Coverage:**
+1. Simple rename with single connection
+2. Multiple incoming connections
+3. Multiple outgoing connections
+4. IF node branches (true/false)
+5. Switch node cases (0, 1, 2, ..., N)
+6. Error connections
+7. AI tool connections (ai_tool, ai_languageModel)
+8. Name collision detection
+9. Rename to same name (no-op)
+10. Multiple renames in single batch
+11. Chain operations (rename + add/remove connections)
+12. validateOnly mode
+13. continueOnError mode
+14. Self-connections (loops)
+15. Real-world Issue #353 scenario
+
+#### Benefits
+
+**User Experience:**
+- ✅ **Principle of Least Surprise**: Matches n8n UI behavior
+- ✅ **Single Operation**: Rename with 1 operation instead of 3+
+- ✅ **No Manual Tracking**: System handles all connection updates
+- ✅ **Safer**: Collision detection prevents naming conflicts
+- ✅ **Faster**: Less error-prone, fewer operations
+
+**Technical:**
+- ✅ **100% Backward Compatible**: Enhances existing `updateNode` operation
+- ✅ **All Connection Types**: main, error, AI connections, etc.
+- ✅ **All Branch Types**: IF, Switch, error outputs
+- ✅ **Atomic**: All connections update together or rollback
+- ✅ **Works in Both Modes**: atomic and continueOnError
+
+**Comprehensive:**
+- ✅ **14 Test Scenarios**: Unit tests covering all edge cases
+- ✅ **4 Integration Tests**: Real-world workflow validation
+- ✅ **Complete Documentation**: Tool docs with examples
+- ✅ **Clear Error Messages**: Name collision detection with actionable guidance
+
+#### Impact on Existing Workflows
+
+**Zero Breaking Changes:**
+- All existing workflows continue working
+- Existing operations work identically
+- Only enhances rename behavior
+- No API changes required
+
+**Migration:**
+- No migration needed
+- Update to v2.21.0 and renames "just work"
+- Remove manual connection workarounds at your convenience
+
+#### Related
+
+- **Issue:** #353 - Enhancement: Auto-update connection references on node rename
+- **Use Case:** Real-world API endpoint workflow (POST /patients/:id/approaches)
+- **Reporter:** Internal testing during workflow refactoring
+- **Solution:** Recommended Solution 1 from issue (auto-update)
+
+Conceived by Romuald Członkowski - [www.aiadvisors.pl/en](https://www.aiadvisors.pl/en)
+
 ## [2.20.8] - 2025-10-23
 
 ### 🐛 Bug Fixes
