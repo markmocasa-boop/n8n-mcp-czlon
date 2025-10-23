@@ -112,53 +112,82 @@ jobs:
 
           echo "✅ Version $CURRENT_VERSION is valid (higher than npm version $NPM_VERSION)"
 
-  extract-changelog:
-    name: Extract Changelog
+  generate-release-notes:
+    name: Generate Release Notes
     runs-on: ubuntu-latest
     needs: detect-version-change
     if: needs.detect-version-change.outputs.version-changed == 'true'
     outputs:
-      release-notes: ${{ steps.extract.outputs.notes }}
-      has-notes: ${{ steps.extract.outputs.has-notes }}
+      release-notes: ${{ steps.generate.outputs.notes }}
+      has-notes: ${{ steps.generate.outputs.has-notes }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Extract changelog for version
-        id: extract
+        with:
+          fetch-depth: 0  # Need full history for git log
+
+      - name: Generate release notes from commits
+        id: generate
         run: |
-          VERSION="${{ needs.detect-version-change.outputs.new-version }}"
-          CHANGELOG_FILE="docs/CHANGELOG.md"
-          
-          if [ ! -f "$CHANGELOG_FILE" ]; then
-            echo "Changelog file not found at $CHANGELOG_FILE"
-            echo "has-notes=false" >> $GITHUB_OUTPUT
-            echo "notes=No changelog entries found for version $VERSION" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # Use the extracted changelog script
-          if NOTES=$(node scripts/extract-changelog.js "$VERSION" "$CHANGELOG_FILE" 2>/dev/null); then
+          CURRENT_VERSION="${{ needs.detect-version-change.outputs.new-version }}"
+          CURRENT_TAG="v$CURRENT_VERSION"
+
+          # Get the previous tag (excluding the current tag which doesn't exist yet)
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^$CURRENT_TAG$" | head -1)
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Current tag: $CURRENT_TAG"
+          echo "Previous tag: $PREVIOUS_TAG"
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "ℹ️ No previous tag found, this might be the first release"
+
+            # Get all commits up to current commit
+            NOTES="### 🎉 Initial Release
+
+This is the initial release of n8n-mcp v$CURRENT_VERSION.
+
+---
+
+**Release Statistics:**
+- Commit count: $(git rev-list --count HEAD)
+- First release setup"
+
             echo "has-notes=true" >> $GITHUB_OUTPUT
-            
+
             # Use heredoc to properly handle multiline content
             {
               echo "notes<<EOF"
               echo "$NOTES"
               echo "EOF"
             } >> $GITHUB_OUTPUT
-            
-            echo "✅ Successfully extracted changelog for version $VERSION"
+
           else
-            echo "has-notes=false" >> $GITHUB_OUTPUT
-            echo "notes=No changelog entries found for version $VERSION" >> $GITHUB_OUTPUT
-            echo "⚠️ Could not extract changelog for version $VERSION"
+            echo "✅ Previous tag found: $PREVIOUS_TAG"
+
+            # Generate release notes between tags
+            if NOTES=$(node scripts/generate-release-notes.js "$PREVIOUS_TAG" "HEAD" 2>/dev/null); then
+              echo "has-notes=true" >> $GITHUB_OUTPUT
+
+              # Use heredoc to properly handle multiline content
+              {
+                echo "notes<<EOF"
+                echo "$NOTES"
+                echo "EOF"
+              } >> $GITHUB_OUTPUT
+
+              echo "✅ Successfully generated release notes from $PREVIOUS_TAG to $CURRENT_TAG"
+            else
+              echo "has-notes=false" >> $GITHUB_OUTPUT
+              echo "notes=Failed to generate release notes for version $CURRENT_VERSION" >> $GITHUB_OUTPUT
+              echo "⚠️ Could not generate release notes for version $CURRENT_VERSION"
+            fi
           fi
 
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [detect-version-change, extract-changelog]
+    needs: [detect-version-change, generate-release-notes]
     if: needs.detect-version-change.outputs.version-changed == 'true'
     outputs:
       release-id: ${{ steps.create.outputs.id }}
@@ -189,7 +218,7 @@ jobs:
           cat > release_body.md << 'EOF'
           # Release v${{ needs.detect-version-change.outputs.new-version }}
           
-          ${{ needs.extract-changelog.outputs.release-notes }}
+          ${{ needs.generate-release-notes.outputs.release-notes }}
           
           ---
           
