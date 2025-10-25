@@ -82,7 +82,7 @@ ENV IS_DOCKER=true
 # To opt-out, uncomment the following line:
 # ENV N8N_MCP_TELEMETRY_DISABLED=true
 
-# Expose HTTP port
+# Expose HTTP port (default 3000, configurable via PORT environment variable at runtime)
 EXPOSE 3000
 
 # Set stop signal to SIGTERM (default, but explicit is better)
@@ -90,7 +90,7 @@ STOPSIGNAL SIGTERM
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://127.0.0.1:3000/health || exit 1
+  CMD sh -c 'curl -f http://127.0.0.1:${PORT:-3000}/health || exit 1'
 
 # Optimized entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

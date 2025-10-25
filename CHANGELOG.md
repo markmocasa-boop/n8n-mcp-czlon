@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.6] - 2025-10-25
+
+### 🐛 Bug Fixes
+
+**Issue #228: Fix Docker Port Configuration Mismatch**
+
+Fixed critical Docker configuration bug where custom PORT environment variable values were not properly mapped to container ports, causing connection failures in Docker deployments.
+
+#### Problem
+- **docker-compose.yml**: Port mapping `"${PORT:-3000}:3000"` hardcoded container port to 3000
+- **docker-compose.yml**: Health check hardcoded to port 3000
+- **Dockerfile**: Health check hardcoded to port 3000
+- Impact: When PORT≠3000 (e.g., PORT=8080), Docker mapped host port to wrong container port
+
+#### Solution
+- **docker-compose.yml line 44**: Changed port mapping to `"${PORT:-3000}:${PORT:-3000}"`
+- **docker-compose.yml line 56**: Updated health check to use dynamic port `$${PORT:-3000}`
+- **Dockerfile line 93**: Updated HEALTHCHECK to use dynamic port `${PORT:-3000}`
+- **Dockerfile line 85**: Added clarifying comment about PORT configurability
+
+#### Testing
+- Verified with default PORT (3000)
+- Verified with custom PORT (8080)
+- Health checks work correctly in both scenarios
+
+#### Related Issues
+- Fixes #228 (Docker Compose port error)
+- Likely fixes #109 (Configuration ignored in HTTP mode)
+- Likely fixes #84 (Can't access container)
+
+Conceived by Romuald Członkowski - [www.aiadvisors.pl/en](https://www.aiadvisors.pl/en)
+
 ## [2.22.3] - 2025-10-25
 
 ### 🔧 Code Quality Improvements
