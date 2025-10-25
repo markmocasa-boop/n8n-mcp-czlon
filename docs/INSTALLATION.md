@@ -59,10 +59,10 @@ docker compose up -d
          - n8n-mcp-data:/app/data
        
        ports:
-         - "${PORT:-3000}:3000"
-       
+         - "${PORT:-3000}:${PORT:-3000}"
+
        healthcheck:
-         test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/health"]
+         test: ["CMD", "sh", "-c", "curl -f http://127.0.0.1:$${PORT:-3000}/health"]
          interval: 30s
          timeout: 10s
          retries: 3
