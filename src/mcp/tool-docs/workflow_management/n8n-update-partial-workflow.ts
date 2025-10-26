@@ -233,13 +233,13 @@ n8n_update_partial_workflow({
   }]
 });
 
-// Remove array element
+// Remove entire array property
 n8n_update_partial_workflow({
   id: "wf_012",
   operations: [{
     type: "updateNode",
     nodeName: "HTTP Request",
-    updates: { "parameters.headers[0]": undefined }
+    updates: { "parameters.headers": undefined }
   }]
 });
 \`\`\`
@@ -337,7 +337,7 @@ n8n_update_partial_workflow({
       '// Migrate from deprecated continueOnFail to onError\nn8n_update_partial_workflow({id: "rm2", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {continueOnFail: undefined, onError: "continueErrorOutput"}}]})',
       '// Remove nested property\nn8n_update_partial_workflow({id: "rm3", operations: [{type: "updateNode", nodeName: "API Request", updates: {"parameters.authentication": undefined}}]})',
       '// Remove multiple properties\nn8n_update_partial_workflow({id: "rm4", operations: [{type: "updateNode", nodeName: "Data Processor", updates: {continueOnFail: undefined, alwaysOutputData: undefined, "parameters.legacy_option": undefined}}]})',
-      '// Remove array element\nn8n_update_partial_workflow({id: "rm5", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {"parameters.headers[0]": undefined}}]})'
+      '// Remove entire array property\nn8n_update_partial_workflow({id: "rm5", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {"parameters.headers": undefined}}]})'
     ],
     useCases: [
       'Rewire connections when replacing nodes',
@@ -402,7 +402,7 @@ n8n_update_partial_workflow({
       'When properties are mutually exclusive (e.g., continueOnFail and onError), setting only the new property will fail - you must remove the old one with undefined',
       'Removing a required property may cause validation errors - check node documentation first',
       'Nested property removal with dot notation only removes the specific nested field, not the entire parent object',
-      'Array element removal with undefined removes the element at that index, which may shift subsequent indices'
+      'Array index notation (e.g., "parameters.headers[0]") is not supported - remove the entire array property instead'
     ],
     relatedTools: ['n8n_update_full_workflow', 'n8n_get_workflow', 'validate_workflow', 'tools_documentation']
   }

@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.7] - 2025-10-26
+
+### 📝 Documentation Fixes
+
+**Issue #292: Corrected Array Property Removal Documentation in n8n_update_partial_workflow**
+
+Fixed critical documentation error in property removal patterns that could have led users to write non-functional code.
+
+#### Problem
+
+The documentation incorrectly showed using array index notation `[0]` for removing array elements:
+```javascript
+// INCORRECT (doesn't work as shown)
+updates: { "parameters.headers[0]": undefined }
+```
+
+**Root Cause**: The `setNestedProperty` implementation doesn't parse array index notation like `[0]`. It treats `headers[0]` as a literal object key, not an array index.
+
+**Impact**: Users following the documentation would write code that doesn't behave as expected. The property `headers[0]` would be treated as an object key, not an array element reference.
+
+#### Fixed
+
+**Three documentation corrections in `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts`:**
+
+1. **Nested Property Removal Section** (lines 236-244):
+   - Changed comment from `// Remove array element` to `// Remove entire array property`
+   - Changed code from `"parameters.headers[0]": undefined` to `"parameters.headers": undefined`
+
+2. **Example rm5** (line 340):
+   - Changed comment from `// Remove array element` to `// Remove entire array property`
+   - Changed code from `"parameters.headers[0]": undefined` to `"parameters.headers": undefined`
+
+3. **Pitfalls Section** (line 405):
+   - OLD: `'Array element removal with undefined removes the element at that index, which may shift subsequent indices'`
+   - NEW: `'Array index notation (e.g., "parameters.headers[0]") is not supported - remove the entire array property instead'`
+
+#### Correct Usage
+
+**To remove an array property:**
+```javascript
+// Correct: Remove entire array
+n8n_update_partial_workflow({
+  id: "wf_012",
+  operations: [{
+    type: "updateNode",
+    nodeName: "HTTP Request",
+    updates: { "parameters.headers": undefined }  // Remove entire headers array
+  }]
+});
+```
+
+**NOT:**
+```javascript
+// Incorrect: Array index notation doesn't work
+updates: { "parameters.headers[0]": undefined }  // Treated as object key "headers[0]"
+```
+
+#### Impact
+
+- **Prevents User Confusion**: Clear documentation on what works vs. what doesn't
+- **Accurate Examples**: All examples now show correct, working patterns
+- **Better Error Prevention**: Pitfall warning helps users avoid this mistake
+- **No Code Changes**: This is purely a documentation fix - no implementation changes needed
+
+#### Testing
+
+- ✅ Documentation reviewed by code-reviewer agent
+- ✅ Tested by n8n-mcp-tester agent
+- ✅ All examples verified against actual implementation behavior
+- ✅ Pitfall accurately describes technical limitation
+
+#### Files Changed
+
+**Documentation (1 file)**:
+- `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts` - Corrected 3 instances of array property removal documentation
+
+**Configuration (2 files)**:
+- `package.json` - Version bump to 2.22.7
+- `package.runtime.json` - Version bump to 2.22.7
+
+#### Related
+
+- **Issue**: #292 - Missing documentation on how to remove node properties using `updateNode`
+- **PR**: #375 - Resolve GitHub Issue 292 in n8n-mcp
+- **Code Review**: Identified critical array index notation documentation error
+- **Root Cause**: Implementation doesn't parse array bracket notation `[N]`
+
+Conceived by Romuald Członkowski - [www.aiadvisors.pl/en](https://www.aiadvisors.pl/en)
+
 ## [2.22.6] - 2025-10-25
 
 ### 🐛 Bug Fixes
