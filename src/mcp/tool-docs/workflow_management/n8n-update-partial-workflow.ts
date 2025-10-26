@@ -186,7 +186,115 @@ Please choose a different name.
 - Simply rename nodes with updateNode - no manual connection operations needed
 - Multiple renames in one call work atomically
 - Can rename a node and add/remove connections using the new name in the same batch
-- Use \`validateOnly: true\` to preview effects before applying`,
+- Use \`validateOnly: true\` to preview effects before applying
+
+## Removing Properties with undefined
+
+To remove a property from a node, set its value to \`undefined\` in the updates object. This is essential when migrating from deprecated properties or cleaning up optional configuration fields.
+
+### Why Use undefined?
+- **Property removal vs. null**: Setting a property to \`undefined\` removes it completely from the node object, while \`null\` sets the property to a null value
+- **Validation constraints**: Some properties are mutually exclusive (e.g., \`continueOnFail\` and \`onError\`). Simply setting one without removing the other will fail validation
+- **Deprecated property migration**: When n8n deprecates properties, you must remove the old property before the new one will work
+
+### Basic Property Removal
+\`\`\`javascript
+// Remove error handling configuration
+n8n_update_partial_workflow({
+  id: "wf_123",
+  operations: [{
+    type: "updateNode",
+    nodeName: "HTTP Request",
+    updates: { onError: undefined }
+  }]
+});
+
+// Remove disabled flag
+n8n_update_partial_workflow({
+  id: "wf_456",
+  operations: [{
+    type: "updateNode",
+    nodeId: "node_abc",
+    updates: { disabled: undefined }
+  }]
+});
+\`\`\`
+
+### Nested Property Removal
+Use dot notation to remove nested properties:
+\`\`\`javascript
+// Remove nested parameter
+n8n_update_partial_workflow({
+  id: "wf_789",
+  operations: [{
+    type: "updateNode",
+    nodeName: "API Request",
+    updates: { "parameters.authentication": undefined }
+  }]
+});
+
+// Remove array element
+n8n_update_partial_workflow({
+  id: "wf_012",
+  operations: [{
+    type: "updateNode",
+    nodeName: "HTTP Request",
+    updates: { "parameters.headers[0]": undefined }
+  }]
+});
+\`\`\`
+
+### Migrating from Deprecated Properties
+Common scenario: replacing \`continueOnFail\` with \`onError\`:
+\`\`\`javascript
+// WRONG: Setting only the new property leaves the old one
+n8n_update_partial_workflow({
+  id: "wf_123",
+  operations: [{
+    type: "updateNode",
+    nodeName: "HTTP Request",
+    updates: { onError: "continueErrorOutput" }
+  }]
+});
+// Error: continueOnFail and onError are mutually exclusive
+
+// CORRECT: Remove the old property first
+n8n_update_partial_workflow({
+  id: "wf_123",
+  operations: [{
+    type: "updateNode",
+    nodeName: "HTTP Request",
+    updates: {
+      continueOnFail: undefined,
+      onError: "continueErrorOutput"
+    }
+  }]
+});
+\`\`\`
+
+### Batch Property Removal
+Remove multiple properties in one operation:
+\`\`\`javascript
+n8n_update_partial_workflow({
+  id: "wf_345",
+  operations: [{
+    type: "updateNode",
+    nodeName: "Data Processor",
+    updates: {
+      continueOnFail: undefined,
+      alwaysOutputData: undefined,
+      "parameters.legacy_option": undefined
+    }
+  }]
+});
+\`\`\`
+
+### When to Use undefined
+- Removing deprecated properties during migration
+- Cleaning up optional configuration flags
+- Resolving mutual exclusivity validation errors
+- Removing stale or unnecessary node metadata
+- Simplifying node configuration`,
     parameters: {
       id: { type: 'string', required: true, description: 'Workflow ID to update' },
       operations: {
@@ -223,7 +331,13 @@ Please choose a different name.
       '// Vector Store setup: Connect embeddings and documents\nn8n_update_partial_workflow({id: "ai7", operations: [\n  {type: "addConnection", source: "Embeddings OpenAI", target: "Pinecone Vector Store", sourceOutput: "ai_embedding"},\n  {type: "addConnection", source: "Default Data Loader", target: "Pinecone Vector Store", sourceOutput: "ai_document"}\n]})',
       '// Connect Vector Store Tool to AI Agent (retrieval setup)\nn8n_update_partial_workflow({id: "ai8", operations: [\n  {type: "addConnection", source: "Pinecone Vector Store", target: "Vector Store Tool", sourceOutput: "ai_vectorStore"},\n  {type: "addConnection", source: "Vector Store Tool", target: "AI Agent", sourceOutput: "ai_tool"}\n]})',
       '// Rewire AI Agent to use different language model\nn8n_update_partial_workflow({id: "ai9", operations: [{type: "rewireConnection", source: "AI Agent", from: "OpenAI Chat Model", to: "Anthropic Chat Model", sourceOutput: "ai_languageModel"}]})',
-      '// Replace all AI tools for an agent\nn8n_update_partial_workflow({id: "ai10", operations: [\n  {type: "removeConnection", source: "Old Tool 1", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "removeConnection", source: "Old Tool 2", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "New HTTP Tool", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "New Code Tool", target: "AI Agent", sourceOutput: "ai_tool"}\n]})'
+      '// Replace all AI tools for an agent\nn8n_update_partial_workflow({id: "ai10", operations: [\n  {type: "removeConnection", source: "Old Tool 1", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "removeConnection", source: "Old Tool 2", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "New HTTP Tool", target: "AI Agent", sourceOutput: "ai_tool"},\n  {type: "addConnection", source: "New Code Tool", target: "AI Agent", sourceOutput: "ai_tool"}\n]})',
+      '\n// ============ REMOVING PROPERTIES EXAMPLES ============',
+      '// Remove a simple property\nn8n_update_partial_workflow({id: "rm1", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {onError: undefined}}]})',
+      '// Migrate from deprecated continueOnFail to onError\nn8n_update_partial_workflow({id: "rm2", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {continueOnFail: undefined, onError: "continueErrorOutput"}}]})',
+      '// Remove nested property\nn8n_update_partial_workflow({id: "rm3", operations: [{type: "updateNode", nodeName: "API Request", updates: {"parameters.authentication": undefined}}]})',
+      '// Remove multiple properties\nn8n_update_partial_workflow({id: "rm4", operations: [{type: "updateNode", nodeName: "Data Processor", updates: {continueOnFail: undefined, alwaysOutputData: undefined, "parameters.legacy_option": undefined}}]})',
+      '// Remove array element\nn8n_update_partial_workflow({id: "rm5", operations: [{type: "updateNode", nodeName: "HTTP Request", updates: {"parameters.headers[0]": undefined}}]})'
     ],
     useCases: [
       'Rewire connections when replacing nodes',
@@ -259,7 +373,11 @@ Please choose a different name.
       'Connect language model BEFORE adding AI Agent to ensure validation passes',
       'Use targetIndex for fallback models (primary=0, fallback=1)',
       'Batch AI component connections in a single operation for atomicity',
-      'Validate AI workflows after connection changes to catch configuration errors'
+      'Validate AI workflows after connection changes to catch configuration errors',
+      'To remove properties, set them to undefined (not null) in the updates object',
+      'When migrating from deprecated properties, remove the old property and add the new one in the same operation',
+      'Use undefined to resolve mutual exclusivity validation errors between properties',
+      'Batch multiple property removals in a single updateNode operation for efficiency'
     ],
     pitfalls: [
       '**REQUIRES N8N_API_URL and N8N_API_KEY environment variables** - will not work without n8n API access',
@@ -279,7 +397,12 @@ Please choose a different name.
       '**Auto-sanitization behavior**: Binary operators (equals, contains) automatically have singleValue removed; unary operators (isEmpty, isNotEmpty) automatically get singleValue:true added',
       '**Auto-sanitization runs on ALL nodes**: When ANY update is made, ALL nodes in the workflow are sanitized (not just modified ones)',
       '**Auto-sanitization cannot fix everything**: It fixes operator structures and missing metadata, but cannot fix broken connections or branch mismatches',
-      '**Corrupted workflows beyond repair**: Workflows in paradoxical states (API returns corrupt, API rejects updates) cannot be fixed via API - must be recreated'
+      '**Corrupted workflows beyond repair**: Workflows in paradoxical states (API returns corrupt, API rejects updates) cannot be fixed via API - must be recreated',
+      'Setting a property to null does NOT remove it - use undefined instead',
+      'When properties are mutually exclusive (e.g., continueOnFail and onError), setting only the new property will fail - you must remove the old one with undefined',
+      'Removing a required property may cause validation errors - check node documentation first',
+      'Nested property removal with dot notation only removes the specific nested field, not the entire parent object',
+      'Array element removal with undefined removes the element at that index, which may shift subsequent indices'
     ],
     relatedTools: ['n8n_update_full_workflow', 'n8n_get_workflow', 'validate_workflow', 'tools_documentation']
   }
