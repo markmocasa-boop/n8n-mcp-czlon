@@ -1,60 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1761429521567,
+  "lastUpdate": 1761473384801,
   "repoUrl": "https://github.com/czlonkowski/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "50439e2aa14c4cc593b477947ac55f3c19ae1229",
-          "message": "Merge pull request #281 from czlonkowski/feature/ai-node-validation\n\nfix: AI workflow validation - critical node type normalization bug",
-          "timestamp": "2025-10-07T11:20:09+02:00",
-          "tree_id": "c9b0b68988ae5bfeac4548a49fed7d321355fd5c",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/50439e2aa14c4cc593b477947ac55f3c19ae1229"
-        },
-        "date": 1759828917655,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0191,
-            "range": "0.23900000000000002",
-            "unit": "ms",
-            "extra": "52476 ops/sec"
-          },
-          {
-            "name": "sample - array sorting - large",
-            "value": 3.3962,
-            "range": "0.43900000000000006",
-            "unit": "ms",
-            "extra": "294 ops/sec"
-          },
-          {
-            "name": "sample - string concatenation",
-            "value": 0.0046,
-            "range": "0.2678",
-            "unit": "ms",
-            "extra": "217233 ops/sec"
-          },
-          {
-            "name": "sample - object creation",
-            "value": 0.0662,
-            "range": "0.3769",
-            "unit": "ms",
-            "extra": "15117 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1668,6 +1616,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/czlonkowski/n8n-mcp/commit/590dc087ac83acf7a1a2711abc086e9aeedb6fdd"
         },
         "date": 1761429520889,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "56956555+czlonkowski@users.noreply.github.com",
+            "name": "Romuald Członkowski",
+            "username": "czlonkowski"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "892c4ed70a40c22c74155fe3625257a6e4988221",
+          "message": "Resolve GitHub Issue 292 in n8n-mcp (#375)\n\n* docs: add comprehensive documentation for removing node properties with undefined\n\nAdd detailed documentation section for property removal pattern in n8n_update_partial_workflow tool:\n- New \"Removing Properties with undefined\" section explaining the pattern\n- Examples showing basic, nested, and batch property removal\n- Migration guide for deprecated properties (continueOnFail → onError)\n- Best practices for when to use undefined\n- Pitfalls to avoid (null vs undefined, mutual exclusivity, etc.)\n\nThis addresses the documentation gap reported in issue #292 where users\nwere confused about how to remove properties during node updates.\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: correct array property removal documentation in n8n_update_partial_workflow (Issue #292)\n\nFixed critical documentation error showing array index notation [0] which doesn't work.\nThe setNestedProperty implementation treats \"headers[0]\" as a literal object key, not an array index.\n\nChanges:\n- Updated nested property removal section to show entire array removal\n- Corrected example rm5 to use \"parameters.headers\" instead of \"parameters.headers[0]\"\n- Replaced misleading pitfall with accurate warning about array index notation not being supported\n\nImpact:\n- Prevents user confusion and non-functional code\n- All examples now show correct, working patterns\n- Clear warning helps users avoid this mistake\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-10-26T11:07:30+01:00",
+          "tree_id": "013b8088524cd46df3e8251f6fab3177df0abfda",
+          "url": "https://github.com/czlonkowski/n8n-mcp/commit/892c4ed70a40c22c74155fe3625257a6e4988221"
+        },
+        "date": 1761473384397,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
