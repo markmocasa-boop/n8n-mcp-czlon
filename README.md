@@ -51,6 +51,8 @@ npx n8n-mcp
 
 Add to Claude Desktop config:
 
+> ⚠️ **Important**: The `MCP_MODE: "stdio"` environment variable is **required** for Claude Desktop. Without it, you will see JSON parsing errors like `"Unexpected token..."` in the UI. This variable ensures that only JSON-RPC messages are sent to stdout, preventing debug logs from interfering with the protocol.
+
 **Basic configuration (documentation tools only):**
 ```json
 {
