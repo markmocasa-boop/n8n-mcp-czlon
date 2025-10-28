@@ -75,10 +75,15 @@ async function fetchTemplatesRobust() {
         
         // Fetch detail
         const detail = await fetcher.fetchTemplateDetail(template.id);
-        
-        // Save immediately
-        repository.saveTemplate(template, detail);
-        saved++;
+
+        if (detail !== null) {
+          // Save immediately
+          repository.saveTemplate(template, detail);
+          saved++;
+        } else {
+          errors++;
+          console.error(`\n❌ Failed to fetch template ${template.id} (${template.name}) after retries`);
+        }
         
         // Rate limiting
         await new Promise(resolve => setTimeout(resolve, 200));

@@ -496,10 +496,17 @@ export class TemplateRepository {
     // Count node usage
     const nodeCount: Record<string, number> = {};
     topNodes.forEach(t => {
-      const nodes = JSON.parse(t.nodes_used);
-      nodes.forEach((n: string) => {
-        nodeCount[n] = (nodeCount[n] || 0) + 1;
-      });
+      if (!t.nodes_used) return;
+      try {
+        const nodes = JSON.parse(t.nodes_used);
+        if (Array.isArray(nodes)) {
+          nodes.forEach((n: string) => {
+            nodeCount[n] = (nodeCount[n] || 0) + 1;
+          });
+        }
+      } catch (error) {
+        logger.warn(`Failed to parse nodes_used for template stats:`, error);
+      }
     });
     
     // Get top 10 most used nodes
