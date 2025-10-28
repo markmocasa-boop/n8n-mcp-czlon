@@ -5,23 +5,23 @@
 [![npm version](https://img.shields.io/npm/v/n8n-mcp.svg)](https://www.npmjs.com/package/n8n-mcp)
 [![codecov](https://codecov.io/gh/czlonkowski/n8n-mcp/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/czlonkowski/n8n-mcp)
 [![Tests](https://img.shields.io/badge/tests-3336%20passing-brightgreen.svg)](https://github.com/czlonkowski/n8n-mcp/actions)
-[![n8n version](https://img.shields.io/badge/n8n-^1.117.2-orange.svg)](https://github.com/n8n-io/n8n)
+[![n8n version](https://img.shields.io/badge/n8n-1.117.2-orange.svg)](https://github.com/n8n-io/n8n)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fczlonkowski%2Fn8n--mcp-green.svg)](https://github.com/czlonkowski/n8n-mcp/pkgs/container/n8n-mcp)
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/n8n-mcp?referralCode=n8n-mcp)
 
-A Model Context Protocol (MCP) server that provides AI assistants with comprehensive access to n8n node documentation, properties, and operations. Deploy in minutes to give Claude and other AI assistants deep knowledge about n8n's 525+ workflow automation nodes.
+A Model Context Protocol (MCP) server that provides AI assistants with comprehensive access to n8n node documentation, properties, and operations. Deploy in minutes to give Claude and other AI assistants deep knowledge about n8n's 541 workflow automation nodes.
 
 ## Overview
 
 n8n-MCP serves as a bridge between n8n's workflow automation platform and AI models, enabling them to understand and work with n8n nodes effectively. It provides structured access to:
 
-- 📚 **536 n8n nodes** from both n8n-nodes-base and @n8n/n8n-nodes-langchain
+- 📚 **541 n8n nodes** from both n8n-nodes-base and @n8n/n8n-nodes-langchain
 - 🔧 **Node properties** - 99% coverage with detailed schemas
 - ⚡ **Node operations** - 63.6% coverage of available actions
-- 📄 **Documentation** - 90% coverage from official n8n docs (including AI nodes)
-- 🤖 **AI tools** - 263 AI-capable nodes detected with full documentation
+- 📄 **Documentation** - 87% coverage from official n8n docs (including AI nodes)
+- 🤖 **AI tools** - 271 AI-capable nodes detected with full documentation
 - 💡 **Real-world examples** - 2,646 pre-extracted configurations from popular templates
-- 🎯 **Template library** - 2,500+ workflow templates with smart filtering
+- 🎯 **Template library** - 2,709 workflow templates with 100% metadata coverage
 
 
 ## ⚠️ Important Safety Warning
@@ -533,7 +533,7 @@ When operations are independent, execute them in parallel for maximum performanc
 ❌ BAD: Sequential tool calls (await each one before the next)
 
 ### 3. Templates First
-ALWAYS check templates before building from scratch (2,500+ available).
+ALWAYS check templates before building from scratch (2,709 available).
 
 ### 4. Multi-Level Validation
 Use validate_node_minimal → validate_node_operation → validate_workflow pattern.
@@ -842,7 +842,7 @@ n8n_update_partial_workflow({
 ### Core Behavior
 1. **Silent execution** - No commentary between tools
 2. **Parallel by default** - Execute independent operations simultaneously
-3. **Templates first** - Always check before building (2,500+ available)
+3. **Templates first** - Always check before building (2,709 available)
 4. **Multi-level validation** - Quick check → Full validation → Workflow validation
 5. **Never trust defaults** - Explicitly configure ALL parameters
 
@@ -945,7 +945,7 @@ Once connected, Claude can use these powerful tools:
 - **`get_node_as_tool_info`** - Get guidance on using any node as an AI tool
 
 ### Template Tools
-- **`list_templates`** - Browse all templates with descriptions and optional metadata (2,500+ templates)
+- **`list_templates`** - Browse all templates with descriptions and optional metadata (2,709 templates)
 - **`search_templates`** - Text search across template names and descriptions
 - **`search_templates_by_metadata`** - Advanced filtering by complexity, setup time, services, audience
 - **`list_node_templates`** - Find templates using specific nodes
@@ -1100,17 +1100,17 @@ npm run dev:http       # HTTP dev mode
 
 ## 📊 Metrics & Coverage
 
-Current database coverage (n8n v1.113.3):
+Current database coverage (n8n v1.117.2):
 
-- ✅ **536/536** nodes loaded (100%)
-- ✅ **528** nodes with properties (98.7%)
-- ✅ **470** nodes with documentation (88%)
-- ✅ **267** AI-capable tools detected
+- ✅ **541/541** nodes loaded (100%)
+- ✅ **541** nodes with properties (100%)
+- ✅ **470** nodes with documentation (87%)
+- ✅ **271** AI-capable tools detected
 - ✅ **2,646** pre-extracted template configurations
-- ✅ **2,500+** workflow templates available
+- ✅ **2,709** workflow templates available (100% metadata coverage)
 - ✅ **AI Agent & LangChain nodes** fully documented
 - ⚡ **Average response time**: ~12ms
-- 💾 **Database size**: ~15MB (optimized)
+- 💾 **Database size**: ~68MB (includes templates with metadata)
 
 ## 🔄 Recent Updates
 
