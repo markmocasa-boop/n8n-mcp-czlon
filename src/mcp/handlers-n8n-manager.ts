@@ -1512,6 +1512,241 @@ export async function handleHealthCheck(context?: InstanceContext): Promise<McpT
   }
 }
 
+// ========================================================================
+// Credential Management Handlers
+// ========================================================================
+
+/**
+ * Create a new credential in n8n
+ */
+export async function handleCreateCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const schema = z.object({
+      name: z.string().min(1, 'Credential name is required'),
+      type: z.string().min(1, 'Credential type is required'),
+      data: z.record(z.any()).optional().default({})
+    });
+
+    const validated = schema.parse(args);
+    const apiClient = getN8nApiClient(context);
+
+    if (!apiClient) {
+      return {
+        success: false,
+        error: 'N8N API is not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.'
+      };
+    }
+
+    const credential = await apiClient.createCredential(validated);
+
+    telemetry.recordToolUsage('n8n_create_credential');
+
+    return {
+      success: true,
+      data: credential,
+      message: `Credential "${credential.name}" created successfully with ID: ${credential.id}`
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+      };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Get a credential by ID
+ */
+export async function handleGetCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const schema = z.object({
+      id: z.string().min(1, 'Credential ID is required')
+    });
+
+    const { id } = schema.parse(args);
+    const apiClient = getN8nApiClient(context);
+
+    if (!apiClient) {
+      return {
+        success: false,
+        error: 'N8N API is not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.'
+      };
+    }
+
+    const credential = await apiClient.getCredential(id);
+
+    telemetry.recordToolUsage('n8n_get_credential');
+
+    return {
+      success: true,
+      data: credential
+    };
+  } catch (error) {
+    if (error instanceof N8nNotFoundError) {
+      return {
+        success: false,
+        error: `Credential not found: ${error.message}`
+      };
+    }
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+      };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * List all credentials with optional filters
+ */
+export async function handleListCredentials(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const schema = z.object({
+      cursor: z.string().optional(),
+      limit: z.number().min(1).max(100).optional()
+    });
+
+    const params = schema.parse(args);
+    const apiClient = getN8nApiClient(context);
+
+    if (!apiClient) {
+      return {
+        success: false,
+        error: 'N8N API is not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.'
+      };
+    }
+
+    const response = await apiClient.listCredentials(params);
+
+    telemetry.recordToolUsage('n8n_list_credentials');
+
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+      };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Update an existing credential
+ */
+export async function handleUpdateCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const schema = z.object({
+      id: z.string().min(1, 'Credential ID is required'),
+      name: z.string().optional(),
+      type: z.string().optional(),
+      data: z.record(z.any()).optional()
+    });
+
+    const { id, ...updates } = schema.parse(args);
+    const apiClient = getN8nApiClient(context);
+
+    if (!apiClient) {
+      return {
+        success: false,
+        error: 'N8N API is not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.'
+      };
+    }
+
+    const credential = await apiClient.updateCredential(id, updates);
+
+    telemetry.recordToolUsage('n8n_update_credential');
+
+    return {
+      success: true,
+      data: credential,
+      message: `Credential "${credential.name}" updated successfully`
+    };
+  } catch (error) {
+    if (error instanceof N8nNotFoundError) {
+      return {
+        success: false,
+        error: `Credential not found: ${error.message}`
+      };
+    }
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+      };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Delete a credential by ID
+ */
+export async function handleDeleteCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const schema = z.object({
+      id: z.string().min(1, 'Credential ID is required')
+    });
+
+    const { id } = schema.parse(args);
+    const apiClient = getN8nApiClient(context);
+
+    if (!apiClient) {
+      return {
+        success: false,
+        error: 'N8N API is not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.'
+      };
+    }
+
+    await apiClient.deleteCredential(id);
+
+    telemetry.recordToolUsage('n8n_delete_credential');
+
+    return {
+      success: true,
+      message: `Credential with ID ${id} deleted successfully`
+    };
+  } catch (error) {
+    if (error instanceof N8nNotFoundError) {
+      return {
+        success: false,
+        error: `Credential not found: ${error.message}`
+      };
+    }
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
+      };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
 export async function handleListAvailableTools(context?: InstanceContext): Promise<McpToolResponse> {
   const tools = [
     {
@@ -1527,6 +1762,16 @@ export async function handleListAvailableTools(context?: InstanceContext): Promi
         { name: 'n8n_list_workflows', description: 'List workflows with filters' },
         { name: 'n8n_validate_workflow', description: 'Validate workflow from n8n instance' },
         { name: 'n8n_autofix_workflow', description: 'Automatically fix common workflow errors' }
+      ]
+    },
+    {
+      category: 'Credential Management',
+      tools: [
+        { name: 'n8n_create_credential', description: 'Create new credentials' },
+        { name: 'n8n_get_credential', description: 'Get credential by ID' },
+        { name: 'n8n_list_credentials', description: 'List all credentials' },
+        { name: 'n8n_update_credential', description: 'Update existing credentials' },
+        { name: 'n8n_delete_credential', description: 'Delete credentials' }
       ]
     },
     {

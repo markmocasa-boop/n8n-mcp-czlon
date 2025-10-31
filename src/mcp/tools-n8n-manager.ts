@@ -516,5 +516,102 @@ Examples:
       },
       required: ['mode']
     }
+  },
+
+  // Credential Management Tools
+  {
+    name: 'n8n_create_credential',
+    description: `Create a new credential in n8n. Credentials store authentication information for services like APIs, databases, etc.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Credential name (required)'
+        },
+        type: {
+          type: 'string',
+          description: 'Credential type (required). Examples: httpHeaderAuth, oAuth2Api, postgres, telegramApi, openAiApi'
+        },
+        data: {
+          type: 'object',
+          description: 'Credential data (required). Structure depends on credential type. For httpHeaderAuth: {name: "Authorization", value: "Bearer token"}. For postgres: {host, port, database, user, password}'
+        }
+      },
+      required: ['name', 'type', 'data']
+    }
+  },
+  {
+    name: 'n8n_get_credential',
+    description: `Get a credential by ID. Returns credential details including name, type, and configuration.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Credential ID'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_list_credentials',
+    description: `List all credentials with optional pagination. Returns paginated list of credentials.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cursor: {
+          type: 'string',
+          description: 'Pagination cursor from previous response'
+        },
+        limit: {
+          type: 'number',
+          minimum: 1,
+          maximum: 100,
+          description: 'Number of credentials to return (1-100)'
+        }
+      }
+    }
+  },
+  {
+    name: 'n8n_update_credential',
+    description: `Update an existing credential. Can update name, type, or data fields.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Credential ID (required)'
+        },
+        name: {
+          type: 'string',
+          description: 'New credential name (optional)'
+        },
+        type: {
+          type: 'string',
+          description: 'New credential type (optional)'
+        },
+        data: {
+          type: 'object',
+          description: 'New credential data (optional)'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'n8n_delete_credential',
+    description: `Delete a credential by ID. This action cannot be undone. Note: Cannot delete credentials currently in use by workflows.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Credential ID to delete'
+        }
+      },
+      required: ['id']
+    }
   }
 ];

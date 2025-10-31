@@ -1054,6 +1054,23 @@ export class N8NDocumentationMCPServer {
         this.validateToolParams(name, args, ['mode']);
         return n8nHandlers.handleWorkflowVersions(args, this.repository!, this.instanceContext);
 
+      // Credential Management Tools
+      case 'n8n_create_credential':
+        this.validateToolParams(name, args, ['name', 'type', 'data']);
+        return n8nHandlers.handleCreateCredential(args, this.instanceContext);
+      case 'n8n_get_credential':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleGetCredential(args, this.instanceContext);
+      case 'n8n_list_credentials':
+        // No required parameters
+        return n8nHandlers.handleListCredentials(args, this.instanceContext);
+      case 'n8n_update_credential':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleUpdateCredential(args, this.instanceContext);
+      case 'n8n_delete_credential':
+        this.validateToolParams(name, args, ['id']);
+        return n8nHandlers.handleDeleteCredential(args, this.instanceContext);
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
