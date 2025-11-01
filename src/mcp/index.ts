@@ -161,9 +161,24 @@ Learn more: https://github.com/czlonkowski/n8n-mcp/blob/main/PRIVACY.md
           await server.shutdown();
 
           // Close stdin to signal we're done reading
+          // NOTE: Destroying stdin on Windows can cause libuv assertions
+          // (see Issue: Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src/win/async.c)
+          // To avoid double-closing underlying handles on Win32, only pause stdin
+          // and avoid calling destroy() on Windows. For non-Windows platforms we
+          // keep the previous behavior.
           if (process.stdin && !process.stdin.destroyed) {
-            process.stdin.pause();
-            process.stdin.destroy();
+            try {
+              process.stdin.pause();
+              if (process.platform !== 'win32') {
+                // Safe to destroy on POSIX-like platforms
+                process.stdin.destroy();
+              } else {
+                logger.debug('Skipping process.stdin.destroy() on Windows to avoid libuv handle assertion');
+              }
+            } catch (err) {
+              // Defensive: log and continue shutdown
+              logger.warn('Error while pausing/destroying stdin during shutdown:', err);
+            }
           }
 
           // Exit with timeout to ensure we don't hang

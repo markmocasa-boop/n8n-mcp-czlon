@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.9] - 2025-11-01
+
+### 🐛 Bug Fixes
+
+**Windows: Fixed libuv assertion failure on graceful shutdown**
+
+Fixed critical issue where the MCP server would crash on Windows with a libuv assertion failure during shutdown, preventing reliable use with Claude Desktop and other MCP clients.
+
+#### Problem
+
+- **Symptom**: Server crashed on exit with `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76`
+- **Impact**: Prevented Windows users from reliably using n8n-mcp with Claude Desktop via npx/npm
+- **Root Cause**: Calling `process.stdin.destroy()` on Windows could trigger double-close of underlying libuv async handles during shutdown
+
+#### Solution
+
+Modified shutdown handler in `src/mcp/index.ts` to avoid calling `process.stdin.destroy()` on Windows platforms:
+- Windows: Only calls `process.stdin.pause()` to stop reading
+- Other platforms: Continues to call both `pause()` and `destroy()` as before
+- Added defensive try/catch and logging for shutdown errors
+
+#### Changes
+
+- **src/mcp/index.ts**: Platform-aware stdin cleanup during shutdown
+- **tests/integration/shutdown/windows-graceful-shutdown.test.ts**: New regression test suite
+- **.github/workflows/test-windows.yml**: New Windows CI workflow to prevent regressions
+
+#### Testing
+
+New test suite validates:
+1. Server starts successfully in stdio mode
+2. Server responds to MCP initialize requests
+3. Server shuts down gracefully when stdin is closed (no assertion failures)
+4. SIGINT/SIGTERM signals are handled cleanly
+
+Runs automatically on Windows CI for changes to shutdown-related code.
+
+#### Acceptance Criteria Met
+
+- ✅ Server can be started via npx on Windows without crashes
+- ✅ Process exits cleanly without assertion failures
+- ✅ No "Server disconnected" errors in Claude Desktop
+- ✅ stdio communication remains stable throughout session
+- ✅ Both better-sqlite3 and sql.js fallback work correctly
+
+**Special thanks to the community for the detailed bug report and reproduction steps!**
+
 ## [2.22.7] - 2025-10-26
 
 ### 📝 Documentation Fixes
