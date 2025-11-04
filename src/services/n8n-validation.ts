@@ -133,6 +133,7 @@ export function cleanWorkflowForUpdate(workflow: Workflow): Partial<Workflow> {
     createdAt,
     updatedAt,
     versionId,
+    versionCounter, // Added: n8n 1.118.1+ returns this but rejects it in updates
     meta,
     staticData,
     // Remove fields that cause API errors
