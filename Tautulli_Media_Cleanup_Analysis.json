@@ -1,0 +1,284 @@
+{
+  "name": "Tautulli Media Library Cleanup Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.tautulliUrl}}/api/v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "tautulliApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.apiKey}}"
+            },
+            {
+              "name": "cmd",
+              "value": "get_library_media_info"
+            },
+            {
+              "name": "section_id",
+              "value": "={{$json.sectionId}}"
+            },
+            {
+              "name": "length",
+              "value": "10000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-library",
+      "name": "Get All Media from Library",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        470,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.tautulliUrl}}/api/v2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.apiKey}}"
+            },
+            {
+              "name": "cmd",
+              "value": "get_history"
+            },
+            {
+              "name": "length",
+              "value": "10000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-history",
+      "name": "Get Watch History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        470,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tautulli Media Analysis Script\n// Analyzes media library for cleanup recommendations\n\nconst libraryData = $input.first().json.response.data.data || [];\nconst historyData = $input.all()[1].json.response.data.data || [];\n\n// Configuration\nconst DAYS_THRESHOLD = 180; // Consider unwatched if not viewed in 180 days\nconst RATING_THRESHOLD = 6.0; // Consider low-rated if below 6.0\nconst PLAY_COUNT_THRESHOLD = 2; // Consider unpopular if played less than this\n\nconst now = Date.now();\nconst daysToMs = days => days * 24 * 60 * 60 * 1000;\n\n// Build watch history map\nconst watchHistory = {};\nhistoryData.forEach(watch => {\n  const ratingKey = watch.rating_key;\n  if (!watchHistory[ratingKey]) {\n    watchHistory[ratingKey] = {\n      lastWatched: 0,\n      playCount: 0,\n      users: new Set()\n    };\n  }\n  const watchTime = watch.stopped * 1000; // Convert to ms\n  if (watchTime > watchHistory[ratingKey].lastWatched) {\n    watchHistory[ratingKey].lastWatched = watchTime;\n  }\n  watchHistory[ratingKey].playCount++;\n  watchHistory[ratingKey].users.add(watch.user);\n});\n\n// Analyze each media item\nconst recommendations = [];\nconst duplicates = {};\n\nlibraryData.forEach(item => {\n  const ratingKey = item.rating_key;\n  const title = item.title || item.grandparent_title || 'Unknown';\n  const year = item.year || 'Unknown';\n  const rating = parseFloat(item.rating || 0);\n  const fileSize = parseInt(item.file_size || 0);\n  const history = watchHistory[ratingKey] || { lastWatched: 0, playCount: 0, users: new Set() };\n\n  const daysSinceWatch = history.lastWatched\n    ? Math.floor((now - history.lastWatched) / daysToMs(1))\n    : 9999;\n\n  const analysis = {\n    ratingKey,\n    title,\n    year,\n    mediaType: item.media_type,\n    rating,\n    playCount: history.playCount,\n    lastWatched: history.lastWatched ? new Date(history.lastWatched).toISOString() : 'Never',\n    daysSinceWatch,\n    fileSize: (fileSize / (1024 ** 3)).toFixed(2) + ' GB',\n    fileSizeBytes: fileSize,\n    filePath: item.file,\n    reasons: []\n  };\n\n  // Check for issues\n  let deleteRecommended = false;\n\n  if (history.playCount === 0) {\n    analysis.reasons.push('Never watched');\n    deleteRecommended = true;\n  } else if (daysSinceWatch > DAYS_THRESHOLD) {\n    analysis.reasons.push(`Not watched in ${daysSinceWatch} days`);\n    deleteRecommended = true;\n  }\n\n  if (rating < RATING_THRESHOLD && rating > 0) {\n    analysis.reasons.push(`Low rating (${rating}/10)`);\n    deleteRecommended = true;\n  }\n\n  if (history.playCount < PLAY_COUNT_THRESHOLD && history.playCount > 0) {\n    analysis.reasons.push(`Unpopular (only ${history.playCount} plays)`);\n    deleteRecommended = true;\n  }\n\n  // Check for duplicates (same title and year)\n  const duplicateKey = `${title}|${year}`;\n  if (!duplicates[duplicateKey]) {\n    duplicates[duplicateKey] = [];\n  }\n  duplicates[duplicateKey].push(analysis);\n\n  if (deleteRecommended) {\n    analysis.deleteRecommended = true;\n    recommendations.push(analysis);\n  }\n});\n\n// Find and mark duplicates\nObject.keys(duplicates).forEach(key => {\n  const items = duplicates[key];\n  if (items.length > 1) {\n    // Sort by quality/size - keep the best one\n    items.sort((a, b) => b.fileSizeBytes - a.fileSizeBytes);\n\n    // Mark all except the first (largest) as duplicates\n    items.forEach((item, index) => {\n      if (index > 0) {\n        item.reasons.push(`Duplicate (keeping larger version)`);\n        item.deleteRecommended = true;\n        item.isDuplicate = true;\n        if (!recommendations.find(r => r.ratingKey === item.ratingKey)) {\n          recommendations.push(item);\n        }\n      }\n    });\n  }\n});\n\n// Calculate statistics\nconst stats = {\n  totalItems: libraryData.length,\n  neverWatched: recommendations.filter(r => r.playCount === 0).length,\n  notWatchedRecently: recommendations.filter(r => r.daysSinceWatch > DAYS_THRESHOLD && r.playCount > 0).length,\n  lowRated: recommendations.filter(r => r.reasons.some(reason => reason.includes('Low rating'))).length,\n  unpopular: recommendations.filter(r => r.reasons.some(reason => reason.includes('Unpopular'))).length,\n  duplicates: recommendations.filter(r => r.isDuplicate).length,\n  totalRecommendedForDeletion: recommendations.length,\n  potentialSpaceSaved: recommendations.reduce((sum, r) => sum + r.fileSizeBytes, 0)\n};\n\nstats.potentialSpaceSavedGB = (stats.potentialSpaceSaved / (1024 ** 3)).toFixed(2) + ' GB';\n\n// Sort by file size (delete largest first to save most space)\nrecommendations.sort((a, b) => b.fileSizeBytes - a.fileSizeBytes);\n\nreturn [{\n  json: {\n    statistics: stats,\n    recommendations,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "analyze-media",
+      "name": "Analyze Media Library",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.statistics.totalRecommendedForDeletion}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-recommendations",
+      "name": "Has Recommendations?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        910,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate deletion report\nconst data = $input.first().json;\nconst stats = data.statistics;\nconst recommendations = data.recommendations;\n\n// Create CSV content for easy import into other tools\nconst csvLines = ['Title,Year,Type,Rating,Play Count,Last Watched,Days Since Watch,File Size,Reasons,File Path'];\n\nrecommendations.forEach(item => {\n  const line = [\n    `\"${item.title.replace(/\"/g, '\"\"')}\"`,\n    item.year,\n    item.mediaType,\n    item.rating,\n    item.playCount,\n    item.lastWatched,\n    item.daysSinceWatch,\n    item.fileSize,\n    `\"${item.reasons.join('; ')}\"`,\n    `\"${item.filePath.replace(/\"/g, '\"\"')}\"`\n  ].join(',');\n  csvLines.push(line);\n});\n\nconst csvContent = csvLines.join('\\n');\n\n// Create summary report\nconst summary = `\n# Tautulli Media Library Cleanup Report\nGenerated: ${data.timestamp}\n\n## Summary Statistics\n- Total Items in Library: ${stats.totalItems}\n- Items Recommended for Deletion: ${stats.totalRecommendedForDeletion}\n- Potential Space Saved: ${stats.potentialSpaceSavedGB}\n\n## Breakdown\n- Never Watched: ${stats.neverWatched}\n- Not Watched Recently (>${DAYS_THRESHOLD} days): ${stats.notWatchedRecently}\n- Low Rated: ${stats.lowRated}\n- Unpopular: ${stats.unpopular}\n- Duplicates: ${stats.duplicates}\n\n## Top 20 Recommendations (by file size)\n${recommendations.slice(0, 20).map((item, i) =>\n  `${i + 1}. ${item.title} (${item.year}) - ${item.fileSize}\n   - Reasons: ${item.reasons.join(', ')}\n   - Play count: ${item.playCount}, Last watched: ${item.lastWatched}\n   - Path: ${item.filePath}`\n).join('\\n\\n')}\n\n## Next Steps\n1. Review the full CSV export for detailed recommendations\n2. Use Maintainerr or similar tools to process the deletion list\n3. Consider backing up before deletion\n4. Run this analysis periodically to keep library optimized\n`;\n\nreturn [{\n  json: {\n    summary,\n    csvContent,\n    statistics: stats,\n    recommendations\n  }\n}];"
+      },
+      "id": "generate-report",
+      "name": "Generate Deletion Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1130,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Merge Library & History",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "config-url",
+              "name": "tautulliUrl",
+              "value": "http://localhost:8181",
+              "type": "string"
+            },
+            {
+              "id": "config-key",
+              "name": "apiKey",
+              "value": "YOUR_TAUTULLI_API_KEY",
+              "type": "string"
+            },
+            {
+              "id": "config-section",
+              "name": "sectionId",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config-node",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        250,
+        400
+      ],
+      "notes": "Update these values:\\n- tautulliUrl: Your Tautulli URL\\n- apiKey: Your Tautulli API key\\n- sectionId: Library section ID (1 for Movies, 2 for TV, etc.)"
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get All Media from Library",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Watch History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Media from Library": {
+      "main": [
+        [
+          {
+            "node": "Merge Library & History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Watch History": {
+      "main": [
+        [
+          {
+            "node": "Merge Library & History",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Library & History": {
+      "main": [
+        [
+          {
+            "node": "Analyze Media Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Media Library": {
+      "main": [
+        [
+          {
+            "node": "Has Recommendations?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Recommendations?": {
+      "main": [
+        [
+          {
+            "node": "Generate Deletion Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-04T09:00:00.000Z",
+  "versionId": "1"
+}
