@@ -313,6 +313,7 @@ describe('n8n-validation', () => {
           createdAt: '2023-01-01',
           updatedAt: '2023-01-01',
           versionId: 'v123',
+          versionCounter: 5, // n8n 1.118.1+ field
           meta: { test: 'data' },
           staticData: { some: 'data' },
           pinData: { pin: 'data' },
@@ -333,6 +334,7 @@ describe('n8n-validation', () => {
         expect(cleaned).not.toHaveProperty('createdAt');
         expect(cleaned).not.toHaveProperty('updatedAt');
         expect(cleaned).not.toHaveProperty('versionId');
+        expect(cleaned).not.toHaveProperty('versionCounter'); // n8n 1.118.1+ compatibility
         expect(cleaned).not.toHaveProperty('meta');
         expect(cleaned).not.toHaveProperty('staticData');
         expect(cleaned).not.toHaveProperty('pinData');
@@ -347,6 +349,22 @@ describe('n8n-validation', () => {
         // Should keep name and filter settings to safe properties
         expect(cleaned.name).toBe('Updated Workflow');
         expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
+      });
+
+      it('should exclude versionCounter for n8n 1.118.1+ compatibility', () => {
+        const workflow = {
+          name: 'Test Workflow',
+          nodes: [],
+          connections: {},
+          versionId: 'v123',
+          versionCounter: 5, // n8n 1.118.1 returns this but rejects it in PUT
+        } as any;
+
+        const cleaned = cleanWorkflowForUpdate(workflow);
+
+        expect(cleaned).not.toHaveProperty('versionCounter');
+        expect(cleaned).not.toHaveProperty('versionId');
+        expect(cleaned.name).toBe('Test Workflow');
       });
 
       it('should add empty settings object for cloud API compatibility', () => {

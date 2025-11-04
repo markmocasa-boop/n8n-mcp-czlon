@@ -66,6 +66,7 @@ export interface Workflow {
   updatedAt?: string;
   createdAt?: string;
   versionId?: string;
+  versionCounter?: number; // Added: n8n 1.118.1+ returns this in GET responses
   meta?: {
     instanceId?: string;
   };
@@ -152,6 +153,7 @@ export interface WorkflowExport {
   tags?: string[];
   pinData?: Record<string, unknown>;
   versionId?: string;
+  versionCounter?: number; // Added: n8n 1.118.1+
   meta?: Record<string, unknown>;
 }
 

@@ -27,6 +27,21 @@ Updated n8n and all related dependencies to the latest versions:
   - 103 nodes from @n8n/n8n-nodes-langchain
 - All node metadata synchronized with latest n8n release
 
+### 🐛 Bug Fixes
+
+**n8n 1.118.1+ Compatibility: Fixed versionCounter API Rejection**
+
+Fixed integration test failures caused by n8n 1.118.1 API change where `versionCounter` property is returned in GET responses but rejected in PUT requests.
+
+**Impact**:
+- Integration tests were failing with "request/body must NOT have additional properties" error
+- Workflow update operations via n8n API were failing
+
+**Solution**:
+- Added `versionCounter` to property exclusion list in `cleanWorkflowForUpdate()` (src/services/n8n-validation.ts:136)
+- Added `versionCounter?: number` type definition to Workflow and WorkflowExport interfaces
+- Added test coverage to prevent regression
+
 ### ✅ Verification
 
 - Database rebuild completed successfully
