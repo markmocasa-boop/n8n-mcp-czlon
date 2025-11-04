@@ -1,0 +1,248 @@
+{
+  "name": "💥 Generate AI Videos with Replicate & Upload to Social Media (Cost-Optimized)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-node",
+      "name": "Trigger: Start Daily Content Generation",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [640, 0]
+    },
+    {
+      "parameters": {
+        "text": "Generate a creative concept involving:\n\nA solid, hard material or element being sliced cleanly with a sharp blade. Your response must follow this structure:\n\n\"(Color) (Material) shaped like a (random everyday object)\"\n\nFor inspiration, imagine examples like: obsidian shaped like a chess piece, quartz shaped like a coffee mug, sapphire shaped like a seashell, or titanium shaped like a leaf.\n\nReflect carefully before answering to ensure originality and visual appeal.",
+        "options": {
+          "systemMessage": "**Role:**  \nYou are an AI designed to generate **one immersive, realistic idea** based on a user-provided topic. Your output must be formatted as a **single-line JSON array** and follow the rules below exactly.\n\n### OUTPUT FORMAT (single-line JSON array)\n\n```json\n[\n  {\n    \"Caption\": \"Your short viral title with emoji #hashtags\",\n    \"Idea\": \"Your idea under 13 words\",\n    \"Environment\": \"Your vivid setting under 20 words matching the action\",\n    \"Sound\": \"background music genre - lofi, epic, calm, energetic\",\n    \"Status\": \"for production\"\n  }\n]\n```"
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "id": "generate-idea",
+      "name": "Generate Creative Video Idea",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "=ROW()-1",
+            "idea": "={{ $json.output[0].Idea }}",
+            "caption": "={{ $json.output[0].Caption }}",
+            "production": "={{ $json.output[0].Status }}",
+            "sound_prompt": "={{ $json.output[0].Sound }}",
+            "environment_prompt": "={{ $json.output[0].Environment }}"
+          }
+        }
+      },
+      "id": "save-metadata",
+      "name": "Save Idea & Metadata to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1424, 0]
+    },
+    {
+      "parameters": {
+        "text": "Give me 3 video prompts based on the previous idea",
+        "options": {
+          "systemMessage": "Role: Generate 3 detailed scene descriptions for video generation.\n\nEach scene should:\n- Show a sharp knife actively cutting through the material\n- Be 1000-2000 characters long\n- Include macro details, lighting, texture, and movement\n- Be cinematic and visually engaging\n\nFormat:\nIdea: \"{{ $json.idea }}\"\nEnvironment: \"{{ $json.environment_prompt }}\"\nSound: \"{{ $json.sound_prompt }}\"\n\nScene 1: \"...\"\nScene 2: \"...\"\nScene 3: \"...\""
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "id": "generate-prompts",
+      "name": "Generate Detailed Video Prompts",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "function findSceneEntries(obj) {\n  const scenes = [];\n  for (const [key, value] of Object.entries(obj)) {\n    if (key.toLowerCase().startsWith(\"scene\") && typeof value === \"string\") {\n      scenes.push(value);\n    } else if (typeof value === \"object\" && value !== null) {\n      scenes.push(...findSceneEntries(value));\n    }\n  }\n  return scenes;\n}\n\nconst inputData = items[0].json;\nconst scenes = findSceneEntries(inputData);\n\nif (scenes.length === 0) {\n  throw new Error(\"No scene keys found.\");\n}\n\nreturn scenes.map(scene => ({ \n  description: scene,\n  idea: $('Generate Detailed Video Prompts').item.json.output.Idea,\n  environment: $('Generate Detailed Video Prompts').item.json.output.Environment\n}));"
+      },
+      "id": "extract-scenes",
+      "name": "Extract Individual Scene Descriptions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [688, 544]
+    },
+    {
+      "parameters": {
+        "url": "https://api.replicate.com/v1/predictions",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Token {{ $credentials.replicateApi.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"version\": \"svg-v1\",\n  \"input\": {\n    \"prompt\": \"{{ $json.description }}. {{ $json.environment }}. Cinematic, high quality, 9:16 aspect ratio\",\n    \"num_frames\": 25,\n    \"fps\": 6,\n    \"motion_bucket_id\": 127,\n    \"cond_aug\": 0.02,\n    \"decoding_t\": 7,\n    \"seed\": -1\n  }\n}",
+        "options": {}
+      },
+      "id": "generate-video-replicate",
+      "name": "Generate Video Clips (Replicate SVD)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 544],
+      "notes": "Using Stable Video Diffusion - very cost effective!"
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "amount": 30
+      },
+      "id": "wait-video",
+      "name": "Wait for Video Generation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1088, 544]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.urls.get }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Token {{ $credentials.replicateApi.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-video-result",
+      "name": "Retrieve Video Clips",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1280, 544]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all video URLs from the 3 clips\nconst videoUrls = items.map(item => item.json.output).filter(url => url);\n\nif (videoUrls.length !== 3) {\n  throw new Error(`Expected 3 videos, got ${videoUrls.length}`);\n}\n\nreturn [{\n  json: {\n    video_urls: videoUrls,\n    idea: $('Save Idea & Metadata to Google Sheets').first().json.idea,\n    caption: $('Save Idea & Metadata to Google Sheets').first().json.caption\n  }\n}];"
+      },
+      "id": "collect-videos",
+      "name": "Collect Video URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [688, 800]
+    },
+    {
+      "parameters": {
+        "command": "=#!/bin/bash\nset -e\n\n# Create temp directory\nTEMP_DIR=\"/tmp/n8n-video-${Date.now()}\"\nmkdir -p \"$TEMP_DIR\"\n\n# Download the 3 video clips\nwget -q -O \"$TEMP_DIR/clip1.mp4\" \"{{ $json.video_urls[0] }}\"\nwget -q -O \"$TEMP_DIR/clip2.mp4\" \"{{ $json.video_urls[1] }}\"\nwget -q -O \"$TEMP_DIR/clip3.mp4\" \"{{ $json.video_urls[2] }}\"\n\n# Create concat file\ncat > \"$TEMP_DIR/concat.txt\" << EOF\nfile 'clip1.mp4'\nfile 'clip2.mp4'\nfile 'clip3.mp4'\nEOF\n\n# Concatenate videos with FFmpeg\nffmpeg -f concat -safe 0 -i \"$TEMP_DIR/concat.txt\" \\\n  -c:v libx264 -preset fast -crf 23 \\\n  -vf \"scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2\" \\\n  -r 30 \\\n  \"$TEMP_DIR/final.mp4\" -y\n\n# Output the file path\necho \"$TEMP_DIR/final.mp4\"",
+        "description": "Stitch videos with FFmpeg"
+      },
+      "id": "stitch-ffmpeg",
+      "name": "Stitch Videos with FFmpeg (FREE)",
+      "type": "n8n-nodes-base.bash",
+      "typeVersion": 1,
+      "position": [880, 800],
+      "notes": "100% FREE - no API costs!"
+    },
+    {
+      "parameters": {
+        "fromEmail": "your-email@example.com",
+        "toEmail": "storage-email@example.com",
+        "subject": "=Video - {{ $('Save Idea & Metadata to Google Sheets').first().json.idea }}",
+        "attachments": "={{ $('Stitch Videos with FFmpeg (FREE)').item.json.stdout.trim() }}",
+        "options": {}
+      },
+      "id": "upload-video",
+      "name": "Upload Final Video",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1088, 800],
+      "notes": "Alternative: Upload to Cloudinary, Google Drive, etc."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": ["idea"],
+          "value": {
+            "idea": "={{ $('Save Idea & Metadata to Google Sheets').first().json.idea }}",
+            "production": "done",
+            "final_output": "={{ $json.video_url || 'video_created' }}"
+          }
+        }
+      },
+      "id": "update-sheet",
+      "name": "Update Status to Done",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1280, 800]
+    }
+  ],
+  "connections": {
+    "Trigger: Start Daily Content Generation": {
+      "main": [[{ "node": "Generate Creative Video Idea", "type": "main", "index": 0 }]]
+    },
+    "Generate Creative Video Idea": {
+      "main": [[{ "node": "Save Idea & Metadata to Google Sheets", "type": "main", "index": 0 }]]
+    },
+    "Save Idea & Metadata to Google Sheets": {
+      "main": [[{ "node": "Generate Detailed Video Prompts", "type": "main", "index": 0 }]]
+    },
+    "Generate Detailed Video Prompts": {
+      "main": [[{ "node": "Extract Individual Scene Descriptions", "type": "main", "index": 0 }]]
+    },
+    "Extract Individual Scene Descriptions": {
+      "main": [[{ "node": "Generate Video Clips (Replicate SVD)", "type": "main", "index": 0 }]]
+    },
+    "Generate Video Clips (Replicate SVD)": {
+      "main": [[{ "node": "Wait for Video Generation", "type": "main", "index": 0 }]]
+    },
+    "Wait for Video Generation": {
+      "main": [[{ "node": "Retrieve Video Clips", "type": "main", "index": 0 }]]
+    },
+    "Retrieve Video Clips": {
+      "main": [[{ "node": "Collect Video URLs", "type": "main", "index": 0 }]]
+    },
+    "Collect Video URLs": {
+      "main": [[{ "node": "Stitch Videos with FFmpeg (FREE)", "type": "main", "index": 0 }]]
+    },
+    "Stitch Videos with FFmpeg (FREE)": {
+      "main": [[{ "node": "Upload Final Video", "type": "main", "index": 0 }]]
+    },
+    "Upload Final Video": {
+      "main": [[{ "node": "Update Status to Done", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

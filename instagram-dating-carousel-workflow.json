@@ -1,0 +1,222 @@
+{
+  "name": "🎯 Dating Dynamics Instagram Carousel Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 12
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Schedule: Generate Post Twice Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [640, 0]
+    },
+    {
+      "parameters": {
+        "text": "Generate a dating scenario where a woman uses a subtle test or communication pattern that men often misunderstand. Create a realistic, relatable situation.",
+        "options": {
+          "systemMessage": "You are a dating psychology expert who understands subtle communication patterns, tests, and dynamics in dating.\n\nGenerate ONE realistic dating scenario following this exact JSON format:\n\n{\n  \"scenario_title\": \"Brief title (5-7 words)\",\n  \"context\": \"Brief context/setup (1-2 sentences)\",\n  \"woman_statement\": \"What the woman says (1-2 sentences, realistic dialogue)\",\n  \"poor_response\": \"How most men respond poorly (1-2 sentences, realistic dialogue)\",\n  \"good_response\": \"The better way to respond (1-2 sentences, realistic dialogue)\",\n  \"explanation\": \"Why this matters and what's really happening (2-3 sentences)\",\n  \"test_type\": \"Type of test (e.g., 'Compliance Test', 'Interest Test', 'Value Test', 'Emotional Intelligence Test')\",\n  \"hashtags\": \"#datingadvice #menspsychology #datingtips #relationshipadvice #attractionpsychology #masculinity #datingcoach #redpill #dating101 #relationshiptips\"\n}\n\nRules:\n- Make it realistic and relatable\n- Focus on common mistakes men make\n- The woman's statement should seem innocent/casual but have deeper meaning\n- Poor response shows misunderstanding\n- Good response shows emotional intelligence\n- Keep all text concise for Instagram readability"
+        },
+        "promptType": "define"
+      },
+      "id": "generate-scenario",
+      "name": "AI: Generate Dating Scenario",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "panel1",
+              "name": "panel1_text",
+              "value": "={{ $json.scenario.woman_statement }}",
+              "type": "string"
+            },
+            {
+              "id": "panel2",
+              "name": "panel2_text",
+              "value": "=❌ POOR RESPONSE:\n\n{{ $json.scenario.poor_response }}",
+              "type": "string"
+            },
+            {
+              "id": "panel3",
+              "name": "panel3_text",
+              "value": "=✅ BETTER RESPONSE:\n\n{{ $json.scenario.good_response }}",
+              "type": "string"
+            },
+            {
+              "id": "panel4",
+              "name": "panel4_text",
+              "value": "=💡 THE LESSON:\n\n{{ $json.scenario.explanation }}\n\nTest Type: {{ $json.scenario.test_type }}",
+              "type": "string"
+            },
+            {
+              "id": "title",
+              "name": "title",
+              "value": "={{ $json.scenario.scenario_title }}",
+              "type": "string"
+            },
+            {
+              "id": "caption",
+              "name": "caption",
+              "value": "={{ $json.scenario.scenario_title }}\n\n{{ $json.scenario.context }}\n\nSwipe to see the difference between a poor response and a high-value response. 👉\n\n{{ $json.scenario.hashtags }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-panels",
+      "name": "Prepare Panel Text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1280, 0]
+    },
+    {
+      "parameters": {
+        "mode": "multiplesTypeArray",
+        "value": "=[\"panel1\", \"panel2\", \"panel3\", \"panel4\"]"
+      },
+      "id": "split-panels",
+      "name": "Split into 4 Panels",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "command": "=#!/bin/bash\nset -e\n\nPANEL_NUM=\"{{ $json.data }}\"\nTITLE=\"{{ $('Prepare Panel Text').item.json.title }}\"\n\n# Get the text for this panel\nif [ \"$PANEL_NUM\" = \"panel1\" ]; then\n  TEXT=\"{{ $('Prepare Panel Text').item.json.panel1_text }}\"\n  BG_COLOR=\"#FF6B9D\"\n  TITLE_TEXT=\"HER: 💬\"\nelif [ \"$PANEL_NUM\" = \"panel2\" ]; then\n  TEXT=\"{{ $('Prepare Panel Text').item.json.panel2_text }}\"\n  BG_COLOR=\"#C44569\"\n  TITLE_TEXT=\"$TITLE\"\nelif [ \"$PANEL_NUM\" = \"panel3\" ]; then\n  TEXT=\"{{ $('Prepare Panel Text').item.json.panel3_text }}\"\n  BG_COLOR=\"#4A90E2\"\n  TITLE_TEXT=\"$TITLE\"\nelse\n  TEXT=\"{{ $('Prepare Panel Text').item.json.panel4_text }}\"\n  BG_COLOR=\"#2C3E50\"\n  TITLE_TEXT=\"$TITLE\"\nfi\n\n# Create output directory\nOUTPUT_DIR=\"/tmp/n8n-ig-carousel-$(date +%s)\"\nmkdir -p \"$OUTPUT_DIR\"\nOUTPUT_FILE=\"$OUTPUT_DIR/${PANEL_NUM}.jpg\"\n\n# Create image with ImageMagick\nconvert -size 1080x1350 \\\n  -background \"$BG_COLOR\" \\\n  -fill white \\\n  -font Arial-Bold \\\n  -pointsize 50 \\\n  -gravity North \\\n  label:\"$TITLE_TEXT\" \\\n  \\( -size 980x1100 \\\n     -background \"$BG_COLOR\" \\\n     -fill white \\\n     -font Arial \\\n     -pointsize 44 \\\n     -gravity Center \\\n     caption:\"$TEXT\" \\) \\\n  -append \\\n  \"$OUTPUT_FILE\"\n\necho \"$OUTPUT_FILE\"",
+        "description": "Create panel image with text overlay"
+      },
+      "id": "create-panel-image",
+      "name": "Create Panel Image (ImageMagick)",
+      "type": "n8n-nodes-base.bash",
+      "typeVersion": 1,
+      "position": [880, 300],
+      "notes": "FREE - uses ImageMagick for text overlay"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "combine-panels",
+      "name": "Combine All 4 Panels",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all 4 panel image paths\nconst panels = items.map(item => {\n  const path = item.json.stdout?.trim();\n  if (!path) throw new Error('Panel image path missing');\n  return path;\n});\n\nif (panels.length !== 4) {\n  throw new Error(`Expected 4 panels, got ${panels.length}`);\n}\n\nreturn [{\n  json: {\n    panel_paths: panels,\n    caption: $('Prepare Panel Text').first().json.caption,\n    title: $('Prepare Panel Text').first().json.title\n  }\n}];"
+      },
+      "id": "collect-panels",
+      "name": "Collect Panel Paths",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 300]
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "mediaUrl": "={{ $json.panel_paths }}",
+        "options": {}
+      },
+      "id": "upload-to-blotato",
+      "name": "Upload Images to Blotato",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [640, 600]
+    },
+    {
+      "parameters": {
+        "platform": "instagram",
+        "accountId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_INSTAGRAM_ACCOUNT_ID"
+        },
+        "postContentText": "={{ $json.caption }}",
+        "postContentMediaUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "id": "post-to-instagram",
+      "name": "Post Carousel to Instagram",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [880, 600]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.toISO() }}",
+            "title": "={{ $('Prepare Panel Text').first().json.title }}",
+            "test_type": "={{ $('AI: Generate Dating Scenario').first().json.scenario.test_type }}",
+            "status": "published"
+          }
+        }
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 600]
+    }
+  ],
+  "connections": {
+    "Schedule: Generate Post Twice Daily": {
+      "main": [[{"node": "AI: Generate Dating Scenario", "type": "main", "index": 0}]]
+    },
+    "AI: Generate Dating Scenario": {
+      "main": [[{"node": "Prepare Panel Text", "type": "main", "index": 0}]]
+    },
+    "Prepare Panel Text": {
+      "main": [[{"node": "Split into 4 Panels", "type": "main", "index": 0}]]
+    },
+    "Split into 4 Panels": {
+      "main": [[{"node": "Create Panel Image (ImageMagick)", "type": "main", "index": 0}]]
+    },
+    "Create Panel Image (ImageMagick)": {
+      "main": [[{"node": "Combine All 4 Panels", "type": "main", "index": 0}]]
+    },
+    "Combine All 4 Panels": {
+      "main": [[{"node": "Collect Panel Paths", "type": "main", "index": 0}]]
+    },
+    "Collect Panel Paths": {
+      "main": [[{"node": "Upload Images to Blotato", "type": "main", "index": 0}]]
+    },
+    "Upload Images to Blotato": {
+      "main": [[{"node": "Post Carousel to Instagram", "type": "main", "index": 0}]]
+    },
+    "Post Carousel to Instagram": {
+      "main": [[{"node": "Log to Google Sheets", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

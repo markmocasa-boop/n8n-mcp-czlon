@@ -1,0 +1,163 @@
+{
+  "name": "🎬 Dating Dynamics Animated Instagram Video (CHEAPEST)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 12}]
+        }
+      },
+      "id": "trigger",
+      "name": "Schedule: Generate Post Twice Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [640, 0]
+    },
+    {
+      "parameters": {
+        "text": "Generate a dating scenario where a woman uses a subtle test or communication pattern that men often misunderstand.",
+        "options": {
+          "systemMessage": "You are a dating psychology expert. Generate ONE realistic dating scenario in this JSON format:\n\n{\n  \"scenario_title\": \"Brief catchy title (5-7 words)\",\n  \"context\": \"Brief context (1-2 sentences)\",\n  \"woman_statement\": \"What the woman says (keep under 60 characters for readability)\",\n  \"poor_response\": \"Poor male response (under 60 characters)\",\n  \"good_response\": \"Better response (under 60 characters)\",\n  \"explanation\": \"Why this matters (2-3 sentences, under 150 characters)\",\n  \"test_type\": \"Test type (e.g., 'Compliance Test', 'Interest Test')\",\n  \"hashtags\": \"#datingadvice #menspsychology #datingtips #relationshipadvice #attractionpsychology #masculinity #datingcoach #redpill #dating101 #relationshiptips\"\n}\n\nKeep text SHORT for video readability!"
+        },
+        "promptType": "define"
+      },
+      "id": "generate-scenario",
+      "name": "AI: Generate Dating Scenario",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "command": "=#!/bin/bash\nset -e\n\n# Get scenario data\nTITLE=\"{{ $json.scenario.scenario_title }}\"\nWOMAN=\"{{ $json.scenario.woman_statement }}\"\nPOOR=\"{{ $json.scenario.poor_response }}\"\nGOOD=\"{{ $json.scenario.good_response }}\"\nLESSON=\"{{ $json.scenario.explanation }}\"\nTEST_TYPE=\"{{ $json.scenario.test_type }}\"\n\n# Create temp directory\nTEMP_DIR=\"/tmp/n8n-dating-video-$(date +%s)\"\nmkdir -p \"$TEMP_DIR\"\n\n# Function to create text image with ImageMagick\ncreate_text_image() {\n  local text=\"$1\"\n  local output=\"$2\"\n  local bg_color=\"$3\"\n  local title=\"$4\"\n  \n  convert -size 1080x1920 \\\n    -background \"$bg_color\" \\\n    -fill white \\\n    -font Arial-Bold \\\n    -pointsize 60 \\\n    -gravity North \\\n    -annotate +0+100 \"$title\" \\\n    \\( -size 900x1400 \\\n       -background \"$bg_color\" \\\n       -fill white \\\n       -font Arial-Bold \\\n       -pointsize 70 \\\n       -gravity Center \\\n       caption:\"$text\" \\) \\\n    -gravity South \\\n    -composite \\\n    \"$output\"\n}\n\n# Create 4 panel images\ncreate_text_image \"💬 HER:\\n\\n$WOMAN\" \"$TEMP_DIR/panel1.png\" \"#FF6B9D\" \"$TITLE\"\ncreate_text_image \"❌ POOR:\\n\\n$POOR\" \"$TEMP_DIR/panel2.png\" \"#C44569\" \"$TITLE\"\ncreate_text_image \"✅ BETTER:\\n\\n$GOOD\" \"$TEMP_DIR/panel3.png\" \"#4A90E2\" \"$TITLE\"\ncreate_text_image \"💡 LESSON:\\n\\n$LESSON\\n\\nTest: $TEST_TYPE\" \"$TEMP_DIR/panel4.png\" \"#2C3E50\" \"$TITLE\"\n\n# Create animated video with FFmpeg\n# Each panel shows for 5 seconds with smooth transitions\nffmpeg -loop 1 -t 5 -i \"$TEMP_DIR/panel1.png\" \\\n  -loop 1 -t 5 -i \"$TEMP_DIR/panel2.png\" \\\n  -loop 1 -t 5 -i \"$TEMP_DIR/panel3.png\" \\\n  -loop 1 -t 5 -i \"$TEMP_DIR/panel4.png\" \\\n  -filter_complex \"\n    [0:v]zoompan=z='min(zoom+0.0015,1.5)':d=125:s=1080x1920,fade=t=out:st=4.5:d=0.5[v0];\n    [1:v]zoompan=z='min(zoom+0.0015,1.5)':d=125:s=1080x1920,fade=t=in:st=0:d=0.5,fade=t=out:st=4.5:d=0.5[v1];\n    [2:v]zoompan=z='min(zoom+0.0015,1.5)':d=125:s=1080x1920,fade=t=in:st=0:d=0.5,fade=t=out:st=4.5:d=0.5[v2];\n    [3:v]zoompan=z='min(zoom+0.0015,1.5)':d=125:s=1080x1920,fade=t=in:st=0:d=0.5[v3];\n    [v0][v1][v2][v3]concat=n=4:v=1:a=0,format=yuv420p[v]\n  \" \\\n  -map \"[v]\" \\\n  -c:v libx264 -preset fast -crf 23 -r 30 \\\n  \"$TEMP_DIR/final_video.mp4\" -y\n\necho \"$TEMP_DIR/final_video.mp4\"",
+        "description": "Create animated video with transitions",
+        "timeout": 120000
+      },
+      "id": "create-animated-video",
+      "name": "Create Animated Video (FFmpeg - FREE)",
+      "type": "n8n-nodes-base.bash",
+      "typeVersion": 1,
+      "position": [1280, 0],
+      "notes": "100% FREE! Creates professional animated video with:\n- Smooth fade transitions\n- Zoom animations\n- 20 second total video\n- Perfect for Instagram Reels, TikTok, YouTube Shorts"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "binaryData": true,
+        "path": "={{ $json.stdout.trim() }}",
+        "options": {
+          "mimetype": "video/mp4"
+        }
+      },
+      "id": "upload-to-storage",
+      "name": "Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "mediaUrl": "={{ $json.webViewLink }}",
+        "options": {}
+      },
+      "id": "upload-to-blotato",
+      "name": "Upload to Blotato",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "platform": "instagram",
+        "accountId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_INSTAGRAM_ACCOUNT_ID"
+        },
+        "postContentText": "={{ $('AI: Generate Dating Scenario').item.json.scenario.scenario_title }}\\n\\n{{ $('AI: Generate Dating Scenario').item.json.scenario.context }}\\n\\nWatch to learn the difference! 👇\\n\\n{{ $('AI: Generate Dating Scenario').item.json.scenario.hashtags }}",
+        "postContentMediaUrls": "={{ $json.url }}",
+        "options": {}
+      },
+      "id": "post-instagram-reel",
+      "name": "Post as Instagram Reel",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "platform": "tiktok",
+        "accountId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_TIKTOK_ACCOUNT_ID"
+        },
+        "postContentText": "={{ $('AI: Generate Dating Scenario').item.json.scenario.scenario_title }}\\n\\n{{ $('AI: Generate Dating Scenario').item.json.scenario.hashtags }}",
+        "postContentMediaUrls": "={{ $('Upload to Blotato').item.json.url }}",
+        "options": {}
+      },
+      "id": "post-tiktok",
+      "name": "Post to TikTok",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [1360, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.toISO() }}",
+            "title": "={{ $('AI: Generate Dating Scenario').item.json.scenario.scenario_title }}",
+            "test_type": "={{ $('AI: Generate Dating Scenario').item.json.scenario.test_type }}",
+            "video_url": "={{ $('Upload to Google Drive').item.json.webViewLink }}",
+            "status": "published"
+          }
+        }
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [640, 600]
+    }
+  ],
+  "connections": {
+    "Schedule: Generate Post Twice Daily": {
+      "main": [[{"node": "AI: Generate Dating Scenario", "type": "main", "index": 0}]]
+    },
+    "AI: Generate Dating Scenario": {
+      "main": [[{"node": "Create Animated Video (FFmpeg - FREE)", "type": "main", "index": 0}]]
+    },
+    "Create Animated Video (FFmpeg - FREE)": {
+      "main": [[{"node": "Upload to Google Drive", "type": "main", "index": 0}]]
+    },
+    "Upload to Google Drive": {
+      "main": [[{"node": "Upload to Blotato", "type": "main", "index": 0}]]
+    },
+    "Upload to Blotato": {
+      "main": [[
+        {"node": "Post as Instagram Reel", "type": "main", "index": 0},
+        {"node": "Post to TikTok", "type": "main", "index": 0}
+      ]]
+    },
+    "Post as Instagram Reel": {
+      "main": [[{"node": "Log to Google Sheets", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
