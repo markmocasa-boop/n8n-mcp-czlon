@@ -42,12 +42,14 @@ export class WorkflowSanitizer {
     // URLs with authentication - MUST BE BEFORE BEARER TOKENS
     { pattern: /https?:\/\/[^:]+:[^@]+@[^\s/]+/g, placeholder: '[REDACTED_URL_WITH_AUTH]' },
     { pattern: /wss?:\/\/[^:]+:[^@]+@[^\s/]+/g, placeholder: '[REDACTED_URL_WITH_AUTH]' },
+    { pattern: /(?:postgres|mysql|mongodb|redis):\/\/[^:]+:[^@]+@[^\s]+/g, placeholder: '[REDACTED_URL_WITH_AUTH]' }, // Database protocols - includes port and path
 
     // API keys and tokens - ORDER MATTERS!
     // More specific patterns first, then general patterns
     { pattern: /sk-[a-zA-Z0-9]{16,}/g, placeholder: '[REDACTED_APIKEY]' }, // OpenAI keys
     { pattern: /Bearer\s+[^\s]+/gi, placeholder: 'Bearer [REDACTED]', preservePrefix: true }, // Bearer tokens
-    { pattern: /\b[a-zA-Z0-9_-]{32,}\b/g, placeholder: '[REDACTED_TOKEN]' }, // Long tokens (32+ chars) - BEFORE field patterns
+    { pattern: /\b[a-zA-Z0-9_-]{32,}\b/g, placeholder: '[REDACTED_TOKEN]' }, // Long tokens (32+ chars)
+    { pattern: /\b[a-zA-Z0-9_-]{20,31}\b/g, placeholder: '[REDACTED]' }, // Short tokens (20-31 chars)
 
     // Email addresses (optional - uncomment if needed)
     // { pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, placeholder: '[REDACTED_EMAIL]' },
@@ -233,6 +235,11 @@ export class WorkflowSanitizer {
       // Skip webhook patterns - already handled above
       if (patternDef.placeholder.includes('WEBHOOK')) {
         continue;
+      }
+
+      // Skip if already sanitized with a placeholder to prevent double-redaction
+      if (sanitized.includes('[REDACTED')) {
+        break;
       }
 
       // Special handling for URL with auth - preserve path after credentials

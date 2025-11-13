@@ -49,7 +49,7 @@ describe('WorkflowSanitizer', () => {
 
       const sanitized = WorkflowSanitizer.sanitizeWorkflow(workflow);
 
-      expect(sanitized.nodes[0].parameters.webhookUrl).toBe('[REDACTED]');
+      expect(sanitized.nodes[0].parameters.webhookUrl).toBe('https://[webhook-url]');
       expect(sanitized.nodes[0].parameters.method).toBe('POST'); // Method should remain
       expect(sanitized.nodes[0].parameters.path).toBe('my-webhook'); // Path should remain
     });
@@ -104,9 +104,9 @@ describe('WorkflowSanitizer', () => {
 
       const sanitized = WorkflowSanitizer.sanitizeWorkflow(workflow);
 
-      expect(sanitized.nodes[0].parameters.url).toBe('[REDACTED]');
-      expect(sanitized.nodes[0].parameters.endpoint).toBe('[REDACTED]');
-      expect(sanitized.nodes[0].parameters.baseUrl).toBe('[REDACTED]');
+      expect(sanitized.nodes[0].parameters.url).toBe('https://[domain]/endpoint');
+      expect(sanitized.nodes[0].parameters.endpoint).toBe('https://[domain]/api');
+      expect(sanitized.nodes[0].parameters.baseUrl).toBe('https://[domain]');
     });
 
     it('should calculate workflow metrics correctly', () => {
@@ -480,8 +480,8 @@ describe('WorkflowSanitizer', () => {
       expect(params.secret_token).toBe('[REDACTED]');
       expect(params.authKey).toBe('[REDACTED]');
       expect(params.clientSecret).toBe('[REDACTED]');
-      expect(params.webhookUrl).toBe('[REDACTED]');
-      expect(params.databaseUrl).toBe('[REDACTED]');
+      expect(params.webhookUrl).toBe('https://hooks.example.com/services/T00000000/B00000000/[REDACTED]');
+      expect(params.databaseUrl).toBe('[REDACTED_URL_WITH_AUTH]');
       expect(params.connectionString).toBe('[REDACTED]');
 
       // Safe values should remain
@@ -515,9 +515,9 @@ describe('WorkflowSanitizer', () => {
       const sanitized = WorkflowSanitizer.sanitizeWorkflow(workflow);
 
       const headers = sanitized.nodes[0].parameters.headers;
-      expect(headers[0].value).toBe('[REDACTED]'); // Authorization
+      expect(headers[0].value).toBe('Bearer [REDACTED]'); // Authorization (Bearer prefix preserved)
       expect(headers[1].value).toBe('application/json'); // Content-Type (safe)
-      expect(headers[2].value).toBe('[REDACTED]'); // X-API-Key
+      expect(headers[2].value).toBe('[REDACTED_TOKEN]'); // X-API-Key (32+ chars)
       expect(sanitized.nodes[0].parameters.methods).toEqual(['GET', 'POST']); // Array should remain
     });
 
