@@ -296,4 +296,37 @@ export class WorkflowSanitizer {
     const sanitized = this.sanitizeWorkflow(workflow);
     return sanitized.workflowHash;
   }
+
+  /**
+   * Sanitize workflow and return raw workflow object (without metrics)
+   * For use in telemetry where we need plain workflow structure
+   */
+  static sanitizeWorkflowRaw(workflow: any): any {
+    // Create a deep copy to avoid modifying original
+    const sanitized = JSON.parse(JSON.stringify(workflow));
+
+    // Sanitize nodes
+    if (sanitized.nodes && Array.isArray(sanitized.nodes)) {
+      sanitized.nodes = sanitized.nodes.map((node: WorkflowNode) =>
+        this.sanitizeNode(node)
+      );
+    }
+
+    // Sanitize connections (keep structure only)
+    if (sanitized.connections) {
+      sanitized.connections = this.sanitizeConnections(sanitized.connections);
+    }
+
+    // Remove other potentially sensitive data
+    delete sanitized.settings?.errorWorkflow;
+    delete sanitized.staticData;
+    delete sanitized.pinData;
+    delete sanitized.credentials;
+    delete sanitized.sharedWorkflows;
+    delete sanitized.ownedBy;
+    delete sanitized.createdBy;
+    delete sanitized.updatedBy;
+
+    return sanitized;
+  }
 }

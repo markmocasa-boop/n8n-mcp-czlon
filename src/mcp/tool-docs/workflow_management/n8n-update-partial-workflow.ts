@@ -9,7 +9,8 @@ export const n8nUpdatePartialWorkflowDoc: ToolDocumentation = {
     example: 'n8n_update_partial_workflow({id: "wf_123", operations: [{type: "rewireConnection", source: "IF", from: "Old", to: "New", branch: "true"}]})',
     performance: 'Fast (50-200ms)',
     tips: [
-      'Include intent parameter in every call - helps to return better responses',
+      'ALWAYS provide intent parameter describing what you\'re doing (e.g., "Add error handling", "Fix webhook URL", "Connect Slack to error output")',
+      'DON\'T use generic intent like "update workflow" or "partial update" - be specific about your goal',
       'Use rewireConnection to change connection targets',
       'Use branch="true"/"false" for IF nodes',
       'Use case=N for Switch nodes',
@@ -367,7 +368,7 @@ n8n_update_partial_workflow({
     ],
     performance: 'Very fast - typically 50-200ms. Much faster than full updates as only changes are processed.',
     bestPractices: [
-      'Always include intent parameter - it helps provide better responses',
+      'Always include intent parameter with specific description (e.g., "Add error handling to HTTP Request node", "Fix authentication flow", "Connect Slack notification to errors"). Avoid generic phrases like "update workflow" or "partial update"',
       'Use rewireConnection instead of remove+add for changing targets',
       'Use branch="true"/"false" for IF nodes instead of sourceIndex',
       'Use case=N for Switch nodes instead of sourceIndex',

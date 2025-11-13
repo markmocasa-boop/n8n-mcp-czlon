@@ -41,8 +41,8 @@ export class MutationTracker {
       }
 
       // Sanitize workflows to remove credentials and sensitive data
-      const workflowBefore = this.sanitizeFullWorkflow(data.workflowBefore);
-      const workflowAfter = this.sanitizeFullWorkflow(data.workflowAfter);
+      const workflowBefore = WorkflowSanitizer.sanitizeWorkflowRaw(data.workflowBefore);
+      const workflowAfter = WorkflowSanitizer.sanitizeWorkflowRaw(data.workflowAfter);
 
       // Sanitize user intent
       const sanitizedIntent = intentSanitizer.sanitize(data.userIntent);
@@ -200,98 +200,6 @@ export class MutationTracker {
     return metrics;
   }
 
-  /**
-   * Sanitize a full workflow while preserving structure
-   * Removes credentials and sensitive data but keeps all nodes, connections, parameters
-   */
-  private sanitizeFullWorkflow(workflow: any): any {
-    if (!workflow) return workflow;
-
-    // Deep clone to avoid modifying original
-    const sanitized = JSON.parse(JSON.stringify(workflow));
-
-    // Remove sensitive workflow-level fields
-    delete sanitized.credentials;
-    delete sanitized.sharedWorkflows;
-    delete sanitized.ownedBy;
-    delete sanitized.createdBy;
-    delete sanitized.updatedBy;
-
-    // Sanitize each node
-    if (sanitized.nodes && Array.isArray(sanitized.nodes)) {
-      sanitized.nodes = sanitized.nodes.map((node: any) => {
-        const sanitizedNode = { ...node };
-
-        // Remove credentials field
-        delete sanitizedNode.credentials;
-
-        // Sanitize parameters if present
-        if (sanitizedNode.parameters && typeof sanitizedNode.parameters === 'object') {
-          sanitizedNode.parameters = this.sanitizeParameters(sanitizedNode.parameters);
-        }
-
-        return sanitizedNode;
-      });
-    }
-
-    return sanitized;
-  }
-
-  /**
-   * Recursively sanitize parameters object
-   */
-  private sanitizeParameters(params: any): any {
-    if (!params || typeof params !== 'object') return params;
-
-    const sensitiveKeys = [
-      'apiKey', 'api_key', 'token', 'secret', 'password', 'credential',
-      'auth', 'authorization', 'privateKey', 'accessToken', 'refreshToken'
-    ];
-
-    const sanitized: any = Array.isArray(params) ? [] : {};
-
-    for (const [key, value] of Object.entries(params)) {
-      const lowerKey = key.toLowerCase();
-
-      // Check if key is sensitive
-      if (sensitiveKeys.some(sk => lowerKey.includes(sk.toLowerCase()))) {
-        sanitized[key] = '[REDACTED]';
-      } else if (typeof value === 'object' && value !== null) {
-        // Recursively sanitize nested objects
-        sanitized[key] = this.sanitizeParameters(value);
-      } else if (typeof value === 'string') {
-        // Sanitize string values that might contain sensitive data
-        sanitized[key] = this.sanitizeStringValue(value);
-      } else {
-        sanitized[key] = value;
-      }
-    }
-
-    return sanitized;
-  }
-
-  /**
-   * Sanitize string values that might contain sensitive data
-   */
-  private sanitizeStringValue(value: string): string {
-    if (!value || typeof value !== 'string') return value;
-
-    let sanitized = value;
-
-    // Redact URLs with authentication
-    sanitized = sanitized.replace(/https?:\/\/[^:]+:[^@]+@[^\s/]+/g, '[REDACTED_URL_WITH_AUTH]');
-
-    // Redact long API keys/tokens (20+ alphanumeric chars)
-    sanitized = sanitized.replace(/\b[A-Za-z0-9_-]{32,}\b/g, '[REDACTED_TOKEN]');
-
-    // Redact OpenAI-style keys
-    sanitized = sanitized.replace(/\bsk-[A-Za-z0-9]{32,}\b/g, '[REDACTED_APIKEY]');
-
-    // Redact Bearer tokens
-    sanitized = sanitized.replace(/Bearer\s+[^\s]+/gi, 'Bearer [REDACTED]');
-
-    return sanitized;
-  }
 
   /**
    * Calculate validation improvement metrics

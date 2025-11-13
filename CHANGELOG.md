@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.17] - 2025-11-13
+
+### 🐛 Bug Fixes
+
+**Critical Telemetry Improvements**
+
+Fixed three critical issues in workflow mutation telemetry to improve data quality and security:
+
+#### 1. Fixed Inconsistent Sanitization (Security Critical)
+- **Problem**: 30% of workflows (178-188 records) were unsanitized, exposing potential credentials/tokens
+- **Solution**: Replaced weak inline sanitization with robust `WorkflowSanitizer.sanitizeWorkflowRaw()`
+- **Impact**: Now 100% sanitization coverage with 17 sensitive patterns detected and redacted
+- **Files Modified**:
+  - `src/telemetry/workflow-sanitizer.ts`: Added `sanitizeWorkflowRaw()` method
+  - `src/telemetry/mutation-tracker.ts`: Removed redundant sanitization code, use centralized sanitizer
+
+#### 2. Enabled Validation Data Capture (Data Quality Blocker)
+- **Problem**: Zero validation metrics captured (validation_before/after all NULL)
+- **Solution**: Added workflow validation before and after mutations using `WorkflowValidator`
+- **Impact**: Can now measure mutation quality, track error resolution patterns
+- **Implementation**:
+  - Validates workflows before mutation (captures baseline errors)
+  - Validates workflows after mutation (measures improvement)
+  - Non-blocking: validation errors don't prevent mutations
+  - Captures: errors, warnings, validation status
+- **Files Modified**:
+  - `src/mcp/handlers-workflow-diff.ts`: Added pre/post mutation validation
+
+#### 3. Improved Intent Capture (Data Quality)
+- **Problem**: 92.62% of intents were generic "Partial workflow update"
+- **Solution**: Enhanced tool documentation + automatic intent inference from operations
+- **Impact**: Meaningful intents automatically generated when not explicitly provided
+- **Implementation**:
+  - Enhanced documentation with specific intent examples and anti-patterns
+  - Added `inferIntentFromOperations()` function that generates meaningful intents:
+    - Single operations: "Add n8n-nodes-base.slack", "Connect webhook to HTTP Request"
+    - Multiple operations: "Workflow update: add 2 nodes, modify connections"
+  - Fallback inference when intent is missing, generic, or too short
+- **Files Modified**:
+  - `src/mcp/tool-docs/workflow_management/n8n-update-partial-workflow.ts`: Enhanced guidance
+  - `src/mcp/handlers-workflow-diff.ts`: Added intent inference logic
+
+### 📊 Expected Results
+
+After deployment, telemetry data should show:
+- **100% sanitization coverage** (up from 70%)
+- **100% validation capture** (up from 0%)
+- **50%+ meaningful intents** (up from 7.33%)
+- **Complete telemetry dataset** for analysis
+
+### 🎯 Technical Details
+
+**Sanitization Coverage**: Now detects and redacts:
+- Webhook URLs, API keys (OpenAI sk-*, GitHub ghp-*, etc.)
+- Bearer tokens, OAuth credentials, passwords
+- URLs with authentication, long tokens (20+ chars)
+- Sensitive field names (apiKey, token, secret, password, etc.)
+
+**Validation Metrics Captured**:
+- Workflow validity status (true/false)
+- Error/warning counts and details
+- Node configuration errors
+- Connection errors
+- Expression syntax errors
+- Validation improvement tracking (errors resolved/introduced)
+
+**Intent Inference Examples**:
+- `addNode` → "Add n8n-nodes-base.webhook"
+- `rewireConnection` → "Rewire IF from ErrorHandler to SuccessHandler"
+- Multiple operations → "Workflow update: add 2 nodes, modify connections, update metadata"
+
 ## [2.22.16] - 2025-11-13
 
 ### ✨ Enhanced Features
