@@ -27,29 +27,30 @@ interface SanitizedWorkflow {
   workflowHash: string;
 }
 
+interface PatternDefinition {
+  pattern: RegExp;
+  placeholder: string;
+  preservePrefix?: boolean; // For patterns like "Bearer [REDACTED]"
+}
+
 export class WorkflowSanitizer {
-  private static readonly SENSITIVE_PATTERNS = [
+  private static readonly SENSITIVE_PATTERNS: PatternDefinition[] = [
     // Webhook URLs (replace with placeholder but keep structure) - MUST BE FIRST
-    /https?:\/\/[^\s/]+\/webhook\/[^\s]+/g,
-    /https?:\/\/[^\s/]+\/hook\/[^\s]+/g,
+    { pattern: /https?:\/\/[^\s/]+\/webhook\/[^\s]+/g, placeholder: '[REDACTED_WEBHOOK]' },
+    { pattern: /https?:\/\/[^\s/]+\/hook\/[^\s]+/g, placeholder: '[REDACTED_WEBHOOK]' },
 
-    // API keys and tokens
-    /sk-[a-zA-Z0-9]{16,}/g, // OpenAI keys
-    /Bearer\s+[^\s]+/gi,    // Bearer tokens
-    /[a-zA-Z0-9_-]{20,}/g,  // Long alphanumeric strings (API keys) - reduced threshold
-    /token['":\s]+[^,}]+/gi, // Token fields
-    /apikey['":\s]+[^,}]+/gi, // API key fields
-    /api_key['":\s]+[^,}]+/gi,
-    /secret['":\s]+[^,}]+/gi,
-    /password['":\s]+[^,}]+/gi,
-    /credential['":\s]+[^,}]+/gi,
+    // URLs with authentication - MUST BE BEFORE BEARER TOKENS
+    { pattern: /https?:\/\/[^:]+:[^@]+@[^\s/]+/g, placeholder: '[REDACTED_URL_WITH_AUTH]' },
+    { pattern: /wss?:\/\/[^:]+:[^@]+@[^\s/]+/g, placeholder: '[REDACTED_URL_WITH_AUTH]' },
 
-    // URLs with authentication
-    /https?:\/\/[^:]+:[^@]+@[^\s/]+/g, // URLs with auth
-    /wss?:\/\/[^:]+:[^@]+@[^\s/]+/g,
+    // API keys and tokens - ORDER MATTERS!
+    // More specific patterns first, then general patterns
+    { pattern: /sk-[a-zA-Z0-9]{16,}/g, placeholder: '[REDACTED_APIKEY]' }, // OpenAI keys
+    { pattern: /Bearer\s+[^\s]+/gi, placeholder: 'Bearer [REDACTED]', preservePrefix: true }, // Bearer tokens
+    { pattern: /\b[a-zA-Z0-9_-]{32,}\b/g, placeholder: '[REDACTED_TOKEN]' }, // Long tokens (32+ chars) - BEFORE field patterns
 
     // Email addresses (optional - uncomment if needed)
-    // /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    // { pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, placeholder: '[REDACTED_EMAIL]' },
   ];
 
   private static readonly SENSITIVE_FIELDS = [
@@ -178,19 +179,34 @@ export class WorkflowSanitizer {
     const sanitized: any = {};
 
     for (const [key, value] of Object.entries(obj)) {
-      // Check if key is sensitive
-      if (this.isSensitiveField(key)) {
-        sanitized[key] = '[REDACTED]';
-        continue;
-      }
+      // Check if field name is sensitive
+      const isSensitive = this.isSensitiveField(key);
+      const isUrlField = key.toLowerCase().includes('url') ||
+                         key.toLowerCase().includes('endpoint') ||
+                         key.toLowerCase().includes('webhook');
 
-      // Recursively sanitize nested objects
+      // Recursively sanitize nested objects (unless it's a sensitive non-URL field)
       if (typeof value === 'object' && value !== null) {
-        sanitized[key] = this.sanitizeObject(value);
+        if (isSensitive && !isUrlField) {
+          // For sensitive object fields (like 'authentication'), redact completely
+          sanitized[key] = '[REDACTED]';
+        } else {
+          sanitized[key] = this.sanitizeObject(value);
+        }
       }
       // Sanitize string values
       else if (typeof value === 'string') {
-        sanitized[key] = this.sanitizeString(value, key);
+        // For sensitive fields (except URL fields), use generic redaction
+        if (isSensitive && !isUrlField) {
+          sanitized[key] = '[REDACTED]';
+        } else {
+          // For URL fields or non-sensitive fields, use pattern-specific sanitization
+          sanitized[key] = this.sanitizeString(value, key);
+        }
+      }
+      // For non-string sensitive fields, redact completely
+      else if (isSensitive) {
+        sanitized[key] = '[REDACTED]';
       }
       // Keep other types as-is
       else {
@@ -212,13 +228,37 @@ export class WorkflowSanitizer {
 
     let sanitized = value;
 
-    // Apply all sensitive patterns
-    for (const pattern of this.SENSITIVE_PATTERNS) {
+    // Apply all sensitive patterns with their specific placeholders
+    for (const patternDef of this.SENSITIVE_PATTERNS) {
       // Skip webhook patterns - already handled above
-      if (pattern.toString().includes('webhook')) {
+      if (patternDef.placeholder.includes('WEBHOOK')) {
         continue;
       }
-      sanitized = sanitized.replace(pattern, '[REDACTED]');
+
+      // Special handling for URL with auth - preserve path after credentials
+      if (patternDef.placeholder === '[REDACTED_URL_WITH_AUTH]') {
+        const matches = value.match(patternDef.pattern);
+        if (matches) {
+          for (const match of matches) {
+            // Extract path after the authenticated URL
+            const fullUrlMatch = value.indexOf(match);
+            if (fullUrlMatch !== -1) {
+              const afterUrl = value.substring(fullUrlMatch + match.length);
+              // If there's a path after the URL, preserve it
+              if (afterUrl && afterUrl.startsWith('/')) {
+                const pathPart = afterUrl.split(/[\s?&#]/)[0]; // Get path until query/fragment
+                sanitized = sanitized.replace(match + pathPart, patternDef.placeholder + pathPart);
+              } else {
+                sanitized = sanitized.replace(match, patternDef.placeholder);
+              }
+            }
+          }
+        }
+        continue;
+      }
+
+      // Apply pattern with its specific placeholder
+      sanitized = sanitized.replace(patternDef.pattern, patternDef.placeholder);
     }
 
     // Additional sanitization for specific field types
@@ -226,9 +266,13 @@ export class WorkflowSanitizer {
         fieldName.toLowerCase().includes('endpoint')) {
       // Keep URL structure but remove domain details
       if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
-        // If value has been redacted, leave it as is
+        // If value has been redacted with URL_WITH_AUTH, preserve it
+        if (sanitized.includes('[REDACTED_URL_WITH_AUTH]')) {
+          return sanitized; // Already properly sanitized with path preserved
+        }
+        // If value has other redactions, leave it as is
         if (sanitized.includes('[REDACTED]')) {
-          return '[REDACTED]';
+          return sanitized;
         }
         const urlParts = sanitized.split('/');
         if (urlParts.length > 2) {
