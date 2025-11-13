@@ -17,6 +17,20 @@ import { WorkflowVersioningService } from '../services/workflow-versioning-servi
 import { WorkflowValidator } from '../services/workflow-validator';
 import { EnhancedConfigValidator } from '../services/enhanced-config-validator';
 
+// Cached validator instance to avoid recreating on every mutation
+let cachedValidator: WorkflowValidator | null = null;
+
+/**
+ * Get or create cached workflow validator instance
+ * Reuses the same validator to avoid redundant NodeSimilarityService initialization
+ */
+function getValidator(repository: NodeRepository): WorkflowValidator {
+  if (!cachedValidator) {
+    cachedValidator = new WorkflowValidator(repository, EnhancedConfigValidator);
+  }
+  return cachedValidator;
+}
+
 // Zod schema for the diff request
 const workflowDiffSchema = z.object({
   id: z.string(),
@@ -99,7 +113,7 @@ export async function handleUpdatePartialWorkflow(
 
       // Validate workflow BEFORE mutation (for telemetry)
       try {
-        const validator = new WorkflowValidator(repository, EnhancedConfigValidator);
+        const validator = getValidator(repository);
         validationBefore = await validator.validateWorkflow(workflowBefore, {
           validateNodes: true,
           validateConnections: true,
@@ -281,7 +295,7 @@ export async function handleUpdatePartialWorkflow(
 
       // Validate workflow AFTER mutation (for telemetry)
       try {
-        const validator = new WorkflowValidator(repository, EnhancedConfigValidator);
+        const validator = getValidator(repository);
         validationAfter = await validator.validateWorkflow(finalWorkflow, {
           validateNodes: true,
           validateConnections: true,
