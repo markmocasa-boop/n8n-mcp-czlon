@@ -25,7 +25,7 @@ Added structural hash tracking to enable cross-referencing between workflow muta
 #### Success Tracking Enhancement
 - Added `isTrulySuccessful` computed field to mutation records
 - Definition: Mutation executed successfully AND improved/maintained validation AND has known intent
-- Enables filtering to high-quality mutation data for AI training
+- Enables filtering to high-quality mutation data
 - Provides automated success detection without manual review
 
 #### Testing & Verification
@@ -39,14 +39,9 @@ Added structural hash tracking to enable cross-referencing between workflow muta
 - `src/telemetry/workflow-sanitizer.ts`: Expose generateWorkflowHash() method
 - `tests/unit/telemetry/mutation-tracker.test.ts`: Add 5 new test cases
 
-**Database Migration**:
-- Migration file: `docs/migrations/20251114_add_structural_hashes_and_success_tracking.sql`
-- Adds columns, indexes, analytics views, and helper functions
-- Includes rollback script
-
 **Impact**:
 - Enables cross-referencing between mutation and workflow data
-- Provides pre-labeled training dataset with quality indicators
+- Provides labeled dataset with quality indicators
 - Maintains backward compatibility (new fields optional)
 
 Conceived by Romuald Członkowski - https://www.aiadvisors.pl/en
