@@ -70,6 +70,10 @@ export class MutationTracker {
       const hashBefore = mutationValidator.hashWorkflow(workflowBefore);
       const hashAfter = mutationValidator.hashWorkflow(workflowAfter);
 
+      // Generate structural hashes for cross-referencing with telemetry_workflows
+      const structureHashBefore = WorkflowSanitizer.generateWorkflowHash(workflowBefore);
+      const structureHashAfter = WorkflowSanitizer.generateWorkflowHash(workflowAfter);
+
       // Classify intent
       const intentClassification = intentClassifier.classify(data.operations, sanitizedIntent);
 
@@ -88,6 +92,8 @@ export class MutationTracker {
         workflowAfter,
         workflowHashBefore: hashBefore,
         workflowHashAfter: hashAfter,
+        workflowStructureHashBefore: structureHashBefore,
+        workflowStructureHashAfter: structureHashAfter,
         userIntent: sanitizedIntent,
         intentClassification,
         toolName: data.toolName,

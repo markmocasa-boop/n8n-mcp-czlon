@@ -91,6 +91,12 @@ export interface WorkflowMutationRecord {
   workflowAfter: any;
   workflowHashBefore: string;
   workflowHashAfter: string;
+  /** Structural hash (nodeTypes + connections) for cross-referencing with telemetry_workflows */
+  workflowStructureHashBefore?: string;
+  /** Structural hash (nodeTypes + connections) for cross-referencing with telemetry_workflows */
+  workflowStructureHashAfter?: string;
+  /** Computed field: true if mutation executed successfully, improved validation, and has known intent */
+  isTrulySuccessful?: boolean;
   userIntent: string;
   intentClassification: IntentClassification;
   toolName: MutationToolName;

@@ -531,6 +531,246 @@ describe('MutationTracker', () => {
     });
   });
 
+  describe('Structural Hash Generation', () => {
+    it('should generate structural hashes for both before and after workflows', async () => {
+      const data: WorkflowMutationData = {
+        sessionId: 'test-session',
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        userIntent: 'Test structural hash generation',
+        operations: [{ type: 'addNode' }],
+        workflowBefore: {
+          id: 'wf1',
+          name: 'Test',
+          nodes: [
+            {
+              id: 'node1',
+              name: 'Start',
+              type: 'n8n-nodes-base.start',
+              position: [100, 100],
+              parameters: {}
+            }
+          ],
+          connections: {}
+        },
+        workflowAfter: {
+          id: 'wf1',
+          name: 'Test',
+          nodes: [
+            {
+              id: 'node1',
+              name: 'Start',
+              type: 'n8n-nodes-base.start',
+              position: [100, 100],
+              parameters: {}
+            },
+            {
+              id: 'node2',
+              name: 'HTTP',
+              type: 'n8n-nodes-base.httpRequest',
+              position: [300, 100],
+              parameters: { url: 'https://api.example.com' }
+            }
+          ],
+          connections: {
+            Start: {
+              main: [[{ node: 'HTTP', type: 'main', index: 0 }]]
+            }
+          }
+        },
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      const result = await tracker.processMutation(data, 'test-user');
+
+      expect(result).toBeTruthy();
+      expect(result!.workflowStructureHashBefore).toBeDefined();
+      expect(result!.workflowStructureHashAfter).toBeDefined();
+      expect(typeof result!.workflowStructureHashBefore).toBe('string');
+      expect(typeof result!.workflowStructureHashAfter).toBe('string');
+      expect(result!.workflowStructureHashBefore!.length).toBe(16);
+      expect(result!.workflowStructureHashAfter!.length).toBe(16);
+    });
+
+    it('should generate different structural hashes when node types change', async () => {
+      const data: WorkflowMutationData = {
+        sessionId: 'test-session',
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        userIntent: 'Test hash changes with node types',
+        operations: [{ type: 'addNode' }],
+        workflowBefore: {
+          id: 'wf1',
+          name: 'Test',
+          nodes: [
+            {
+              id: 'node1',
+              name: 'Start',
+              type: 'n8n-nodes-base.start',
+              position: [100, 100],
+              parameters: {}
+            }
+          ],
+          connections: {}
+        },
+        workflowAfter: {
+          id: 'wf1',
+          name: 'Test',
+          nodes: [
+            {
+              id: 'node1',
+              name: 'Start',
+              type: 'n8n-nodes-base.start',
+              position: [100, 100],
+              parameters: {}
+            },
+            {
+              id: 'node2',
+              name: 'Slack',
+              type: 'n8n-nodes-base.slack',
+              position: [300, 100],
+              parameters: {}
+            }
+          ],
+          connections: {}
+        },
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      const result = await tracker.processMutation(data, 'test-user');
+
+      expect(result).toBeTruthy();
+      expect(result!.workflowStructureHashBefore).not.toBe(result!.workflowStructureHashAfter);
+    });
+
+    it('should generate same structural hash for workflows with same structure but different parameters', async () => {
+      const workflow1Before = {
+        id: 'wf1',
+        name: 'Test 1',
+        nodes: [
+          {
+            id: 'node1',
+            name: 'HTTP',
+            type: 'n8n-nodes-base.httpRequest',
+            position: [100, 100],
+            parameters: { url: 'https://api1.example.com' }
+          }
+        ],
+        connections: {}
+      };
+
+      const workflow1After = {
+        id: 'wf1',
+        name: 'Test 1 Updated',
+        nodes: [
+          {
+            id: 'node1',
+            name: 'HTTP',
+            type: 'n8n-nodes-base.httpRequest',
+            position: [100, 100],
+            parameters: { url: 'https://api1-updated.example.com' }
+          }
+        ],
+        connections: {}
+      };
+
+      const workflow2Before = {
+        id: 'wf2',
+        name: 'Test 2',
+        nodes: [
+          {
+            id: 'node2',
+            name: 'Different Name',
+            type: 'n8n-nodes-base.httpRequest',
+            position: [200, 200],
+            parameters: { url: 'https://api2.example.com' }
+          }
+        ],
+        connections: {}
+      };
+
+      const workflow2After = {
+        id: 'wf2',
+        name: 'Test 2 Updated',
+        nodes: [
+          {
+            id: 'node2',
+            name: 'Different Name',
+            type: 'n8n-nodes-base.httpRequest',
+            position: [200, 200],
+            parameters: { url: 'https://api2-updated.example.com' }
+          }
+        ],
+        connections: {}
+      };
+
+      const data1: WorkflowMutationData = {
+        sessionId: 'test-session-1',
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        userIntent: 'Test 1',
+        operations: [{ type: 'updateNode', nodeId: 'node1' }],
+        workflowBefore: workflow1Before,
+        workflowAfter: workflow1After,
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      const data2: WorkflowMutationData = {
+        sessionId: 'test-session-2',
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        userIntent: 'Test 2',
+        operations: [{ type: 'updateNode', nodeId: 'node2' }],
+        workflowBefore: workflow2Before,
+        workflowAfter: workflow2After,
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      const result1 = await tracker.processMutation(data1, 'test-user-1');
+      const result2 = await tracker.processMutation(data2, 'test-user-2');
+
+      expect(result1).toBeTruthy();
+      expect(result2).toBeTruthy();
+      // Same structure (same node types, same connection structure) should yield same hash
+      expect(result1!.workflowStructureHashBefore).toBe(result2!.workflowStructureHashBefore);
+    });
+
+    it('should generate both full hash and structural hash', async () => {
+      const data: WorkflowMutationData = {
+        sessionId: 'test-session',
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        userIntent: 'Test both hash types',
+        operations: [{ type: 'updateNode' }],
+        workflowBefore: {
+          id: 'wf1',
+          name: 'Test',
+          nodes: [],
+          connections: {}
+        },
+        workflowAfter: {
+          id: 'wf1',
+          name: 'Test Updated',
+          nodes: [],
+          connections: {}
+        },
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      const result = await tracker.processMutation(data, 'test-user');
+
+      expect(result).toBeTruthy();
+      // Full hashes (includes all workflow data)
+      expect(result!.workflowHashBefore).toBeDefined();
+      expect(result!.workflowHashAfter).toBeDefined();
+      // Structural hashes (nodeTypes + connections only)
+      expect(result!.workflowStructureHashBefore).toBeDefined();
+      expect(result!.workflowStructureHashAfter).toBeDefined();
+      // They should be different since they hash different data
+      expect(result!.workflowHashBefore).not.toBe(result!.workflowStructureHashBefore);
+    });
+  });
+
   describe('Statistics', () => {
     it('should track recent mutations count', async () => {
       expect(tracker.getRecentMutationsCount()).toBe(0);
