@@ -155,17 +155,22 @@ export class SingleSessionHTTPServer {
    */
   private async removeSession(sessionId: string, reason: string): Promise<void> {
     try {
-      // Close transport if exists
-      if (this.transports[sessionId]) {
-        await this.transports[sessionId].close();
-        delete this.transports[sessionId];
-      }
-      
-      // Remove server, metadata, and context
+      // Store reference to transport before deletion
+      const transport = this.transports[sessionId];
+
+      // Delete transport FIRST to prevent onclose handler from triggering recursion
+      // This breaks the circular reference: removeSession -> close -> onclose -> removeSession
+      delete this.transports[sessionId];
       delete this.servers[sessionId];
       delete this.sessionMetadata[sessionId];
       delete this.sessionContexts[sessionId];
-      
+
+      // Close transport AFTER deletion
+      // When onclose handler fires, it won't find the transport anymore
+      if (transport) {
+        await transport.close();
+      }
+
       logger.info('Session removed', { sessionId, reason });
     } catch (error) {
       logger.warn('Error removing session', { sessionId, reason, error });

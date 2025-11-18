@@ -411,17 +411,17 @@ describe('HTTP Server Session Management', () => {
 
     it('should handle removeSession with transport close error gracefully', async () => {
       server = new SingleSessionHTTPServer();
-      
-      const mockTransport = { 
+
+      const mockTransport = {
         close: vi.fn().mockRejectedValue(new Error('Transport close failed'))
       };
       (server as any).transports = { 'test-session': mockTransport };
       (server as any).servers = { 'test-session': {} };
-      (server as any).sessionMetadata = { 
-        'test-session': { 
+      (server as any).sessionMetadata = {
+        'test-session': {
           lastAccess: new Date(),
           createdAt: new Date()
-        } 
+        }
       };
 
       // Should not throw even if transport close fails
@@ -429,10 +429,66 @@ describe('HTTP Server Session Management', () => {
 
       // Verify transport close was attempted
       expect(mockTransport.close).toHaveBeenCalled();
-      
+
       // Session should still be cleaned up despite transport error
       // Note: The actual implementation may handle errors differently, so let's verify what we can
       expect(mockTransport.close).toHaveBeenCalledWith();
+    });
+
+    it('should not cause infinite recursion when transport.close triggers onclose handler', async () => {
+      server = new SingleSessionHTTPServer();
+
+      const sessionId = 'test-recursion-session';
+      let closeCallCount = 0;
+      let oncloseCallCount = 0;
+
+      // Create a mock transport that simulates the actual behavior
+      const mockTransport = {
+        close: vi.fn().mockImplementation(async () => {
+          closeCallCount++;
+          // Simulate the actual SDK behavior: close() triggers onclose handler
+          if (mockTransport.onclose) {
+            oncloseCallCount++;
+            await mockTransport.onclose();
+          }
+        }),
+        onclose: null as (() => Promise<void>) | null,
+        sessionId
+      };
+
+      // Set up the transport and session data
+      (server as any).transports = { [sessionId]: mockTransport };
+      (server as any).servers = { [sessionId]: {} };
+      (server as any).sessionMetadata = {
+        [sessionId]: {
+          lastAccess: new Date(),
+          createdAt: new Date()
+        }
+      };
+
+      // Set up onclose handler like the real implementation does
+      // This handler calls removeSession, which could cause infinite recursion
+      mockTransport.onclose = async () => {
+        await (server as any).removeSession(sessionId, 'transport_closed');
+      };
+
+      // Call removeSession - this should NOT cause infinite recursion
+      await (server as any).removeSession(sessionId, 'manual_removal');
+
+      // Verify the fix works:
+      // 1. close() should be called exactly once
+      expect(closeCallCount).toBe(1);
+
+      // 2. onclose handler should be triggered
+      expect(oncloseCallCount).toBe(1);
+
+      // 3. Transport should be deleted and not cause second close attempt
+      expect((server as any).transports[sessionId]).toBeUndefined();
+      expect((server as any).servers[sessionId]).toBeUndefined();
+      expect((server as any).sessionMetadata[sessionId]).toBeUndefined();
+
+      // 4. If there was a recursion bug, closeCallCount would be > 1
+      // or the test would timeout/crash with "Maximum call stack size exceeded"
     });
   });
 

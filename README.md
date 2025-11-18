@@ -1114,6 +1114,13 @@ Current database coverage (n8n v1.117.2):
 
 ## 🔄 Recent Updates
 
+### v2.22.19 - Critical Bug Fix
+**Fixed:** Stack overflow in session removal (Issue #427)
+- Eliminated infinite recursion in HTTP server session cleanup
+- Transport resources now deleted before closing to prevent circular event handler chain
+- Production logs no longer show "RangeError: Maximum call stack size exceeded"
+- All session cleanup operations now complete successfully without crashes
+
 See [CHANGELOG.md](./docs/CHANGELOG.md) for full version history and recent changes.
 
 ## ⚠️ Known Issues
