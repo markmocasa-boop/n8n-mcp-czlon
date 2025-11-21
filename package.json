@@ -66,6 +66,7 @@
     "test:workflow-diff": "node dist/scripts/test-workflow-diff.js",
     "test:transactional-diff": "node dist/scripts/test-transactional-diff.js",
     "test:tools-documentation": "node dist/scripts/test-tools-documentation.js",
+    "test:structure-validation": "npx tsx scripts/test-structure-validation.ts",
     "test:url-configuration": "npm run build && ts-node scripts/test-url-configuration.ts",
     "test:search-improvements": "node dist/scripts/test-search-improvements.js",
     "test:fts5-search": "node dist/scripts/test-fts5-search.js",

@@ -1208,17 +1208,31 @@ export class EnhancedConfigValidator extends ConfigValidator {
       string: [
         'empty', 'notEmpty', 'equals', 'notEquals',
         'contains', 'notContains', 'startsWith', 'notStartsWith',
-        'endsWith', 'notEndsWith', 'regex', 'notRegex'
+        'endsWith', 'notEndsWith', 'regex', 'notRegex',
+        'exists', 'notExists', 'isNotEmpty' // exists checks field presence, isNotEmpty alias for notEmpty
       ],
-      number: ['empty', 'notEmpty', 'equals', 'notEquals', 'gt', 'lt', 'gte', 'lte'],
-      dateTime: ['empty', 'notEmpty', 'equals', 'notEquals', 'after', 'before', 'afterOrEquals', 'beforeOrEquals'],
-      boolean: ['empty', 'notEmpty', 'true', 'false', 'equals', 'notEquals'],
+      number: [
+        'empty', 'notEmpty', 'equals', 'notEquals', 'gt', 'lt', 'gte', 'lte',
+        'exists', 'notExists', 'isNotEmpty'
+      ],
+      dateTime: [
+        'empty', 'notEmpty', 'equals', 'notEquals', 'after', 'before', 'afterOrEquals', 'beforeOrEquals',
+        'exists', 'notExists', 'isNotEmpty'
+      ],
+      boolean: [
+        'empty', 'notEmpty', 'true', 'false', 'equals', 'notEquals',
+        'exists', 'notExists', 'isNotEmpty'
+      ],
       array: [
         'contains', 'notContains', 'lengthEquals', 'lengthNotEquals',
-        'lengthGt', 'lengthLt', 'lengthGte', 'lengthLte', 'empty', 'notEmpty'
+        'lengthGt', 'lengthLt', 'lengthGte', 'lengthLte', 'empty', 'notEmpty',
+        'exists', 'notExists', 'isNotEmpty'
       ],
-      object: ['empty', 'notEmpty'],
-      any: ['exists', 'notExists']
+      object: [
+        'empty', 'notEmpty',
+        'exists', 'notExists', 'isNotEmpty'
+      ],
+      any: ['exists', 'notExists', 'isNotEmpty']
     };
 
     for (let i = 0; i < conditions.length; i++) {

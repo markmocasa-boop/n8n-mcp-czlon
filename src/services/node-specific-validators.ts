@@ -1707,4 +1707,35 @@ export class NodeSpecificValidators {
       }
     }
   }
+
+  /**
+   * Validate Google Sheets node configuration
+   *
+   * Google Sheets nodes have special requirements where sheetId comes from
+   * credentials and doesn't need to be in the configuration.
+   */
+  static validateGoogleSheets(context: NodeValidationContext): void {
+    const { errors } = context;
+
+    // Filter out sheetId errors - this field comes from credentials, not configuration
+    // In ai-friendly and runtime modes, we should not require sheetId in config
+    const filteredErrors: ValidationError[] = [];
+    for (const error of errors) {
+      // Remove errors about missing sheetId - it comes from credentials
+      if (error.property === 'sheetId' && error.type === 'missing_required') {
+        continue; // Skip this error - sheetId is provided by credentials
+      }
+
+      // Remove errors about sheetId in nested paths (resourceMapper, resourceLocator)
+      if (error.property && error.property.includes('sheetId') && error.type === 'missing_required') {
+        continue; // Skip - sheetId validation should not fail for credential-provided values
+      }
+
+      filteredErrors.push(error);
+    }
+
+    // Replace errors array with filtered version
+    errors.length = 0;
+    errors.push(...filteredErrors);
+  }
 }
