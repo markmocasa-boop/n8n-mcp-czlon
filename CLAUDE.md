@@ -149,29 +149,6 @@ npm run test:templates   # Test template functionality
 3. **Validation Profiles**: Different validation strictness levels (minimal, runtime, ai-friendly, strict)
 4. **Diff-Based Updates**: Efficient workflow updates using operation diffs
 
-### Type Structure Validation (v2.22.21+)
-
-Automatic validation system for complex n8n node configuration structures. **Status: Production Ready**
-
-**Phases 1-3 Completed (2025-11-21):**
-- ✅ **Phase 1**: Type Structure Definitions - 22 complete type structures defined
-- ✅ **Phase 2**: Validation Integration - Integrated in EnhancedConfigValidator
-- ✅ **Phase 3**: Real-World Validation - 100% pass rate on 776 validations (91 templates, 616 nodes)
-
-**Supported Types:**
-- `filter` (FilterValue) - Complex filtering with 40+ operations
-- `resourceMapper` (ResourceMapperValue) - Data mapping configuration
-- `assignmentCollection` (AssignmentCollectionValue) - Variable assignments
-- `resourceLocator` (INodeParameterResourceLocator) - Resource selection
-
-**Performance:**
-- **0.01ms** average validation time (500x faster than 50ms target)
-- **100% pass rate** on real-world templates
-- **0% false positives**
-- Zero breaking changes (automatic, backward compatible)
-
-**Documentation:** See `docs/TYPE_STRUCTURE_VALIDATION.md` for complete details.
-
 ### MCP Tools Architecture
 
 The MCP server exposes tools in several categories:

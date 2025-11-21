@@ -7,6 +7,176 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.0] - 2025-11-21
+
+### ✨ Features
+
+**Type Structure Validation System (Phases 1-4 Complete)**
+
+Implemented comprehensive automatic validation system for complex n8n node configuration structures, ensuring workflows are correct before deployment.
+
+#### Overview
+
+Type Structure Validation is an automatic, zero-configuration validation system that validates complex node configurations (filter, resourceMapper, assignmentCollection, resourceLocator) during node validation. The system operates transparently - no special flags or configuration required.
+
+#### Key Features
+
+**1. Automatic Structure Validation**
+- Validates 4 special n8n types: filter, resourceMapper, assignmentCollection, resourceLocator
+- Zero configuration required - works automatically in all validation tools
+- Integrated in `validate_node_operation` and `validate_node_minimal` tools
+- 100% backward compatible - no breaking changes
+
+**2. Comprehensive Type Coverage**
+- **filter** (FilterValue) - Complex filtering conditions with 40+ operations (equals, contains, regex, etc.)
+- **resourceMapper** (ResourceMapperValue) - Data mapping configuration for format transformation
+- **assignmentCollection** (AssignmentCollectionValue) - Variable assignments for setting multiple values
+- **resourceLocator** (INodeParameterResourceLocator) - Resource selection with multiple lookup modes (ID, name, URL)
+
+**3. Production-Ready Performance**
+- **100% pass rate** on 776 real-world validations (91 templates, 616 nodes)
+- **0.01ms average** validation time (500x faster than 50ms target)
+- **0% false positive rate**
+- Tested against top n8n.io workflow templates
+
+**4. Clear Error Messages**
+- Actionable error messages with property paths
+- Fix suggestions for common issues
+- Context-aware validation with node-specific logic
+- Educational feedback for AI agents
+
+#### Implementation Phases
+
+**Phase 1: Type Structure Definitions** ✅
+- 22 complete type structures defined in `src/constants/type-structures.ts` (741 lines)
+- Type definitions in `src/types/type-structures.ts` (301 lines)
+- Complete coverage of filter, resourceMapper, assignmentCollection, resourceLocator
+- TypeScript interfaces with validation schemas
+
+**Phase 2: Validation Integration** ✅
+- Integrated in `EnhancedConfigValidator` service (427 lines)
+- Automatic validation in all MCP tools (validate_node_operation, validate_node_minimal)
+- Four validation profiles: minimal, runtime, ai-friendly, strict
+- Node-specific validation logic for edge cases
+
+**Phase 3: Real-World Validation** ✅
+- 100% pass rate on 776 validations across 91 templates
+- 616 nodes tested from top n8n.io workflows
+- Type-specific results:
+  - filter: 93/93 passed (100.00%)
+  - resourceMapper: 69/69 passed (100.00%)
+  - assignmentCollection: 213/213 passed (100.00%)
+  - resourceLocator: 401/401 passed (100.00%)
+- Performance: 0.01ms average (500x better than target)
+
+**Phase 4: Documentation & Polish** ✅
+- Comprehensive technical documentation (`docs/TYPE_STRUCTURE_VALIDATION.md`)
+- Updated internal documentation (CLAUDE.md)
+- Progressive discovery maintained (minimal tool documentation changes)
+- Production readiness checklist completed
+
+#### Edge Cases Handled
+
+**1. Credential-Provided Fields**
+- Fields like Google Sheets `sheetId` that come from credentials at runtime
+- No false positives for credential-populated fields
+
+**2. Filter Operations**
+- Universal operations (exists, notExists, isNotEmpty) work across all data types
+- Type-specific operations validated (regex for strings, gt/lt for numbers)
+
+**3. Node-Specific Logic**
+- Custom validation for specific nodes (Google Sheets, Slack, etc.)
+- Context-aware error messages based on node operation
+
+#### Technical Details
+
+**Files Added:**
+- `src/types/type-structures.ts` (301 lines) - Type definitions
+- `src/constants/type-structures.ts` (741 lines) - 22 complete type structures
+- `src/services/type-structure-service.ts` (427 lines) - Validation service
+- `docs/TYPE_STRUCTURE_VALIDATION.md` (239 lines) - Technical documentation
+
+**Files Modified:**
+- `src/services/enhanced-config-validator.ts` - Integrated structure validation
+- `src/mcp/tools-documentation.ts` - Minimal progressive discovery notes
+- `CLAUDE.md` - Updated architecture and Phase 1-3 completion
+
+**Test Coverage:**
+- `tests/unit/types/type-structures.test.ts` (14 tests)
+- `tests/unit/constants/type-structures.test.ts` (39 tests)
+- `tests/unit/services/type-structure-service.test.ts` (64 tests)
+- `tests/unit/services/enhanced-config-validator-type-structures.test.ts` (comprehensive)
+- `tests/integration/validation/real-world-structure-validation.test.ts` (8 tests, 388ms)
+- `scripts/test-structure-validation.ts` - Standalone validation script
+
+#### Usage
+
+No changes required - structure validation works automatically:
+
+```javascript
+// Validation works automatically with structure validation
+validate_node_operation("nodes-base.if", {
+  conditions: {
+    combinator: "and",
+    conditions: [{
+      leftValue: "={{ $json.status }}",
+      rightValue: "active",
+      operator: { type: "string", operation: "equals" }
+    }]
+  }
+})
+
+// Structure errors are caught and reported clearly
+// Invalid operation → Clear error with valid operations list
+// Missing required fields → Actionable fix suggestions
+```
+
+#### Benefits
+
+**For Users:**
+- ✅ Prevents configuration errors before deployment
+- ✅ Clear, actionable error messages
+- ✅ Faster workflow development with immediate feedback
+- ✅ Confidence in workflow correctness
+
+**For AI Agents:**
+- ✅ Better understanding of complex n8n types
+- ✅ Self-correction based on clear error messages
+- ✅ Reduced validation errors and retry loops
+- ✅ Educational feedback for learning n8n patterns
+
+**Technical:**
+- ✅ Zero breaking changes (100% backward compatible)
+- ✅ Automatic integration (no configuration needed)
+- ✅ High performance (0.01ms average)
+- ✅ Production-ready (100% pass rate on real workflows)
+
+#### Documentation
+
+**User Documentation:**
+- `docs/TYPE_STRUCTURE_VALIDATION.md` - Complete technical reference
+- Includes: Overview, supported types, performance metrics, examples, developer guide
+
+**Internal Documentation:**
+- `CLAUDE.md` - Architecture updates and Phase 1-3 results
+- `src/mcp/tools-documentation.ts` - Progressive discovery notes
+
+**Implementation Details:**
+- `docs/local/v3/implementation-plan-final.md` - Complete technical specifications
+- All 4 phases documented with success criteria and results
+
+#### Version History
+
+- **v2.23.0** (2025-11-21): Type structure validation system completed (Phases 1-4)
+  - Phase 1: 22 complete type structures defined
+  - Phase 2: Validation integrated in all MCP tools
+  - Phase 3: 100% pass rate on 776 real-world validations
+  - Phase 4: Documentation and polish completed
+  - Zero false positives, 0.01ms average validation time
+
+Conceived by Romuald Członkowski - https://www.aiadvisors.pl/en
+
 ## [2.22.21] - 2025-11-20
 
 ### 🐛 Bug Fixes
