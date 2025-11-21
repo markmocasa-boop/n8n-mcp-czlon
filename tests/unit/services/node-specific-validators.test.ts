@@ -310,18 +310,20 @@ describe('NodeSpecificValidators', () => {
 
   describe('validateGoogleSheets', () => {
     describe('common validations', () => {
-      it('should require spreadsheet ID', () => {
+      it('should require range for read operation (sheetId comes from credentials)', () => {
         context.config = {
           operation: 'read'
         };
-        
+
         NodeSpecificValidators.validateGoogleSheets(context);
-        
+
+        // NOTE: sheetId validation was removed because it's provided by credentials, not configuration
+        // The actual error is missing range, which is checked first
         expect(context.errors).toContainEqual({
           type: 'missing_required',
-          property: 'sheetId',
-          message: 'Spreadsheet ID is required',
-          fix: 'Provide the Google Sheets document ID from the URL'
+          property: 'range',
+          message: 'Range is required for read operation',
+          fix: 'Specify range like "Sheet1!A:B" or "Sheet1!A1:B10"'
         });
       });
 

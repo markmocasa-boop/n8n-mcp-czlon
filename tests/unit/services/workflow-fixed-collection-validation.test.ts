@@ -160,11 +160,22 @@ describe('Workflow FixedCollection Validation', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    
-    const ifError = result.errors.find(e => e.nodeId === 'if');
-    expect(ifError).toBeDefined();
-    expect(ifError!.message).toContain('Invalid structure for nodes-base.if node');
+
+    // Type Structure Validation (v2.23.0) now catches multiple filter structure errors:
+    // 1. Missing combinator field
+    // 2. Missing conditions field
+    // 3. Invalid nested structure (conditions.values)
+    expect(result.errors).toHaveLength(3);
+
+    // All errors should be for the If node
+    const ifErrors = result.errors.filter(e => e.nodeId === 'if');
+    expect(ifErrors).toHaveLength(3);
+
+    // Check for the main structure error
+    const structureError = ifErrors.find(e => e.message.includes('Invalid structure'));
+    expect(structureError).toBeDefined();
+    expect(structureError!.message).toContain('conditions.values');
+    expect(structureError!.message).toContain('propertyValues[itemName] is not iterable');
   });
 
   test('should accept valid Switch node structure in workflow validation', async () => {
