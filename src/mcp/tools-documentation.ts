@@ -97,8 +97,8 @@ When working with Code nodes, always start by calling the relevant guide:
    - search_node_properties("nodes-base.slack", "auth") - Find specific properties
 
 3. **Validate** before deployment:
-   - validate_node_minimal("nodes-base.slack", config) - Check required fields
-   - validate_node_operation("nodes-base.slack", config) - Full validation with fixes
+   - validate_node_minimal("nodes-base.slack", config) - Check required fields (includes automatic structure validation)
+   - validate_node_operation("nodes-base.slack", config) - Full validation with fixes (includes automatic structure validation)
    - validate_workflow(workflow) - Validate entire workflow
 
 ## Tool Categories
@@ -115,8 +115,8 @@ When working with Code nodes, always start by calling the relevant guide:
 - get_property_dependencies - Analyze property visibility dependencies
 
 **Validation Tools**
-- validate_node_minimal - Quick validation of required fields only
-- validate_node_operation - Full validation with operation awareness
+- validate_node_minimal - Quick validation of required fields (includes structure validation)
+- validate_node_operation - Full validation with operation awareness (includes structure validation)
 - validate_workflow - Complete workflow validation including connections
 
 **Template Tools**
