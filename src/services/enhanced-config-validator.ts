@@ -1223,7 +1223,7 @@ export class EnhancedConfigValidator extends ConfigValidator {
 
     for (let i = 0; i < conditions.length; i++) {
       const condition = conditions[i];
-      if (!condition.operator) continue;
+      if (!condition.operator || typeof condition.operator !== 'object') continue;
 
       const { type, operation } = condition.operator;
       if (!type || !operation) continue;
