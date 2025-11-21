@@ -13,6 +13,8 @@ import { ResourceSimilarityService } from './resource-similarity-service';
 import { NodeRepository } from '../database/node-repository';
 import { DatabaseAdapter } from '../database/database-adapter';
 import { NodeTypeNormalizer } from '../utils/node-type-normalizer';
+import { TypeStructureService } from './type-structure-service';
+import type { NodePropertyTypes } from 'n8n-workflow';
 
 export type ValidationMode = 'full' | 'operation' | 'minimal';
 export type ValidationProfile = 'strict' | 'runtime' | 'ai-friendly' | 'minimal';
@@ -111,7 +113,7 @@ export class EnhancedConfigValidator extends ConfigValidator {
     this.applyProfileFilters(enhancedResult, profile);
     
     // Add operation-specific enhancements
-    this.addOperationSpecificEnhancements(nodeType, config, enhancedResult);
+    this.addOperationSpecificEnhancements(nodeType, config, filteredProperties, enhancedResult);
     
     // Deduplicate errors
     enhancedResult.errors = this.deduplicateErrors(enhancedResult.errors);
@@ -247,6 +249,7 @@ export class EnhancedConfigValidator extends ConfigValidator {
   private static addOperationSpecificEnhancements(
     nodeType: string,
     config: Record<string, any>,
+    properties: any[],
     result: EnhancedValidationResult
   ): void {
     // Type safety check - this should never happen with proper validation
@@ -262,6 +265,9 @@ export class EnhancedConfigValidator extends ConfigValidator {
 
     // Validate resource and operation using similarity services
     this.validateResourceAndOperation(nodeType, config, result);
+
+    // Validate special type structures (filter, resourceMapper, assignmentCollection, resourceLocator)
+    this.validateSpecialTypeStructures(config, properties, result);
 
     // First, validate fixedCollection properties for known problematic nodes
     this.validateFixedCollectionStructures(nodeType, config, result);
@@ -979,6 +985,268 @@ export class EnhancedConfigValidator extends ConfigValidator {
             );
           }
         }
+      }
+    }
+  }
+
+  /**
+   * Validate special type structures (filter, resourceMapper, assignmentCollection, resourceLocator)
+   *
+   * Integrates TypeStructureService to validate complex property types against their
+   * expected structures. This catches configuration errors for advanced node types.
+   *
+   * @param config - Node configuration to validate
+   * @param properties - Property definitions from node schema
+   * @param result - Validation result to populate with errors/warnings
+   */
+  private static validateSpecialTypeStructures(
+    config: Record<string, any>,
+    properties: any[],
+    result: EnhancedValidationResult
+  ): void {
+    for (const [key, value] of Object.entries(config)) {
+      if (value === undefined || value === null) continue;
+
+      // Find property definition
+      const propDef = properties.find(p => p.name === key);
+      if (!propDef) continue;
+
+      // Check if this property uses a special type
+      let structureType: NodePropertyTypes | null = null;
+
+      if (propDef.type === 'filter') {
+        structureType = 'filter';
+      } else if (propDef.type === 'resourceMapper') {
+        structureType = 'resourceMapper';
+      } else if (propDef.type === 'assignmentCollection') {
+        structureType = 'assignmentCollection';
+      } else if (propDef.type === 'resourceLocator') {
+        structureType = 'resourceLocator';
+      }
+
+      if (!structureType) continue;
+
+      // Get structure definition
+      const structure = TypeStructureService.getStructure(structureType);
+      if (!structure) {
+        console.warn(`No structure definition found for type: ${structureType}`);
+        continue;
+      }
+
+      // Validate using TypeStructureService for basic type checking
+      const validationResult = TypeStructureService.validateTypeCompatibility(
+        value,
+        structureType
+      );
+
+      // Add errors from structure validation
+      if (!validationResult.valid) {
+        for (const error of validationResult.errors) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: key,
+            message: error,
+            fix: `Ensure ${key} follows the expected structure for ${structureType} type. Example: ${JSON.stringify(structure.example)}`
+          });
+        }
+      }
+
+      // Add warnings
+      for (const warning of validationResult.warnings) {
+        result.warnings.push({
+          type: 'best_practice',
+          property: key,
+          message: warning
+        });
+      }
+
+      // Perform deep structure validation for complex types
+      if (typeof value === 'object' && value !== null) {
+        this.validateComplexTypeStructure(key, value, structureType, structure, result);
+      }
+
+      // Special handling for filter operation validation
+      if (structureType === 'filter' && value.conditions) {
+        this.validateFilterOperations(value.conditions, key, result);
+      }
+    }
+  }
+
+  /**
+   * Deep validation for complex type structures
+   */
+  private static validateComplexTypeStructure(
+    propertyName: string,
+    value: any,
+    type: NodePropertyTypes,
+    structure: any,
+    result: EnhancedValidationResult
+  ): void {
+    switch (type) {
+      case 'filter':
+        // Validate filter structure: must have combinator and conditions
+        if (!value.combinator) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.combinator`,
+            message: 'Filter must have a combinator field',
+            fix: 'Add combinator: "and" or combinator: "or" to the filter configuration'
+          });
+        } else if (value.combinator !== 'and' && value.combinator !== 'or') {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.combinator`,
+            message: `Invalid combinator value: ${value.combinator}. Must be "and" or "or"`,
+            fix: 'Set combinator to either "and" or "or"'
+          });
+        }
+
+        if (!value.conditions) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.conditions`,
+            message: 'Filter must have a conditions field',
+            fix: 'Add conditions array to the filter configuration'
+          });
+        } else if (!Array.isArray(value.conditions)) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.conditions`,
+            message: 'Filter conditions must be an array',
+            fix: 'Ensure conditions is an array of condition objects'
+          });
+        }
+        break;
+
+      case 'resourceLocator':
+        // Validate resourceLocator structure: must have mode and value
+        if (!value.mode) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.mode`,
+            message: 'ResourceLocator must have a mode field',
+            fix: 'Add mode: "id", mode: "url", or mode: "list" to the resourceLocator configuration'
+          });
+        } else if (!['id', 'url', 'list', 'name'].includes(value.mode)) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.mode`,
+            message: `Invalid mode value: ${value.mode}. Must be "id", "url", "list", or "name"`,
+            fix: 'Set mode to one of: "id", "url", "list", "name"'
+          });
+        }
+
+        if (!value.hasOwnProperty('value')) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.value`,
+            message: 'ResourceLocator must have a value field',
+            fix: 'Add value field to the resourceLocator configuration'
+          });
+        }
+        break;
+
+      case 'assignmentCollection':
+        // Validate assignmentCollection structure: must have assignments array
+        if (!value.assignments) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.assignments`,
+            message: 'AssignmentCollection must have an assignments field',
+            fix: 'Add assignments array to the assignmentCollection configuration'
+          });
+        } else if (!Array.isArray(value.assignments)) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.assignments`,
+            message: 'AssignmentCollection assignments must be an array',
+            fix: 'Ensure assignments is an array of assignment objects'
+          });
+        }
+        break;
+
+      case 'resourceMapper':
+        // Validate resourceMapper structure: must have mappingMode
+        if (!value.mappingMode) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.mappingMode`,
+            message: 'ResourceMapper must have a mappingMode field',
+            fix: 'Add mappingMode: "defineBelow" or mappingMode: "autoMapInputData"'
+          });
+        } else if (!['defineBelow', 'autoMapInputData'].includes(value.mappingMode)) {
+          result.errors.push({
+            type: 'invalid_configuration',
+            property: `${propertyName}.mappingMode`,
+            message: `Invalid mappingMode: ${value.mappingMode}. Must be "defineBelow" or "autoMapInputData"`,
+            fix: 'Set mappingMode to either "defineBelow" or "autoMapInputData"'
+          });
+        }
+        break;
+    }
+  }
+
+  /**
+   * Validate filter operations match operator types
+   *
+   * Ensures that filter operations are compatible with their operator types.
+   * For example, 'gt' (greater than) is only valid for numbers, not strings.
+   *
+   * @param conditions - Array of filter conditions to validate
+   * @param propertyName - Name of the filter property (for error reporting)
+   * @param result - Validation result to populate with errors
+   */
+  private static validateFilterOperations(
+    conditions: any,
+    propertyName: string,
+    result: EnhancedValidationResult
+  ): void {
+    if (!Array.isArray(conditions)) return;
+
+    // Operation validation rules based on n8n filter type definitions
+    const VALID_OPERATIONS_BY_TYPE: Record<string, string[]> = {
+      string: [
+        'empty', 'notEmpty', 'equals', 'notEquals',
+        'contains', 'notContains', 'startsWith', 'notStartsWith',
+        'endsWith', 'notEndsWith', 'regex', 'notRegex'
+      ],
+      number: ['empty', 'notEmpty', 'equals', 'notEquals', 'gt', 'lt', 'gte', 'lte'],
+      dateTime: ['empty', 'notEmpty', 'equals', 'notEquals', 'after', 'before', 'afterOrEquals', 'beforeOrEquals'],
+      boolean: ['empty', 'notEmpty', 'true', 'false', 'equals', 'notEquals'],
+      array: [
+        'contains', 'notContains', 'lengthEquals', 'lengthNotEquals',
+        'lengthGt', 'lengthLt', 'lengthGte', 'lengthLte', 'empty', 'notEmpty'
+      ],
+      object: ['empty', 'notEmpty'],
+      any: ['exists', 'notExists']
+    };
+
+    for (let i = 0; i < conditions.length; i++) {
+      const condition = conditions[i];
+      if (!condition.operator) continue;
+
+      const { type, operation } = condition.operator;
+      if (!type || !operation) continue;
+
+      // Get valid operations for this type
+      const validOperations = VALID_OPERATIONS_BY_TYPE[type];
+      if (!validOperations) {
+        result.warnings.push({
+          type: 'best_practice',
+          property: `${propertyName}.conditions[${i}].operator.type`,
+          message: `Unknown operator type: ${type}`
+        });
+        continue;
+      }
+
+      // Check if operation is valid for this type
+      if (!validOperations.includes(operation)) {
+        result.errors.push({
+          type: 'invalid_value',
+          property: `${propertyName}.conditions[${i}].operator.operation`,
+          message: `Operation '${operation}' is not valid for type '${type}'`,
+          fix: `Use one of the valid operations for ${type}: ${validOperations.join(', ')}`
+        });
       }
     }
   }
