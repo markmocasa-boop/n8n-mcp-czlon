@@ -8,8 +8,7 @@ import {
   WebhookRequest,
   McpToolResponse,
   ExecutionFilterOptions,
-  ExecutionMode,
-  Variable
+  ExecutionMode
 } from '../types/n8n-api';
 import {
   validateWorkflowStructure,
@@ -366,7 +365,6 @@ const updateWorkflowSchema = z.object({
   connections: z.record(z.any()).optional(),
   settings: z.any().optional(),
   createBackup: z.boolean().optional(),
-  intent: z.string().optional(),
 });
 
 const listWorkflowsSchema = z.object({
@@ -702,22 +700,15 @@ export async function handleUpdateWorkflow(
   repository: NodeRepository,
   context?: InstanceContext
 ): Promise<McpToolResponse> {
-  const startTime = Date.now();
-  const sessionId = `mutation_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-  let workflowBefore: any = null;
-  let userIntent = 'Full workflow update';
-
   try {
     const client = ensureApiConfigured(context);
     const input = updateWorkflowSchema.parse(args);
-    const { id, createBackup, intent, ...updateData } = input;
-    userIntent = intent || 'Full workflow update';
+    const { id, createBackup, ...updateData } = input;
 
     // If nodes/connections are being updated, validate the structure
     if (updateData.nodes || updateData.connections) {
       // Always fetch current workflow for validation (need all fields like name)
       const current = await client.getWorkflow(id);
-      workflowBefore = JSON.parse(JSON.stringify(current));
 
       // Create backup before modifying workflow (default: true)
       if (createBackup !== false) {
@@ -760,46 +751,13 @@ export async function handleUpdateWorkflow(
 
     // Update workflow
     const workflow = await client.updateWorkflow(id, updateData);
-
-    // Track successful mutation
-    if (workflowBefore) {
-      trackWorkflowMutationForFullUpdate({
-        sessionId,
-        toolName: 'n8n_update_full_workflow',
-        userIntent,
-        operations: [], // Full update doesn't use diff operations
-        workflowBefore,
-        workflowAfter: workflow,
-        mutationSuccess: true,
-        durationMs: Date.now() - startTime,
-      }).catch(err => {
-        logger.warn('Failed to track mutation telemetry:', err);
-      });
-    }
-
+    
     return {
       success: true,
       data: workflow,
       message: `Workflow "${workflow.name}" updated successfully`
     };
   } catch (error) {
-    // Track failed mutation
-    if (workflowBefore) {
-      trackWorkflowMutationForFullUpdate({
-        sessionId,
-        toolName: 'n8n_update_full_workflow',
-        userIntent,
-        operations: [],
-        workflowBefore,
-        workflowAfter: workflowBefore, // No change since it failed
-        mutationSuccess: false,
-        mutationError: error instanceof Error ? error.message : 'Unknown error',
-        durationMs: Date.now() - startTime,
-      }).catch(err => {
-        logger.warn('Failed to track mutation telemetry for failed operation:', err);
-      });
-    }
-
     if (error instanceof z.ZodError) {
       return {
         success: false,
@@ -807,7 +765,7 @@ export async function handleUpdateWorkflow(
         details: { errors: error.errors }
       };
     }
-
+    
     if (error instanceof N8nApiError) {
       return {
         success: false,
@@ -816,24 +774,11 @@ export async function handleUpdateWorkflow(
         details: error.details as Record<string, unknown> | undefined
       };
     }
-
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
-  }
-}
-
-/**
- * Track workflow mutation for telemetry (full workflow updates)
- */
-async function trackWorkflowMutationForFullUpdate(data: any): Promise<void> {
-  try {
-    const { telemetry } = await import('../telemetry/telemetry-manager.js');
-    await telemetry.trackWorkflowMutation(data);
-  } catch (error) {
-    // Silently fail - telemetry should never break core functionality
-    logger.debug('Telemetry tracking failed:', error);
   }
 }
 
@@ -848,78 +793,6 @@ export async function handleDeleteWorkflow(args: unknown, context?: InstanceCont
       success: true,
       data: deleted,
       message: `Workflow ${id} deleted successfully`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleActivateWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const client = ensureApiConfigured(context);
-    const { id } = z.object({ id: z.string() }).parse(args);
-
-    const workflow = await client.activateWorkflow(id);
-
-    return {
-      success: true,
-      data: workflow,
-      message: `Workflow ${id} (${workflow.name}) activated successfully`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleDeactivateWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const client = ensureApiConfigured(context);
-    const { id } = z.object({ id: z.string() }).parse(args);
-
-    const workflow = await client.deactivateWorkflow(id);
-
-    return {
-      success: true,
-      data: workflow,
-      message: `Workflow ${id} (${workflow.name}) deactivated successfully`
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -1531,185 +1404,6 @@ export async function handleDeleteExecution(args: unknown, context?: InstanceCon
   }
 }
 
-export async function handleRetryExecution(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const client = ensureApiConfigured(context);
-    const { id, loadWorkflow = true } = z.object({
-      id: z.string(),
-      loadWorkflow: z.boolean().optional().default(true)
-    }).parse(args);
-    
-    const execution = await client.retryExecution(id, loadWorkflow);
-    
-    return {
-      success: true,
-      message: `Execution ${id} retried successfully. New execution ID: ${execution.id}`,
-      data: {
-        newExecutionId: execution.id,
-        status: execution.status,
-        workflowId: execution.workflowId,
-        workflowName: execution.workflowName,
-        retryOf: execution.retryOf,
-        startedAt: execution.startedAt
-      }
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-// Credential Management Handlers
-
-/**
- * Handle create credential request
- */
-export async function handleCreateCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      name: z.string().min(1, 'Credential name is required'),
-      type: z.string().min(1, 'Credential type is required'),
-      data: z.record(z.any())
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const credential = await client.createCredential(validatedArgs);
-    
-    return {
-      success: true,
-      data: {
-        id: credential.id,
-        name: credential.name,
-        type: credential.type,
-        createdAt: credential.createdAt
-      },
-      message: `Credential "${credential.name}" created successfully. ID: ${credential.id}. NOTE: Credential data is stored securely and cannot be retrieved via API.`
-    };
-  } catch (error) {
-    // Sanitize error messages to avoid exposing credential data
-    if (error instanceof Error && error.message.includes('400')) {
-      return {
-        success: false,
-        error: 'Invalid credential data. Check the credential schema for required fields.',
-        code: 'INVALID_CREDENTIAL_DATA'
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle get credential request
- */
-export async function handleGetCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Credential ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const credential = await client.getCredential(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: credential,
-      message: 'Retrieved credential metadata. NOTE: Sensitive data (passwords, tokens) is not included for security.'
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle delete credential request
- */
-export async function handleDeleteCredential(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Credential ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    // Get credential name before deletion
-    const credential = await client.getCredential(validatedArgs.id);
-    
-    await client.deleteCredential(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: {
-        id: validatedArgs.id,
-        name: credential.name,
-        deleted: true
-      },
-      message: `Credential "${credential.name}" (${validatedArgs.id}) deleted successfully. WARNING: Workflows using this credential will fail until updated.`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle get credential schema request
- */
-export async function handleGetCredentialSchema(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      credentialTypeName: z.string().min(1, 'Credential type name is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const credentialSchema = await client.getCredentialSchema(validatedArgs.credentialTypeName);
-    
-    return {
-      success: true,
-      data: credentialSchema,
-      message: `Retrieved schema for credential type "${credentialSchema.displayName}"`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
 // System Tools Handlers
 
 export async function handleHealthCheck(context?: InstanceContext): Promise<McpToolResponse> {
@@ -1867,10 +1561,10 @@ export async function handleListAvailableTools(context?: InstanceContext): Promi
         maxRetries: config.maxRetries
       } : null,
       limitations: [
+        'Cannot activate/deactivate workflows via API',
         'Cannot execute workflows directly (must use webhooks)',
         'Cannot stop running executions',
-        'Credential data (passwords, tokens) cannot be retrieved after creation (security feature)',
-        'Cannot test credentials via API (must use n8n UI)'
+        'Tags and credentials have limited API support'
       ]
     }
   };
@@ -2493,428 +2187,6 @@ export async function handleWorkflowVersions(
       };
     }
 
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-// ========================================================================
-// Tag Management Handlers
-// ========================================================================
-
-export async function handleCreateTag(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      name: z.string().min(1, 'Tag name is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const tag = await client.createTag({ name: validatedArgs.name });
-    
-    return {
-      success: true,
-      data: tag,
-      message: `Tag "${tag.name}" created successfully. ID: ${tag.id}`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleListTags(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const client = ensureApiConfigured(context);
-    const result = await client.listTags();
-    
-    return {
-      success: true,
-      data: {
-        tags: result.data,
-        count: result.data.length
-      },
-      message: `Found ${result.data.length} tag${result.data.length !== 1 ? 's' : ''}`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleGetTag(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Tag ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const tag = await client.getTag(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: tag,
-      message: `Tag "${tag.name}" is used by ${tag.workflowCount || 0} workflow${tag.workflowCount !== 1 ? 's' : ''}`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleUpdateTag(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Tag ID is required'),
-      name: z.string().min(1, 'Tag name is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const tag = await client.updateTag(validatedArgs.id, { name: validatedArgs.name });
-    
-    return {
-      success: true,
-      data: tag,
-      message: `Tag renamed to "${tag.name}"`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleDeleteTag(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Tag ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    // Get tag details before deletion
-    const tag = await client.getTag(validatedArgs.id);
-    
-    await client.deleteTag(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: {
-        id: validatedArgs.id,
-        name: tag.name,
-        deleted: true
-      },
-      message: `Tag "${tag.name}" deleted successfully. Removed from ${tag.workflowCount || 0} workflow${tag.workflowCount !== 1 ? 's' : ''}.`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-export async function handleUpdateWorkflowTags(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      workflowId: z.string().min(1, 'Workflow ID is required'),
-      tagIds: z.array(z.string())
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    // Get workflow name for better messaging
-    const workflow = await client.getWorkflow(validatedArgs.workflowId);
-    
-    const result = await client.updateWorkflowTags(
-      validatedArgs.workflowId,
-      validatedArgs.tagIds
-    );
-    
-    const tagNames = result.tags.map(t => t.name).join(', ');
-    
-    return {
-      success: true,
-      data: result,
-      message: validatedArgs.tagIds.length > 0
-        ? `Workflow "${workflow.name}" tagged with: ${tagNames}`
-        : `All tags removed from workflow "${workflow.name}"`
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-// ========================================================================
-// Variable Management Handlers
-// ========================================================================
-
-/**
- * Handle create variable request
- */
-export async function handleCreateVariable(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      key: z.string().min(1, 'Variable key is required'),
-      value: z.string(),
-      projectId: z.string().optional()
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const variable = await client.createVariable(validatedArgs);
-    
-    return {
-      success: true,
-      data: variable,
-      message: `Variable "${variable.key}" created successfully. ID: ${variable.id}`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle list variables request
- */
-export async function handleListVariables(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      limit: z.number().min(1).max(100).optional(),
-      cursor: z.string().optional(),
-      projectId: z.string().optional(),
-      state: z.enum(['active', 'inactive']).optional()
-    });
-
-    const validatedArgs = schema.parse(args || {});
-    const client = ensureApiConfigured(context);
-    
-    const response = await client.listVariables({
-      limit: validatedArgs.limit || 100,
-      cursor: validatedArgs.cursor,
-      projectId: validatedArgs.projectId,
-      state: validatedArgs.state
-    });
-    
-    return {
-      success: true,
-      data: {
-        variables: response.data,
-        returned: response.data.length,
-        nextCursor: response.nextCursor,
-        hasMore: !!response.nextCursor,
-        ...(response.nextCursor ? { 
-          _note: "More variables available. Use cursor to get next page." 
-        } : {})
-      }
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle get variable request
- */
-export async function handleGetVariable(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Variable ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    const variable = await client.getVariable(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: variable,
-      message: `Retrieved variable "${variable.key}"`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle update variable request
- */
-export async function handleUpdateVariable(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Variable ID is required'),
-      key: z.string().optional(),
-      value: z.string().optional()
-    });
-
-    const validatedArgs = schema.parse(args);
-    
-    // At least one field must be provided for update
-    if (!validatedArgs.key && !validatedArgs.value) {
-      return {
-        success: false,
-        error: 'At least one of key or value must be provided for update'
-      };
-    }
-
-    const client = ensureApiConfigured(context);
-    
-    const updateData: Partial<Variable> = {};
-    if (validatedArgs.key) updateData.key = validatedArgs.key;
-    if (validatedArgs.value) updateData.value = validatedArgs.value;
-    
-    const variable = await client.updateVariable(validatedArgs.id, updateData);
-    
-    return {
-      success: true,
-      data: variable,
-      message: `Variable "${variable.key}" updated successfully`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
-}
-
-/**
- * Handle delete variable request
- */
-export async function handleDeleteVariable(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
-  try {
-    const schema = z.object({
-      id: z.string().min(1, 'Variable ID is required')
-    });
-
-    const validatedArgs = schema.parse(args);
-    const client = ensureApiConfigured(context);
-    
-    // Get variable details before deletion for better messaging
-    const variable = await client.getVariable(validatedArgs.id);
-    
-    await client.deleteVariable(validatedArgs.id);
-    
-    return {
-      success: true,
-      data: {
-        id: validatedArgs.id,
-        key: variable.key,
-        deleted: true
-      },
-      message: `Variable "${variable.key}" deleted successfully. WARNING: Workflows using this variable may fail.`
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        details: { errors: error.errors }
-      };
-    }
-    
-    if (error instanceof N8nApiError) {
-      return {
-        success: false,
-        error: getUserFriendlyErrorMessage(error),
-        code: error.code
-      };
-    }
-    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

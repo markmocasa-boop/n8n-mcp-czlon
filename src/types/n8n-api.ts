@@ -123,11 +123,24 @@ export interface Credential {
   updatedAt?: string;
 }
 
+export interface CredentialSchema {
+  type: string;
+  displayName: string;
+  properties: Array<{
+    name: string;
+    type: string;
+    required?: boolean;
+    displayName?: string;
+    typeOptions?: Record<string, unknown>;
+  }>;
+}
+
 // Tag Types
 export interface Tag {
   id?: string;
   name: string;
   workflowIds?: string[];
+  workflowCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -138,6 +151,19 @@ export interface Variable {
   key: string;
   value: string;
   type?: 'string';
+  projectId?: string;
+}
+
+export interface VariableListParams {
+  limit?: number;
+  cursor?: string;
+  projectId?: string;
+  state?: 'active' | 'inactive';
+}
+
+export interface VariableListResponse {
+  data: Variable[];
+  nextCursor?: string;
 }
 
 // Import/Export Types
@@ -251,17 +277,6 @@ export interface ExecutionListParams {
 
 export interface ExecutionListResponse {
   data: Execution[];
-  nextCursor?: string | null;
-}
-
-export interface CredentialListParams {
-  limit?: number;
-  cursor?: string;
-  filter?: Record<string, unknown>;
-}
-
-export interface CredentialListResponse {
-  data: Credential[];
   nextCursor?: string | null;
 }
 

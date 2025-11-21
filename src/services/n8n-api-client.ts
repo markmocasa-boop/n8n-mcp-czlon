@@ -8,13 +8,14 @@ import {
   ExecutionListParams,
   ExecutionListResponse,
   Credential,
-  CredentialListParams,
-  CredentialListResponse,
+  CredentialSchema,
   Tag,
   TagListParams,
   TagListResponse,
   HealthCheckResponse,
   Variable,
+  VariableListParams,
+  VariableListResponse,
   WebhookRequest,
   WorkflowExport,
   WorkflowImport,
@@ -252,6 +253,17 @@ export class N8nApiClient {
     }
   }
 
+  async retryExecution(id: string, loadWorkflow: boolean = true): Promise<Execution> {
+    try {
+      const response = await this.client.post(`/executions/${id}/retry`, {
+        loadWorkflow
+      });
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
   // Webhook Execution
   async triggerWebhook(request: WebhookRequest): Promise<any> {
     try {
@@ -305,28 +317,6 @@ export class N8nApiClient {
   }
 
   // Credential Management
-  /**
-   * Lists credentials from n8n instance.
-   *
-   * @param params - Query parameters for filtering and pagination
-   * @returns Paginated list of credentials
-   *
-   * @remarks
-   * This method handles two response formats for backwards compatibility:
-   * - Modern (n8n v0.200.0+): {data: Credential[], nextCursor?: string}
-   * - Legacy (older versions): Credential[] (wrapped automatically)
-   *
-   * @see https://github.com/czlonkowski/n8n-mcp/issues/349
-   */
-  async listCredentials(params: CredentialListParams = {}): Promise<CredentialListResponse> {
-    try {
-      const response = await this.client.get('/credentials', { params });
-      return this.validateListResponse<Credential>(response.data, 'credentials');
-    } catch (error) {
-      throw handleN8nApiError(error);
-    }
-  }
-
   async getCredential(id: string): Promise<Credential> {
     try {
       const response = await this.client.get(`/credentials/${id}`);
@@ -345,18 +335,26 @@ export class N8nApiClient {
     }
   }
 
-  async updateCredential(id: string, credential: Partial<Credential>): Promise<Credential> {
+  async deleteCredential(id: string): Promise<void> {
     try {
-      const response = await this.client.patch(`/credentials/${id}`, credential);
-      return response.data;
+      await this.client.delete(`/credentials/${id}`);
     } catch (error) {
       throw handleN8nApiError(error);
     }
   }
 
-  async deleteCredential(id: string): Promise<void> {
+  /**
+   * Get credential type schema for dynamic form building
+   * 
+   * @param credentialTypeName - The credential type (e.g., 'httpBasicAuth', 'gmailOAuth2Api')
+   * @returns Credential schema with field definitions
+   */
+  async getCredentialSchema(credentialTypeName: string): Promise<CredentialSchema> {
     try {
-      await this.client.delete(`/credentials/${id}`);
+      const response = await this.client.get<CredentialSchema>(
+        `/credentials/schema/${credentialTypeName}`
+      );
+      return response.data;
     } catch (error) {
       throw handleN8nApiError(error);
     }
@@ -394,9 +392,18 @@ export class N8nApiClient {
     }
   }
 
+  async getTag(id: string): Promise<Tag> {
+    try {
+      const response = await this.client.get(`/tags/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
   async updateTag(id: string, tag: Partial<Tag>): Promise<Tag> {
     try {
-      const response = await this.client.patch(`/tags/${id}`, tag);
+      const response = await this.client.put(`/tags/${id}`, tag);
       return response.data;
     } catch (error) {
       throw handleN8nApiError(error);
@@ -406,6 +413,96 @@ export class N8nApiClient {
   async deleteTag(id: string): Promise<void> {
     try {
       await this.client.delete(`/tags/${id}`);
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  async updateWorkflowTags(
+    workflowId: string,
+    tagIds: string[]
+  ): Promise<{ id: string; tags: Tag[] }> {
+    try {
+      const response = await this.client.put<{ id: string; tags: Tag[] }>(
+        `/workflows/${workflowId}/tags`,
+        { tags: tagIds }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  // Variable Management
+  /**
+   * Lists variables from n8n instance.
+   *
+   * @param params - Query parameters for filtering and pagination
+   * @returns Paginated list of variables
+   */
+  async listVariables(params: VariableListParams = {}): Promise<VariableListResponse> {
+    try {
+      const response = await this.client.get('/variables', { params });
+      return this.validateListResponse<Variable>(response.data, 'variables');
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  /**
+   * Create a new variable.
+   *
+   * @param variable - Variable data (key, value, optional projectId)
+   * @returns Created variable with id
+   */
+  async createVariable(variable: Partial<Variable>): Promise<Variable> {
+    try {
+      const response = await this.client.post('/variables', variable);
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  /**
+   * Get a variable by ID.
+   *
+   * @param id - Variable ID
+   * @returns Variable details
+   */
+  async getVariable(id: string): Promise<Variable> {
+    try {
+      const response = await this.client.get(`/variables/${id}`);
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  /**
+   * Update a variable.
+   *
+   * @param id - Variable ID
+   * @param variable - Updated variable data (key and/or value)
+   * @returns Updated variable
+   */
+  async updateVariable(id: string, variable: Partial<Variable>): Promise<Variable> {
+    try {
+      const response = await this.client.put(`/variables/${id}`, variable);
+      return response.data;
+    } catch (error) {
+      throw handleN8nApiError(error);
+    }
+  }
+
+  /**
+   * Delete a variable.
+   *
+   * @param id - Variable ID
+   */
+  async deleteVariable(id: string): Promise<void> {
+    try {
+      await this.client.delete(`/variables/${id}`);
     } catch (error) {
       throw handleN8nApiError(error);
     }
@@ -457,32 +554,6 @@ export class N8nApiClient {
     }
   }
 
-  async createVariable(variable: Partial<Variable>): Promise<Variable> {
-    try {
-      const response = await this.client.post('/variables', variable);
-      return response.data;
-    } catch (error) {
-      throw handleN8nApiError(error);
-    }
-  }
-
-  async updateVariable(id: string, variable: Partial<Variable>): Promise<Variable> {
-    try {
-      const response = await this.client.patch(`/variables/${id}`, variable);
-      return response.data;
-    } catch (error) {
-      throw handleN8nApiError(error);
-    }
-  }
-
-  async deleteVariable(id: string): Promise<void> {
-    try {
-      await this.client.delete(`/variables/${id}`);
-    } catch (error) {
-      throw handleN8nApiError(error);
-    }
-  }
-
   /**
    * Validates and normalizes n8n API list responses.
    * Handles both modern format {data: [], nextCursor?: string} and legacy array format.
@@ -495,7 +566,7 @@ export class N8nApiClient {
   private validateListResponse<T>(
     responseData: any,
     resourceType: string
-  ): { data: T[]; nextCursor?: string | null } {
+  ): { data: T[]; nextCursor?: string } {
     // Validate response structure
     if (!responseData || typeof responseData !== 'object') {
       throw new Error(`Invalid response from n8n API for ${resourceType}: response is not an object`);
@@ -508,8 +579,7 @@ export class N8nApiClient {
         'Wrapping in expected format for backwards compatibility.'
       );
       return {
-        data: responseData,
-        nextCursor: null
+        data: responseData
       };
     }
 
