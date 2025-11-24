@@ -140,10 +140,9 @@ describe('Parameter Validation', () => {
     // Mock the actual tool methods to avoid database calls
     beforeEach(() => {
       // Mock all the tool methods that would be called
-      vi.spyOn(server as any, 'getNodeInfo').mockResolvedValue({ mockResult: true });
+      vi.spyOn(server as any, 'getNode').mockResolvedValue({ mockResult: true });
       vi.spyOn(server as any, 'searchNodes').mockResolvedValue({ results: [] });
       vi.spyOn(server as any, 'getNodeDocumentation').mockResolvedValue({ docs: 'test' });
-      vi.spyOn(server as any, 'getNodeEssentials').mockResolvedValue({ essentials: true });
       vi.spyOn(server as any, 'searchNodeProperties').mockResolvedValue({ properties: [] });
       // Note: getNodeForTask removed in v2.15.0
       vi.spyOn(server as any, 'validateNodeConfig').mockResolvedValue({ valid: true });

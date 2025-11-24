@@ -119,20 +119,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
   },
   {
     name: 'get_node',
-    description: `Unified node information tool with multiple detail levels and modes.
-
-Detail levels (mode='info'):
-- minimal: Basic metadata only (~200 tokens)
-- standard: Essential properties and operations - AI-friendly default (~1000-2000 tokens)
-- full: Complete node information including all properties (~3000-8000 tokens)
-
-Version modes (detail ignored):
-- versions: List all versions with breaking changes summary
-- compare: Compare two versions with property-level changes
-- breaking: Show only breaking changes between versions
-- migrations: Show auto-migratable changes
-
-Recommended: Use detail='standard' for most AI tasks, detail='full' only when you need complete schemas.`,
+    description: `Get node info with progressive detail levels. Detail: minimal (~200 tokens), standard (~1-2K, default), full (~3-8K). Version modes: versions (history), compare (diff), breaking (changes), migrations (auto-migrate). Supports includeTypeInfo and includeExamples. Use standard for most tasks.`,
     inputSchema: {
       type: 'object',
       properties: {

@@ -59,6 +59,67 @@ interface NodeRow {
   credentials_required?: string;
 }
 
+interface VersionSummary {
+  currentVersion: string;
+  totalVersions: number;
+  hasVersionHistory: boolean;
+}
+
+interface NodeMinimalInfo {
+  nodeType: string;
+  workflowNodeType: string;
+  displayName: string;
+  description: string;
+  category: string;
+  package: string;
+  isAITool: boolean;
+  isTrigger: boolean;
+  isWebhook: boolean;
+}
+
+interface NodeStandardInfo {
+  nodeType: string;
+  displayName: string;
+  description: string;
+  category: string;
+  requiredProperties: any[];
+  commonProperties: any[];
+  operations?: any[];
+  credentials?: any;
+  examples?: any[];
+  versionInfo: VersionSummary;
+}
+
+interface NodeFullInfo {
+  nodeType: string;
+  displayName: string;
+  description: string;
+  category: string;
+  properties: any[];
+  operations?: any[];
+  credentials?: any;
+  documentation?: string;
+  versionInfo: VersionSummary;
+}
+
+interface VersionHistoryInfo {
+  nodeType: string;
+  versions: any[];
+  latestVersion: string;
+  hasBreakingChanges: boolean;
+}
+
+interface VersionComparisonInfo {
+  nodeType: string;
+  fromVersion: string;
+  toVersion: string;
+  changes: any[];
+  breakingChanges?: any[];
+  migrations?: any[];
+}
+
+type NodeInfoResponse = NodeMinimalInfo | NodeStandardInfo | NodeFullInfo | VersionHistoryInfo | VersionComparisonInfo;
+
 export class N8NDocumentationMCPServer {
   private server: Server;
   private db: DatabaseAdapter | null = null;
@@ -2227,13 +2288,26 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
   /**
    * Unified node information retrieval with multiple detail levels and modes.
    *
-   * @param nodeType - Node type identifier
-   * @param detail - Information detail level (minimal, standard, full)
-   * @param mode - Operation mode (info, versions, compare, breaking, migrations)
-   * @param includeTypeInfo - Include type structure metadata
-   * @param includeExamples - Include real-world examples
-   * @param fromVersion - Source version for comparison modes
-   * @param toVersion - Target version for comparison modes
+   * @param nodeType - Full node type identifier (e.g., "nodes-base.httpRequest" or "nodes-langchain.agent")
+   * @param detail - Information detail level (minimal, standard, full). Only applies when mode='info'.
+   *   - minimal: ~200 tokens, basic metadata only (no version info)
+   *   - standard: ~1-2K tokens, essential properties and operations (includes version info, AI-friendly default)
+   *   - full: ~3-8K tokens, complete node information with all properties (includes version info)
+   * @param mode - Operation mode determining the type of information returned:
+   *   - info: Node configuration details (respects detail level)
+   *   - versions: Complete version history with breaking changes summary
+   *   - compare: Property-level comparison between two versions (requires fromVersion)
+   *   - breaking: Breaking changes only between versions (requires fromVersion)
+   *   - migrations: Auto-migratable changes between versions (requires both fromVersion and toVersion)
+   * @param includeTypeInfo - Include type structure metadata for properties (only applies to mode='info').
+   *   Adds ~80-120 tokens per property with type category, JS type, and validation rules.
+   * @param includeExamples - Include real-world configuration examples from templates (only applies to mode='info' with detail='standard').
+   *   Adds ~200-400 tokens per example.
+   * @param fromVersion - Source version for comparison modes (required for compare, breaking, migrations).
+   *   Format: "1.0" or "2.1"
+   * @param toVersion - Target version for comparison modes (optional for compare/breaking, required for migrations).
+   *   Defaults to latest version if omitted.
+   * @returns NodeInfoResponse - Union type containing different response structures based on mode and detail parameters
    */
   private async getNode(
     nodeType: string,
@@ -2243,9 +2317,21 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
     includeExamples?: boolean,
     fromVersion?: string,
     toVersion?: string
-  ): Promise<any> {
+  ): Promise<NodeInfoResponse> {
     await this.ensureInitialized();
     if (!this.repository) throw new Error('Repository not initialized');
+
+    // Validate parameters
+    const validDetailLevels = ['minimal', 'standard', 'full'];
+    const validModes = ['info', 'versions', 'compare', 'breaking', 'migrations'];
+
+    if (!validDetailLevels.includes(detail)) {
+      throw new Error(`get_node: Invalid detail level "${detail}". Valid options: ${validDetailLevels.join(', ')}`);
+    }
+
+    if (!validModes.includes(mode)) {
+      throw new Error(`get_node: Invalid mode "${mode}". Valid options: ${validModes.join(', ')}`);
+    }
 
     const normalizedType = NodeTypeNormalizer.normalizeToFullForm(nodeType);
 
@@ -2276,13 +2362,10 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
     detail: string,
     includeTypeInfo?: boolean,
     includeExamples?: boolean
-  ): Promise<any> {
-    // Get version summary (always included in info mode)
-    const versionSummary = this.getVersionSummary(nodeType);
-
+  ): Promise<NodeMinimalInfo | NodeStandardInfo | NodeFullInfo> {
     switch (detail) {
       case 'minimal': {
-        // Get basic node metadata only
+        // Get basic node metadata only (no version info for minimal mode)
         let node = this.repository!.getNode(nodeType);
 
         if (!node) {
@@ -2309,23 +2392,19 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
           package: node.package,
           isAITool: node.isAITool,
           isTrigger: node.isTrigger,
-          isWebhook: node.isWebhook,
-          versionInfo: versionSummary
+          isWebhook: node.isWebhook
         };
       }
 
       case 'standard': {
         // Use existing getNodeEssentials logic
         const essentials = await this.getNodeEssentials(nodeType, includeExamples);
+        const versionSummary = this.getVersionSummary(nodeType);
 
         // Apply type info enrichment if requested
         if (includeTypeInfo) {
-          essentials.requiredProperties = essentials.requiredProperties.map((prop: any) =>
-            this.enrichPropertyWithTypeInfo(prop)
-          );
-          essentials.commonProperties = essentials.commonProperties.map((prop: any) =>
-            this.enrichPropertyWithTypeInfo(prop)
-          );
+          essentials.requiredProperties = this.enrichPropertiesWithTypeInfo(essentials.requiredProperties);
+          essentials.commonProperties = this.enrichPropertiesWithTypeInfo(essentials.commonProperties);
         }
 
         return {
@@ -2337,12 +2416,11 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
       case 'full': {
         // Use existing getNodeInfo logic
         const fullInfo = await this.getNodeInfo(nodeType);
+        const versionSummary = this.getVersionSummary(nodeType);
 
         // Apply type info enrichment if requested
         if (includeTypeInfo && fullInfo.properties) {
-          fullInfo.properties = fullInfo.properties.map((prop: any) =>
-            this.enrichPropertyWithTypeInfo(prop)
-          );
+          fullInfo.properties = this.enrichPropertiesWithTypeInfo(fullInfo.properties);
         }
 
         return {
@@ -2364,46 +2442,59 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
     mode: string,
     fromVersion?: string,
     toVersion?: string
-  ): Promise<any> {
+  ): Promise<VersionHistoryInfo | VersionComparisonInfo> {
     switch (mode) {
       case 'versions':
         return this.getVersionHistory(nodeType);
 
       case 'compare':
         if (!fromVersion) {
-          throw new Error('fromVersion is required for compare mode');
+          throw new Error(`get_node: fromVersion is required for compare mode (nodeType: ${nodeType})`);
         }
         return this.compareVersions(nodeType, fromVersion, toVersion);
 
       case 'breaking':
         if (!fromVersion) {
-          throw new Error('fromVersion is required for breaking mode');
+          throw new Error(`get_node: fromVersion is required for breaking mode (nodeType: ${nodeType})`);
         }
         return this.getBreakingChanges(nodeType, fromVersion, toVersion);
 
       case 'migrations':
         if (!fromVersion || !toVersion) {
-          throw new Error('Both fromVersion and toVersion are required for migrations mode');
+          throw new Error(`get_node: Both fromVersion and toVersion are required for migrations mode (nodeType: ${nodeType})`);
         }
         return this.getMigrations(nodeType, fromVersion, toVersion);
 
       default:
-        throw new Error(`Unknown mode: ${mode}`);
+        throw new Error(`get_node: Unknown mode: ${mode} (nodeType: ${nodeType})`);
     }
   }
 
   /**
    * Get version summary (always included in info mode responses)
+   * Cached for 24 hours to improve performance
    */
-  private getVersionSummary(nodeType: string): any {
+  private getVersionSummary(nodeType: string): VersionSummary {
+    const cacheKey = `version-summary:${nodeType}`;
+    const cached = this.cache.get(cacheKey) as VersionSummary | null;
+
+    if (cached) {
+      return cached;
+    }
+
     const versions = this.repository!.getNodeVersions(nodeType);
     const latest = this.repository!.getLatestNodeVersion(nodeType);
 
-    return {
+    const summary: VersionSummary = {
       currentVersion: latest?.version || 'unknown',
       totalVersions: versions.length,
       hasVersionHistory: versions.length > 0
     };
+
+    // Cache for 24 hours (86400000 ms)
+    this.cache.set(cacheKey, summary, 86400000);
+
+    return summary;
   }
 
   /**
@@ -2545,7 +2636,7 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
    * Enrich property with type structure metadata
    */
   private enrichPropertyWithTypeInfo(property: any): any {
-    if (!property.type) return property;
+    if (!property || !property.type) return property;
 
     const structure = TypeStructureService.getStructure(property.type);
     if (!structure) return property;
@@ -2571,6 +2662,14 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
         ...(structure.notes && { notes: structure.notes })
       }
     };
+  }
+
+  /**
+   * Enrich an array of properties with type structure metadata
+   */
+  private enrichPropertiesWithTypeInfo(properties: any[]): any[] {
+    if (!properties || !Array.isArray(properties)) return properties;
+    return properties.map((prop: any) => this.enrichPropertyWithTypeInfo(prop));
   }
 
   private async searchNodeProperties(nodeType: string, query: string, maxResults: number = 20): Promise<any> {
