@@ -84,16 +84,17 @@ When working with Code nodes, always start by calling the relevant guide:
 
 ## Standard Workflow Pattern
 
-⚠️ **CRITICAL**: Always call get_node_essentials() FIRST before configuring any node!
+⚠️ **CRITICAL**: Always call get_node() with detail='standard' FIRST before configuring any node!
 
 1. **Find** the node you need:
    - search_nodes({query: "slack"}) - Search by keyword
    - list_nodes({category: "communication"}) - List by category
    - list_ai_tools() - List AI-capable nodes
 
-2. **Configure** the node (ALWAYS START WITH ESSENTIALS):
-   - ✅ get_node_essentials("nodes-base.slack") - Get essential properties FIRST (5KB, shows required fields)
-   - get_node_info("nodes-base.slack") - Get complete schema only if essentials insufficient (100KB+)
+2. **Configure** the node (ALWAYS START WITH STANDARD DETAIL):
+   - ✅ get_node("nodes-base.slack", {detail: 'standard'}) - Get essential properties FIRST (~1-2KB, shows required fields)
+   - get_node("nodes-base.slack", {detail: 'full'}) - Get complete schema only if standard insufficient (~100KB+)
+   - get_node("nodes-base.slack", {detail: 'minimal'}) - Get basic metadata only (~200 tokens)
    - search_node_properties("nodes-base.slack", "auth") - Find specific properties
 
 3. **Validate** before deployment:
@@ -109,8 +110,12 @@ When working with Code nodes, always start by calling the relevant guide:
 - list_ai_tools - List all AI-capable nodes with usage guidance
 
 **Configuration Tools**
-- get_node_essentials - ✅ CALL THIS FIRST! Returns 10-20 key properties with examples and required fields
-- get_node_info - Returns complete node schema (only use if essentials is insufficient)
+- get_node - ✅ Unified node information tool with progressive detail levels:
+  - detail='minimal': Basic metadata (~200 tokens)
+  - detail='standard': Essential properties (default, ~1-2KB) - USE THIS FIRST!
+  - detail='full': Complete schema (~100KB+, use only when standard insufficient)
+  - mode='versions': View version history and breaking changes
+  - includeTypeInfo=true: Add type structure metadata
 - search_node_properties - Search for specific properties within a node
 - get_property_dependencies - Analyze property visibility dependencies
 
@@ -132,9 +137,9 @@ When working with Code nodes, always start by calling the relevant guide:
 - n8n_trigger_webhook_workflow - Trigger workflow execution
 
 ## Performance Characteristics
-- Instant (<10ms): search_nodes, list_nodes, get_node_essentials
+- Instant (<10ms): search_nodes, list_nodes, get_node (minimal/standard)
 - Fast (<100ms): validate_node_minimal, get_node_for_task
-- Moderate (100-500ms): validate_workflow, get_node_info
+- Moderate (100-500ms): validate_workflow, get_node (full detail)
 - Network-dependent: All n8n_* tools
 
 For comprehensive documentation on any tool:
@@ -167,7 +172,7 @@ ${tools.map(toolName => {
 
 ## Usage Notes
 - All node types require the "nodes-base." or "nodes-langchain." prefix
-- Use get_node_essentials() first for most tasks (95% smaller than get_node_info)
+- Use get_node() with detail='standard' first for most tasks (~95% smaller than detail='full')
 - Validation profiles: minimal (editing), runtime (default), strict (deployment)
 - n8n API tools only available when N8N_API_URL and N8N_API_KEY are configured
 
