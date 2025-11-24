@@ -229,14 +229,16 @@ describe('MCP Error Handling', () => {
     it('should handle large node info requests', async () => {
       // HTTP Request node has extensive properties
       const response = await client.callTool({ name: 'get_node', arguments: {
-        nodeType: 'nodes-base.httpRequest'
+        nodeType: 'nodes-base.httpRequest',
+        detail: 'full'
       } });
 
       expect((response as any).content[0].text.length).toBeGreaterThan(10000);
-      
+
       // Should be valid JSON
       const nodeInfo = JSON.parse((response as any).content[0].text);
-      expect(nodeInfo).toHaveProperty('properties');
+      expect(nodeInfo).toHaveProperty('nodeType');
+      expect(nodeInfo).toHaveProperty('displayName');
     });
 
     it('should handle large workflow validation', async () => {

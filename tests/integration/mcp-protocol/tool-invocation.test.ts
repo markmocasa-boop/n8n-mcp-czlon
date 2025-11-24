@@ -149,16 +149,17 @@ describe('MCP Tool Invocation', () => {
     describe('get_node', () => {
       it('should get complete node information', async () => {
         const response = await client.callTool({ name: 'get_node', arguments: {
-          nodeType: 'nodes-base.httpRequest'
+          nodeType: 'nodes-base.httpRequest',
+          detail: 'full'
         }});
 
         expect(((response as any).content[0]).type).toBe('text');
         const nodeInfo = JSON.parse(((response as any).content[0]).text);
-        
+
         expect(nodeInfo).toHaveProperty('nodeType', 'nodes-base.httpRequest');
         expect(nodeInfo).toHaveProperty('displayName');
-        expect(nodeInfo).toHaveProperty('properties');
-        expect(Array.isArray(nodeInfo.properties)).toBe(true);
+        expect(nodeInfo).toHaveProperty('description');
+        expect(nodeInfo).toHaveProperty('version');
       });
 
       it('should handle non-existent nodes', async () => {
@@ -184,24 +185,25 @@ describe('MCP Tool Invocation', () => {
       });
     });
 
-    describe('get_node', () => {
-      it('should return condensed node information', async () => {
+    describe('get_node with different detail levels', () => {
+      it('should return standard detail by default', async () => {
         const response = await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'nodes-base.httpRequest'
         }});
 
-        const essentials = JSON.parse(((response as any).content[0]).text);
-        
-        expect(essentials).toHaveProperty('nodeType');
-        expect(essentials).toHaveProperty('displayName');
-        expect(essentials).toHaveProperty('commonProperties');
-        expect(essentials).toHaveProperty('requiredProperties');
-        
-        // Should be smaller than full info
+        const nodeInfo = JSON.parse(((response as any).content[0]).text);
+
+        expect(nodeInfo).toHaveProperty('nodeType');
+        expect(nodeInfo).toHaveProperty('displayName');
+        expect(nodeInfo).toHaveProperty('description');
+        expect(nodeInfo).toHaveProperty('essentialProperties');
+
+        // Should be smaller than full detail
         const fullResponse = await client.callTool({ name: 'get_node', arguments: {
-          nodeType: 'nodes-base.httpRequest'
+          nodeType: 'nodes-base.httpRequest',
+          detail: 'full'
         }});
-        
+
         expect(((response as any).content[0]).text.length).toBeLessThan(((fullResponse as any).content[0]).text.length);
       });
     });
