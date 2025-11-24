@@ -58,20 +58,6 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     },
   },
   {
-    name: 'get_node_info',
-    description: `Get full node documentation. Pass nodeType as string with prefix. Example: nodeType="nodes-base.webhook"`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        nodeType: {
-          type: 'string',
-          description: 'Full type: "nodes-base.{name}" or "nodes-langchain.{name}". Examples: nodes-base.httpRequest, nodes-base.webhook, nodes-base.slack',
-        },
-      },
-      required: ['nodeType'],
-    },
-  },
-  {
     name: 'search_nodes',
     description: `Search n8n nodes by keyword with optional real-world examples. Pass query as string. Example: query="webhook" or query="database". Returns max 20 results. Use includeExamples=true to get top 2 template configs per node.`,
     inputSchema: {
@@ -132,19 +118,57 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     },
   },
   {
-    name: 'get_node_essentials',
-    description: `Get node essential info with optional real-world examples from templates. Pass nodeType as string with prefix. Example: nodeType="nodes-base.slack". Use includeExamples=true to get top 3 template configs.`,
+    name: 'get_node',
+    description: `Unified node information tool with multiple detail levels and modes.
+
+Detail levels (mode='info'):
+- minimal: Basic metadata only (~200 tokens)
+- standard: Essential properties and operations - AI-friendly default (~1000-2000 tokens)
+- full: Complete node information including all properties (~3000-8000 tokens)
+
+Version modes (detail ignored):
+- versions: List all versions with breaking changes summary
+- compare: Compare two versions with property-level changes
+- breaking: Show only breaking changes between versions
+- migrations: Show auto-migratable changes
+
+Recommended: Use detail='standard' for most AI tasks, detail='full' only when you need complete schemas.`,
     inputSchema: {
       type: 'object',
       properties: {
         nodeType: {
           type: 'string',
-          description: 'Full type: "nodes-base.httpRequest"',
+          description: 'Full node type: "nodes-base.httpRequest" or "nodes-langchain.agent"',
+        },
+        detail: {
+          type: 'string',
+          enum: ['minimal', 'standard', 'full'],
+          default: 'standard',
+          description: 'Information detail level. standard=essential properties (recommended), full=everything',
+        },
+        mode: {
+          type: 'string',
+          enum: ['info', 'versions', 'compare', 'breaking', 'migrations'],
+          default: 'info',
+          description: 'Operation mode. info=node information, versions=version history, compare/breaking/migrations=version comparison',
+        },
+        includeTypeInfo: {
+          type: 'boolean',
+          default: false,
+          description: 'Include type structure metadata (type category, JS type, validation rules). Only applies to mode=info. Adds ~80-120 tokens per property.',
         },
         includeExamples: {
           type: 'boolean',
-          description: 'Include top 3 real-world configuration examples from popular templates (default: false)',
           default: false,
+          description: 'Include real-world configuration examples from templates. Only applies to mode=info with detail=standard. Adds ~200-400 tokens per example.',
+        },
+        fromVersion: {
+          type: 'string',
+          description: 'Source version for compare/breaking/migrations modes (e.g., "1.0")',
+        },
+        toVersion: {
+          type: 'string',
+          description: 'Target version for compare mode (e.g., "2.0"). Defaults to latest if omitted.',
         },
       },
       required: ['nodeType'],

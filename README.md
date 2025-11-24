@@ -565,7 +565,9 @@ ALWAYS explicitly configure ALL parameters that control node behavior.
    - `list_ai_tools()` - AI-capable nodes
 
 4. **Configuration Phase** (parallel for multiple nodes)
-   - `get_node_essentials(nodeType, {includeExamples: true})` - 10-20 key properties
+   - `get_node(nodeType, {detail: 'standard', includeExamples: true})` - Essential properties (default)
+   - `get_node(nodeType, {detail: 'minimal'})` - Basic metadata only (~200 tokens)
+   - `get_node(nodeType, {detail: 'full'})` - Complete information (~3000-8000 tokens)
    - `search_node_properties(nodeType, 'auth')` - Find specific properties
    - `get_node_documentation(nodeType)` - Human-readable docs
    - Show workflow architecture to user for approval before proceeding
@@ -612,7 +614,7 @@ Default values cause runtime failures. Example:
 ### ⚠️ Example Availability
 `includeExamples: true` returns real configurations from workflow templates.
 - Coverage varies by node popularity
-- When no examples available, use `get_node_essentials` + `validate_node_minimal`
+- When no examples available, use `get_node` + `validate_node_minimal`
 
 ## Validation Strategy
 
@@ -802,8 +804,8 @@ list_nodes({category: 'communication'})
 
 // STEP 2: Configuration (parallel execution)
 [Silent execution]
-get_node_essentials('n8n-nodes-base.slack', {includeExamples: true})
-get_node_essentials('n8n-nodes-base.webhook', {includeExamples: true})
+get_node('n8n-nodes-base.slack', {detail: 'standard', includeExamples: true})
+get_node('n8n-nodes-base.webhook', {detail: 'standard', includeExamples: true})
 
 // STEP 3: Validation (parallel execution)
 [Silent execution]
@@ -860,7 +862,7 @@ n8n_update_partial_workflow({
 - **Only when necessary** - Use code node as last resort
 - **AI tool capability** - ANY node can be an AI tool (not just marked ones)
 
-### Most Popular n8n Nodes (for get_node_essentials):
+### Most Popular n8n Nodes (for get_node):
 
 1. **n8n-nodes-base.code** - JavaScript/Python scripting
 2. **n8n-nodes-base.httpRequest** - HTTP API calls
@@ -924,7 +926,7 @@ When Claude, Anthropic's AI assistant, tested n8n-MCP, the results were transfor
 
 **Without MCP:** "I was basically playing a guessing game. 'Is it `scheduleTrigger` or `schedule`? Does it take `interval` or `rule`?' I'd write what seemed logical, but n8n has its own conventions that you can't just intuit. I made six different configuration errors in a simple HackerNews scraper."
 
-**With MCP:** "Everything just... worked. Instead of guessing, I could ask `get_node_essentials()` and get exactly what I needed - not a 100KB JSON dump, but the actual 5-10 properties that matter. What took 45 minutes now takes 3 minutes."
+**With MCP:** "Everything just... worked. Instead of guessing, I could ask `get_node()` and get exactly what I needed - not a 100KB JSON dump, but the actual properties that matter. What took 45 minutes now takes 3 minutes."
 
 **The Real Value:** "It's about confidence. When you're building automation workflows, uncertainty is expensive. One wrong parameter and your workflow fails at 3 AM. With MCP, I could validate my configuration before deployment. That's not just time saved - that's peace of mind."
 
@@ -937,8 +939,14 @@ Once connected, Claude can use these powerful tools:
 ### Core Tools
 - **`tools_documentation`** - Get documentation for any MCP tool (START HERE!)
 - **`list_nodes`** - List all n8n nodes with filtering options
-- **`get_node_info`** - Get comprehensive information about a specific node
-- **`get_node_essentials`** - Get only essential properties (10-20 instead of 200+). Use `includeExamples: true` to get top 3 real-world configurations from popular templates
+- **`get_node`** - Unified node information tool with multiple detail levels:
+  - `detail: 'minimal'` - Basic metadata only (~200 tokens)
+  - `detail: 'standard'` - Essential properties (default, ~1000-2000 tokens)
+  - `detail: 'full'` - Complete information (~3000-8000 tokens)
+  - `includeExamples: true` - Include real-world configurations from popular templates
+  - `mode: 'versions'` - View version history and breaking changes
+  - `mode: 'compare'` - Compare two versions with property-level changes
+  - `includeTypeInfo: true` - Add type structure metadata (NEW!)
 - **`search_nodes`** - Full-text search across all node documentation. Use `includeExamples: true` to get top 2 real-world configurations per node from templates
 - **`search_node_properties`** - Find specific properties within nodes
 - **`list_ai_tools`** - List all AI-capable nodes (ANY node can be used as AI tool!)
@@ -999,23 +1007,51 @@ These powerful tools allow you to manage n8n workflows directly from Claude. The
 ### Example Usage
 
 ```typescript
-// Get essentials with real-world examples from templates
-get_node_essentials({
+// Get node info with different detail levels
+get_node({
   nodeType: "nodes-base.httpRequest",
-  includeExamples: true  // Returns top 3 configs from popular templates
+  detail: "standard",        // Default: Essential properties
+  includeExamples: true      // Include real-world examples from templates
+})
+
+// Minimal info for quick reference
+get_node({
+  nodeType: "nodes-base.slack",
+  detail: "minimal"           // ~200 tokens: just basic metadata
+})
+
+// Full documentation
+get_node({
+  nodeType: "nodes-base.webhook",
+  detail: "full",             // Complete information
+  includeTypeInfo: true       // Include type structure metadata
+})
+
+// Version history and breaking changes
+get_node({
+  nodeType: "nodes-base.httpRequest",
+  mode: "versions"            // View all versions with summary
+})
+
+// Compare versions
+get_node({
+  nodeType: "nodes-base.slack",
+  mode: "compare",
+  fromVersion: "2.1",
+  toVersion: "2.2"
 })
 
 // Search nodes with configuration examples
 search_nodes({
   query: "send email gmail",
-  includeExamples: true  // Returns top 2 configs per node
+  includeExamples: true       // Returns top 2 configs per node
 })
 
 // Validate before deployment
 validate_node_operation({
   nodeType: "nodes-base.httpRequest",
   config: { method: "POST", url: "..." },
-  profile: "runtime" // or "minimal", "ai-friendly", "strict"
+  profile: "runtime"          // or "minimal", "ai-friendly", "strict"
 })
 
 // Quick required field check

@@ -7,6 +7,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2025-01-24
+
+### ✨ Features
+
+**Unified Node Information Tool**
+
+Introduced `get_node` - a unified tool that consolidates and enhances node information retrieval with multiple detail levels, version history, and type structure metadata.
+
+#### What's New
+
+**1. Progressive Detail Levels**
+- `minimal`: Basic metadata only (~200 tokens) - nodeType, displayName, description, category, version summary
+- `standard`: Essential properties and operations - AI-friendly default (~1000-2000 tokens)
+- `full`: Complete node information including all properties (~3000-8000 tokens)
+
+**2. Version History & Management**
+- `versions` mode: List all versions with breaking changes summary
+- `compare` mode: Compare two versions with property-level changes
+- `breaking` mode: Show only breaking changes between versions
+- `migrations` mode: Show auto-migratable changes
+- Version summary always included in info mode responses
+
+**3. Type Structure Metadata**
+- `includeTypeInfo` parameter exposes type structures from v2.23.0 validation system
+- Includes: type category, JS type, validation rules, structure hints
+- Helps AI agents understand complex types (filter, resourceMapper, resourceLocator, etc.)
+- Adds ~80-120 tokens per property when enabled
+- Works with all detail levels
+
+**4. Real-World Examples**
+- `includeExamples` parameter includes configuration examples from templates
+- Shows popular workflow patterns
+- Includes metadata (views, complexity, use cases)
+
+#### Usage Examples
+
+```javascript
+// Standard detail (recommended for AI agents)
+get_node({nodeType: "nodes-base.httpRequest"})
+
+// Standard with type info
+get_node({nodeType: "nodes-base.httpRequest", includeTypeInfo: true})
+
+// Minimal (quick metadata check)
+get_node({nodeType: "nodes-base.httpRequest", detail: "minimal"})
+
+// Full detail with examples
+get_node({nodeType: "nodes-base.httpRequest", detail: "full", includeExamples: true})
+
+// Version history
+get_node({nodeType: "nodes-base.httpRequest", mode: "versions"})
+
+// Compare versions
+get_node({
+  nodeType: "nodes-base.httpRequest",
+  mode: "compare",
+  fromVersion: "3.0",
+  toVersion: "4.1"
+})
+```
+
+#### Benefits
+
+- ✅ **Single Unified API**: One tool for all node information needs
+- ✅ **Token Efficient**: AI-friendly defaults (standard mode recommended)
+- ✅ **Progressive Disclosure**: minimal → standard → full as needed
+- ✅ **Type Aware**: Exposes v2.23.0 type structures for better configuration
+- ✅ **Version Aware**: Built-in version history and comparison
+- ✅ **Flexible**: Can combine detail levels with type info and examples
+- ✅ **Discoverable**: Version summary always visible in info mode
+
+#### Token Costs
+
+- `minimal`: ~200 tokens
+- `standard`: ~1000-2000 tokens (default)
+- `full`: ~3000-8000 tokens
+- `includeTypeInfo`: +80-120 tokens per property
+- `includeExamples`: +200-400 tokens per example
+- Version modes: ~400-1200 tokens
+
+### 🗑️ Breaking Changes
+
+**Removed Deprecated Tools**
+
+Immediately removed `get_node_info` and `get_node_essentials` in favor of the unified `get_node` tool:
+- `get_node_info` → Use `get_node` with `detail='full'`
+- `get_node_essentials` → Use `get_node` with `detail='standard'` (default)
+
+**Migration:**
+```javascript
+// Old
+get_node_info({nodeType: "nodes-base.httpRequest"})
+// New
+get_node({nodeType: "nodes-base.httpRequest", detail: "full"})
+
+// Old
+get_node_essentials({nodeType: "nodes-base.httpRequest", includeExamples: true})
+// New
+get_node({nodeType: "nodes-base.httpRequest", includeExamples: true})
+// or
+get_node({nodeType: "nodes-base.httpRequest", detail: "standard", includeExamples: true})
+```
+
+### 📊 Impact
+
+**Tool Count**: 40 → 39 tools (-2 deprecated, +1 new unified)
+
+**For AI Agents:**
+- Better understanding of complex n8n types through type metadata
+- Version upgrade planning with breaking change detection
+- Token-efficient defaults reduce costs
+- Progressive disclosure of information as needed
+
+**For Users:**
+- Single tool to learn instead of two separate tools
+- Clear progression from minimal to full detail
+- Version history helps with node upgrades
+- Type-aware configuration assistance
+
+### 🔧 Technical Details
+
+**Files Added:**
+- Enhanced type structure exposure in node information
+
+**Files Modified:**
+- `src/mcp/tools.ts` - Removed get_node_info and get_node_essentials, added get_node
+- `src/mcp/server.ts` - Added unified getNode() implementation with all modes
+- `package.json` - Version bump to 2.24.0
+
+**Implementation:**
+- ~250 lines of new code
+- 7 new private methods for mode handling
+- Version repository methods utilized (previously unused)
+- TypeStructureService integrated for type metadata
+- 100% backward compatible in behavior (just different API)
+
+Conceived by Romuald Członkowski - https://www.aiadvisors.pl/en
+
 ## [2.23.0] - 2025-11-21
 
 ### ✨ Features
