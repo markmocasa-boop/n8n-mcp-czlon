@@ -132,7 +132,7 @@ describe('MCP Protocol Compliance', () => {
     it('should validate params schema', async () => {
       try {
         // Invalid nodeType format (missing prefix)
-        const response = await client.callTool({ name: 'get_node_info', arguments: {
+        const response = await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'httpRequest' // Should be 'nodes-base.httpRequest'
         } });
         // Check if the response indicates an error
@@ -157,7 +157,7 @@ describe('MCP Protocol Compliance', () => {
 
     it('should handle large text responses', async () => {
       // Get a large node info response
-      const response = await client.callTool({ name: 'get_node_info', arguments: {
+      const response = await client.callTool({ name: 'get_node', arguments: {
         nodeType: 'nodes-base.httpRequest'
       } });
 
@@ -181,9 +181,9 @@ describe('MCP Protocol Compliance', () => {
   describe('Request/Response Correlation', () => {
     it('should correlate concurrent requests correctly', async () => {
       const requests = [
-        client.callTool({ name: 'get_node_essentials', arguments: { nodeType: 'nodes-base.httpRequest' } }),
-        client.callTool({ name: 'get_node_essentials', arguments: { nodeType: 'nodes-base.webhook' } }),
-        client.callTool({ name: 'get_node_essentials', arguments: { nodeType: 'nodes-base.slack' } })
+        client.callTool({ name: 'get_node', arguments: { nodeType: 'nodes-base.httpRequest' } }),
+        client.callTool({ name: 'get_node', arguments: { nodeType: 'nodes-base.webhook' } }),
+        client.callTool({ name: 'get_node', arguments: { nodeType: 'nodes-base.slack' } })
       ];
 
       const responses = await Promise.all(requests);

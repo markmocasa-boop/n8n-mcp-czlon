@@ -146,9 +146,9 @@ describe('MCP Tool Invocation', () => {
       });
     });
 
-    describe('get_node_info', () => {
+    describe('get_node', () => {
       it('should get complete node information', async () => {
-        const response = await client.callTool({ name: 'get_node_info', arguments: {
+        const response = await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'nodes-base.httpRequest'
         }});
 
@@ -163,7 +163,7 @@ describe('MCP Tool Invocation', () => {
 
       it('should handle non-existent nodes', async () => {
         try {
-          await client.callTool({ name: 'get_node_info', arguments: {
+          await client.callTool({ name: 'get_node', arguments: {
             nodeType: 'nodes-base.nonExistent'
           }});
           expect.fail('Should have thrown an error');
@@ -174,7 +174,7 @@ describe('MCP Tool Invocation', () => {
 
       it('should handle invalid node type format', async () => {
         try {
-          await client.callTool({ name: 'get_node_info', arguments: {
+          await client.callTool({ name: 'get_node', arguments: {
             nodeType: 'invalidFormat'
           }});
           expect.fail('Should have thrown an error');
@@ -184,9 +184,9 @@ describe('MCP Tool Invocation', () => {
       });
     });
 
-    describe('get_node_essentials', () => {
+    describe('get_node', () => {
       it('should return condensed node information', async () => {
-        const response = await client.callTool({ name: 'get_node_essentials', arguments: {
+        const response = await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'nodes-base.httpRequest'
         }});
 
@@ -198,7 +198,7 @@ describe('MCP Tool Invocation', () => {
         expect(essentials).toHaveProperty('requiredProperties');
         
         // Should be smaller than full info
-        const fullResponse = await client.callTool({ name: 'get_node_info', arguments: {
+        const fullResponse = await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'nodes-base.httpRequest'
         }});
         
@@ -515,7 +515,7 @@ describe('MCP Tool Invocation', () => {
       
       // Get info for first result
       const firstNode = nodes[0];
-      const infoResponse = await client.callTool({ name: 'get_node_info', arguments: {
+      const infoResponse = await client.callTool({ name: 'get_node', arguments: {
         nodeType: firstNode.nodeType
       }});
       
@@ -548,8 +548,8 @@ describe('MCP Tool Invocation', () => {
       const nodeType = 'nodes-base.httpRequest';
       
       const [fullInfo, essentials, searchResult] = await Promise.all([
-        client.callTool({ name: 'get_node_info', arguments: { nodeType } }),
-        client.callTool({ name: 'get_node_essentials', arguments: { nodeType } }),
+        client.callTool({ name: 'get_node', arguments: { nodeType } }),
+        client.callTool({ name: 'get_node', arguments: { nodeType } }),
         client.callTool({ name: 'search_nodes', arguments: { query: 'httpRequest' } })
       ]);
 

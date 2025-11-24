@@ -59,7 +59,7 @@ describe('MCP Error Handling', () => {
     it('should handle invalid params', async () => {
       try {
         // Missing required parameter
-        await client.callTool({ name: 'get_node_info', arguments: {} });
+        await client.callTool({ name: 'get_node', arguments: {} });
         expect.fail('Should have thrown an error');
       } catch (error: any) {
         expect(error).toBeDefined();
@@ -71,7 +71,7 @@ describe('MCP Error Handling', () => {
     it('should handle internal errors gracefully', async () => {
       try {
         // Invalid node type format should cause internal processing error
-        await client.callTool({ name: 'get_node_info', arguments: {
+        await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'completely-invalid-format-$$$$'
         } });
         expect.fail('Should have thrown an error');
@@ -123,7 +123,7 @@ describe('MCP Error Handling', () => {
 
       it('should handle non-existent node types', async () => {
         try {
-          await client.callTool({ name: 'get_node_info', arguments: {
+          await client.callTool({ name: 'get_node', arguments: {
             nodeType: 'nodes-base.thisDoesNotExist'
           } });
           expect.fail('Should have thrown an error');
@@ -228,7 +228,7 @@ describe('MCP Error Handling', () => {
   describe('Large Payload Handling', () => {
     it('should handle large node info requests', async () => {
       // HTTP Request node has extensive properties
-      const response = await client.callTool({ name: 'get_node_info', arguments: {
+      const response = await client.callTool({ name: 'get_node', arguments: {
         nodeType: 'nodes-base.httpRequest'
       } });
 
@@ -355,7 +355,7 @@ describe('MCP Error Handling', () => {
 
       for (const nodeType of largeNodes) {
         promises.push(
-          client.callTool({ name: 'get_node_info', arguments: { nodeType } })
+          client.callTool({ name: 'get_node', arguments: { nodeType } })
             .catch(() => null) // Some might not exist
         );
       }
@@ -400,7 +400,7 @@ describe('MCP Error Handling', () => {
     it('should continue working after errors', async () => {
       // Cause an error
       try {
-        await client.callTool({ name: 'get_node_info', arguments: {
+        await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'invalid'
         } });
       } catch (error) {
@@ -415,7 +415,7 @@ describe('MCP Error Handling', () => {
     it('should handle mixed success and failure', async () => {
       const promises = [
         client.callTool({ name: 'list_nodes', arguments: { limit: 5 } }),
-        client.callTool({ name: 'get_node_info', arguments: { nodeType: 'invalid' } }).catch(e => ({ error: e })),
+        client.callTool({ name: 'get_node', arguments: { nodeType: 'invalid' } }).catch(e => ({ error: e })),
         client.callTool({ name: 'get_database_statistics', arguments: {} }),
         client.callTool({ name: 'search_nodes', arguments: { query: '' } }).catch(e => ({ error: e })),
         client.callTool({ name: 'list_ai_tools', arguments: {} })
@@ -482,7 +482,7 @@ describe('MCP Error Handling', () => {
     it('should provide helpful error messages', async () => {
       try {
         // Use a truly invalid node type
-        await client.callTool({ name: 'get_node_info', arguments: {
+        await client.callTool({ name: 'get_node', arguments: {
           nodeType: 'invalid-node-type-that-does-not-exist'
         } });
         expect.fail('Should have thrown an error');

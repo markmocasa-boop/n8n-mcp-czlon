@@ -114,13 +114,13 @@ describe('MCP Performance Tests', () => {
       const start = performance.now();
 
       for (const nodeType of nodeTypes) {
-        await client.callTool({ name: 'get_node_info', arguments: { nodeType } });
+        await client.callTool({ name: 'get_node', arguments: { nodeType } });
       }
 
       const duration = performance.now() - start;
       const avgTime = duration / nodeTypes.length;
 
-      console.log(`Average response time for get_node_info: ${avgTime.toFixed(2)}ms`);
+      console.log(`Average response time for get_node: ${avgTime.toFixed(2)}ms`);
       console.log(`Environment: ${process.env.CI ? 'CI' : 'Local'}`);
       
       // Environment-aware threshold (these are large responses)
@@ -331,7 +331,7 @@ describe('MCP Performance Tests', () => {
       // Perform large operations
       for (let i = 0; i < 10; i++) {
         await client.callTool({ name: 'list_nodes', arguments: { limit: 200 } });
-        await client.callTool({ name: 'get_node_info', arguments: { 
+        await client.callTool({ name: 'get_node', arguments: { 
           nodeType: 'nodes-base.httpRequest' 
         } });
       }
@@ -503,7 +503,7 @@ describe('MCP Performance Tests', () => {
 
       // First call (cold)
       const coldStart = performance.now();
-      await client.callTool({ name: 'get_node_info', arguments: { nodeType } });
+      await client.callTool({ name: 'get_node', arguments: { nodeType } });
       const coldTime = performance.now() - coldStart;
 
       // Give cache time to settle
@@ -513,7 +513,7 @@ describe('MCP Performance Tests', () => {
       const warmTimes: number[] = [];
       for (let i = 0; i < 10; i++) {
         const start = performance.now();
-        await client.callTool({ name: 'get_node_info', arguments: { nodeType } });
+        await client.callTool({ name: 'get_node', arguments: { nodeType } });
         warmTimes.push(performance.now() - start);
       }
 
