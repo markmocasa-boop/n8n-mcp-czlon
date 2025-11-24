@@ -196,7 +196,8 @@ describe('MCP Tool Invocation', () => {
         expect(nodeInfo).toHaveProperty('nodeType');
         expect(nodeInfo).toHaveProperty('displayName');
         expect(nodeInfo).toHaveProperty('description');
-        expect(nodeInfo).toHaveProperty('essentialProperties');
+        expect(nodeInfo).toHaveProperty('requiredProperties');
+        expect(nodeInfo).toHaveProperty('commonProperties');
 
         // Should be smaller than full detail
         const fullResponse = await client.callTool({ name: 'get_node', arguments: {
