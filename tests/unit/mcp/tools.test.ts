@@ -103,8 +103,8 @@ describe('n8nDocumentationToolsFinal', () => {
       });
     });
 
-    describe('get_node_info', () => {
-      const tool = n8nDocumentationToolsFinal.find(t => t.name === 'get_node_info');
+    describe('get_node', () => {
+      const tool = n8nDocumentationToolsFinal.find(t => t.name === 'get_node');
 
       it('should exist', () => {
         expect(tool).toBeDefined();
@@ -114,8 +114,8 @@ describe('n8nDocumentationToolsFinal', () => {
         expect(tool?.inputSchema.required).toContain('nodeType');
       });
 
-      it('should mention performance implications in description', () => {
-        expect(tool?.description).toMatch(/100KB\+|large|full/i);
+      it('should mention detail levels in description', () => {
+        expect(tool?.description).toMatch(/minimal|standard|full/i);
       });
     });
 
@@ -206,9 +206,8 @@ describe('n8nDocumentationToolsFinal', () => {
     it('should include examples or key information in descriptions', () => {
       const toolsWithExamples = [
         'list_nodes',
-        'get_node_info',
+        'get_node',
         'search_nodes',
-        'get_node_essentials',
         'get_node_documentation'
       ];
 
@@ -252,7 +251,7 @@ describe('n8nDocumentationToolsFinal', () => {
     it('should have tools for all major categories', () => {
       const categories = {
         discovery: ['list_nodes', 'search_nodes', 'list_ai_tools'],
-        configuration: ['get_node_info', 'get_node_essentials', 'get_node_documentation'],
+        configuration: ['get_node', 'get_node_documentation'],
         validation: ['validate_node_operation', 'validate_workflow', 'validate_node_minimal'],
         templates: ['list_tasks', 'search_templates', 'list_templates', 'get_template', 'list_node_templates'], // get_node_for_task removed in v2.15.0
         documentation: ['tools_documentation']

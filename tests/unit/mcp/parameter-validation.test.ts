@@ -159,15 +159,15 @@ describe('Parameter Validation', () => {
       vi.spyOn(server as any, 'validateWorkflowExpressions').mockResolvedValue({ valid: true });
     });
 
-    describe('get_node_info', () => {
+    describe('get_node', () => {
       it('should require nodeType parameter', async () => {
-        await expect(server.testExecuteTool('get_node_info', {}))
-          .rejects.toThrow('Missing required parameters for get_node_info: nodeType');
+        await expect(server.testExecuteTool('get_node', {}))
+          .rejects.toThrow('Missing required parameters for get_node: nodeType');
       });
 
       it('should succeed with valid nodeType', async () => {
-        const result = await server.testExecuteTool('get_node_info', { 
-          nodeType: 'nodes-base.httpRequest' 
+        const result = await server.testExecuteTool('get_node', {
+          nodeType: 'nodes-base.httpRequest'
         });
         expect(result).toEqual({ mockResult: true });
       });
@@ -424,8 +424,8 @@ describe('Parameter Validation', () => {
   describe('Error Message Quality', () => {
     it('should provide clear error messages with tool name', () => {
       expect(() => {
-        server.testValidateToolParams('get_node_info', {}, ['nodeType']);
-      }).toThrow('Missing required parameters for get_node_info: nodeType. Please provide the required parameters to use this tool.');
+        server.testValidateToolParams('get_node', {}, ['nodeType']);
+      }).toThrow('Missing required parameters for get_node: nodeType. Please provide the required parameters to use this tool.');
     });
 
     it('should list all missing parameters', () => {
@@ -447,11 +447,11 @@ describe('Parameter Validation', () => {
     it('should convert validation errors to MCP error responses rather than throwing exceptions', async () => {
       // This test simulates what happens at the MCP level when a tool validation fails
       // The server should catch the validation error and return it as an MCP error response
-      
+
       // Directly test the executeTool method to ensure it throws appropriately
       // The MCP server's request handler should catch these and convert to error responses
-      await expect(server.testExecuteTool('get_node_info', {}))
-        .rejects.toThrow('Missing required parameters for get_node_info: nodeType');
+      await expect(server.testExecuteTool('get_node', {}))
+        .rejects.toThrow('Missing required parameters for get_node: nodeType');
       
       await expect(server.testExecuteTool('search_nodes', {}))
         .rejects.toThrow('search_nodes: Validation failed:\n  • query: query is required');
@@ -462,20 +462,19 @@ describe('Parameter Validation', () => {
 
     it('should handle edge cases in parameter validation gracefully', async () => {
       // Test with null args (should be handled by args = args || {})
-      await expect(server.testExecuteTool('get_node_info', null))
+      await expect(server.testExecuteTool('get_node', null))
         .rejects.toThrow('Missing required parameters');
-      
+
       // Test with undefined args
-      await expect(server.testExecuteTool('get_node_info', undefined))
+      await expect(server.testExecuteTool('get_node', undefined))
         .rejects.toThrow('Missing required parameters');
     });
 
     it('should provide consistent error format across all tools', async () => {
       // Tools using legacy validation
       const legacyValidationTools = [
-        { name: 'get_node_info', args: {}, expected: 'Missing required parameters for get_node_info: nodeType' },
+        { name: 'get_node', args: {}, expected: 'Missing required parameters for get_node: nodeType' },
         { name: 'get_node_documentation', args: {}, expected: 'Missing required parameters for get_node_documentation: nodeType' },
-        { name: 'get_node_essentials', args: {}, expected: 'Missing required parameters for get_node_essentials: nodeType' },
         { name: 'search_node_properties', args: {}, expected: 'Missing required parameters for search_node_properties: nodeType, query' },
         // Note: get_node_for_task removed in v2.15.0
         { name: 'get_property_dependencies', args: {}, expected: 'Missing required parameters for get_property_dependencies: nodeType' },
