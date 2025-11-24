@@ -78,31 +78,6 @@ describe('n8nDocumentationToolsFinal', () => {
       });
     });
 
-    describe('list_nodes', () => {
-      const tool = n8nDocumentationToolsFinal.find(t => t.name === 'list_nodes');
-
-      it('should exist', () => {
-        expect(tool).toBeDefined();
-      });
-
-      it('should have correct schema properties', () => {
-        const properties = tool?.inputSchema.properties;
-        expect(properties).toHaveProperty('package');
-        expect(properties).toHaveProperty('category');
-        expect(properties).toHaveProperty('developmentStyle');
-        expect(properties).toHaveProperty('isAITool');
-        expect(properties).toHaveProperty('limit');
-      });
-
-      it('should have correct defaults', () => {
-        expect(tool?.inputSchema.properties.limit.default).toBe(50);
-      });
-
-      it('should have proper enum values', () => {
-        expect(tool?.inputSchema.properties.developmentStyle.enum).toEqual(['declarative', 'programmatic']);
-      });
-    });
-
     describe('get_node', () => {
       const tool = n8nDocumentationToolsFinal.find(t => t.name === 'get_node');
 
@@ -205,7 +180,6 @@ describe('n8nDocumentationToolsFinal', () => {
 
     it('should include examples or key information in descriptions', () => {
       const toolsWithExamples = [
-        'list_nodes',
         'get_node',
         'search_nodes',
         'get_node_documentation'
@@ -250,14 +224,14 @@ describe('n8nDocumentationToolsFinal', () => {
   describe('Tool Categories Coverage', () => {
     it('should have tools for all major categories', () => {
       const categories = {
-        discovery: ['list_nodes', 'search_nodes', 'list_ai_tools'],
+        discovery: ['search_nodes'],
         configuration: ['get_node', 'get_node_documentation'],
         validation: ['validate_node_operation', 'validate_workflow', 'validate_node_minimal'],
-        templates: ['list_tasks', 'search_templates', 'list_templates', 'get_template', 'list_node_templates'], // get_node_for_task removed in v2.15.0
+        templates: ['search_templates', 'get_template', 'list_node_templates', 'get_templates_for_task', 'search_templates_by_metadata'],
         documentation: ['tools_documentation']
       };
 
-      Object.entries(categories).forEach(([category, expectedTools]) => {
+      Object.entries(categories).forEach(([_category, expectedTools]) => {
         expectedTools.forEach(toolName => {
           const tool = n8nDocumentationToolsFinal.find(t => t.name === toolName);
           expect(tool).toBeDefined();
@@ -294,13 +268,15 @@ describe('n8nDocumentationToolsFinal', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle tools with no parameters', () => {
-      const toolsWithNoParams = ['list_ai_tools', 'get_database_statistics'];
-      
-      toolsWithNoParams.forEach(toolName => {
+    it('should handle tools with optional parameters only', () => {
+      // Tools where all parameters are optional
+      const toolsWithOptionalParams = ['tools_documentation'];
+
+      toolsWithOptionalParams.forEach(toolName => {
         const tool = n8nDocumentationToolsFinal.find(t => t.name === toolName);
         expect(tool).toBeDefined();
-        expect(Object.keys(tool?.inputSchema.properties || {}).length).toBe(0);
+        // These tools have properties but no required array or empty required array
+        expect(tool?.inputSchema.required === undefined || tool?.inputSchema.required?.length === 0).toBe(true);
       });
     });
 
@@ -318,37 +294,6 @@ describe('n8nDocumentationToolsFinal', () => {
   });
 
   describe('New Template Tools', () => {
-    describe('list_templates', () => {
-      const tool = n8nDocumentationToolsFinal.find(t => t.name === 'list_templates');
-
-      it('should exist and be properly defined', () => {
-        expect(tool).toBeDefined();
-        expect(tool?.description).toContain('minimal data');
-      });
-
-      it('should have correct parameters', () => {
-        expect(tool?.inputSchema.properties).toHaveProperty('limit');
-        expect(tool?.inputSchema.properties).toHaveProperty('offset');
-        expect(tool?.inputSchema.properties).toHaveProperty('sortBy');
-
-        const limitParam = tool?.inputSchema.properties.limit;
-        expect(limitParam.type).toBe('number');
-        expect(limitParam.minimum).toBe(1);
-        expect(limitParam.maximum).toBe(100);
-
-        const offsetParam = tool?.inputSchema.properties.offset;
-        expect(offsetParam.type).toBe('number');
-        expect(offsetParam.minimum).toBe(0);
-
-        const sortByParam = tool?.inputSchema.properties.sortBy;
-        expect(sortByParam.enum).toEqual(['views', 'created_at', 'name']);
-      });
-
-      it('should have no required parameters', () => {
-        expect(tool?.inputSchema.required).toBeUndefined();
-      });
-    });
-
     describe('get_template (enhanced)', () => {
       const tool = n8nDocumentationToolsFinal.find(t => t.name === 'get_template');
 

@@ -399,24 +399,11 @@ describe('Parameter Validation', () => {
       expect(result).toEqual({ docs: 'test' });
     });
 
-    it('should allow list_nodes with no parameters', async () => {
-      const result = await server.testExecuteTool('list_nodes', {});
-      expect(result).toEqual({ nodes: [] });
-    });
-
-    it('should allow list_ai_tools with no parameters', async () => {
-      const result = await server.testExecuteTool('list_ai_tools', {});
-      expect(result).toEqual({ tools: [] });
-    });
-
-    it('should allow get_database_statistics with no parameters', async () => {
-      const result = await server.testExecuteTool('get_database_statistics', {});
-      expect(result).toEqual({ stats: {} });
-    });
-
-    it('should allow list_tasks with no parameters', async () => {
-      const result = await server.testExecuteTool('list_tasks', {});
-      expect(result).toEqual({ tasks: [] });
+    it('should allow tools_documentation with no parameters', async () => {
+      const result = await server.testExecuteTool('tools_documentation', {});
+      expect(result).toBeDefined();
+      // tools_documentation returns an object with documentation content
+      expect(typeof result).toBe('object');
     });
   });
 
@@ -476,8 +463,8 @@ describe('Parameter Validation', () => {
         { name: 'get_node_documentation', args: {}, expected: 'Missing required parameters for get_node_documentation: nodeType' },
         { name: 'search_node_properties', args: {}, expected: 'Missing required parameters for search_node_properties: nodeType, query' },
         // Note: get_node_for_task removed in v2.15.0
+        // Note: get_node_as_tool_info removed in v2.25.0
         { name: 'get_property_dependencies', args: {}, expected: 'Missing required parameters for get_property_dependencies: nodeType' },
-        { name: 'get_node_as_tool_info', args: {}, expected: 'Missing required parameters for get_node_as_tool_info: nodeType' },
         { name: 'get_template', args: {}, expected: 'Missing required parameters for get_template: templateId' },
       ];
 

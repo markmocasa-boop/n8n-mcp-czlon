@@ -10,7 +10,7 @@ export const getTemplatesForTaskDoc: ToolDocumentation = {
     performance: 'Fast (<100ms) - pre-categorized results',
     tips: [
       'Returns hand-picked templates for specific automation tasks',
-      'Use list_tasks to see all available task categories',
+      'Available tasks: ai_automation, data_sync, webhook_processing, email_automation, slack_integration, etc.',
       'Templates are curated for quality and relevance'
     ]
   },

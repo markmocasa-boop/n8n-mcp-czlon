@@ -88,8 +88,8 @@ When working with Code nodes, always start by calling the relevant guide:
 
 1. **Find** the node you need:
    - search_nodes({query: "slack"}) - Search by keyword
-   - list_nodes({category: "communication"}) - List by category
-   - list_ai_tools() - List AI-capable nodes
+   - search_nodes({query: "communication"}) - Search by category name
+   - search_nodes({query: "AI langchain"}) - Search for AI-capable nodes
 
 2. **Configure** the node (ALWAYS START WITH STANDARD DETAIL):
    - ✅ get_node("nodes-base.slack", {detail: 'standard'}) - Get essential properties FIRST (~1-2KB, shows required fields)
@@ -105,9 +105,7 @@ When working with Code nodes, always start by calling the relevant guide:
 ## Tool Categories
 
 **Discovery Tools**
-- search_nodes - Full-text search across all nodes
-- list_nodes - List nodes with filtering by category, package, or type
-- list_ai_tools - List all AI-capable nodes with usage guidance
+- search_nodes - Full-text search across all nodes (supports OR, AND, FUZZY modes)
 
 **Configuration Tools**
 - get_node - ✅ Unified node information tool with progressive detail levels:
@@ -125,10 +123,11 @@ When working with Code nodes, always start by calling the relevant guide:
 - validate_workflow - Complete workflow validation including connections
 
 **Template Tools**
-- list_tasks - List common task templates
 - get_node_for_task - Get pre-configured node for specific tasks
 - search_templates - Search workflow templates by keyword
 - get_template - Get complete workflow JSON by ID
+- list_node_templates - Find templates using specific nodes
+- get_templates_for_task - Get curated templates by task type
 
 **n8n API Tools** (requires N8N_API_URL configuration)
 - n8n_create_workflow - Create new workflows
@@ -137,7 +136,7 @@ When working with Code nodes, always start by calling the relevant guide:
 - n8n_trigger_webhook_workflow - Trigger workflow execution
 
 ## Performance Characteristics
-- Instant (<10ms): search_nodes, list_nodes, get_node (minimal/standard)
+- Instant (<10ms): search_nodes, get_node (minimal/standard)
 - Fast (<100ms): validate_node_minimal, get_node_for_task
 - Moderate (100-500ms): validate_workflow, get_node (full detail)
 - Network-dependent: All n8n_* tools

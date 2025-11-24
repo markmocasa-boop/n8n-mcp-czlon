@@ -1553,7 +1553,7 @@ export async function handleHealthCheck(context?: InstanceContext): Promise<McpT
             '1. Verify n8n instance is running',
             '2. Check N8N_API_URL is correct',
             '3. Verify N8N_API_KEY has proper permissions',
-            '4. Run n8n_diagnostic for detailed analysis'
+            '4. Run n8n_health_check with mode="diagnostic" for detailed analysis'
           ]
         }
       };
@@ -1564,63 +1564,6 @@ export async function handleHealthCheck(context?: InstanceContext): Promise<McpT
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
-}
-
-export async function handleListAvailableTools(context?: InstanceContext): Promise<McpToolResponse> {
-  const tools = [
-    {
-      category: 'Workflow Management',
-      tools: [
-        { name: 'n8n_create_workflow', description: 'Create new workflows' },
-        { name: 'n8n_get_workflow', description: 'Get workflow by ID' },
-        { name: 'n8n_get_workflow_details', description: 'Get detailed workflow info with stats' },
-        { name: 'n8n_get_workflow_structure', description: 'Get simplified workflow structure' },
-        { name: 'n8n_get_workflow_minimal', description: 'Get minimal workflow info' },
-        { name: 'n8n_update_workflow', description: 'Update existing workflows' },
-        { name: 'n8n_delete_workflow', description: 'Delete workflows' },
-        { name: 'n8n_list_workflows', description: 'List workflows with filters' },
-        { name: 'n8n_validate_workflow', description: 'Validate workflow from n8n instance' },
-        { name: 'n8n_autofix_workflow', description: 'Automatically fix common workflow errors' }
-      ]
-    },
-    {
-      category: 'Execution Management',
-      tools: [
-        { name: 'n8n_trigger_webhook_workflow', description: 'Trigger workflows via webhook' },
-        { name: 'n8n_get_execution', description: 'Get execution details' },
-        { name: 'n8n_list_executions', description: 'List executions with filters' },
-        { name: 'n8n_delete_execution', description: 'Delete execution records' }
-      ]
-    },
-    {
-      category: 'System',
-      tools: [
-        { name: 'n8n_health_check', description: 'Check API connectivity' },
-        { name: 'n8n_list_available_tools', description: 'List all available tools' }
-      ]
-    }
-  ];
-  
-  const config = getN8nApiConfig();
-  const apiConfigured = config !== null;
-  
-  return {
-    success: true,
-    data: {
-      tools,
-      apiConfigured,
-      configuration: config ? {
-        apiUrl: config.baseUrl,
-        timeout: config.timeout,
-        maxRetries: config.maxRetries
-      } : null,
-      limitations: [
-        'Cannot execute workflows directly (must use webhooks)',
-        'Cannot stop running executions',
-        'Tags and credentials have limited API support'
-      ]
-    }
-  };
 }
 
 // Environment-aware debugging helpers
@@ -1981,7 +1924,7 @@ export async function handleDiagnostic(request: any, context?: InstanceContext):
             example: 'validate_workflow({workflow: {...}})'
           }
         ],
-        note: '22 documentation tools available without API configuration'
+        note: '14 documentation tools available without API configuration'
       },
       whatYouCannotDo: [
         '✗ Create/update workflows in n8n instance',
@@ -1996,8 +1939,8 @@ export async function handleDiagnostic(request: any, context?: InstanceContext):
           '   N8N_API_URL=https://your-n8n-instance.com',
           '   N8N_API_KEY=your_api_key_here',
           '3. Restart the MCP server',
-          '4. Run n8n_diagnostic again to verify',
-          '5. All 38 tools will be available!'
+          '4. Run n8n_health_check with mode="diagnostic" to verify',
+          '5. All 31 tools will be available!'
         ],
         documentation: 'https://github.com/czlonkowski/n8n-mcp?tab=readme-ov-file#n8n-management-tools-optional---requires-api-configuration'
       }

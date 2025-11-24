@@ -19,29 +19,6 @@ export interface HealthCheckResponse {
   [key: string]: any; // Allow dynamic property access for optional field checks
 }
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-}
-
-export interface ToolCategory {
-  category: string;
-  tools: ToolDefinition[];
-}
-
-export interface ApiConfiguration {
-  apiUrl: string;
-  timeout: number;
-  maxRetries: number;
-}
-
-export interface ListToolsResponse {
-  tools: ToolCategory[];
-  apiConfigured: boolean;
-  configuration?: ApiConfiguration | null;
-  limitations: string[];
-}
-
 export interface ApiStatus {
   configured: boolean;
   connected: boolean;
