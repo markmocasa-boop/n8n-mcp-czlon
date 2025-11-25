@@ -8,3 +8,4 @@ export { n8nValidateWorkflowDoc } from './n8n-validate-workflow';
 export { n8nAutofixWorkflowDoc } from './n8n-autofix-workflow';
 export { n8nTriggerWebhookWorkflowDoc } from './n8n-trigger-webhook-workflow';
 export { n8nExecutionsDoc } from './n8n-executions';
+export { n8nWorkflowVersionsDoc } from './n8n-workflow-versions';

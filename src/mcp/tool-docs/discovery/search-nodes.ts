@@ -4,7 +4,7 @@ export const searchNodesDoc: ToolDocumentation = {
   name: 'search_nodes',
   category: 'discovery',
   essentials: {
-    description: 'Text search across node names and descriptions. Returns most relevant nodes first, with frequently-used nodes (HTTP Request, Webhook, Set, Code, Slack) prioritized in results. Searches all 525 nodes in the database.',
+    description: 'Text search across node names and descriptions. Returns most relevant nodes first, with frequently-used nodes (HTTP Request, Webhook, Set, Code, Slack) prioritized in results. Searches all 500+ nodes in the database.',
     keyParameters: ['query', 'mode', 'limit'],
     example: 'search_nodes({query: "webhook"})',
     performance: '<20ms even for complex queries',
@@ -42,7 +42,7 @@ export const searchNodesDoc: ToolDocumentation = {
       'Start with single keywords for broadest results',
       'Use FUZZY mode when users might misspell node names',
       'AND mode works best for 2-3 word searches',
-      'Combine with get_node_essentials after finding the right node'
+      'Combine with get_node after finding the right node'
     ],
     pitfalls: [
       'AND mode searches all fields (name, description) not just node names',

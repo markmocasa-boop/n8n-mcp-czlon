@@ -7,9 +7,7 @@ import { validateNodeDoc, validateWorkflowDoc } from './validation';
 import { getTemplateDoc, searchTemplatesDoc } from './templates';
 import {
   toolsDocumentationDoc,
-  n8nDiagnosticDoc,
-  n8nHealthCheckDoc,
-  n8nListAvailableToolsDoc
+  n8nHealthCheckDoc
 } from './system';
 import { aiAgentsGuide } from './guides';
 import {
@@ -22,7 +20,8 @@ import {
   n8nValidateWorkflowDoc,
   n8nAutofixWorkflowDoc,
   n8nTriggerWebhookWorkflowDoc,
-  n8nExecutionsDoc
+  n8nExecutionsDoc,
+  n8nWorkflowVersionsDoc
 } from './workflow_management';
 
 // Combine all tool documentations into a single object
@@ -30,9 +29,7 @@ import {
 export const toolsDocumentation: Record<string, ToolDocumentation> = {
   // System tools
   tools_documentation: toolsDocumentationDoc,
-  n8n_diagnostic: n8nDiagnosticDoc,
   n8n_health_check: n8nHealthCheckDoc,
-  n8n_list_available_tools: n8nListAvailableToolsDoc,
 
   // Guides
   ai_agents_guide: aiAgentsGuide,
@@ -61,7 +58,8 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
   n8n_validate_workflow: n8nValidateWorkflowDoc,
   n8n_autofix_workflow: n8nAutofixWorkflowDoc,
   n8n_trigger_webhook_workflow: n8nTriggerWebhookWorkflowDoc,
-  n8n_executions: n8nExecutionsDoc  // Actions replace: n8n_get_execution, n8n_list_executions, n8n_delete_execution
+  n8n_executions: n8nExecutionsDoc,  // Actions replace: n8n_get_execution, n8n_list_executions, n8n_delete_execution
+  n8n_workflow_versions: n8nWorkflowVersionsDoc  // Modes: list, get, rollback, delete, prune, truncate
 };
 
 // Re-export types

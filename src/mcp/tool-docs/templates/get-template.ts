@@ -4,23 +4,30 @@ export const getTemplateDoc: ToolDocumentation = {
   name: 'get_template',
   category: 'templates',
   essentials: {
-    description: 'Get complete workflow JSON by ID. Ready to import. IDs from search_templates.',
-    keyParameters: ['templateId'],
-    example: 'get_template({templateId: 1234})',
+    description: 'Get workflow template by ID with configurable detail level. Ready to import. IDs from search_templates.',
+    keyParameters: ['templateId', 'mode'],
+    example: 'get_template({templateId: 1234, mode: "full"})',
     performance: 'Fast (<100ms) - single database lookup',
     tips: [
       'Get template IDs from search_templates first',
-      'Returns complete workflow JSON ready for import into n8n',
-      'Includes all nodes, connections, and settings'
+      'Use mode="nodes_only" for quick overview, "structure" for topology, "full" for import',
+      'Returns complete workflow JSON ready for import into n8n'
     ]
   },
   full: {
-    description: `Retrieves the complete workflow JSON for a specific template by its ID. The returned workflow can be directly imported into n8n through the UI or API. This tool fetches pre-built workflows from the community template library containing 399+ curated workflows.`,
+    description: `Retrieves the complete workflow JSON for a specific template by its ID. The returned workflow can be directly imported into n8n through the UI or API. This tool fetches pre-built workflows from the community template library containing 2,700+ curated workflows.`,
     parameters: {
       templateId: {
         type: 'number',
         required: true,
         description: 'The numeric ID of the template to retrieve. Get IDs from search_templates'
+      },
+      mode: {
+        type: 'string',
+        required: false,
+        description: 'Response detail level: "nodes_only" (minimal - just node list), "structure" (nodes + connections), "full" (complete workflow JSON, default)',
+        default: 'full',
+        enum: ['nodes_only', 'structure', 'full']
       }
     },
     returns: `Returns an object containing:
@@ -39,9 +46,10 @@ export const getTemplateDoc: ToolDocumentation = {
     - settings: Workflow configuration (timezone, error handling, etc.)
 - usage: Instructions for using the workflow`,
     examples: [
-      'get_template({templateId: 1234}) - Get Slack notification workflow',
-      'get_template({templateId: 5678}) - Get data sync workflow',
-      'get_template({templateId: 9012}) - Get AI chatbot workflow'
+      'get_template({templateId: 1234}) - Get complete workflow (default mode="full")',
+      'get_template({templateId: 1234, mode: "nodes_only"}) - Get just the node list',
+      'get_template({templateId: 1234, mode: "structure"}) - Get nodes and connections',
+      'get_template({templateId: 5678, mode: "full"}) - Get complete workflow JSON for import'
     ],
     useCases: [
       'Download workflows for direct import into n8n',

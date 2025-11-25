@@ -5,8 +5,8 @@ export const n8nHealthCheckDoc: ToolDocumentation = {
   category: 'system',
   essentials: {
     description: 'Check n8n instance health, API connectivity, version status, and performance metrics',
-    keyParameters: [],
-    example: 'n8n_health_check({})',
+    keyParameters: ['mode', 'verbose'],
+    example: 'n8n_health_check({mode: "status"})',
     performance: 'Fast - single API call (~150-200ms median)',
     tips: [
       'Use before starting workflow operations to ensure n8n is responsive',
@@ -31,7 +31,21 @@ Health checks are crucial for:
 - Detecting performance degradation
 - Verifying API compatibility before operations
 - Ensuring authentication is working correctly`,
-    parameters: {},
+    parameters: {
+      mode: {
+        type: 'string',
+        required: false,
+        description: 'Operation mode: "status" (default) for quick health check, "diagnostic" for detailed debug info including env vars and tool status',
+        default: 'status',
+        enum: ['status', 'diagnostic']
+      },
+      verbose: {
+        type: 'boolean',
+        required: false,
+        description: 'Include extra details in diagnostic mode',
+        default: false
+      }
+    },
     returns: `Health status object containing:
 - status: Overall health status ('healthy', 'degraded', 'error')
 - n8nVersion: n8n instance version information
@@ -81,6 +95,6 @@ Health checks are crucial for:
       'Does not check individual workflow health',
       'Health endpoint might be cached - not real-time for all metrics'
     ],
-    relatedTools: ['n8n_diagnostic', 'n8n_list_available_tools', 'n8n_list_workflows']
+    relatedTools: ['n8n_list_workflows', 'n8n_validate_workflow', 'n8n_workflow_versions']
   }
 };

@@ -422,8 +422,8 @@ try {
 5. Use descriptive variable names
 
 ## Related Tools
-- get_node_essentials("nodes-base.code")
-- validate_node_operation()
+- get_node({nodeType: "nodes-base.code"}) - Get Code node configuration details
+- validate_node({nodeType: "nodes-base.code", config: {...}}) - Validate Code node setup
 - python_code_node_guide (for Python syntax)`;
 }
 
@@ -691,7 +691,7 @@ except json.JSONDecodeError:
 \`\`\`
 
 ## Related Tools
-- get_node_essentials("nodes-base.code")
-- validate_node_operation()
+- get_node({nodeType: "nodes-base.code"}) - Get Code node configuration details
+- validate_node({nodeType: "nodes-base.code", config: {...}}) - Validate Code node setup
 - javascript_code_node_guide (for JavaScript syntax)`;
 }

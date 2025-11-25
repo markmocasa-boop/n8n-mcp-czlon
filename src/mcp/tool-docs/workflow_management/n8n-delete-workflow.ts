@@ -11,7 +11,7 @@ export const n8nDeleteWorkflowDoc: ToolDocumentation = {
     tips: [
       'Action is irreversible',
       'Deletes all execution history',
-      'Check workflow first with get_minimal'
+      'Check workflow first with n8n_get_workflow({mode: "minimal"})'
     ]
   },
   full: {
@@ -34,7 +34,7 @@ export const n8nDeleteWorkflowDoc: ToolDocumentation = {
     performance: 'Fast operation - typically 50-150ms. May take longer if workflow has extensive execution history.',
     bestPractices: [
       'Always confirm before deletion',
-      'Check workflow with get_minimal first',
+      'Check workflow with n8n_get_workflow({mode: "minimal"}) first',
       'Consider deactivating instead of deleting',
       'Export workflow before deletion for backup'
     ],

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.3] - 2025-11-26
+
+### 🔧 Fixed
+
+- **Tools Documentation Gaps**: Addressed remaining documentation issues after v2.26.2 tool consolidation
+  - Added missing `n8n_workflow_versions` documentation with all 6 modes (list, get, rollback, delete, prune, truncate)
+  - Removed non-existent tools (`n8n_diagnostic`, `n8n_list_available_tools`) from documentation exports
+  - Fixed 10+ outdated tool name references:
+    - `get_node_essentials` → `get_node({detail: "standard"})`
+    - `validate_node_operation` → `validate_node()`
+    - `get_minimal` → `n8n_get_workflow({mode: "minimal"})`
+  - Added missing `mode` and `verbose` parameters to `n8n_health_check` documentation
+  - Added missing `mode` parameter to `get_template` documentation (nodes_only, structure, full)
+  - Updated template count from "399+" to "2,700+" in `get_template`
+  - Updated node count from "525" to "500+" in `search_nodes`
+  - Fixed `relatedTools` arrays to remove references to non-existent tools
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.26.2] - 2025-11-25
 
 ### 🔧 Fixed
