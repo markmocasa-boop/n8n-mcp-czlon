@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated n8n-workflow from 1.117.0 to 1.118.1
 - Updated @n8n/n8n-nodes-langchain from 1.119.1 to 1.120.1
 - Rebuilt node database with 545 nodes (439 from n8n-nodes-base, 106 from @n8n/n8n-nodes-langchain)
+- Expanded template database from ~2,598 to 2,768 templates (+170 new templates)
 - Updated README badge with new n8n version
 
 ## [2.26.0] - 2025-01-25
