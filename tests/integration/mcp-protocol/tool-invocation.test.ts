@@ -357,7 +357,8 @@ describe('MCP Tool Invocation', () => {
           depth: 'full'
         }});
 
-        expect(((response as any).content[0]).text.length).toBeGreaterThan(5000);
+        // Reduced from 5000 after v2.26.0 tool consolidation (31→19 tools)
+        expect(((response as any).content[0]).text.length).toBeGreaterThan(4000);
         expect(((response as any).content[0]).text).toBeDefined();
       });
 
