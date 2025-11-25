@@ -2246,3 +2246,173 @@ export async function handleWorkflowVersions(
     };
   }
 }
+/**
+ * New Node-Specific Handlers
+ * These handlers provide granular access to individual nodes within workflows
+ * to reduce token usage when debugging or modifying specific nodes.
+ */
+
+/**
+ * Get details of a specific node from a workflow
+ *
+ * This is a token-efficient alternative to getting the full workflow when you only
+ * need to inspect or debug a single node.
+ *
+ * Recommended workflow:
+ * 1. Use n8n_get_workflow_structure() to see all nodes and connections
+ * 2. Identify the problematic node
+ * 3. Use n8n_get_node_details() to get full configuration of just that node
+ *
+ * @param args - { id: string (workflow ID), nodeName: string }
+ * @param context - Instance context for multi-instance setups
+ * @returns Node details or error if not found
+ */
+export async function handleGetNodeDetails(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const { id, nodeName } = z.object({
+      id: z.string(),
+      nodeName: z.string()
+    }).parse(args);
+
+    // Fetch workflow
+    const workflow = await client.getWorkflow(id);
+
+    // Find node by name
+    const node = workflow.nodes.find(n => n.name === nodeName);
+
+    if (!node) {
+      return {
+        success: false,
+        error: `Node "${nodeName}" not found in workflow ${id}`,
+        details: {
+          availableNodes: workflow.nodes.map(n => n.name),
+          hint: 'Use n8n_get_workflow_structure() to see all node names'
+        }
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        workflowId: id,
+        workflowName: workflow.name,
+        node: node,
+        // Include connection info for this node
+        connections: {
+          inputs: workflow.connections[node.name] || {},
+          outputs: Object.entries(workflow.connections).reduce((acc, [source, targets]) => {
+            if (source === node.name) {
+              acc[source] = targets;
+            }
+            return acc;
+          }, {} as Record<string, any>)
+        }
+      }
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Invalid input',
+        details: { errors: error.errors }
+      };
+    }
+
+    if (error instanceof N8nApiError) {
+      return {
+        success: false,
+        error: getUserFriendlyErrorMessage(error),
+        code: error.code
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Update a single node in a workflow
+ *
+ * This is a convenience wrapper around n8n_update_partial_workflow that simplifies
+ * updating a single node without having to construct the full operation object.
+ *
+ * Recommended workflow:
+ * 1. Use n8n_get_node_details() to see current configuration
+ * 2. Prepare your updates object with only the fields you want to change
+ * 3. Use n8n_update_single_node() to apply the changes
+ *
+ * @param args - { id: string (workflow ID), nodeName: string, updates: object }
+ * @param repository - Node repository for validation
+ * @param context - Instance context for multi-instance setups
+ * @returns Update result with backup version info
+ */
+export async function handleUpdateSingleNode(
+  args: unknown,
+  repository: NodeRepository,
+  context?: InstanceContext
+): Promise<McpToolResponse> {
+  try {
+    const { id, nodeName, updates } = z.object({
+      id: z.string(),
+      nodeName: z.string(),
+      updates: z.any()
+    }).parse(args);
+
+    // Verify node exists first (provides better error messages)
+    const client = ensureApiConfigured(context);
+    const workflow = await client.getWorkflow(id);
+    const node = workflow.nodes.find(n => n.name === nodeName);
+
+    if (!node) {
+      return {
+        success: false,
+        error: `Node "${nodeName}" not found in workflow ${id}`,
+        details: {
+          availableNodes: workflow.nodes.map(n => n.name),
+          hint: 'Use n8n_get_workflow_structure() to see all node names'
+        }
+      };
+    }
+
+    // Use handleUpdatePartialWorkflow with an updateNode operation
+    const partialUpdateArgs = {
+      id,
+      operations: [
+        {
+          type: 'updateNode',
+          nodeName,
+          updates,
+          description: `Update node "${nodeName}"`
+        }
+      ],
+      createBackup: true  // Always create backup for safety
+    };
+
+    return await handleUpdatePartialWorkflow(partialUpdateArgs, repository, context);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Invalid input',
+        details: { errors: error.errors }
+      };
+    }
+
+    if (error instanceof N8nApiError) {
+      return {
+        success: false,
+        error: getUserFriendlyErrorMessage(error),
+        code: error.code
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}

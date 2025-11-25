@@ -862,6 +862,23 @@ export class N8NDocumentationMCPServer {
       case 'n8n_delete_execution':
         validationResult = ToolValidation.validateWorkflowId(args);
         break;
+      case 'n8n_get_node_details':
+        // Validate workflow ID + node name
+        validationResult = ToolValidation.validateWorkflowId(args);
+        if (validationResult.valid && (!args || typeof args !== 'object' || !('nodeName' in args) || typeof (args as any).nodeName !== 'string')) {
+          validationResult = { valid: false, errors: [{ field: 'nodeName', message: 'nodeName (string) is required' }] };
+        }
+        break;
+      case 'n8n_update_single_node':
+        // Validate workflow ID + node name + updates object
+        validationResult = ToolValidation.validateWorkflowId(args);
+        if (validationResult.valid && (!args || typeof args !== 'object' || !('nodeName' in args) || typeof (args as any).nodeName !== 'string')) {
+          validationResult = { valid: false, errors: [{ field: 'nodeName', message: 'nodeName (string) is required' }] };
+        }
+        if (validationResult.valid && (!args || typeof args !== 'object' || !('updates' in args))) {
+          validationResult = { valid: false, errors: [{ field: 'updates', message: 'updates (object) is required' }] };
+        }
+        break;
       default:
         // For tools not yet migrated to schema validation, use basic validation
         return this.validateToolParamsBasic(toolName, args, legacyRequiredParams || []);
@@ -1170,6 +1187,12 @@ export class N8NDocumentationMCPServer {
       case 'n8n_get_workflow_minimal':
         this.validateToolParams(name, args, ['id']);
         return n8nHandlers.handleGetWorkflowMinimal(args, this.instanceContext);
+      case 'n8n_get_node_details':
+        this.validateToolParams(name, args, ['id', 'nodeName']);
+        return n8nHandlers.handleGetNodeDetails(args, this.instanceContext);
+      case 'n8n_update_single_node':
+        this.validateToolParams(name, args, ['id', 'nodeName', 'updates']);
+        return n8nHandlers.handleUpdateSingleNode(args, this.repository!, this.instanceContext);
       case 'n8n_update_full_workflow':
         this.validateToolParams(name, args, ['id']);
         return n8nHandlers.handleUpdateWorkflow(args, this.repository!, this.instanceContext);
