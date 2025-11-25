@@ -92,52 +92,57 @@ When working with Code nodes, always start by calling the relevant guide:
    - search_nodes({query: "AI langchain"}) - Search for AI-capable nodes
 
 2. **Configure** the node (ALWAYS START WITH STANDARD DETAIL):
-   - ✅ get_node("nodes-base.slack", {detail: 'standard'}) - Get essential properties FIRST (~1-2KB, shows required fields)
-   - get_node("nodes-base.slack", {detail: 'full'}) - Get complete schema only if standard insufficient (~100KB+)
-   - get_node("nodes-base.slack", {detail: 'minimal'}) - Get basic metadata only (~200 tokens)
-   - search_node_properties("nodes-base.slack", "auth") - Find specific properties
+   - ✅ get_node({nodeType: "nodes-base.slack", detail: "standard"}) - Get essential properties FIRST (~1-2KB, shows required fields)
+   - get_node({nodeType: "nodes-base.slack", detail: "full"}) - Get complete schema only if standard insufficient (~100KB+)
+   - get_node({nodeType: "nodes-base.slack", mode: "docs"}) - Get readable markdown documentation
+   - get_node({nodeType: "nodes-base.slack", mode: "search_properties", propertyQuery: "auth"}) - Find specific properties
 
 3. **Validate** before deployment:
-   - validate_node_minimal("nodes-base.slack", config) - Check required fields (includes automatic structure validation)
-   - validate_node_operation("nodes-base.slack", config) - Full validation with fixes (includes automatic structure validation)
-   - validate_workflow(workflow) - Validate entire workflow
+   - validate_node({nodeType: "nodes-base.slack", config: {...}, mode: "minimal"}) - Quick required fields check
+   - validate_node({nodeType: "nodes-base.slack", config: {...}}) - Full validation with errors/warnings/suggestions
+   - validate_workflow({workflow: {...}}) - Validate entire workflow
 
-## Tool Categories
+## Tool Categories (19 Tools Total)
 
-**Discovery Tools**
+**Discovery Tools** (1 tool)
 - search_nodes - Full-text search across all nodes (supports OR, AND, FUZZY modes)
 
-**Configuration Tools**
-- get_node - ✅ Unified node information tool with progressive detail levels:
-  - detail='minimal': Basic metadata (~200 tokens)
-  - detail='standard': Essential properties (default, ~1-2KB) - USE THIS FIRST!
-  - detail='full': Complete schema (~100KB+, use only when standard insufficient)
-  - mode='versions': View version history and breaking changes
-  - includeTypeInfo=true: Add type structure metadata
-- search_node_properties - Search for specific properties within a node
-- get_property_dependencies - Analyze property visibility dependencies
+**Configuration Tools** (1 consolidated tool)
+- get_node - Unified node information tool:
+  - detail='minimal'/'standard'/'full': Progressive detail levels
+  - mode='docs': Readable markdown documentation
+  - mode='search_properties': Find specific properties
+  - mode='versions'/'compare'/'breaking'/'migrations': Version management
 
-**Validation Tools**
-- validate_node_minimal - Quick validation of required fields (includes structure validation)
-- validate_node_operation - Full validation with operation awareness (includes structure validation)
-- validate_workflow - Complete workflow validation including connections
+**Validation Tools** (2 tools)
+- validate_node - Unified validation with mode='full' or mode='minimal'
+- validate_workflow - Complete workflow validation (nodes, connections, expressions)
 
-**Template Tools**
-- get_node_for_task - Get pre-configured node for specific tasks
-- search_templates - Search workflow templates by keyword
+**Template Tools** (2 tools)
 - get_template - Get complete workflow JSON by ID
-- list_node_templates - Find templates using specific nodes
-- get_templates_for_task - Get curated templates by task type
+- search_templates - Unified template search:
+  - searchMode='keyword': Text search (default)
+  - searchMode='by_nodes': Find templates using specific nodes
+  - searchMode='by_task': Curated task-based templates
+  - searchMode='by_metadata': Filter by complexity/services
 
-**n8n API Tools** (requires N8N_API_URL configuration)
+**n8n API Tools** (12 tools, requires N8N_API_URL configuration)
 - n8n_create_workflow - Create new workflows
-- n8n_update_partial_workflow - Update workflows using diff operations
-- n8n_validate_workflow - Validate workflow from n8n instance
-- n8n_trigger_webhook_workflow - Trigger workflow execution
+- n8n_get_workflow - Get workflow with mode='full'/'details'/'structure'/'minimal'
+- n8n_update_full_workflow - Full workflow replacement
+- n8n_update_partial_workflow - Incremental diff-based updates
+- n8n_delete_workflow - Delete workflow
+- n8n_list_workflows - List workflows with filters
+- n8n_validate_workflow - Validate workflow by ID
+- n8n_autofix_workflow - Auto-fix common issues
+- n8n_trigger_webhook_workflow - Trigger via webhook
+- n8n_executions - Unified execution management (action='get'/'list'/'delete')
+- n8n_health_check - Check n8n API connectivity
+- n8n_workflow_versions - Version history and rollback
 
 ## Performance Characteristics
 - Instant (<10ms): search_nodes, get_node (minimal/standard)
-- Fast (<100ms): validate_node_minimal, get_node_for_task
+- Fast (<100ms): validate_node, get_template
 - Moderate (100-500ms): validate_workflow, get_node (full detail)
 - Network-dependent: All n8n_* tools
 

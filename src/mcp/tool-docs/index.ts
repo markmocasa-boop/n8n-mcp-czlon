@@ -1,45 +1,20 @@
 import { ToolDocumentation } from './types';
 
 // Import all tool documentations
-import { searchNodesDoc, listNodesDoc, listAiToolsDoc, getDatabaseStatisticsDoc } from './discovery';
-import { 
-  getNodeEssentialsDoc, 
-  getNodeInfoDoc, 
-  getNodeDocumentationDoc,
-  searchNodePropertiesDoc,
-  getNodeAsToolInfoDoc,
-  getPropertyDependenciesDoc
-} from './configuration';
-import { 
-  validateNodeMinimalDoc, 
-  validateNodeOperationDoc,
-  validateWorkflowDoc,
-  validateWorkflowConnectionsDoc,
-  validateWorkflowExpressionsDoc
-} from './validation';
-import {
-  listTasksDoc,
-  listNodeTemplatesDoc,
-  getTemplateDoc,
-  searchTemplatesDoc,
-  searchTemplatesByMetadataDoc,
-  getTemplatesForTaskDoc
-} from './templates';
+import { searchNodesDoc } from './discovery';
+import { getNodeDoc } from './configuration';
+import { validateNodeDoc, validateWorkflowDoc } from './validation';
+import { getTemplateDoc, searchTemplatesDoc } from './templates';
 import {
   toolsDocumentationDoc,
   n8nDiagnosticDoc,
   n8nHealthCheckDoc,
   n8nListAvailableToolsDoc
 } from './system';
-import {
-  aiAgentsGuide
-} from './guides';
+import { aiAgentsGuide } from './guides';
 import {
   n8nCreateWorkflowDoc,
   n8nGetWorkflowDoc,
-  n8nGetWorkflowDetailsDoc,
-  n8nGetWorkflowStructureDoc,
-  n8nGetWorkflowMinimalDoc,
   n8nUpdateFullWorkflowDoc,
   n8nUpdatePartialWorkflowDoc,
   n8nDeleteWorkflowDoc,
@@ -47,12 +22,11 @@ import {
   n8nValidateWorkflowDoc,
   n8nAutofixWorkflowDoc,
   n8nTriggerWebhookWorkflowDoc,
-  n8nGetExecutionDoc,
-  n8nListExecutionsDoc,
-  n8nDeleteExecutionDoc
+  n8nExecutionsDoc
 } from './workflow_management';
 
 // Combine all tool documentations into a single object
+// Total: 19 tools after v2.26.0 consolidation
 export const toolsDocumentation: Record<string, ToolDocumentation> = {
   // System tools
   tools_documentation: toolsDocumentationDoc,
@@ -65,39 +39,21 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
 
   // Discovery tools
   search_nodes: searchNodesDoc,
-  list_nodes: listNodesDoc,
-  list_ai_tools: listAiToolsDoc,
-  get_database_statistics: getDatabaseStatisticsDoc,
-  
-  // Configuration tools
-  get_node_essentials: getNodeEssentialsDoc,
-  get_node_info: getNodeInfoDoc,
-  get_node_documentation: getNodeDocumentationDoc,
-  search_node_properties: searchNodePropertiesDoc,
-  get_node_as_tool_info: getNodeAsToolInfoDoc,
-  get_property_dependencies: getPropertyDependenciesDoc,
-  
-  // Validation tools
-  validate_node_minimal: validateNodeMinimalDoc,
-  validate_node_operation: validateNodeOperationDoc,
-  validate_workflow: validateWorkflowDoc,
-  validate_workflow_connections: validateWorkflowConnectionsDoc,
-  validate_workflow_expressions: validateWorkflowExpressionsDoc,
-  
-  // Template tools
-  list_tasks: listTasksDoc,
-  list_node_templates: listNodeTemplatesDoc,
+
+  // Configuration tools (consolidated)
+  get_node: getNodeDoc,  // Replaces: get_node_info, get_node_essentials, get_node_documentation, search_node_properties
+
+  // Validation tools (consolidated)
+  validate_node: validateNodeDoc,  // Replaces: validate_node_operation, validate_node_minimal
+  validate_workflow: validateWorkflowDoc,  // Options replace: validate_workflow_connections, validate_workflow_expressions
+
+  // Template tools (consolidated)
   get_template: getTemplateDoc,
-  search_templates: searchTemplatesDoc,
-  search_templates_by_metadata: searchTemplatesByMetadataDoc,
-  get_templates_for_task: getTemplatesForTaskDoc,
-  
+  search_templates: searchTemplatesDoc,  // Modes replace: list_node_templates, search_templates_by_metadata, get_templates_for_task
+
   // Workflow Management tools (n8n API)
   n8n_create_workflow: n8nCreateWorkflowDoc,
-  n8n_get_workflow: n8nGetWorkflowDoc,
-  n8n_get_workflow_details: n8nGetWorkflowDetailsDoc,
-  n8n_get_workflow_structure: n8nGetWorkflowStructureDoc,
-  n8n_get_workflow_minimal: n8nGetWorkflowMinimalDoc,
+  n8n_get_workflow: n8nGetWorkflowDoc,  // Modes replace: n8n_get_workflow_details, n8n_get_workflow_structure, n8n_get_workflow_minimal
   n8n_update_full_workflow: n8nUpdateFullWorkflowDoc,
   n8n_update_partial_workflow: n8nUpdatePartialWorkflowDoc,
   n8n_delete_workflow: n8nDeleteWorkflowDoc,
@@ -105,9 +61,7 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
   n8n_validate_workflow: n8nValidateWorkflowDoc,
   n8n_autofix_workflow: n8nAutofixWorkflowDoc,
   n8n_trigger_webhook_workflow: n8nTriggerWebhookWorkflowDoc,
-  n8n_get_execution: n8nGetExecutionDoc,
-  n8n_list_executions: n8nListExecutionsDoc,
-  n8n_delete_execution: n8nDeleteExecutionDoc
+  n8n_executions: n8nExecutionsDoc  // Actions replace: n8n_get_execution, n8n_list_executions, n8n_delete_execution
 };
 
 // Re-export types

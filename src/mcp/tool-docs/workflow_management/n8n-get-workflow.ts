@@ -4,46 +4,65 @@ export const n8nGetWorkflowDoc: ToolDocumentation = {
   name: 'n8n_get_workflow',
   category: 'workflow_management',
   essentials: {
-    description: 'Get a workflow by ID. Returns the complete workflow including nodes, connections, and settings.',
-    keyParameters: ['id'],
-    example: 'n8n_get_workflow({id: "workflow_123"})',
+    description: 'Get workflow by ID with different detail levels. Use mode to control response size and content.',
+    keyParameters: ['id', 'mode'],
+    example: 'n8n_get_workflow({id: "workflow_123", mode: "structure"})',
     performance: 'Fast (50-200ms)',
     tips: [
-      'Returns complete workflow JSON',
-      'Includes all node parameters',
-      'Use get_workflow_minimal for faster listings'
+      'mode="full" (default): Complete workflow with all data',
+      'mode="details": Full workflow + execution stats',
+      'mode="structure": Just nodes and connections (topology)',
+      'mode="minimal": Only id, name, active status, tags'
     ]
   },
   full: {
-    description: 'Retrieves a complete workflow from n8n by its ID. Returns full workflow definition including all nodes with their parameters, connections between nodes, and workflow settings. This is the primary tool for fetching workflows for viewing, editing, or cloning.',
+    description: `Unified workflow retrieval with configurable detail levels. Replaces n8n_get_workflow, n8n_get_workflow_details, n8n_get_workflow_structure, and n8n_get_workflow_minimal.
+
+**Modes:**
+- full (default): Complete workflow including all nodes with parameters, connections, and settings
+- details: Full workflow plus execution statistics (success/error counts, last execution time)
+- structure: Nodes and connections only - useful for topology analysis
+- minimal: Just id, name, active status, and tags - fastest response`,
     parameters: {
-      id: { type: 'string', required: true, description: 'Workflow ID to retrieve' }
+      id: { type: 'string', required: true, description: 'Workflow ID to retrieve' },
+      mode: { type: 'string', required: false, description: 'Detail level: "full" (default), "details", "structure", "minimal"' }
     },
-    returns: 'Complete workflow object containing: id, name, active status, nodes array (with full parameters), connections object, settings, createdAt, updatedAt',
+    returns: `Depends on mode:
+- full: Complete workflow object (id, name, active, nodes[], connections{}, settings, createdAt, updatedAt)
+- details: Full workflow + executionStats (successCount, errorCount, lastExecution, etc.)
+- structure: { nodes: [...], connections: {...} } - topology only
+- minimal: { id, name, active, tags, createdAt, updatedAt }`,
     examples: [
-      'n8n_get_workflow({id: "abc123"}) - Get workflow for editing',
-      'const wf = n8n_get_workflow({id: "xyz789"}); // Clone workflow structure'
+      '// Get complete workflow (default)\nn8n_get_workflow({id: "abc123"})',
+      '// Get workflow with execution stats\nn8n_get_workflow({id: "abc123", mode: "details"})',
+      '// Get just the topology\nn8n_get_workflow({id: "abc123", mode: "structure"})',
+      '// Quick metadata check\nn8n_get_workflow({id: "abc123", mode: "minimal"})'
     ],
     useCases: [
-      'View workflow configuration',
-      'Export workflow for backup',
-      'Clone workflow structure',
-      'Debug workflow issues',
-      'Prepare for updates'
+      'View and edit workflow (mode=full)',
+      'Analyze workflow performance (mode=details)',
+      'Clone or compare workflow structure (mode=structure)',
+      'List workflows with status (mode=minimal)',
+      'Debug workflow issues'
     ],
-    performance: 'Fast retrieval - typically 50-200ms depending on workflow size. Cached by n8n for performance.',
+    performance: `Response times vary by mode:
+- minimal: ~20-50ms (smallest response)
+- structure: ~30-80ms (nodes + connections only)
+- full: ~50-200ms (complete workflow)
+- details: ~100-300ms (includes execution queries)`,
     bestPractices: [
-      'Check workflow exists before updating',
-      'Use for complete workflow data needs',
-      'Cache results when making multiple operations',
-      'Validate after retrieving if modifying'
+      'Use mode="minimal" when listing or checking status',
+      'Use mode="structure" for workflow analysis or cloning',
+      'Use mode="full" (default) when editing',
+      'Use mode="details" for debugging execution issues',
+      'Validate workflow after retrieval if planning modifications'
     ],
     pitfalls: [
       'Requires N8N_API_URL and N8N_API_KEY configured',
-      'Returns all data - use minimal/structure for performance',
-      'Workflow must exist or returns 404',
-      'Credentials are referenced but not included'
+      'mode="details" adds database queries for execution stats',
+      'Workflow must exist or returns 404 error',
+      'Credentials are referenced by ID but values not included'
     ],
-    relatedTools: ['n8n_get_workflow_minimal', 'n8n_get_workflow_structure', 'n8n_update_full_workflow', 'n8n_validate_workflow']
+    relatedTools: ['n8n_list_workflows', 'n8n_update_full_workflow', 'n8n_update_partial_workflow', 'n8n_validate_workflow']
   }
 };

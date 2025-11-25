@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.2] - 2025-01-25
+
+### 🔧 Fixed
+
+- **Tool Documentation Cleanup**: Synchronized `tool-docs/` with v2.26.0 tool consolidation
+  - Deleted 23 obsolete documentation files for removed tools (get_node_info, get_node_essentials, validate_node_operation, etc.)
+  - Created consolidated documentation for `get_node` (covers all modes: info, docs, search_properties, versions, compare, breaking, migrations)
+  - Created consolidated documentation for `validate_node` (covers modes: full, minimal; profiles: minimal, runtime, ai-friendly, strict)
+  - Created consolidated documentation for `n8n_executions` (covers actions: get, list, delete)
+  - Updated `search_templates` documentation with all searchModes (keyword, by_nodes, by_task, by_metadata)
+  - Updated `n8n_get_workflow` documentation with all modes (full, details, structure, minimal)
+  - Fixed stale `relatedTools` references pointing to removed tools
+  - Updated `tools-documentation.ts` overview to accurately reflect 19 consolidated tools
+
 ## [2.26.1] - 2025-11-25
 
 ### 🔄 Updated

@@ -49,6 +49,6 @@ export const searchNodesDoc: ToolDocumentation = {
       'FUZZY mode with very short queries (1-2 chars) may return unexpected results',
       'Exact matches in quotes are case-sensitive'
     ],
-    relatedTools: ['list_nodes for browsing by category', 'get_node_essentials to configure found nodes', 'list_ai_tools for AI-specific search']
+    relatedTools: ['get_node to configure found nodes', 'search_templates to find workflow examples', 'validate_node to check configurations']
   }
 };
