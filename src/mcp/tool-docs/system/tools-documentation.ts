@@ -58,6 +58,6 @@ export const toolsDocumentationDoc: ToolDocumentation = {
       'Not all internal functions are documented',
       'Special topics (code guides) require exact names'
     ],
-    relatedTools: ['n8n_health_check for verifying API connection', 'get_node_for_task for common configurations', 'search_nodes for finding nodes']
+    relatedTools: ['n8n_health_check for verifying API connection', 'search_templates for workflow examples', 'search_nodes for finding nodes']
   }
 };

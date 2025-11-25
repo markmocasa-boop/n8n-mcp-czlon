@@ -79,6 +79,6 @@ export const validateWorkflowDoc: ToolDocumentation = {
       'Validation cannot catch all runtime errors (e.g., API failures)',
       'Profile setting only affects node validation, not connection/expression checks'
     ],
-    relatedTools: ['validate_workflow_connections', 'validate_workflow_expressions', 'validate_node_operation', 'n8n_create_workflow', 'n8n_update_partial_workflow', 'n8n_autofix_workflow']
+    relatedTools: ['validate_node', 'n8n_create_workflow', 'n8n_update_partial_workflow', 'n8n_autofix_workflow']
   }
 };

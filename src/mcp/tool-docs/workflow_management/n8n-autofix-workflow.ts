@@ -153,9 +153,8 @@ Requires N8N_API_URL and N8N_API_KEY environment variables to be configured.`,
     relatedTools: [
       'n8n_validate_workflow',
       'validate_workflow',
-      'n8n_update_partial_workflow',
-      'validate_workflow_expressions',
-      'validate_node_operation'
+      'validate_node',
+      'n8n_update_partial_workflow'
     ]
   }
 };
