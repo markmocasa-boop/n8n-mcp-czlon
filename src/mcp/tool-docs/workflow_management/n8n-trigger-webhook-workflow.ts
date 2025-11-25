@@ -64,13 +64,13 @@ export const n8nTriggerWebhookWorkflowDoc: ToolDocumentation = {
 When a webhook trigger fails, the error response now includes specific guidance to help debug the issue:
 
 **Error with Execution ID** (workflow started but failed):
-- Format: "Workflow {workflowId} execution {executionId} failed. Use n8n_get_execution({id: '{executionId}', mode: 'preview'}) to investigate the error."
+- Format: "Workflow {workflowId} execution {executionId} failed. Use n8n_executions({action: 'get', id: '{executionId}', mode: 'preview'}) to investigate the error."
 - Response includes: executionId and workflowId fields for direct access
-- Recommended action: Use n8n_get_execution with mode='preview' for fast, efficient error inspection
+- Recommended action: Use n8n_executions with action='get' and mode='preview' for fast, efficient error inspection
 
 **Error without Execution ID** (workflow didn't start):
-- Format: "Workflow failed to execute. Use n8n_list_executions to find recent executions, then n8n_get_execution with mode='preview' to investigate."
-- Recommended action: Check recent executions with n8n_list_executions
+- Format: "Workflow failed to execute. Use n8n_executions({action: 'list'}) to find recent executions, then n8n_executions({action: 'get', mode: 'preview'}) to investigate."
+- Recommended action: Check recent executions with n8n_executions({action: 'list'})
 
 **Why mode='preview'?**
 - Fast: <50ms response time
@@ -92,7 +92,7 @@ When a webhook trigger fails, the error response now includes specific guidance 
 
 **Investigation Workflow**:
 1. Trigger returns error with execution ID
-2. Call n8n_get_execution({id: executionId, mode: 'preview'}) to see structure and error
+2. Call n8n_executions({action: 'get', id: executionId, mode: 'preview'}) to see structure and error
 3. Based on preview recommendation, fetch more data if needed
 4. Fix issues in workflow and retry`,
     bestPractices: [
@@ -101,7 +101,7 @@ When a webhook trigger fails, the error response now includes specific guidance 
       'Use async mode (waitForResponse: false) for long-running workflows',
       'Include authentication headers when webhook requires them',
       'Test webhook URL manually first to ensure it works',
-      'When errors occur, use n8n_get_execution with mode="preview" first for efficient debugging',
+      'When errors occur, use n8n_executions with action="get" and mode="preview" first for efficient debugging',
       'Store execution IDs from error responses for later investigation'
     ],
     pitfalls: [
@@ -110,9 +110,9 @@ When a webhook trigger fails, the error response now includes specific guidance 
       'Webhook node must be the trigger node in the workflow',
       'Timeout errors occur with long workflows in sync mode',
       'Data format must match webhook node expectations',
-      'Error messages always include n8n_get_execution guidance - follow the suggested steps for efficient debugging',
+      'Error messages always include n8n_executions guidance - follow the suggested steps for efficient debugging',
       'Execution IDs in error responses are crucial for debugging - always check for and use them'
     ],
-    relatedTools: ['n8n_get_execution', 'n8n_list_executions', 'n8n_get_workflow', 'n8n_create_workflow']
+    relatedTools: ['n8n_executions', 'n8n_get_workflow', 'n8n_create_workflow']
   }
 };

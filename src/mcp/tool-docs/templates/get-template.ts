@@ -4,12 +4,12 @@ export const getTemplateDoc: ToolDocumentation = {
   name: 'get_template',
   category: 'templates',
   essentials: {
-    description: 'Get complete workflow JSON by ID. Ready to import. IDs from list_node_templates or search_templates.',
+    description: 'Get complete workflow JSON by ID. Ready to import. IDs from search_templates.',
     keyParameters: ['templateId'],
     example: 'get_template({templateId: 1234})',
     performance: 'Fast (<100ms) - single database lookup',
     tips: [
-      'Get template IDs from list_node_templates or search_templates first',
+      'Get template IDs from search_templates first',
       'Returns complete workflow JSON ready for import into n8n',
       'Includes all nodes, connections, and settings'
     ]
@@ -20,7 +20,7 @@ export const getTemplateDoc: ToolDocumentation = {
       templateId: {
         type: 'number',
         required: true,
-        description: 'The numeric ID of the template to retrieve. Get IDs from list_node_templates or search_templates'
+        description: 'The numeric ID of the template to retrieve. Get IDs from search_templates'
       }
     },
     returns: `Returns an object containing:
@@ -69,6 +69,6 @@ export const getTemplateDoc: ToolDocumentation = {
       'Not all templates work with all n8n versions',
       'Template may reference external services you don\'t have access to'
     ],
-    relatedTools: ['list_node_templates', 'search_templates', 'get_templates_for_task', 'n8n_create_workflow']
+    relatedTools: ['search_templates', 'n8n_create_workflow']
   }
 };

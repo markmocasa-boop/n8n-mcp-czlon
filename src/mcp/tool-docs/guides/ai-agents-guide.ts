@@ -690,7 +690,7 @@ n8n_validate_workflow({id: "workflow_id"})
 - **FINAL_AI_VALIDATION_SPEC.md**: Complete validation rules
 - **n8n_update_partial_workflow**: Workflow modification tool
 - **search_nodes({query: "AI", includeExamples: true})**: Find AI nodes with examples
-- **get_node_essentials({nodeType: "...", includeExamples: true})**: Node details with examples
+- **get_node({nodeType: "...", detail: "standard", includeExamples: true})**: Node details with examples
 
 ---
 
@@ -731,8 +731,7 @@ n8n_validate_workflow({id: "workflow_id"})
       'n8n_update_partial_workflow',
       'n8n_validate_workflow',
       'search_nodes',
-      'get_node_essentials',
-      'list_ai_tools'
+      'get_node'
     ]
   }
 };
