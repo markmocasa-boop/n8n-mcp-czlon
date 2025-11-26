@@ -403,45 +403,47 @@ describe('n8n-validation', () => {
           settings: {
             executionOrder: 'v1' as const,
             saveDataSuccessExecution: 'none' as const,
-            callerPolicy: 'workflowsFromSameOwner' as const, // Filtered out (not in OpenAPI spec)
+            callerPolicy: 'workflowsFromSameOwner' as const, // Now whitelisted (n8n 1.121+)
             timeSavedPerExecution: 5, // Filtered out (UI-only property)
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
 
-        // Unsafe properties filtered out, safe properties kept
+        // Unsafe properties filtered out, safe properties kept (callerPolicy now whitelisted)
         expect(cleaned.settings).toEqual({
           executionOrder: 'v1',
-          saveDataSuccessExecution: 'none'
+          saveDataSuccessExecution: 'none',
+          callerPolicy: 'workflowsFromSameOwner'
         });
-        expect(cleaned.settings).not.toHaveProperty('callerPolicy');
         expect(cleaned.settings).not.toHaveProperty('timeSavedPerExecution');
       });
 
-      it('should filter out callerPolicy (Issue #248 - API limitation)', () => {
+      it('should preserve callerPolicy and availableInMCP (n8n 1.121+ settings)', () => {
         const workflow = {
           name: 'Test Workflow',
           nodes: [],
           connections: {},
           settings: {
             executionOrder: 'v1' as const,
-            callerPolicy: 'workflowsFromSameOwner' as const, // Filtered out
+            callerPolicy: 'workflowsFromSameOwner' as const, // Now whitelisted
+            availableInMCP: true, // New in n8n 1.121
             errorWorkflow: 'N2O2nZy3aUiBRGFN',
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
 
-        // callerPolicy filtered out (causes API errors), safe properties kept
+        // callerPolicy and availableInMCP now whitelisted (n8n 1.121+)
         expect(cleaned.settings).toEqual({
           executionOrder: 'v1',
+          callerPolicy: 'workflowsFromSameOwner',
+          availableInMCP: true,
           errorWorkflow: 'N2O2nZy3aUiBRGFN'
         });
-        expect(cleaned.settings).not.toHaveProperty('callerPolicy');
       });
 
-      it('should filter all settings properties correctly (Issue #248 - API design)', () => {
+      it('should preserve all whitelisted settings properties including callerPolicy (Issue #248 - updated for n8n 1.121)', () => {
         const workflow = {
           name: 'Test Workflow',
           nodes: [],
@@ -455,14 +457,14 @@ describe('n8n-validation', () => {
             saveExecutionProgress: false,
             executionTimeout: 300,
             errorWorkflow: 'error-workflow-id',
-            callerPolicy: 'workflowsFromAList' as const, // Filtered out (not in OpenAPI spec)
+            callerPolicy: 'workflowsFromAList' as const, // Now whitelisted (n8n 1.121+)
+            availableInMCP: false, // New in n8n 1.121
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
 
-        // Safe properties kept, unsafe properties filtered out
-        // See: https://community.n8n.io/t/api-workflow-update-endpoint-doesnt-support-setting-callerpolicy/161916
+        // All whitelisted properties kept including callerPolicy and availableInMCP
         expect(cleaned.settings).toEqual({
           executionOrder: 'v0',
           timezone: 'UTC',
@@ -471,9 +473,10 @@ describe('n8n-validation', () => {
           saveManualExecutions: false,
           saveExecutionProgress: false,
           executionTimeout: 300,
-          errorWorkflow: 'error-workflow-id'
+          errorWorkflow: 'error-workflow-id',
+          callerPolicy: 'workflowsFromAList',
+          availableInMCP: false
         });
-        expect(cleaned.settings).not.toHaveProperty('callerPolicy');
       });
 
       it('should handle workflows without settings gracefully', () => {
@@ -494,7 +497,6 @@ describe('n8n-validation', () => {
           nodes: [],
           connections: {},
           settings: {
-            callerPolicy: 'workflowsFromSameOwner' as const, // Filtered out
             timeSavedPerExecution: 5, // Filtered out (UI-only)
             someOtherProperty: 'value', // Filtered out
           },
@@ -514,19 +516,19 @@ describe('n8n-validation', () => {
           connections: {},
           settings: {
             executionOrder: 'v1' as const, // Whitelisted
-            callerPolicy: 'workflowsFromSameOwner' as const, // Filtered out
+            callerPolicy: 'workflowsFromSameOwner' as const, // Now whitelisted (n8n 1.121+)
             timezone: 'America/New_York', // Whitelisted
             someOtherProperty: 'value', // Filtered out
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // Should keep only whitelisted properties
+        // Should keep only whitelisted properties (callerPolicy now whitelisted)
         expect(cleaned.settings).toEqual({
           executionOrder: 'v1',
+          callerPolicy: 'workflowsFromSameOwner',
           timezone: 'America/New_York'
         });
-        expect(cleaned.settings).not.toHaveProperty('callerPolicy');
         expect(cleaned.settings).not.toHaveProperty('someOtherProperty');
       });
     });
