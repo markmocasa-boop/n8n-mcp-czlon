@@ -62,6 +62,7 @@ export const workflowSettingsSchema = z.object({
   executionTimeout: z.number().optional(),
   errorWorkflow: z.string().optional(),
   callerPolicy: z.enum(['any', 'workflowsFromSameOwner', 'workflowsFromAList']).optional(),
+  availableInMCP: z.boolean().optional(),
 });
 
 // Default settings for workflow creation
@@ -181,7 +182,9 @@ export function cleanWorkflowForUpdate(workflow: Workflow): Partial<Workflow> {
     'executionTimeout',
     'errorWorkflow',
     'timezone',
-    'executionOrder'
+    'executionOrder',
+    'callerPolicy',
+    'availableInMCP',
   ];
 
   if (cleanedWorkflow.settings && typeof cleanedWorkflow.settings === 'object') {

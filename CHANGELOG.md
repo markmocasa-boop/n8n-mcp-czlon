@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.4] - 2025-11-26
+
+### 🔧 Fixed
+
+- **n8n 1.121 Compatibility**: Added support for new workflow settings introduced in n8n 1.121
+  - Added `availableInMCP` (boolean) to settings whitelist - controls "Available in MCP" toggle
+  - Added `callerPolicy` to settings whitelist - was already in schema but missing from sanitization
+  - Both settings are now preserved during workflow updates instead of being silently stripped
+  - Settings can be toggled via `updateSettings` operation: `{type: "updateSettings", settings: {availableInMCP: true}}`
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.26.3] - 2025-11-26
 
 ### 🔧 Fixed
