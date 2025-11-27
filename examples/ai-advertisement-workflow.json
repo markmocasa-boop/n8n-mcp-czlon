@@ -1,0 +1,906 @@
+{
+  "name": "AI Advertisement Creator - Professional Ad Generation",
+  "nodes": [
+    {
+      "id": "manual-trigger",
+      "name": "Start Workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 400],
+      "parameters": {}
+    },
+    {
+      "id": "input-config",
+      "name": "Configure Ad Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [470, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "product-name",
+              "name": "productName",
+              "value": "Electric Motorcycle",
+              "type": "string"
+            },
+            {
+              "id": "brand-name",
+              "name": "brandName",
+              "value": "ThunderRide",
+              "type": "string"
+            },
+            {
+              "id": "ad-style",
+              "name": "adStyle",
+              "value": "cinematic, high-energy, futuristic",
+              "type": "string"
+            },
+            {
+              "id": "target-audience",
+              "name": "targetAudience",
+              "value": "young professionals, tech enthusiasts, adventure seekers",
+              "type": "string"
+            },
+            {
+              "id": "ad-duration",
+              "name": "adDuration",
+              "value": "30 seconds",
+              "type": "string"
+            },
+            {
+              "id": "num-scenes",
+              "name": "numberOfScenes",
+              "value": "7",
+              "type": "string"
+            },
+            {
+              "id": "image-model",
+              "name": "imageModel",
+              "value": "dall-e-3",
+              "type": "string"
+            },
+            {
+              "id": "video-api-url",
+              "name": "videoApiUrl",
+              "value": "https://api.example.com/v1/video/generate",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "storyboard-generator",
+      "name": "Phase 1: Generate Storyboard",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [690, 400],
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert advertising creative director specializing in AI-generated video advertisements.\n\nCreate a detailed storyboard for a {{ $json.adDuration }} advertisement for {{ $json.brandName }} {{ $json.productName }}.\n\nTarget Audience: {{ $json.targetAudience }}\nVisual Style: {{ $json.adStyle }}\nNumber of Scenes: {{ $json.numberOfScenes }}\n\nFor EACH scene, provide:\n1. **Scene Number** (1-{{ $json.numberOfScenes }})\n2. **Shot Type** (Wide/Establishing, Medium, Close-up, Extreme Close-up)\n3. **Duration** (in seconds)\n4. **Visual Description** - Detailed description for image generation (lighting, composition, mood, colors)\n5. **Action/Motion** - What movement happens in this scene\n6. **Audio Cue** - Music mood, sound effects, or voiceover timing\n\nIMPORTANT GUIDELINES:\n- Scene 1 should be an establishing/anchor shot that sets the visual style for all subsequent scenes\n- Alternate between wide landscape shots and close-up detail shots for cinematic pacing\n- Each visual description should be self-contained but reference the overall aesthetic\n- Include at least 2 product close-up scenes\n- End with a brand reveal or call-to-action scene\n\nOutput as a structured JSON array with each scene as an object.",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.8,
+          "maxTokens": 4000,
+          "responseFormat": "json_object"
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "parse-storyboard",
+      "name": "Parse Storyboard JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 400],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse the storyboard response from OpenAI\nconst inputData = $input.all();\nconst storyboardResponse = inputData[0].json;\n\n// Parse the JSON content from OpenAI response\nlet storyboard;\ntry {\n  const content = storyboardResponse.message?.content || storyboardResponse.content;\n  storyboard = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  throw new Error(`Failed to parse storyboard: ${error.message}`);\n}\n\n// Extract scenes array\nconst scenes = storyboard.scenes || storyboard;\n\n// Validate and enhance each scene\nconst enhancedScenes = scenes.map((scene, index) => ({\n  sceneNumber: scene.sceneNumber || index + 1,\n  shotType: scene.shotType || 'Medium',\n  duration: scene.duration || '3 seconds',\n  visualDescription: scene.visualDescription || scene.visual_description,\n  action: scene.action || scene.motion,\n  audioCue: scene.audioCue || scene.audio_cue,\n  isAnchorScene: index === 0,\n  imagePrompt: `${scene.visualDescription || scene.visual_description}. Style: ${$('Configure Ad Parameters').item.json.adStyle}. High quality, photorealistic, cinematic lighting.`\n}));\n\nreturn [{\n  json: {\n    productName: $('Configure Ad Parameters').item.json.productName,\n    brandName: $('Configure Ad Parameters').item.json.brandName,\n    adStyle: $('Configure Ad Parameters').item.json.adStyle,\n    totalScenes: enhancedScenes.length,\n    scenes: enhancedScenes,\n    storyboardComplete: true\n  }\n}];"
+      }
+    },
+    {
+      "id": "storyboard-review",
+      "name": "Review Storyboard (Human Approval)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1130, 400],
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Storyboard Review - Phase 1 Complete",
+        "formDescription": "=Review the generated storyboard for {{ $json.brandName }} {{ $json.productName }} advertisement.\n\nTotal Scenes: {{ $json.totalScenes }}\n\nApprove to proceed with image generation, or reject to regenerate.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Storyboard Approval",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approved - Proceed to Image Generation"
+                  },
+                  {
+                    "option": "Rejected - Regenerate Storyboard"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Feedback/Notes",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Enter any specific feedback or modifications needed..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "webhookId": "storyboard-review-webhook"
+    },
+    {
+      "id": "check-storyboard-approval",
+      "name": "Check Storyboard Approval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1350, 400],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "approval-check",
+              "leftValue": "={{ $json['Storyboard Approval'] }}",
+              "rightValue": "Approved - Proceed to Image Generation",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "prepare-scenes",
+      "name": "Prepare Scenes for Image Generation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Get storyboard data from previous steps\nconst storyboardData = $('Parse Storyboard JSON').first().json;\nconst scenes = storyboardData.scenes;\n\n// Output each scene as a separate item for batch processing\nreturn scenes.map((scene, index) => ({\n  json: {\n    ...scene,\n    brandName: storyboardData.brandName,\n    productName: storyboardData.productName,\n    adStyle: storyboardData.adStyle,\n    totalScenes: storyboardData.totalScenes,\n    processingIndex: index\n  }\n}));"
+      }
+    },
+    {
+      "id": "generate-anchor-image",
+      "name": "Phase 2a: Generate Anchor Image (Scene 1)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [1790, 200],
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-3",
+        "prompt": "={{ $json.imagePrompt }}",
+        "options": {
+          "size": "1792x1024",
+          "quality": "hd",
+          "style": "vivid",
+          "n": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "id": "store-anchor-style",
+      "name": "Store Anchor Image Reference",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2010, 200],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "anchor-url",
+              "name": "anchorImageUrl",
+              "value": "={{ $json.data[0].url }}",
+              "type": "string"
+            },
+            {
+              "id": "anchor-b64",
+              "name": "anchorImageB64",
+              "value": "={{ $json.data[0].b64_json }}",
+              "type": "string"
+            },
+            {
+              "id": "scene-data",
+              "name": "sceneData",
+              "value": "={{ $('Prepare Scenes for Image Generation').first().json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "include": "all"
+        }
+      }
+    },
+    {
+      "id": "split-remaining-scenes",
+      "name": "Split Remaining Scenes (2-7)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2230, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Get all scenes from the prepare step\nconst allScenes = $('Prepare Scenes for Image Generation').all();\nconst anchorImageUrl = $input.first().json.anchorImageUrl;\n\n// Filter to scenes 2 and beyond, add anchor reference\nconst remainingScenes = allScenes.slice(1).map((item, index) => ({\n  json: {\n    ...item.json,\n    anchorImageUrl: anchorImageUrl,\n    consistencyPrompt: `Maintain exact same style, lighting, color grading, and aesthetic as the anchor image. ${item.json.imagePrompt}`\n  }\n}));\n\nreturn remainingScenes;"
+      }
+    },
+    {
+      "id": "generate-consistent-images",
+      "name": "Phase 2b: Generate Consistent Images",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [2450, 200],
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-3",
+        "prompt": "={{ $json.consistencyPrompt }}",
+        "options": {
+          "size": "1792x1024",
+          "quality": "hd",
+          "style": "vivid",
+          "n": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "merge-all-images",
+      "name": "Merge All Generated Images",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2670, 300],
+      "parameters": {
+        "mode": "append"
+      }
+    },
+    {
+      "id": "compile-image-results",
+      "name": "Compile Image Generation Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2890, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Compile all generated images\nconst allItems = $input.all();\nconst storyboardData = $('Parse Storyboard JSON').first().json;\n\nconst generatedImages = allItems.map((item, index) => {\n  const imageData = item.json.data ? item.json.data[0] : item.json;\n  return {\n    sceneNumber: index + 1,\n    imageUrl: imageData.url || imageData.anchorImageUrl,\n    imageB64: imageData.b64_json,\n    revisedPrompt: imageData.revised_prompt,\n    isAnchor: index === 0\n  };\n});\n\nreturn [{\n  json: {\n    brandName: storyboardData.brandName,\n    productName: storyboardData.productName,\n    adStyle: storyboardData.adStyle,\n    totalImages: generatedImages.length,\n    images: generatedImages,\n    scenes: storyboardData.scenes,\n    phase2Complete: true\n  }\n}];"
+      }
+    },
+    {
+      "id": "image-review",
+      "name": "Review Generated Images (Human Approval)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3110, 300],
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Image Review - Phase 2 Complete",
+        "formDescription": "=Review the {{ $json.totalImages }} generated images for {{ $json.brandName }} {{ $json.productName }}.\n\nCRITICAL: Verify visual consistency across all images before proceeding to video generation.\n\nApprove only if:\n- Lighting and color grading match the anchor image\n- Character/product appearance is consistent\n- All scenes align with the storyboard vision",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Image Quality Approval",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "All Images Approved - Proceed to Video Generation"
+                  },
+                  {
+                    "option": "Some Images Need Regeneration"
+                  },
+                  {
+                    "option": "Rejected - Restart Image Generation"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Scenes to Regenerate (comma-separated numbers)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "e.g., 3, 5, 7"
+            },
+            {
+              "fieldLabel": "Additional Style Notes",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Any specific adjustments for video generation..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "webhookId": "image-review-webhook"
+    },
+    {
+      "id": "check-image-approval",
+      "name": "Check Image Approval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3330, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "image-approval-check",
+              "leftValue": "={{ $json['Image Quality Approval'] }}",
+              "rightValue": "All Images Approved",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "prepare-video-generation",
+      "name": "Prepare Video Generation Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3550, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Get compiled image data\nconst imageData = $('Compile Image Generation Results').first().json;\nconst scenes = imageData.scenes;\nconst images = imageData.images;\n\n// Prepare video generation requests for each scene\nconst videoRequests = scenes.map((scene, index) => {\n  const image = images[index];\n  return {\n    json: {\n      sceneNumber: scene.sceneNumber,\n      startingFrameUrl: image.imageUrl,\n      startingFrameB64: image.imageB64,\n      motionPrompt: scene.action || scene.motion,\n      duration: scene.duration,\n      shotType: scene.shotType,\n      audioCue: scene.audioCue,\n      // Video generation API parameters\n      videoParams: {\n        model: 'veo-3.1',  // Can be changed to actual API model\n        image: image.imageUrl || image.imageB64,\n        prompt: `${scene.action}. Camera: ${scene.shotType}. Smooth, cinematic motion. High quality 4K.`,\n        duration_seconds: parseInt(scene.duration) || 3,\n        aspect_ratio: '16:9',\n        fps: 24\n      }\n    }\n  };\n});\n\nreturn videoRequests;"
+      }
+    },
+    {
+      "id": "generate-videos",
+      "name": "Phase 3: Generate Videos (API Call)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3770, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configure Ad Parameters').first().json.videoApiUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.httpHeaderAuth.value}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.videoParams) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "video-api-credentials",
+          "name": "Video Generation API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "compile-video-results",
+      "name": "Compile Video Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3990, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Compile all video generation results\nconst allItems = $input.all();\nconst imageData = $('Compile Image Generation Results').first().json;\nconst scenes = imageData.scenes;\n\nconst videoResults = allItems.map((item, index) => {\n  const videoData = item.json;\n  const scene = scenes[index];\n  \n  return {\n    sceneNumber: index + 1,\n    duration: scene.duration,\n    shotType: scene.shotType,\n    videoUrl: videoData.video_url || videoData.url,\n    videoId: videoData.id || videoData.video_id,\n    status: videoData.status || (videoData.error ? 'failed' : 'completed'),\n    error: videoData.error || null,\n    // For the 8-second rule - recommend best segment\n    recommendedSegment: {\n      startTime: 0,\n      endTime: Math.min(parseInt(scene.duration) || 3, 3),\n      note: 'Select the best 1-3 second segment with most realistic motion'\n    }\n  };\n});\n\nconst successCount = videoResults.filter(v => v.status === 'completed').length;\nconst failedCount = videoResults.filter(v => v.status === 'failed').length;\n\nreturn [{\n  json: {\n    brandName: imageData.brandName,\n    productName: imageData.productName,\n    totalVideos: videoResults.length,\n    successfulVideos: successCount,\n    failedVideos: failedCount,\n    videos: videoResults,\n    originalScenes: scenes,\n    phase3Complete: true,\n    assemblyInstructions: {\n      step1: 'Import all video clips into your video editor (e.g., CapCut)',\n      step2: 'Add your music track to the timeline FIRST',\n      step3: 'Identify beat drops and musical transitions',\n      step4: 'Cut each video clip to the best 1-3 second segment',\n      step5: 'Align clip cuts precisely to musical beats',\n      step6: 'Add text overlays and brand elements',\n      step7: 'Apply fade-to-black transition at the end',\n      step8: 'Export in 4K resolution'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "final-review",
+      "name": "Final Review & Export Instructions",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4210, 200],
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Video Generation Complete - Phase 3",
+        "formDescription": "=Video generation for {{ $json.brandName }} {{ $json.productName }} is complete!\n\nResults:\n- Total Videos: {{ $json.totalVideos }}\n- Successful: {{ $json.successfulVideos }}\n- Failed: {{ $json.failedVideos }}\n\nProceed to download assets and begin assembly in your video editor.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Video Quality Check",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "All Videos Acceptable - Download Assets"
+                  },
+                  {
+                    "option": "Some Videos Need Regeneration"
+                  },
+                  {
+                    "option": "Restart Video Generation Phase"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Export Format Preference",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Download Individual Clips"
+                  },
+                  {
+                    "option": "Create Asset Package (ZIP)"
+                  },
+                  {
+                    "option": "Send to Cloud Storage"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "webhookId": "final-review-webhook"
+    },
+    {
+      "id": "generate-export-package",
+      "name": "Generate Export Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4430, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Generate final export package with all assets and instructions\nconst videoData = $('Compile Video Results').first().json;\nconst imageData = $('Compile Image Generation Results').first().json;\n\nconst exportPackage = {\n  projectName: `${videoData.brandName}_${videoData.productName}_Ad`,\n  createdAt: new Date().toISOString(),\n  \n  // All image assets\n  images: imageData.images.map((img, i) => ({\n    filename: `scene_${i + 1}_image.png`,\n    url: img.imageUrl,\n    sceneNumber: img.sceneNumber,\n    isAnchor: img.isAnchor\n  })),\n  \n  // All video assets\n  videos: videoData.videos.map((vid, i) => ({\n    filename: `scene_${i + 1}_video.mp4`,\n    url: vid.videoUrl,\n    sceneNumber: vid.sceneNumber,\n    duration: vid.duration,\n    recommendedCut: vid.recommendedSegment\n  })),\n  \n  // Storyboard reference\n  storyboard: videoData.originalScenes,\n  \n  // Assembly instructions\n  assemblyGuide: videoData.assemblyInstructions,\n  \n  // Project summary\n  summary: {\n    brandName: videoData.brandName,\n    productName: videoData.productName,\n    totalScenes: videoData.totalVideos,\n    targetDuration: '30 seconds',\n    recommendedEditor: 'CapCut or similar video editor',\n    exportSettings: {\n      resolution: '3840x2160 (4K)',\n      frameRate: '24fps',\n      codec: 'H.264 or H.265'\n    }\n  }\n};\n\nreturn [{ json: exportPackage }];"
+      }
+    },
+    {
+      "id": "output-success",
+      "name": "Workflow Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [4650, 200],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "AI Advertisement workflow completed successfully!",
+              "type": "string"
+            },
+            {
+              "id": "export-package",
+              "name": "exportPackage",
+              "value": "={{ $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "include": "all"
+        }
+      }
+    },
+    {
+      "id": "rejection-handler",
+      "name": "Handle Rejection (Storyboard)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1570, 500],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "rejected",
+              "type": "string"
+            },
+            {
+              "id": "phase",
+              "name": "rejectedPhase",
+              "value": "storyboard",
+              "type": "string"
+            },
+            {
+              "id": "feedback",
+              "name": "feedback",
+              "value": "={{ $json['Feedback/Notes'] }}",
+              "type": "string"
+            },
+            {
+              "id": "action",
+              "name": "nextAction",
+              "value": "Re-run workflow with modified parameters based on feedback",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "image-rejection-handler",
+      "name": "Handle Rejection (Images)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3550, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "partial_rejection",
+              "type": "string"
+            },
+            {
+              "id": "phase",
+              "name": "rejectedPhase",
+              "value": "image_generation",
+              "type": "string"
+            },
+            {
+              "id": "scenes-to-redo",
+              "name": "scenesToRegenerate",
+              "value": "={{ $json['Scenes to Regenerate (comma-separated numbers)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "notes",
+              "name": "styleNotes",
+              "value": "={{ $json['Additional Style Notes'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Start Workflow": {
+      "main": [
+        [
+          {
+            "node": "Configure Ad Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure Ad Parameters": {
+      "main": [
+        [
+          {
+            "node": "Phase 1: Generate Storyboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 1: Generate Storyboard": {
+      "main": [
+        [
+          {
+            "node": "Parse Storyboard JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Storyboard JSON": {
+      "main": [
+        [
+          {
+            "node": "Review Storyboard (Human Approval)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Storyboard (Human Approval)": {
+      "main": [
+        [
+          {
+            "node": "Check Storyboard Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Storyboard Approval": {
+      "main": [
+        [
+          {
+            "node": "Prepare Scenes for Image Generation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Rejection (Storyboard)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Scenes for Image Generation": {
+      "main": [
+        [
+          {
+            "node": "Phase 2a: Generate Anchor Image (Scene 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 2a: Generate Anchor Image (Scene 1)": {
+      "main": [
+        [
+          {
+            "node": "Store Anchor Image Reference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Anchor Image Reference": {
+      "main": [
+        [
+          {
+            "node": "Split Remaining Scenes (2-7)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge All Generated Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Remaining Scenes (2-7)": {
+      "main": [
+        [
+          {
+            "node": "Phase 2b: Generate Consistent Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 2b: Generate Consistent Images": {
+      "main": [
+        [
+          {
+            "node": "Merge All Generated Images",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Generated Images": {
+      "main": [
+        [
+          {
+            "node": "Compile Image Generation Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Image Generation Results": {
+      "main": [
+        [
+          {
+            "node": "Review Generated Images (Human Approval)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Generated Images (Human Approval)": {
+      "main": [
+        [
+          {
+            "node": "Check Image Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Image Approval": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Generation Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Rejection (Images)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Generation Requests": {
+      "main": [
+        [
+          {
+            "node": "Phase 3: Generate Videos (API Call)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 3: Generate Videos (API Call)": {
+      "main": [
+        [
+          {
+            "node": "Compile Video Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Video Results": {
+      "main": [
+        [
+          {
+            "node": "Final Review & Export Instructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Review & Export Instructions": {
+      "main": [
+        [
+          {
+            "node": "Generate Export Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Export Package": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI",
+      "id": "1"
+    },
+    {
+      "name": "Advertisement",
+      "id": "2"
+    },
+    {
+      "name": "Video",
+      "id": "3"
+    },
+    {
+      "name": "Image Generation",
+      "id": "4"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}
