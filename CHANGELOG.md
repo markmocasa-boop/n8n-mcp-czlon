@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.5] - 2025-11-27
+
+### 🔧 Fixed
+
+- **Tools Documentation: Runtime Token Optimization**
+  - Removed historical migration information from tool descriptions (e.g., "Replaces X, Y, Z...")
+  - Removed version-specific references (v2.21.1, issue #357) that are not needed at runtime
+  - Cleaned up consolidation comments in index.ts
+  - Documentation now starts directly with functional content for better AI agent efficiency
+  - Estimated savings: ~128 tokens per full documentation request
+  - Affected tools: `get_node`, `validate_node`, `search_templates`, `n8n_executions`, `n8n_get_workflow`, `n8n_update_partial_workflow`
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.26.4] - 2025-11-26
 
 ### 🔧 Fixed

@@ -90,7 +90,6 @@ Full support for all 8 AI connection types used in n8n AI workflows:
 
 **Important Notes**:
 - **AI nodes do NOT require main connections**: Nodes like OpenAI Chat Model, Postgres Chat Memory, Embeddings OpenAI, and Supabase Vector Store use AI-specific connection types exclusively. They should ONLY have connections like \`ai_languageModel\`, \`ai_memory\`, \`ai_embedding\`, or \`ai_tool\` - NOT \`main\` connections.
-- **Fixed in v2.21.1**: Validation now correctly recognizes AI nodes that only have AI-specific connections without requiring \`main\` connections (resolves issue #357).
 
 **Best Practices**:
 - Always specify \`sourceOutput\` for AI connections (defaults to "main" if omitted)

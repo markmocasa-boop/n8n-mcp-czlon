@@ -17,9 +17,7 @@ export const getNodeDoc: ToolDocumentation = {
     ]
   },
   full: {
-    description: `Unified tool for all node information needs. Replaces get_node_info, get_node_essentials, get_node_documentation, and search_node_properties with a single versatile API.
-
-**Detail Levels (mode="info", default):**
+    description: `**Detail Levels (mode="info", default):**
 - minimal (~200 tokens): Basic metadata only - nodeType, displayName, description, category
 - standard (~1-2K tokens): Essential properties + operations - recommended for most tasks
 - full (~3-8K tokens): Complete node schema - use only when standard insufficient

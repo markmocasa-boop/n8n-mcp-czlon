@@ -25,7 +25,6 @@ import {
 } from './workflow_management';
 
 // Combine all tool documentations into a single object
-// Total: 19 tools after v2.26.0 consolidation
 export const toolsDocumentation: Record<string, ToolDocumentation> = {
   // System tools
   tools_documentation: toolsDocumentationDoc,
@@ -37,20 +36,20 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
   // Discovery tools
   search_nodes: searchNodesDoc,
 
-  // Configuration tools (consolidated)
-  get_node: getNodeDoc,  // Replaces: get_node_info, get_node_essentials, get_node_documentation, search_node_properties
+  // Configuration tools
+  get_node: getNodeDoc,
 
-  // Validation tools (consolidated)
-  validate_node: validateNodeDoc,  // Replaces: validate_node_operation, validate_node_minimal
-  validate_workflow: validateWorkflowDoc,  // Options replace: validate_workflow_connections, validate_workflow_expressions
+  // Validation tools
+  validate_node: validateNodeDoc,
+  validate_workflow: validateWorkflowDoc,
 
-  // Template tools (consolidated)
+  // Template tools
   get_template: getTemplateDoc,
-  search_templates: searchTemplatesDoc,  // Modes replace: list_node_templates, search_templates_by_metadata, get_templates_for_task
+  search_templates: searchTemplatesDoc,
 
   // Workflow Management tools (n8n API)
   n8n_create_workflow: n8nCreateWorkflowDoc,
-  n8n_get_workflow: n8nGetWorkflowDoc,  // Modes replace: n8n_get_workflow_details, n8n_get_workflow_structure, n8n_get_workflow_minimal
+  n8n_get_workflow: n8nGetWorkflowDoc,
   n8n_update_full_workflow: n8nUpdateFullWorkflowDoc,
   n8n_update_partial_workflow: n8nUpdatePartialWorkflowDoc,
   n8n_delete_workflow: n8nDeleteWorkflowDoc,
@@ -58,8 +57,8 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
   n8n_validate_workflow: n8nValidateWorkflowDoc,
   n8n_autofix_workflow: n8nAutofixWorkflowDoc,
   n8n_trigger_webhook_workflow: n8nTriggerWebhookWorkflowDoc,
-  n8n_executions: n8nExecutionsDoc,  // Actions replace: n8n_get_execution, n8n_list_executions, n8n_delete_execution
-  n8n_workflow_versions: n8nWorkflowVersionsDoc  // Modes: list, get, rollback, delete, prune, truncate
+  n8n_executions: n8nExecutionsDoc,
+  n8n_workflow_versions: n8nWorkflowVersionsDoc
 };
 
 // Re-export types

@@ -16,9 +16,7 @@ export const n8nExecutionsDoc: ToolDocumentation = {
     ]
   },
   full: {
-    description: `Unified execution management tool. Replaces n8n_get_execution, n8n_list_executions, and n8n_delete_execution.
-
-**Actions:**
+    description: `**Actions:**
 - get: Retrieve execution details by ID with configurable detail level
 - list: List executions with filtering and pagination
 - delete: Remove an execution record from history

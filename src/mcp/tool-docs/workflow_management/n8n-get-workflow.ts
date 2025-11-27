@@ -16,9 +16,7 @@ export const n8nGetWorkflowDoc: ToolDocumentation = {
     ]
   },
   full: {
-    description: `Unified workflow retrieval with configurable detail levels. Replaces n8n_get_workflow, n8n_get_workflow_details, n8n_get_workflow_structure, and n8n_get_workflow_minimal.
-
-**Modes:**
+    description: `**Modes:**
 - full (default): Complete workflow including all nodes with parameters, connections, and settings
 - details: Full workflow plus execution statistics (success/error counts, last execution time)
 - structure: Nodes and connections only - useful for topology analysis

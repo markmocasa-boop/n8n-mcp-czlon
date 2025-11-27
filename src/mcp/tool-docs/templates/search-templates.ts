@@ -16,9 +16,7 @@ export const searchTemplatesDoc: ToolDocumentation = {
     ]
   },
   full: {
-    description: `Unified template search tool with four search modes. Replaces search_templates, list_node_templates, search_templates_by_metadata, and get_templates_for_task.
-
-**Search Modes:**
+    description: `**Search Modes:**
 - keyword (default): Full-text search across template names and descriptions
 - by_nodes: Find templates that use specific node types
 - by_task: Get curated templates for predefined task categories

@@ -16,9 +16,7 @@ export const validateNodeDoc: ToolDocumentation = {
     ]
   },
   full: {
-    description: `Unified node configuration validator. Replaces validate_node_operation and validate_node_minimal with a single tool.
-
-**Validation Modes:**
+    description: `**Validation Modes:**
 - full (default): Comprehensive validation with errors, warnings, suggestions, and automatic structure validation
 - minimal: Quick check for required fields only - fast but less thorough
 
