@@ -501,6 +501,9 @@ Complete guide for integrating n8n-MCP with Windsurf using project rules.
 ### [Codex](./docs/CODEX_SETUP.md)
 Complete guide for integrating n8n-MCP with Codex.
 
+### [Antigravity](./docs/ANTIGRAVITY_SETUP.md)
+Complete guide for integrating n8n-MCP with Antigravity.
+
 ## 🎓 Add Claude Skills (Optional)
 
 Supercharge your n8n workflow building with specialized skills that teach AI how to build production-ready workflows!
