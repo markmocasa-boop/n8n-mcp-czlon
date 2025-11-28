@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Test the schema directly without needing full API mocking
 const deployTemplateSchema = z.object({
-  templateId: z.number(),
+  templateId: z.number().positive().int(),
   name: z.string().optional(),
   autoUpgradeVersions: z.boolean().default(true),
   validate: z.boolean().default(true),
@@ -16,7 +16,7 @@ const deployTemplateSchema = z.object({
 
 describe('handleDeployTemplate Schema Validation', () => {
   describe('Input Schema', () => {
-    it('should require templateId as a number', () => {
+    it('should require templateId as a positive integer', () => {
       // Valid input
       const validResult = deployTemplateSchema.safeParse({ templateId: 123 });
       expect(validResult.success).toBe(true);
@@ -28,6 +28,18 @@ describe('handleDeployTemplate Schema Validation', () => {
       // Invalid: templateId as string
       const stringResult = deployTemplateSchema.safeParse({ templateId: '123' });
       expect(stringResult.success).toBe(false);
+
+      // Invalid: negative templateId
+      const negativeResult = deployTemplateSchema.safeParse({ templateId: -1 });
+      expect(negativeResult.success).toBe(false);
+
+      // Invalid: zero templateId
+      const zeroResult = deployTemplateSchema.safeParse({ templateId: 0 });
+      expect(zeroResult.success).toBe(false);
+
+      // Invalid: decimal templateId
+      const decimalResult = deployTemplateSchema.safeParse({ templateId: 123.5 });
+      expect(decimalResult.success).toBe(false);
     });
 
     it('should accept optional name parameter', () => {

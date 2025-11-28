@@ -1789,7 +1789,7 @@ export async function handleDiagnostic(request: any, context?: InstanceContext):
 
   // Check which tools are available
   const documentationTools = 7; // Base documentation tools (after v2.26.0 consolidation)
-  const managementTools = apiConfigured ? 12 : 0; // Management tools requiring API (after v2.26.0 consolidation)
+  const managementTools = apiConfigured ? 13 : 0; // Management tools requiring API (includes n8n_deploy_template)
   const totalTools = documentationTools + managementTools;
 
   // Check npm version
@@ -2196,7 +2196,7 @@ export async function handleWorkflowVersions(
 // ========================================================================
 
 const deployTemplateSchema = z.object({
-  templateId: z.number(),
+  templateId: z.number().positive().int(),
   name: z.string().optional(),
   autoUpgradeVersions: z.boolean().default(true),
   validate: z.boolean().default(true),
@@ -2243,8 +2243,8 @@ export async function handleDeployTemplate(
       };
     }
 
-    // Extract workflow from template
-    const workflow = template.workflow;
+    // Extract workflow from template (deep copy to avoid mutation)
+    const workflow = JSON.parse(JSON.stringify(template.workflow));
     if (!workflow || !workflow.nodes) {
       return {
         success: false,
