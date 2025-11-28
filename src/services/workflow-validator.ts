@@ -383,13 +383,10 @@ export class WorkflowValidator {
             });
           }
         }
-        // Normalize node type FIRST to ensure consistent lookup
+        // Normalize node type for database lookup (DO NOT mutate the original workflow)
+        // The normalizer converts to short form (nodes-base.*) for database queries,
+        // but n8n API requires full form (n8n-nodes-base.*). Never modify the input workflow.
         const normalizedType = NodeTypeNormalizer.normalizeToFullForm(node.type);
-
-        // Update node type in place if it was normalized
-        if (normalizedType !== node.type) {
-          node.type = normalizedType;
-        }
 
         // Get node definition using normalized type (needed for typeVersion validation)
         const nodeInfo = this.nodeRepository.getNode(normalizedType);
@@ -684,7 +681,12 @@ export class WorkflowValidator {
         }
 
         // Special validation for SplitInBatches node
-        if (sourceNode && sourceNode.type === 'nodes-base.splitInBatches') {
+        // Check both full form (n8n-nodes-base.*) and short form (nodes-base.*)
+        const isSplitInBatches = sourceNode && (
+          sourceNode.type === 'n8n-nodes-base.splitInBatches' ||
+          sourceNode.type === 'nodes-base.splitInBatches'
+        );
+        if (isSplitInBatches) {
           this.validateSplitInBatchesConnection(
             sourceNode,
             outputIndex,
@@ -696,8 +698,8 @@ export class WorkflowValidator {
 
         // Check for self-referencing connections
         if (connection.node === sourceName) {
-          // This is only a warning for non-loop nodes
-          if (sourceNode && sourceNode.type !== 'nodes-base.splitInBatches') {
+          // This is only a warning for non-loop nodes (not SplitInBatches)
+          if (sourceNode && !isSplitInBatches) {
             result.warnings.push({
               type: 'warning',
               message: `Node "${sourceName}" has a self-referencing connection. This can cause infinite loops.`
