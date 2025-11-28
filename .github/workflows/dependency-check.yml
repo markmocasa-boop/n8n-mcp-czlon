@@ -17,6 +17,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/dependency-check.yml'
+  # Allow manual trigger for debugging
+  workflow_dispatch:
   # Run weekly to catch upstream dependency changes
   schedule:
     - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
@@ -74,6 +76,11 @@ jobs:
           echo ""
 
           # Check MCP SDK version - must be exactly 1.20.1
+          if [[ "$SDK_VERSION" == "not found" ]]; then
+            echo "❌ FAILED: Could not determine MCP SDK version!"
+            echo "   The dependency may not have been installed correctly."
+            exit 1
+          fi
           if [[ "$SDK_VERSION" != "1.20.1" ]]; then
             echo "❌ FAILED: MCP SDK version mismatch!"
             echo "   Expected: 1.20.1"
@@ -84,8 +91,13 @@ jobs:
           fi
           echo "✅ MCP SDK version is correct: $SDK_VERSION"
 
-          # Check Zod version - must be 3.x (not 4.x)
-          if [[ "$ZOD_VERSION" == 4.* ]]; then
+          # Check Zod version - must be 3.x (not 4.x, including pre-releases)
+          if [[ "$ZOD_VERSION" == "not found" ]]; then
+            echo "❌ FAILED: Could not determine Zod version!"
+            echo "   The dependency may not have been installed correctly."
+            exit 1
+          fi
+          if [[ "$ZOD_VERSION" =~ ^4\. ]]; then
             echo "❌ FAILED: Zod v4 detected - incompatible with MCP SDK 1.20.1!"
             echo "   Expected: 3.x"
             echo "   Got: $ZOD_VERSION"
@@ -139,11 +151,13 @@ jobs:
 
             // Wait for response or timeout
             let output = '';
+            let stderrOutput = '';
             proc.stdout.on('data', (data) => {
               output += data.toString();
             });
 
             proc.stderr.on('data', (data) => {
+              stderrOutput += data.toString();
               console.error('stderr:', data.toString());
             });
 
@@ -151,6 +165,15 @@ jobs:
             await new Promise((resolve) => setTimeout(resolve, 5000));
 
             proc.kill();
+
+            // Check for Zod v4 compatibility errors (the bug we're testing for)
+            const allOutput = output + stderrOutput;
+            if (allOutput.includes('_zod') || allOutput.includes('Cannot read properties of undefined')) {
+              console.error('❌ FAILED: Zod compatibility error detected!');
+              console.error('This indicates the SDK/Zod version fix is not working.');
+              console.error('See issues #440, #444, #446, #447, #450');
+              process.exit(1);
+            }
 
             if (output.includes('"result"')) {
               console.log('✅ MCP server initialized successfully');
