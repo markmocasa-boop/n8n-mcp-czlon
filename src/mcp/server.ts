@@ -856,6 +856,12 @@ export class N8NDocumentationMCPServer {
           ? { valid: true, errors: [] }
           : { valid: false, errors: [{ field: 'action', message: 'action is required' }] };
         break;
+      case 'n8n_deploy_template':
+        // Requires templateId parameter
+        validationResult = args.templateId !== undefined
+          ? { valid: true, errors: [] }
+          : { valid: false, errors: [{ field: 'templateId', message: 'templateId is required' }] };
+        break;
       default:
         // For tools not yet migrated to schema validation, use basic validation
         return this.validateToolParamsBasic(toolName, args, legacyRequiredParams || []);
@@ -1202,6 +1208,13 @@ export class N8NDocumentationMCPServer {
       case 'n8n_workflow_versions':
         this.validateToolParams(name, args, ['mode']);
         return n8nHandlers.handleWorkflowVersions(args, this.repository!, this.instanceContext);
+
+      case 'n8n_deploy_template':
+        this.validateToolParams(name, args, ['templateId']);
+        await this.ensureInitialized();
+        if (!this.templateService) throw new Error('Template service not initialized');
+        if (!this.repository) throw new Error('Repository not initialized');
+        return n8nHandlers.handleDeployTemplate(args, this.templateService, this.repository, this.instanceContext);
 
       default:
         throw new Error(`Unknown tool: ${name}`);

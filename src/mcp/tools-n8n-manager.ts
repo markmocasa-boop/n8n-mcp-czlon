@@ -445,5 +445,40 @@ export const n8nManagementTools: ToolDefinition[] = [
       },
       required: ['mode']
     }
+  },
+
+  // Template Deployment Tool
+  {
+    name: 'n8n_deploy_template',
+    description: `Deploy a workflow template from n8n.io directly to your n8n instance. Fetches template, optionally upgrades node versions and validates, then creates workflow. Returns workflow ID and required credentials list.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        templateId: {
+          type: 'number',
+          description: 'Template ID from n8n.io (required)'
+        },
+        name: {
+          type: 'string',
+          description: 'Custom workflow name (default: template name)'
+        },
+        autoUpgradeVersions: {
+          type: 'boolean',
+          default: true,
+          description: 'Automatically upgrade node typeVersions to latest supported (default: true)'
+        },
+        validate: {
+          type: 'boolean',
+          default: true,
+          description: 'Validate workflow before deployment (default: true)'
+        },
+        stripCredentials: {
+          type: 'boolean',
+          default: true,
+          description: 'Remove credential references from nodes - user configures in n8n UI (default: true)'
+        }
+      },
+      required: ['templateId']
+    }
   }
 ];

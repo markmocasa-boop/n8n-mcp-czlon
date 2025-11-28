@@ -34,6 +34,7 @@ import { ExpressionFormatValidator, ExpressionFormatIssue } from '../services/ex
 import { WorkflowVersioningService } from '../services/workflow-versioning-service';
 import { handleUpdatePartialWorkflow } from './handlers-workflow-diff';
 import { telemetry } from '../telemetry';
+import { TemplateService } from '../templates/template-service';
 import {
   createCacheKey,
   createInstanceCache,
@@ -2180,6 +2181,223 @@ export async function handleWorkflowVersions(
         success: false,
         error: 'Invalid input',
         details: { errors: error.errors }
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+// ========================================================================
+// Template Deployment Handler
+// ========================================================================
+
+const deployTemplateSchema = z.object({
+  templateId: z.number(),
+  name: z.string().optional(),
+  autoUpgradeVersions: z.boolean().default(true),
+  validate: z.boolean().default(true),
+  stripCredentials: z.boolean().default(true)
+});
+
+interface RequiredCredential {
+  nodeType: string;
+  nodeName: string;
+  credentialType: string;
+}
+
+/**
+ * Deploy a workflow template from n8n.io directly to the user's n8n instance.
+ *
+ * This handler:
+ * 1. Fetches the template from the local template database
+ * 2. Extracts credential requirements for user guidance
+ * 3. Optionally strips credentials (for user to configure in n8n UI)
+ * 4. Optionally upgrades node typeVersions to latest supported
+ * 5. Optionally validates the workflow structure
+ * 6. Creates the workflow in the n8n instance
+ */
+export async function handleDeployTemplate(
+  args: unknown,
+  templateService: TemplateService,
+  repository: NodeRepository,
+  context?: InstanceContext
+): Promise<McpToolResponse> {
+  try {
+    const client = ensureApiConfigured(context);
+    const input = deployTemplateSchema.parse(args);
+
+    // Fetch template
+    const template = await templateService.getTemplate(input.templateId, 'full');
+    if (!template) {
+      return {
+        success: false,
+        error: `Template ${input.templateId} not found`,
+        details: {
+          hint: 'Use search_templates to find available templates',
+          templateUrl: `https://n8n.io/workflows/${input.templateId}`
+        }
+      };
+    }
+
+    // Extract workflow from template
+    const workflow = template.workflow;
+    if (!workflow || !workflow.nodes) {
+      return {
+        success: false,
+        error: 'Template has invalid workflow structure',
+        details: { templateId: input.templateId }
+      };
+    }
+
+    // Set workflow name
+    const workflowName = input.name || template.name;
+
+    // Collect required credentials before stripping
+    const requiredCredentials: RequiredCredential[] = [];
+    for (const node of workflow.nodes) {
+      if (node.credentials && typeof node.credentials === 'object') {
+        for (const [credType] of Object.entries(node.credentials)) {
+          requiredCredentials.push({
+            nodeType: node.type,
+            nodeName: node.name,
+            credentialType: credType
+          });
+        }
+      }
+    }
+
+    // Strip credentials if requested
+    if (input.stripCredentials) {
+      workflow.nodes = workflow.nodes.map((node: any) => {
+        const { credentials, ...rest } = node;
+        return rest;
+      });
+    }
+
+    // Auto-upgrade typeVersions if requested
+    if (input.autoUpgradeVersions) {
+      const autoFixer = new WorkflowAutoFixer(repository);
+
+      // Run validation to get issues to fix
+      const validator = new WorkflowValidator(repository, EnhancedConfigValidator);
+      const validationResult = await validator.validateWorkflow(workflow, {
+        validateNodes: true,
+        validateConnections: false,
+        validateExpressions: false,
+        profile: 'runtime'
+      });
+
+      // Generate fixes focused on typeVersion upgrades
+      const fixResult = await autoFixer.generateFixes(
+        workflow,
+        validationResult,
+        [],
+        { fixTypes: ['typeversion-upgrade', 'typeversion-correction'] }
+      );
+
+      // Apply fixes to workflow
+      if (fixResult.operations.length > 0) {
+        for (const op of fixResult.operations) {
+          if (op.type === 'updateNode' && op.updates) {
+            const node = workflow.nodes.find((n: any) =>
+              n.id === op.nodeId || n.name === op.nodeName
+            );
+            if (node) {
+              for (const [path, value] of Object.entries(op.updates)) {
+                if (path === 'typeVersion') {
+                  node.typeVersion = value;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Validate workflow if requested
+    if (input.validate) {
+      const validator = new WorkflowValidator(repository, EnhancedConfigValidator);
+      const validationResult = await validator.validateWorkflow(workflow, {
+        validateNodes: true,
+        validateConnections: true,
+        validateExpressions: true,
+        profile: 'runtime'
+      });
+
+      if (validationResult.errors.length > 0) {
+        return {
+          success: false,
+          error: 'Workflow validation failed',
+          details: {
+            errors: validationResult.errors.map(e => ({
+              node: e.nodeName,
+              message: e.message
+            })),
+            warnings: validationResult.warnings.length,
+            hint: 'Use validate=false to skip validation, or fix the template issues'
+          }
+        };
+      }
+    }
+
+    // Identify trigger type
+    const triggerNode = workflow.nodes.find((n: any) =>
+      n.type?.includes('Trigger') ||
+      n.type?.includes('webhook') ||
+      n.type === 'n8n-nodes-base.webhook'
+    );
+    const triggerType = triggerNode?.type?.split('.').pop() || 'manual';
+
+    // Create workflow via API (always creates inactive)
+    const createdWorkflow = await client.createWorkflow({
+      name: workflowName,
+      nodes: workflow.nodes,
+      connections: workflow.connections,
+      settings: workflow.settings || { executionOrder: 'v1' }
+    });
+
+    // Get base URL for workflow link
+    const apiConfig = context ? getN8nApiConfigFromContext(context) : getN8nApiConfig();
+    const baseUrl = apiConfig?.baseUrl?.replace('/api/v1', '') || '';
+
+    return {
+      success: true,
+      data: {
+        workflowId: createdWorkflow.id,
+        name: createdWorkflow.name,
+        active: false,
+        nodeCount: workflow.nodes.length,
+        triggerType,
+        requiredCredentials: requiredCredentials.length > 0 ? requiredCredentials : undefined,
+        url: baseUrl ? `${baseUrl}/workflow/${createdWorkflow.id}` : undefined,
+        templateId: input.templateId,
+        templateUrl: template.url || `https://n8n.io/workflows/${input.templateId}`
+      },
+      message: `Workflow "${createdWorkflow.name}" deployed successfully from template ${input.templateId}. ${
+        requiredCredentials.length > 0
+          ? `Configure ${requiredCredentials.length} credential(s) in n8n to activate.`
+          : ''
+      }`
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Invalid input',
+        details: { errors: error.errors }
+      };
+    }
+
+    if (error instanceof N8nApiError) {
+      return {
+        success: false,
+        error: getUserFriendlyErrorMessage(error),
+        code: error.code,
+        details: error.details as Record<string, unknown> | undefined
       };
     }
 
