@@ -954,7 +954,7 @@ Once connected, Claude can use these powerful tools:
   - `searchMode: 'by_metadata'` - Filter by `complexity`, `requiredService`, `targetAudience`
 - **`get_template`** - Get complete workflow JSON (modes: nodes_only, structure, full)
 
-### n8n Management Tools (12 tools - Requires API Configuration)
+### n8n Management Tools (13 tools - Requires API Configuration)
 These tools require `N8N_API_URL` and `N8N_API_KEY` in your configuration.
 
 #### Workflow Management
@@ -971,6 +971,7 @@ These tools require `N8N_API_URL` and `N8N_API_KEY` in your configuration.
 - **`n8n_validate_workflow`** - Validate workflows in n8n by ID
 - **`n8n_autofix_workflow`** - Automatically fix common workflow errors
 - **`n8n_workflow_versions`** - Manage version history and rollback
+- **`n8n_deploy_template`** - Deploy templates from n8n.io directly to your instance (NEW!)
 
 #### Execution Management
 - **`n8n_trigger_webhook_workflow`** - Trigger workflows via webhook URL
