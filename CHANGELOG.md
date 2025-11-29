@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.27.1] - 2025-11-29
+
+### 🐛 Bug Fixes
+
+**Issue #454: Docker Image Missing Zod Fix from #450**
+
+Fixed Docker image build that was missing the pinned MCP SDK version, causing `n8n_create_workflow` Zod validation errors to persist in the 2.27.0 Docker image.
+
+#### Root Cause
+
+Two files were not updated when #450 pinned the SDK version in `package.json`:
+- `package.runtime.json` had `"@modelcontextprotocol/sdk": "^1.13.2"` instead of `"1.20.1"`
+- `Dockerfile` builder stage had `@modelcontextprotocol/sdk@^1.12.1` hardcoded
+
+The Docker runtime stage uses `package.runtime.json` (not `package.json`), and the builder stage has hardcoded dependency versions.
+
+#### Changes
+
+- **package.runtime.json**: Updated SDK to pinned version `"1.20.1"` (no caret)
+- **Dockerfile**: Updated builder stage SDK to `@1.20.1` and pinned `zod@3.24.1`
+
+#### Impact
+
+- Docker images now include the correct MCP SDK version with Zod fix
+- `n8n_create_workflow` and other workflow tools work correctly in Docker deployments
+- No changes to functionality - this is a build configuration fix
+
+Fixes #454
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
+## [2.27.0] - 2025-11-28
+
+### ✨ Features
+
+**n8n_deploy_template Tool**
+
+Added new tool for one-click deployment of n8n.io workflow templates directly to your n8n instance.
+
+#### Key Features
+
+- Fetches templates from n8n.io by ID
+- Automatically upgrades node typeVersions to latest supported
+- Validates workflow before deployment
+- Lists required credentials for configuration
+- Strips credential references (user configures in n8n UI)
+
+#### Usage
+
+```javascript
+n8n_deploy_template({
+  templateId: 2639,           // Required: template ID from n8n.io
+  name: "My Custom Name",     // Optional: custom workflow name
+  autoUpgradeVersions: true,  // Default: upgrade node versions
+  validate: true,             // Default: validate before deploy
+  stripCredentials: true      // Default: remove credential refs
+})
+```
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.26.5] - 2025-11-27
 
 ### 🔧 Fixed
