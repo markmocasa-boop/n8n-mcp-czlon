@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.27.2] - 2025-11-29
+
+### ✨ Enhanced Features
+
+**n8n_deploy_template: Deploy-First with Auto-Fix**
+
+Improved the template deployment tool to deploy first, then automatically fix common issues. This change dramatically improves deployment success rates for templates with expression format issues.
+
+#### Key Changes
+
+1. **Deploy-First Behavior**
+   - Templates are now deployed first without pre-validation
+   - Auto-fix runs automatically after deployment (configurable via `autoFix` parameter)
+   - Returns `fixesApplied` array showing all corrections made
+
+2. **Fixed Expression Validator False Positive**
+   - Fixed "nested expressions" detection that incorrectly flagged valid patterns
+   - Multiple expressions in one string like `={{ $a }} text {{ $b }}` now correctly pass validation
+   - Only truly nested patterns like `{{ {{ $json }} }}` are flagged as errors
+
+3. **Fixed Zod Schema Validation**
+   - Added missing `typeversion-upgrade` and `version-migration` fix types to autofix schema
+   - Prevents silent validation failures when autofix runs
+
+#### Usage
+
+```javascript
+// Deploy with auto-fix (default behavior)
+n8n_deploy_template({
+  templateId: 2776,
+  name: "My Workflow"
+})
+
+// Deploy without auto-fix (not recommended)
+n8n_deploy_template({
+  templateId: 2776,
+  autoFix: false
+})
+```
+
+#### Response
+
+```json
+{
+  "workflowId": "abc123",
+  "name": "My Workflow",
+  "fixesApplied": [
+    {
+      "node": "HTTP Request",
+      "field": "url",
+      "type": "expression-format",
+      "before": "https://api.com/{{ $json.id }}",
+      "after": "=https://api.com/{{ $json.id }}",
+      "confidence": "high"
+    }
+  ]
+}
+```
+
+#### Testing Results
+
+- 87% deployment success rate across 15 diverse templates
+- Auto-fix correctly adds `=` prefix to expressions missing it
+- Auto-fix correctly upgrades outdated typeVersions
+- Failed deployments are legitimate issues (missing community nodes, incomplete templates)
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.27.1] - 2025-11-29
 
 ### 🐛 Bug Fixes

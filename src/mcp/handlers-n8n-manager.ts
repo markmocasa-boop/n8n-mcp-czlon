@@ -396,7 +396,9 @@ const autofixWorkflowSchema = z.object({
     'typeversion-correction',
     'error-output-config',
     'node-type-correction',
-    'webhook-missing-path'
+    'webhook-missing-path',
+    'typeversion-upgrade',
+    'version-migration'
   ])).optional(),
   confidenceThreshold: z.enum(['high', 'medium', 'low']).optional().default('medium'),
   maxFixes: z.number().optional().default(50)
@@ -2199,7 +2201,7 @@ const deployTemplateSchema = z.object({
   templateId: z.number().positive().int(),
   name: z.string().optional(),
   autoUpgradeVersions: z.boolean().default(true),
-  validate: z.boolean().default(true),
+  autoFix: z.boolean().default(true),  // Auto-apply fixes after deployment
   stripCredentials: z.boolean().default(true)
 });
 
@@ -2318,32 +2320,6 @@ export async function handleDeployTemplate(
       }
     }
 
-    // Validate workflow if requested
-    if (input.validate) {
-      const validator = new WorkflowValidator(repository, EnhancedConfigValidator);
-      const validationResult = await validator.validateWorkflow(workflow, {
-        validateNodes: true,
-        validateConnections: true,
-        validateExpressions: true,
-        profile: 'runtime'
-      });
-
-      if (validationResult.errors.length > 0) {
-        return {
-          success: false,
-          error: 'Workflow validation failed',
-          details: {
-            errors: validationResult.errors.map(e => ({
-              node: e.nodeName,
-              message: e.message
-            })),
-            warnings: validationResult.warnings.length,
-            hint: 'Use validate=false to skip validation, or fix the template issues'
-          }
-        };
-      }
-    }
-
     // Identify trigger type
     const triggerNode = workflow.nodes.find((n: any) =>
       n.type?.includes('Trigger') ||
@@ -2353,6 +2329,7 @@ export async function handleDeployTemplate(
     const triggerType = triggerNode?.type?.split('.').pop() || 'manual';
 
     // Create workflow via API (always creates inactive)
+    // Deploy first, then fix - this ensures the workflow exists before we modify it
     const createdWorkflow = await client.createWorkflow({
       name: workflowName,
       nodes: workflow.nodes,
@@ -2363,6 +2340,40 @@ export async function handleDeployTemplate(
     // Get base URL for workflow link
     const apiConfig = context ? getN8nApiConfigFromContext(context) : getN8nApiConfig();
     const baseUrl = apiConfig?.baseUrl?.replace('/api/v1', '') || '';
+
+    // Auto-fix common issues after deployment (expression format, etc.)
+    let fixesApplied: any[] = [];
+    let fixSummary = '';
+
+    if (input.autoFix) {
+      try {
+        // Run autofix on the deployed workflow
+        const autofixResult = await handleAutofixWorkflow(
+          {
+            id: createdWorkflow.id,
+            applyFixes: true,
+            fixTypes: ['expression-format', 'typeversion-upgrade'],
+            confidenceThreshold: 'medium'
+          },
+          repository,
+          context
+        );
+
+        if (autofixResult.success && autofixResult.data) {
+          const fixData = autofixResult.data as { fixesApplied?: number; fixes?: any[] };
+          if (fixData.fixesApplied && fixData.fixesApplied > 0) {
+            fixesApplied = fixData.fixes || [];
+            fixSummary = ` Auto-fixed ${fixData.fixesApplied} issue(s).`;
+          }
+        }
+      } catch (fixError) {
+        // Log but don't fail - autofix is best-effort
+        logger.warn('Auto-fix failed after template deployment', {
+          workflowId: createdWorkflow.id,
+          error: fixError instanceof Error ? fixError.message : 'Unknown error'
+        });
+      }
+    }
 
     return {
       success: true,
@@ -2375,9 +2386,10 @@ export async function handleDeployTemplate(
         requiredCredentials: requiredCredentials.length > 0 ? requiredCredentials : undefined,
         url: baseUrl ? `${baseUrl}/workflow/${createdWorkflow.id}` : undefined,
         templateId: input.templateId,
-        templateUrl: template.url || `https://n8n.io/workflows/${input.templateId}`
+        templateUrl: template.url || `https://n8n.io/workflows/${input.templateId}`,
+        fixesApplied: fixesApplied.length > 0 ? fixesApplied : undefined
       },
-      message: `Workflow "${createdWorkflow.name}" deployed successfully from template ${input.templateId}. ${
+      message: `Workflow "${createdWorkflow.name}" deployed successfully from template ${input.templateId}.${fixSummary} ${
         requiredCredentials.length > 0
           ? `Configure ${requiredCredentials.length} credential(s) in n8n to activate.`
           : ''

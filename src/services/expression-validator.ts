@@ -97,12 +97,12 @@ export class ExpressionValidator {
       errors.push('Unmatched expression brackets {{ }}');
     }
 
-    // Check for nested expressions (not supported in n8n)
-    if (expression.includes('{{') && expression.includes('{{', expression.indexOf('{{') + 2)) {
-      const match = expression.match(/\{\{.*\{\{/);
-      if (match) {
-        errors.push('Nested expressions are not supported');
-      }
+    // Check for truly nested expressions (not supported in n8n)
+    // This means {{ inside another {{ }}, like {{ {{ $json }} }}
+    // NOT multiple expressions like {{ $json.a }} text {{ $json.b }} (which is valid)
+    const nestedPattern = /\{\{[^}]*\{\{/;
+    if (nestedPattern.test(expression)) {
+      errors.push('Nested expressions are not supported (expression inside another expression)');
     }
 
     // Check for empty expressions

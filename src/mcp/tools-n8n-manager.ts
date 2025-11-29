@@ -450,7 +450,7 @@ export const n8nManagementTools: ToolDefinition[] = [
   // Template Deployment Tool
   {
     name: 'n8n_deploy_template',
-    description: `Deploy a workflow template from n8n.io directly to your n8n instance. Fetches template, optionally upgrades node versions and validates, then creates workflow. Returns workflow ID and required credentials list.`,
+    description: `Deploy a workflow template from n8n.io directly to your n8n instance. Deploys first, then auto-fixes common issues (expression format, typeVersions). Returns workflow ID, required credentials, and fixes applied.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -467,10 +467,10 @@ export const n8nManagementTools: ToolDefinition[] = [
           default: true,
           description: 'Automatically upgrade node typeVersions to latest supported (default: true)'
         },
-        validate: {
+        autoFix: {
           type: 'boolean',
           default: true,
-          description: 'Validate workflow before deployment (default: true)'
+          description: 'Auto-apply fixes after deployment for expression format issues, missing = prefix, etc. (default: true)'
         },
         stripCredentials: {
           type: 'boolean',
