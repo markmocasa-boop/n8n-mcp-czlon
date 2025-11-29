@@ -86,6 +86,31 @@ interface CloudPlatformGuide {
 }
 
 /**
+ * Applied Fix from Auto-Fix Operation
+ */
+interface AppliedFix {
+  node: string;
+  field: string;
+  type: string;
+  before: string;
+  after: string;
+  confidence: string;
+}
+
+/**
+ * Auto-Fix Result Data from handleAutofixWorkflow
+ */
+interface AutofixResultData {
+  fixesApplied?: number;
+  fixes?: AppliedFix[];
+  workflowId?: string;
+  workflowName?: string;
+  message?: string;
+  summary?: string;
+  stats?: Record<string, number>;
+}
+
+/**
  * Workflow Validation Response Data
  */
 interface WorkflowValidationResponse {
@@ -2342,8 +2367,9 @@ export async function handleDeployTemplate(
     const baseUrl = apiConfig?.baseUrl?.replace('/api/v1', '') || '';
 
     // Auto-fix common issues after deployment (expression format, etc.)
-    let fixesApplied: any[] = [];
+    let fixesApplied: AppliedFix[] = [];
     let fixSummary = '';
+    let autoFixStatus: 'success' | 'failed' | 'skipped' = 'skipped';
 
     if (input.autoFix) {
       try {
@@ -2360,7 +2386,8 @@ export async function handleDeployTemplate(
         );
 
         if (autofixResult.success && autofixResult.data) {
-          const fixData = autofixResult.data as { fixesApplied?: number; fixes?: any[] };
+          const fixData = autofixResult.data as AutofixResultData;
+          autoFixStatus = 'success';
           if (fixData.fixesApplied && fixData.fixesApplied > 0) {
             fixesApplied = fixData.fixes || [];
             fixSummary = ` Auto-fixed ${fixData.fixesApplied} issue(s).`;
@@ -2368,10 +2395,12 @@ export async function handleDeployTemplate(
         }
       } catch (fixError) {
         // Log but don't fail - autofix is best-effort
+        autoFixStatus = 'failed';
         logger.warn('Auto-fix failed after template deployment', {
           workflowId: createdWorkflow.id,
           error: fixError instanceof Error ? fixError.message : 'Unknown error'
         });
+        fixSummary = ' Auto-fix failed (workflow deployed successfully).';
       }
     }
 
@@ -2387,6 +2416,7 @@ export async function handleDeployTemplate(
         url: baseUrl ? `${baseUrl}/workflow/${createdWorkflow.id}` : undefined,
         templateId: input.templateId,
         templateUrl: template.url || `https://n8n.io/workflows/${input.templateId}`,
+        autoFixStatus,
         fixesApplied: fixesApplied.length > 0 ? fixesApplied : undefined
       },
       message: `Workflow "${createdWorkflow.name}" deployed successfully from template ${input.templateId}.${fixSummary} ${

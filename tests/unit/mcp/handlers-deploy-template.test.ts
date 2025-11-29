@@ -10,7 +10,7 @@ const deployTemplateSchema = z.object({
   templateId: z.number().positive().int(),
   name: z.string().optional(),
   autoUpgradeVersions: z.boolean().default(true),
-  validate: z.boolean().default(true),
+  autoFix: z.boolean().default(true),
   stripCredentials: z.boolean().default(true)
 });
 
@@ -78,11 +78,11 @@ describe('handleDeployTemplate Schema Validation', () => {
       }
     });
 
-    it('should default validate to true', () => {
+    it('should default autoFix to true', () => {
       const result = deployTemplateSchema.safeParse({ templateId: 123 });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.validate).toBe(true);
+        expect(result.data.autoFix).toBe(true);
       }
     });
 
@@ -99,7 +99,7 @@ describe('handleDeployTemplate Schema Validation', () => {
         templateId: 2776,
         name: 'My Deployed Workflow',
         autoUpgradeVersions: false,
-        validate: false,
+        autoFix: false,
         stripCredentials: false
       });
 
@@ -108,7 +108,7 @@ describe('handleDeployTemplate Schema Validation', () => {
         expect(result.data.templateId).toBe(2776);
         expect(result.data.name).toBe('My Deployed Workflow');
         expect(result.data.autoUpgradeVersions).toBe(false);
-        expect(result.data.validate).toBe(false);
+        expect(result.data.autoFix).toBe(false);
         expect(result.data.stripCredentials).toBe(false);
       }
     });

@@ -24,7 +24,7 @@ export const n8nDeployTemplateDoc: ToolDocumentation = {
       autoFix: { type: 'boolean', description: 'Auto-apply fixes after deployment for expression format issues, missing = prefix, etc. (default: true)' },
       stripCredentials: { type: 'boolean', description: 'Remove credential references - user configures in n8n UI (default: true)' }
     },
-    returns: 'Object with workflowId, name, nodeCount, triggerType, requiredCredentials array, url, templateId, templateUrl, and fixesApplied array',
+    returns: 'Object with workflowId, name, nodeCount, triggerType, requiredCredentials array, url, templateId, templateUrl, autoFixStatus (success/failed/skipped), and fixesApplied array',
     examples: [
       `// Deploy template with default settings (auto-fix enabled)
 n8n_deploy_template({templateId: 2776})`,
@@ -54,6 +54,7 @@ n8n_deploy_template({
     bestPractices: [
       'Use search_templates to find templates by use case',
       'Review required credentials in the response',
+      'Check autoFixStatus in response - "success", "failed", or "skipped"',
       'Check fixesApplied in response to see what was automatically corrected',
       'Configure credentials in n8n UI before activating',
       'Test workflow before connecting to production systems'
