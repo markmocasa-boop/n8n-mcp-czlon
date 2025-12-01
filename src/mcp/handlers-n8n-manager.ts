@@ -433,7 +433,7 @@ const autofixWorkflowSchema = z.object({
 // Schema for n8n_test_workflow tool
 const testWorkflowSchema = z.object({
   workflowId: z.string(),
-  triggerType: z.enum(['webhook', 'form', 'chat', 'execute']).optional(),
+  triggerType: z.enum(['webhook', 'form', 'chat']).optional(),
   httpMethod: z.enum(['GET', 'POST', 'PUT', 'DELETE']).optional(),
   webhookPath: z.string().optional(),
   message: z.string().optional(),

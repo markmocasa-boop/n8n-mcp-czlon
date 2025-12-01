@@ -598,7 +598,7 @@ ALWAYS explicitly configure ALL parameters that control node behavior.
    - `n8n_create_workflow(workflow)` - Deploy
    - `n8n_validate_workflow({id})` - Post-deployment check
    - `n8n_update_partial_workflow({id, operations: [...]})` - Batch updates
-   - `n8n_trigger_webhook_workflow()` - Test webhooks
+   - `n8n_test_workflow({workflowId})` - Test workflow execution
 
 ## Critical Warnings
 
@@ -977,7 +977,10 @@ These tools require `N8N_API_URL` and `N8N_API_KEY` in your configuration.
 - **`n8n_deploy_template`** - Deploy templates from n8n.io directly to your instance with auto-fix
 
 #### Execution Management
-- **`n8n_trigger_webhook_workflow`** - Trigger workflows via webhook URL
+- **`n8n_test_workflow`** - Test/trigger workflow execution:
+  - Auto-detects trigger type (webhook, form, chat) from workflow
+  - Supports custom data, headers, and HTTP methods for webhooks
+  - Chat triggers support message and sessionId for conversations
 - **`n8n_executions`** - Unified execution management (v2.26.0):
   - `action: 'list'` - List executions with status filtering
   - `action: 'get'` - Get execution details by ID

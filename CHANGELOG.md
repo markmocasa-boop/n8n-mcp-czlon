@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.0] - 2025-12-01
+
+### ✨ Features
+
+**n8n_test_workflow: Unified Workflow Trigger Tool**
+
+Replaced `n8n_trigger_webhook_workflow` with a new unified `n8n_test_workflow` tool that supports multiple trigger types with auto-detection.
+
+#### Key Features
+
+1. **Auto-Detection of Trigger Type**
+   - Automatically analyzes workflow to detect trigger type (webhook, form, or chat)
+   - No need to specify triggerType unless you want to override detection
+
+2. **Multi-Trigger Support**
+   - **Webhook**: HTTP-based triggers (GET/POST/PUT/DELETE) with custom headers and data
+   - **Form**: Form submission triggers with form field data
+   - **Chat**: AI chat triggers with message and session continuity
+
+3. **SSRF Protection**
+   - All trigger handlers include SSRF URL validation
+   - Blocks requests to private networks, cloud metadata endpoints
+   - Configurable security modes (strict/moderate/permissive)
+
+4. **Extensible Handler Architecture**
+   - Plugin-based trigger handler system
+   - Registry pattern for easy extension
+   - Clean separation of concerns
+
+#### Usage
+
+```javascript
+// Auto-detect trigger type (recommended)
+n8n_test_workflow({workflowId: "123"})
+
+// Webhook with data
+n8n_test_workflow({
+  workflowId: "123",
+  triggerType: "webhook",
+  httpMethod: "POST",
+  data: {name: "John", email: "john@example.com"}
+})
+
+// Chat trigger
+n8n_test_workflow({
+  workflowId: "123",
+  triggerType: "chat",
+  message: "Hello AI assistant",
+  sessionId: "conversation-123"
+})
+
+// Form submission
+n8n_test_workflow({
+  workflowId: "123",
+  triggerType: "form",
+  data: {email: "test@example.com", name: "Test User"}
+})
+```
+
+#### Breaking Changes
+
+- **Removed**: `n8n_trigger_webhook_workflow` tool
+- **Replaced by**: `n8n_test_workflow` with enhanced capabilities
+- **Migration**: Change tool name and add `workflowId` parameter (previously `webhookUrl`)
+
+#### Technical Details
+
+**New Files:**
+- `src/triggers/` - Complete trigger system module
+  - `types.ts` - Type definitions for all trigger types
+  - `trigger-detector.ts` - Auto-detection logic
+  - `trigger-registry.ts` - Handler registration
+  - `handlers/` - Individual handler implementations
+
+**Modified Files:**
+- `src/mcp/handlers-n8n-manager.ts` - New `handleTestWorkflow` function
+- `src/mcp/tools-n8n-manager.ts` - Updated tool definition
+- `src/mcp/tool-docs/workflow_management/` - New documentation
+
+**Test Coverage:**
+- 32 unit tests for trigger detection and registry
+- 30 unit tests for SSRF protection
+- All parameter validation tests updated
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.27.2] - 2025-11-29
 
 ### ✨ Enhanced Features
