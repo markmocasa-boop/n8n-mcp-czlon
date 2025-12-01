@@ -56,10 +56,14 @@ services:
     depends_on:
       n8n:
         condition: service_healthy
+    # Healthcheck: ensure MCP Node process is running
+    # n8n-mcp is a stdio-based MCP server, not an HTTP server on port 3000.
+    # curl-based healthchecks to 127.0.0.1:3000 always fail and mark the
+    # container unhealthy even when MCP is working as expected.
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:$${MCP_PORT:-3000}/health"]
+      test: ["CMD-SHELL", "ps aux | grep 'dist/mcp/index.js' | grep -v grep || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 40s
 

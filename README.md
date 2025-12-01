@@ -482,6 +482,8 @@ Want to use n8n-MCP with your n8n instance? Check out our comprehensive [n8n Dep
 - Cloud deployment on Hetzner, AWS, and other providers
 - Troubleshooting and security best practices
 
+> **Note on Docker healthchecks**: When using `docker-compose.n8n.yml`, n8n-mcp runs as a stdio-based MCP server (Node process) and does not expose an HTTP server on port 3000. Avoid curl-based healthchecks such as `curl 127.0.0.1:3000`, as they will always fail. The provided docker-compose file uses a process-based healthcheck that verifies the MCP Node process is running.
+
 ## 💻 Connect your IDE
 
 n8n-MCP works with multiple AI-powered IDEs and tools. Choose your preferred development environment:
