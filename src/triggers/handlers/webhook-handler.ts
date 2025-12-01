@@ -80,6 +80,13 @@ export class WebhookHandler extends BaseTriggerHandler<WebhookTriggerInput> {
       // Determine HTTP method
       const httpMethod = input.httpMethod || triggerInfo?.httpMethod || 'POST';
 
+      // SSRF protection - validate the webhook URL before making the request
+      const { SSRFProtection } = await import('../../utils/ssrf-protection');
+      const validation = await SSRFProtection.validateWebhookUrl(webhookUrl);
+      if (!validation.valid) {
+        return this.errorResponse(input, `SSRF protection: ${validation.reason}`, startTime);
+      }
+
       // Build webhook request
       const webhookRequest: WebhookRequest = {
         webhookUrl,
