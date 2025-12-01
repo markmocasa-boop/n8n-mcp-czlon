@@ -77,6 +77,6 @@ export const n8nExecutionsDoc: ToolDocumentation = {
       'Execution must exist or returns 404',
       'Delete is permanent - cannot undo'
     ],
-    relatedTools: ['n8n_get_workflow', 'n8n_trigger_webhook_workflow', 'n8n_validate_workflow']
+    relatedTools: ['n8n_get_workflow', 'n8n_test_workflow', 'n8n_validate_workflow']
   }
 };

@@ -6,7 +6,7 @@ export { n8nDeleteWorkflowDoc } from './n8n-delete-workflow';
 export { n8nListWorkflowsDoc } from './n8n-list-workflows';
 export { n8nValidateWorkflowDoc } from './n8n-validate-workflow';
 export { n8nAutofixWorkflowDoc } from './n8n-autofix-workflow';
-export { n8nTriggerWebhookWorkflowDoc } from './n8n-trigger-webhook-workflow';
+export { n8nTestWorkflowDoc } from './n8n-test-workflow';
 export { n8nExecutionsDoc } from './n8n-executions';
 export { n8nWorkflowVersionsDoc } from './n8n-workflow-versions';
 export { n8nDeployTemplateDoc } from './n8n-deploy-template';

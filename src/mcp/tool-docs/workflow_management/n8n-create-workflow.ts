@@ -84,7 +84,7 @@ n8n_create_workflow({
       'Validate with validate_workflow first',
       'Use unique node IDs',
       'Position nodes for readability',
-      'Test with n8n_trigger_webhook_workflow'
+      'Test with n8n_test_workflow'
     ],
     pitfalls: [
       '**REQUIRES N8N_API_URL and N8N_API_KEY environment variables** - tool unavailable without n8n API access',
@@ -95,6 +95,6 @@ n8n_create_workflow({
       '**Auto-sanitization runs on creation**: All nodes sanitized before workflow created (operator structures fixed, missing metadata added)',
       '**Auto-sanitization cannot prevent all failures**: Broken connections or invalid node configurations may still cause creation to fail'
     ],
-    relatedTools: ['validate_workflow', 'n8n_update_partial_workflow', 'n8n_trigger_webhook_workflow']
+    relatedTools: ['validate_workflow', 'n8n_update_partial_workflow', 'n8n_test_workflow']
   }
 };

@@ -19,7 +19,7 @@ import {
   n8nListWorkflowsDoc,
   n8nValidateWorkflowDoc,
   n8nAutofixWorkflowDoc,
-  n8nTriggerWebhookWorkflowDoc,
+  n8nTestWorkflowDoc,
   n8nExecutionsDoc,
   n8nWorkflowVersionsDoc,
   n8nDeployTemplateDoc
@@ -57,7 +57,7 @@ export const toolsDocumentation: Record<string, ToolDocumentation> = {
   n8n_list_workflows: n8nListWorkflowsDoc,
   n8n_validate_workflow: n8nValidateWorkflowDoc,
   n8n_autofix_workflow: n8nAutofixWorkflowDoc,
-  n8n_trigger_webhook_workflow: n8nTriggerWebhookWorkflowDoc,
+  n8n_test_workflow: n8nTestWorkflowDoc,
   n8n_executions: n8nExecutionsDoc,
   n8n_workflow_versions: n8nWorkflowVersionsDoc,
   n8n_deploy_template: n8nDeployTemplateDoc

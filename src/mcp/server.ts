@@ -1176,9 +1176,9 @@ export class N8NDocumentationMCPServer {
         await this.ensureInitialized();
         if (!this.repository) throw new Error('Repository not initialized');
         return n8nHandlers.handleAutofixWorkflow(args, this.repository, this.instanceContext);
-      case 'n8n_trigger_webhook_workflow':
-        this.validateToolParams(name, args, ['webhookUrl']);
-        return n8nHandlers.handleTriggerWebhookWorkflow(args, this.instanceContext);
+      case 'n8n_test_workflow':
+        this.validateToolParams(name, args, ['workflowId']);
+        return n8nHandlers.handleTestWorkflow(args, this.instanceContext);
       case 'n8n_executions': {
         this.validateToolParams(name, args, ['action']);
         const execAction = args.action;

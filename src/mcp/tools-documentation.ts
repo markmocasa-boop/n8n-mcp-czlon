@@ -135,7 +135,7 @@ When working with Code nodes, always start by calling the relevant guide:
 - n8n_list_workflows - List workflows with filters
 - n8n_validate_workflow - Validate workflow by ID
 - n8n_autofix_workflow - Auto-fix common issues
-- n8n_trigger_webhook_workflow - Trigger via webhook
+- n8n_test_workflow - Test/trigger workflows (webhook, form, chat, execute)
 - n8n_executions - Unified execution management (action='get'/'list'/'delete')
 - n8n_health_check - Check n8n API connectivity
 - n8n_workflow_versions - Version history and rollback

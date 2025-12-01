@@ -10,6 +10,7 @@ import {
   ExecutionFilterOptions,
   ExecutionMode
 } from '../types/n8n-api';
+import type { TriggerType, TestWorkflowInput } from '../triggers/types';
 import {
   validateWorkflowStructure,
   hasWebhookTrigger,
@@ -429,11 +430,17 @@ const autofixWorkflowSchema = z.object({
   maxFixes: z.number().optional().default(50)
 });
 
-const triggerWebhookSchema = z.object({
-  webhookUrl: z.string().url(),
+// Schema for n8n_test_workflow tool
+const testWorkflowSchema = z.object({
+  workflowId: z.string(),
+  triggerType: z.enum(['webhook', 'form', 'chat', 'execute']).optional(),
   httpMethod: z.enum(['GET', 'POST', 'PUT', 'DELETE']).optional(),
+  webhookPath: z.string().optional(),
+  message: z.string().optional(),
+  sessionId: z.string().optional(),
   data: z.record(z.unknown()).optional(),
   headers: z.record(z.string()).optional(),
+  timeout: z.number().optional(),
   waitForResponse: z.boolean().optional(),
 });
 
@@ -1235,74 +1242,160 @@ export async function handleAutofixWorkflow(
 
 // Execution Management Handlers
 
-export async function handleTriggerWebhookWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+/**
+ * Handler for n8n_test_workflow tool
+ * Triggers workflow execution via auto-detected or specified trigger type
+ */
+export async function handleTestWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
   try {
     const client = ensureApiConfigured(context);
-    const input = triggerWebhookSchema.parse(args);
+    const input = testWorkflowSchema.parse(args);
 
-    const webhookRequest: WebhookRequest = {
-      webhookUrl: input.webhookUrl,
-      httpMethod: input.httpMethod || 'POST',
+    // Import trigger system (lazy to avoid circular deps)
+    const {
+      detectTriggerFromWorkflow,
+      ensureRegistryInitialized,
+      TriggerRegistry,
+    } = await import('../triggers');
+
+    // Ensure registry is initialized
+    await ensureRegistryInitialized();
+
+    // Fetch the workflow to analyze its trigger
+    const workflow = await client.getWorkflow(input.workflowId);
+
+    // Determine trigger type
+    let triggerType: TriggerType | undefined = input.triggerType as TriggerType | undefined;
+    let triggerInfo;
+
+    // Auto-detect from workflow
+    const detection = detectTriggerFromWorkflow(workflow);
+
+    if (!triggerType) {
+      if (detection.detected && detection.trigger) {
+        triggerType = detection.trigger.type;
+        triggerInfo = detection.trigger;
+      } else {
+        // No externally-triggerable trigger found
+        return {
+          success: false,
+          error: 'Workflow cannot be triggered externally',
+          details: {
+            workflowId: input.workflowId,
+            reason: detection.reason,
+            hint: 'Only workflows with webhook, form, or chat triggers can be executed via the API. Add one of these trigger nodes to your workflow.',
+          },
+        };
+      }
+    } else {
+      // User specified a trigger type, verify it matches workflow
+      if (detection.detected && detection.trigger?.type === triggerType) {
+        triggerInfo = detection.trigger;
+      } else if (!detection.detected || detection.trigger?.type !== triggerType) {
+        return {
+          success: false,
+          error: `Workflow does not have a ${triggerType} trigger`,
+          details: {
+            workflowId: input.workflowId,
+            requestedTrigger: triggerType,
+            detectedTrigger: detection.trigger?.type || 'none',
+            hint: detection.detected
+              ? `Workflow has a ${detection.trigger?.type} trigger. Either use that type or omit triggerType for auto-detection.`
+              : 'Workflow has no externally-triggerable triggers (webhook, form, or chat).',
+          },
+        };
+      }
+    }
+
+    // Get handler for trigger type
+    const handler = TriggerRegistry.getHandler(triggerType, client, context);
+    if (!handler) {
+      return {
+        success: false,
+        error: `No handler registered for trigger type: ${triggerType}`,
+        details: {
+          supportedTypes: TriggerRegistry.getRegisteredTypes(),
+        },
+      };
+    }
+
+    // Check if workflow is active (if required by handler)
+    if (handler.capabilities.requiresActiveWorkflow && !workflow.active) {
+      return {
+        success: false,
+        error: 'Workflow must be active to trigger via this method',
+        details: {
+          workflowId: input.workflowId,
+          triggerType,
+          hint: 'Activate the workflow in n8n using n8n_update_partial_workflow with [{type: "activateWorkflow"}]',
+        },
+      };
+    }
+
+    // Validate chat trigger has message
+    if (triggerType === 'chat' && !input.message) {
+      return {
+        success: false,
+        error: 'Chat trigger requires a message parameter',
+        details: {
+          hint: 'Provide message="your message" for chat triggers',
+        },
+      };
+    }
+
+    // Build trigger-specific input
+    const triggerInput = {
+      workflowId: input.workflowId,
+      triggerType,
+      httpMethod: input.httpMethod,
+      webhookPath: input.webhookPath,
+      message: input.message || '',
+      sessionId: input.sessionId,
       data: input.data,
+      formData: input.data, // For form triggers
       headers: input.headers,
-      waitForResponse: input.waitForResponse ?? true
+      timeout: input.timeout,
+      waitForResponse: input.waitForResponse,
     };
 
-    const response = await client.triggerWebhook(webhookRequest);
+    // Execute the trigger
+    const response = await handler.execute(triggerInput as any, workflow, triggerInfo);
 
     return {
-      success: true,
-      data: response,
-      message: 'Webhook triggered successfully'
+      success: response.success,
+      data: response.data,
+      message: response.success
+        ? `Workflow triggered successfully via ${triggerType}`
+        : response.error,
+      executionId: response.executionId,
+      workflowId: input.workflowId,
+      details: {
+        triggerType,
+        metadata: response.metadata,
+        ...(response.details || {}),
+      },
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
         error: 'Invalid input',
-        details: { errors: error.errors }
+        details: { errors: error.errors },
       };
     }
 
     if (error instanceof N8nApiError) {
-      // Try to extract execution context from error response
-      const errorData = error.details as any;
-      const executionId = errorData?.executionId || errorData?.id || errorData?.execution?.id;
-      const workflowId = errorData?.workflowId || errorData?.workflow?.id;
-
-      // If we have execution ID, provide specific guidance with n8n_get_execution
-      if (executionId) {
-        return {
-          success: false,
-          error: formatExecutionError(executionId, workflowId),
-          code: error.code,
-          executionId,
-          workflowId: workflowId || undefined
-        };
-      }
-
-      // No execution ID available - workflow likely didn't start
-      // Provide guidance to check recent executions
-      if (error.code === 'SERVER_ERROR' || error.statusCode && error.statusCode >= 500) {
-        return {
-          success: false,
-          error: formatNoExecutionError(),
-          code: error.code
-        };
-      }
-
-      // For other errors (auth, validation, etc), use standard message
       return {
         success: false,
         error: getUserFriendlyErrorMessage(error),
         code: error.code,
-        details: error.details as Record<string, unknown> | undefined
+        details: error.details as Record<string, unknown> | undefined,
       };
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }
@@ -2435,6 +2528,87 @@ export async function handleDeployTemplate(
     }
 
     if (error instanceof N8nApiError) {
+      return {
+        success: false,
+        error: getUserFriendlyErrorMessage(error),
+        code: error.code,
+        details: error.details as Record<string, unknown> | undefined
+      };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Backward-compatible webhook trigger handler
+ *
+ * @deprecated Use handleTestWorkflow instead. This function is kept for
+ * backward compatibility with existing integration tests.
+ */
+export async function handleTriggerWebhookWorkflow(args: unknown, context?: InstanceContext): Promise<McpToolResponse> {
+  const triggerWebhookSchema = z.object({
+    webhookUrl: z.string().url(),
+    httpMethod: z.enum(['GET', 'POST', 'PUT', 'DELETE']).optional(),
+    data: z.record(z.unknown()).optional(),
+    headers: z.record(z.string()).optional(),
+    waitForResponse: z.boolean().optional(),
+  });
+
+  try {
+    const client = ensureApiConfigured(context);
+    const input = triggerWebhookSchema.parse(args);
+
+    const webhookRequest: WebhookRequest = {
+      webhookUrl: input.webhookUrl,
+      httpMethod: input.httpMethod || 'POST',
+      data: input.data,
+      headers: input.headers,
+      waitForResponse: input.waitForResponse ?? true
+    };
+
+    const response = await client.triggerWebhook(webhookRequest);
+
+    return {
+      success: true,
+      data: response,
+      message: 'Webhook triggered successfully'
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Invalid input',
+        details: { errors: error.errors }
+      };
+    }
+
+    if (error instanceof N8nApiError) {
+      const errorData = error.details as any;
+      const executionId = errorData?.executionId || errorData?.id || errorData?.execution?.id;
+      const workflowId = errorData?.workflowId || errorData?.workflow?.id;
+
+      if (executionId) {
+        return {
+          success: false,
+          error: formatExecutionError(executionId, workflowId),
+          code: error.code,
+          executionId,
+          workflowId: workflowId || undefined
+        };
+      }
+
+      if (error.code === 'SERVER_ERROR' || error.statusCode && error.statusCode >= 500) {
+        return {
+          success: false,
+          error: formatNoExecutionError(),
+          code: error.code
+        };
+      }
+
       return {
         success: false,
         error: getUserFriendlyErrorMessage(error),
