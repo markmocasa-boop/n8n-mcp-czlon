@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.3] - 2025-12-02
+
+### Changed
+
+**Dependencies**
+- Updated n8n from 1.121.2 to 1.122.4
+- Updated n8n-core from 1.120.1 to 1.121.1
+- Updated n8n-workflow from 1.118.1 to 1.119.1
+- Updated @n8n/n8n-nodes-langchain from 1.120.1 to 1.121.1
+- Rebuilt node database with 544 nodes (438 from n8n-nodes-base, 106 from @n8n/n8n-nodes-langchain)
+
+### Removed
+
+**Templates**
+- Removed 7 templates from creator "ludwig" at author's request
+  - Template IDs: 2795, 2816, 2825, 2850, 2869, 2939, 3847
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.2] - 2025-12-01
 
 ### Bug Fixes
