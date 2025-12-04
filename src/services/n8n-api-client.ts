@@ -14,6 +14,7 @@ import {
   TagListParams,
   TagListResponse,
   HealthCheckResponse,
+  N8nVersionInfo,
   Variable,
   WebhookRequest,
   WorkflowExport,
@@ -24,6 +25,11 @@ import {
 } from '../types/n8n-api';
 import { handleN8nApiError, logN8nError } from '../utils/n8n-errors';
 import { cleanWorkflowForCreate, cleanWorkflowForUpdate } from './n8n-validation';
+import {
+  fetchN8nVersion,
+  cleanSettingsForVersion,
+  getCachedVersion,
+} from './n8n-version';
 
 export interface N8nApiClientConfig {
   baseUrl: string;
@@ -35,15 +41,19 @@ export interface N8nApiClientConfig {
 export class N8nApiClient {
   private client: AxiosInstance;
   private maxRetries: number;
+  private baseUrl: string;
+  private versionInfo: N8nVersionInfo | null = null;
+  private versionFetched = false;
 
   constructor(config: N8nApiClientConfig) {
     const { baseUrl, apiKey, timeout = 30000, maxRetries = 3 } = config;
 
     this.maxRetries = maxRetries;
+    this.baseUrl = baseUrl;
 
     // Ensure baseUrl ends with /api/v1
-    const apiUrl = baseUrl.endsWith('/api/v1') 
-      ? baseUrl 
+    const apiUrl = baseUrl.endsWith('/api/v1')
+      ? baseUrl
       : `${baseUrl.replace(/\/$/, '')}/api/v1`;
 
     this.client = axios.create({
@@ -84,25 +94,52 @@ export class N8nApiClient {
     );
   }
 
+  /**
+   * Get the n8n version, fetching it if not already cached
+   */
+  async getVersion(): Promise<N8nVersionInfo | null> {
+    if (!this.versionFetched) {
+      // Check if already cached globally
+      this.versionInfo = getCachedVersion(this.baseUrl);
+      if (!this.versionInfo) {
+        // Fetch from server
+        this.versionInfo = await fetchN8nVersion(this.baseUrl);
+      }
+      this.versionFetched = true;
+    }
+    return this.versionInfo;
+  }
+
+  /**
+   * Get cached version info without fetching
+   */
+  getCachedVersionInfo(): N8nVersionInfo | null {
+    return this.versionInfo;
+  }
+
   // Health check to verify API connectivity
   async healthCheck(): Promise<HealthCheckResponse> {
     try {
       // Try the standard healthz endpoint (available on all n8n instances)
       const baseUrl = this.client.defaults.baseURL || '';
       const healthzUrl = baseUrl.replace(/\/api\/v\d+\/?$/, '') + '/healthz';
-      
+
       const response = await axios.get(healthzUrl, {
         timeout: 5000,
         validateStatus: (status) => status < 500
       });
-      
+
+      // Also fetch version info (will be cached)
+      const versionInfo = await this.getVersion();
+
       if (response.status === 200 && response.data?.status === 'ok') {
-        return { 
+        return {
           status: 'ok',
-          features: {} // Features detection would require additional endpoints
+          n8nVersion: versionInfo?.version,
+          features: {}
         };
       }
-      
+
       // If healthz doesn't work, fall back to API check
       throw new Error('healthz endpoint not available');
     } catch (error) {
@@ -110,8 +147,13 @@ export class N8nApiClient {
       // This is a fallback for older n8n versions
       try {
         await this.client.get('/workflows', { params: { limit: 1 } });
-        return { 
+
+        // Still try to get version
+        const versionInfo = await this.getVersion();
+
+        return {
           status: 'ok',
+          n8nVersion: versionInfo?.version,
           features: {}
         };
       } catch (fallbackError) {
@@ -142,8 +184,25 @@ export class N8nApiClient {
 
   async updateWorkflow(id: string, workflow: Partial<Workflow>): Promise<Workflow> {
     try {
-      // First, try PUT method (newer n8n versions)
+      // Step 1: Basic cleaning (remove read-only fields, filter to known settings)
       const cleanedWorkflow = cleanWorkflowForUpdate(workflow as Workflow);
+
+      // Step 2: Version-aware settings filtering for older n8n compatibility
+      // This prevents "additional properties" errors on n8n < 1.119.0
+      const versionInfo = await this.getVersion();
+      if (versionInfo) {
+        logger.debug(`Updating workflow with n8n version ${versionInfo.version}`);
+        // Apply version-specific filtering to settings
+        cleanedWorkflow.settings = cleanSettingsForVersion(
+          cleanedWorkflow.settings as Record<string, unknown>,
+          versionInfo
+        );
+      } else {
+        logger.warn('Could not determine n8n version, sending all known settings properties');
+        // Without version info, we send all known properties (might fail on old n8n)
+      }
+
+      // First, try PUT method (newer n8n versions)
       try {
         const response = await this.client.put(`/workflows/${id}`, cleanedWorkflow);
         return response.data;
@@ -288,7 +347,7 @@ export class N8nApiClient {
       // Create a new axios instance for webhook requests to avoid API interceptors
       const webhookClient = axios.create({
         baseURL: new URL('/', webhookUrl).toString(),
-        validateStatus: (status) => status < 500, // Don't throw on 4xx
+        validateStatus: (status: number) => status < 500, // Don't throw on 4xx
       });
 
       const response = await webhookClient.request(config);

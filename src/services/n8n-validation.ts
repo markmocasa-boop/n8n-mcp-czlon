@@ -116,102 +116,73 @@ export function cleanWorkflowForCreate(workflow: Partial<Workflow>): Partial<Wor
  * Clean workflow data for update operations.
  *
  * This function removes read-only and computed fields that should not be sent
- * in API update requests. It does NOT add any default values or new fields.
+ * in API update requests. It filters settings to known API-accepted properties
+ * to prevent "additional properties" errors.
  *
- * Note: Unlike cleanWorkflowForCreate, this function does not add default settings.
- * The n8n API will reject update requests that include properties not present in
- * the original workflow ("settings must NOT have additional properties" error).
- *
- * Settings are filtered to only include whitelisted properties to prevent API
- * errors when workflows from n8n contain UI-only or deprecated properties.
+ * NOTE: This function filters settings to ALL known properties (12 total).
+ * For version-specific filtering (compatibility with older n8n versions),
+ * use N8nApiClient.updateWorkflow() which automatically detects the n8n version
+ * and filters settings accordingly.
  *
  * @param workflow - The workflow object to clean
  * @returns A cleaned partial workflow suitable for API updates
  */
 export function cleanWorkflowForUpdate(workflow: Workflow): Partial<Workflow> {
   const {
-    // Remove read-only/computed fields
+    // Remove ALL read-only/computed fields (comprehensive list)
     id,
     createdAt,
     updatedAt,
     versionId,
-    versionCounter, // Added: n8n 1.118.1+ returns this but rejects it in updates
+    versionCounter,
     meta,
     staticData,
-    // Remove fields that cause API errors
     pinData,
     tags,
-    description, // Issue #431: n8n returns this field but rejects it in updates
-    // Remove additional fields that n8n API doesn't accept
+    description,
     isArchived,
     usedCredentials,
     sharedWithProjects,
     triggerCount,
     shared,
     active,
-    // Remove version-related read-only fields (Issue #466)
     activeVersionId,
     activeVersion,
     // Keep everything else
     ...cleanedWorkflow
   } = workflow as any;
 
-  // CRITICAL FIX for Issue #248:
-  // The n8n API has version-specific behavior for settings in workflow updates:
-  //
-  // PROBLEM:
-  // - Some versions reject updates with settings properties (community forum reports)
-  // - Properties like callerPolicy cause "additional properties" errors
-  // - Empty settings objects {} cause "additional properties" validation errors (Issue #431)
-  //
-  // SOLUTION:
-  // - Filter settings to only include whitelisted properties (OpenAPI spec)
-  // - If no settings after filtering, omit the property entirely (n8n API rejects empty objects)
-  // - Omitting the property prevents "additional properties" validation errors
-  // - Whitelisted properties prevent "additional properties" errors
-  //
-  // References:
-  // - Issue #431: Empty settings validation error
-  // - https://community.n8n.io/t/api-workflow-update-endpoint-doesnt-support-setting-callerpolicy/161916
-  // - OpenAPI spec: workflowSettings schema
-  // - Tested on n8n.estyl.team (cloud) and localhost (self-hosted)
-
-  // Whitelisted settings properties from n8n Public API OpenAPI spec
-  // Source: https://github.com/n8n-io/n8n/blob/master/packages/cli/src/public-api/v1/handlers/workflows/spec/schemas/workflowSettings.yml
-  //
-  // CRITICAL: The n8n Public API uses strict JSON schema validation with
-  // additionalProperties: false. These 12 properties are accepted:
-  const safeSettingsProperties = [
-    'saveExecutionProgress',      // boolean
-    'saveManualExecutions',       // boolean
-    'saveDataErrorExecution',     // string enum: 'all' | 'none'
-    'saveDataSuccessExecution',   // string enum: 'all' | 'none'
-    'executionTimeout',           // number (max: 3600)
-    'errorWorkflow',              // string (workflow ID)
-    'timezone',                   // string (e.g., 'America/New_York')
-    'executionOrder',             // string (e.g., 'v1')
-    'callerPolicy',               // string enum: 'any' | 'none' | 'workflowsFromAList' | 'workflowsFromSameOwner'
-    'callerIds',                  // string (comma-separated workflow IDs)
-    'timeSavedPerExecution',      // number (in minutes)
-    'availableInMCP',             // boolean (default: false)
-  ];
+  // ALL known settings properties accepted by n8n Public API (as of n8n 1.119.0+)
+  // This list is the UNION of all properties ever accepted by any n8n version
+  // Version-specific filtering is handled by N8nApiClient.updateWorkflow()
+  const ALL_KNOWN_SETTINGS_PROPERTIES = new Set([
+    // Core properties (all versions)
+    'saveExecutionProgress',
+    'saveManualExecutions',
+    'saveDataErrorExecution',
+    'saveDataSuccessExecution',
+    'executionTimeout',
+    'errorWorkflow',
+    'timezone',
+    // Added in n8n 1.37.0
+    'executionOrder',
+    // Added in n8n 1.119.0
+    'callerPolicy',
+    'callerIds',
+    'timeSavedPerExecution',
+    'availableInMCP',
+  ]);
 
   if (cleanedWorkflow.settings && typeof cleanedWorkflow.settings === 'object') {
-    // Filter to only safe properties
-    const filteredSettings: any = {};
-    for (const key of safeSettingsProperties) {
-      if (key in cleanedWorkflow.settings) {
-        filteredSettings[key] = (cleanedWorkflow.settings as any)[key];
+    // Filter to only known properties (security + prevent garbage)
+    const filteredSettings: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(cleanedWorkflow.settings)) {
+      if (ALL_KNOWN_SETTINGS_PROPERTIES.has(key)) {
+        filteredSettings[key] = value;
       }
     }
-
-    // n8n API behavior with settings:
-    // - The settings property is REQUIRED by the API
-    // - Empty settings objects {} are now accepted (n8n preserves existing settings)
-    // - Only whitelisted properties are accepted; others cause "additional properties" error
     cleanedWorkflow.settings = filteredSettings;
   } else {
-    // No settings provided - use empty object (required by API)
     cleanedWorkflow.settings = {};
   }
 

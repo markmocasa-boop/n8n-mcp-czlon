@@ -383,7 +383,7 @@ describe('n8n-validation', () => {
         expect(cleaned.name).toBe('Test Workflow');
       });
 
-      it('should provide minimal default settings when no settings provided (Issue #431)', () => {
+      it('should provide empty settings when no settings provided (Issue #431)', () => {
         const workflow = {
           name: 'Test Workflow',
           nodes: [],
@@ -391,8 +391,8 @@ describe('n8n-validation', () => {
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // n8n API requires settings to be present, so we provide minimal defaults (v1 is modern default)
-        expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
+        // n8n API now accepts empty settings {} - server preserves existing values
+        expect(cleaned.settings).toEqual({});
       });
 
       it('should filter settings to safe properties to prevent API errors (Issue #248 - final fix)', () => {
@@ -403,20 +403,22 @@ describe('n8n-validation', () => {
           settings: {
             executionOrder: 'v1' as const,
             saveDataSuccessExecution: 'none' as const,
-            callerPolicy: 'workflowsFromSameOwner' as const, // Now whitelisted (n8n 1.121+)
-            timeSavedPerExecution: 5, // Filtered out (UI-only property)
+            callerPolicy: 'workflowsFromSameOwner' as const, // Whitelisted (n8n 1.119+)
+            timeSavedPerExecution: 5, // Whitelisted (n8n 1.119+, PR #21297)
+            unknownProperty: 'should be filtered', // Unknown properties ARE filtered
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
 
-        // Unsafe properties filtered out, safe properties kept (callerPolicy now whitelisted)
+        // All 4 properties from n8n 1.119+ are whitelisted, unknown properties filtered
         expect(cleaned.settings).toEqual({
           executionOrder: 'v1',
           saveDataSuccessExecution: 'none',
-          callerPolicy: 'workflowsFromSameOwner'
+          callerPolicy: 'workflowsFromSameOwner',
+          timeSavedPerExecution: 5,
         });
-        expect(cleaned.settings).not.toHaveProperty('timeSavedPerExecution');
+        expect(cleaned.settings).not.toHaveProperty('unknownProperty');
       });
 
       it('should preserve callerPolicy and availableInMCP (n8n 1.121+ settings)', () => {
@@ -487,26 +489,26 @@ describe('n8n-validation', () => {
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // n8n API requires settings, so we provide minimal defaults (v1 is modern default)
-        expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
+        // n8n API now accepts empty settings {} - server preserves existing values
+        expect(cleaned.settings).toEqual({});
       });
 
-      it('should provide minimal settings when only non-whitelisted properties exist (Issue #431)', () => {
+      it('should return empty settings when only non-whitelisted properties exist (Issue #431)', () => {
         const workflow = {
           name: 'Test Workflow',
           nodes: [],
           connections: {},
           settings: {
-            timeSavedPerExecution: 5, // Filtered out (UI-only)
-            someOtherProperty: 'value', // Filtered out
+            timeSavedPerExecution: 5, // Whitelisted (n8n 1.119+)
+            someOtherProperty: 'value', // Filtered out (unknown)
           },
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // All properties were filtered out, but n8n API requires settings
-        // so we provide minimal defaults (v1 is modern default) to avoid both
-        // "additional properties" and "required property" API errors
-        expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
+        // timeSavedPerExecution is now whitelisted, someOtherProperty is filtered out
+        // n8n API now accepts empty or partial settings {} - server preserves existing values
+        expect(cleaned.settings).toEqual({ timeSavedPerExecution: 5 });
+        expect(cleaned.settings).not.toHaveProperty('someOtherProperty');
       });
 
       it('should preserve whitelisted settings when mixed with non-whitelisted (Issue #431)', () => {
@@ -1408,8 +1410,8 @@ describe('n8n-validation', () => {
       expect(forUpdate).not.toHaveProperty('active');
       expect(forUpdate).not.toHaveProperty('tags');
       expect(forUpdate).not.toHaveProperty('meta');
-      // n8n API requires settings in updates, so minimal defaults (v1) are provided (Issue #431)
-      expect(forUpdate.settings).toEqual({ executionOrder: 'v1' });
+      // n8n API now accepts empty settings {} - server preserves existing values
+      expect(forUpdate.settings).toEqual({});
       expect(validateWorkflowStructure(forUpdate)).toEqual([]);
     });
   });
