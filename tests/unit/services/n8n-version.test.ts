@@ -55,7 +55,16 @@ describe('n8n-version', () => {
       expect(parseVersion('invalid')).toBeNull();
       expect(parseVersion('')).toBeNull();
       expect(parseVersion('1.2')).toBeNull();
-      expect(parseVersion('v1.2.3')).toBeNull(); // No 'v' prefix support
+    });
+
+    it('should handle v prefix in version strings', () => {
+      const result = parseVersion('v1.2.3');
+      expect(result).toEqual({
+        version: 'v1.2.3',
+        major: 1,
+        minor: 2,
+        patch: 3,
+      });
     });
   });
 

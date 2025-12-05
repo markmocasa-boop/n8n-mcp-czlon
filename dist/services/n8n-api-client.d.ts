@@ -10,9 +10,10 @@ export declare class N8nApiClient {
     private maxRetries;
     private baseUrl;
     private versionInfo;
-    private versionFetched;
+    private versionPromise;
     constructor(config: N8nApiClientConfig);
     getVersion(): Promise<N8nVersionInfo | null>;
+    private fetchVersionOnce;
     getCachedVersionInfo(): N8nVersionInfo | null;
     healthCheck(): Promise<HealthCheckResponse>;
     createWorkflow(workflow: Partial<Workflow>): Promise<Workflow>;

@@ -15,6 +15,7 @@ exports.setCachedVersion = setCachedVersion;
 exports.cleanSettingsForVersion = cleanSettingsForVersion;
 const axios_1 = __importDefault(require("axios"));
 const logger_1 = require("../utils/logger");
+const VERSION_CACHE_TTL_MS = 5 * 60 * 1000;
 const versionCache = new Map();
 const SETTINGS_BY_VERSION = {
     core: [
@@ -37,7 +38,7 @@ const SETTINGS_BY_VERSION = {
     ],
 };
 function parseVersion(versionString) {
-    const match = versionString.match(/^(\d+)\.(\d+)\.(\d+)/);
+    const match = versionString.match(/^v?(\d+)\.(\d+)\.(\d+)/);
     if (!match) {
         return null;
     }
@@ -71,9 +72,9 @@ function getSupportedSettingsProperties(version) {
 }
 async function fetchN8nVersion(baseUrl) {
     const cached = versionCache.get(baseUrl);
-    if (cached) {
-        logger_1.logger.debug(`Using cached n8n version for ${baseUrl}: ${cached.version}`);
-        return cached;
+    if (cached && Date.now() - cached.fetchedAt < VERSION_CACHE_TTL_MS) {
+        logger_1.logger.debug(`Using cached n8n version for ${baseUrl}: ${cached.info.version}`);
+        return cached.info;
     }
     try {
         const cleanBaseUrl = baseUrl.replace(/\/api\/v\d+\/?$/, '').replace(/\/$/, '');
@@ -89,11 +90,15 @@ async function fetchN8nVersion(baseUrl) {
                 logger_1.logger.warn('No data in settings response');
                 return null;
             }
-            const versionString = settings.n8nVersion || settings.versionCli;
+            const versionString = typeof settings.n8nVersion === 'string'
+                ? settings.n8nVersion
+                : typeof settings.versionCli === 'string'
+                    ? settings.versionCli
+                    : null;
             if (versionString) {
                 const versionInfo = parseVersion(versionString);
                 if (versionInfo) {
-                    versionCache.set(baseUrl, versionInfo);
+                    versionCache.set(baseUrl, { info: versionInfo, fetchedAt: Date.now() });
                     logger_1.logger.debug(`Detected n8n version: ${versionInfo.version}`);
                     return versionInfo;
                 }
@@ -111,10 +116,14 @@ function clearVersionCache() {
     versionCache.clear();
 }
 function getCachedVersion(baseUrl) {
-    return versionCache.get(baseUrl) || null;
+    const cached = versionCache.get(baseUrl);
+    if (cached && Date.now() - cached.fetchedAt < VERSION_CACHE_TTL_MS) {
+        return cached.info;
+    }
+    return null;
 }
 function setCachedVersion(baseUrl, version) {
-    versionCache.set(baseUrl, version);
+    versionCache.set(baseUrl, { info: version, fetchedAt: Date.now() });
 }
 function cleanSettingsForVersion(settings, version) {
     if (!settings || typeof settings !== 'object') {

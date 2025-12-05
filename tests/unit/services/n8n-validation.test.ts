@@ -391,8 +391,8 @@ describe('n8n-validation', () => {
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // n8n API now accepts empty settings {} - server preserves existing values
-        expect(cleaned.settings).toEqual({});
+        // Empty settings get minimal defaults to avoid API rejection (Issue #431)
+        expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
       });
 
       it('should filter settings to safe properties to prevent API errors (Issue #248 - final fix)', () => {
@@ -489,11 +489,11 @@ describe('n8n-validation', () => {
         } as any;
 
         const cleaned = cleanWorkflowForUpdate(workflow);
-        // n8n API now accepts empty settings {} - server preserves existing values
-        expect(cleaned.settings).toEqual({});
+        // Empty settings get minimal defaults to avoid API rejection (Issue #431)
+        expect(cleaned.settings).toEqual({ executionOrder: 'v1' });
       });
 
-      it('should return empty settings when only non-whitelisted properties exist (Issue #431)', () => {
+      it('should return minimal defaults when only non-whitelisted properties exist (Issue #431)', () => {
         const workflow = {
           name: 'Test Workflow',
           nodes: [],
@@ -1410,8 +1410,8 @@ describe('n8n-validation', () => {
       expect(forUpdate).not.toHaveProperty('active');
       expect(forUpdate).not.toHaveProperty('tags');
       expect(forUpdate).not.toHaveProperty('meta');
-      // n8n API now accepts empty settings {} - server preserves existing values
-      expect(forUpdate.settings).toEqual({});
+      // Empty settings get minimal defaults to avoid API rejection (Issue #431)
+      expect(forUpdate.settings).toEqual({ executionOrder: 'v1' });
       expect(validateWorkflowStructure(forUpdate)).toEqual([]);
     });
   });

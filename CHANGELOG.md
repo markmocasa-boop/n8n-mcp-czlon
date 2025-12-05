@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.6] - 2025-12-05
+
+### Bug Fixes
+
+**Test Updates for v2.28.5 Behavior Changes**
+
+Fixed test expectations to match v2.28.5 implementation changes:
+
+- **n8n-version tests**: Updated to verify 'v' prefix support in version strings (e.g., `v1.2.3`)
+- **n8n-validation tests**: Updated expectations for empty settings handling - now returns minimal defaults `{ executionOrder: 'v1' }` instead of `{}` to avoid n8n API rejection (Issue #431)
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.5] - 2025-12-05
 
 ### Bug Fixes

@@ -45,7 +45,7 @@ const n8n_version_1 = require("./n8n-version");
 class N8nApiClient {
     constructor(config) {
         this.versionInfo = null;
-        this.versionFetched = false;
+        this.versionPromise = null;
         const { baseUrl, apiKey, timeout = 30000, maxRetries = 3 } = config;
         this.maxRetries = maxRetries;
         this.baseUrl = baseUrl;
@@ -80,14 +80,27 @@ class N8nApiClient {
         });
     }
     async getVersion() {
-        if (!this.versionFetched) {
-            this.versionInfo = (0, n8n_version_1.getCachedVersion)(this.baseUrl);
-            if (!this.versionInfo) {
-                this.versionInfo = await (0, n8n_version_1.fetchN8nVersion)(this.baseUrl);
-            }
-            this.versionFetched = true;
+        if (this.versionInfo) {
+            return this.versionInfo;
         }
-        return this.versionInfo;
+        if (this.versionPromise) {
+            return this.versionPromise;
+        }
+        this.versionPromise = this.fetchVersionOnce();
+        try {
+            this.versionInfo = await this.versionPromise;
+            return this.versionInfo;
+        }
+        finally {
+            this.versionPromise = null;
+        }
+    }
+    async fetchVersionOnce() {
+        let version = (0, n8n_version_1.getCachedVersion)(this.baseUrl);
+        if (!version) {
+            version = await (0, n8n_version_1.fetchN8nVersion)(this.baseUrl);
+        }
+        return version;
     }
     getCachedVersionInfo() {
         return this.versionInfo;

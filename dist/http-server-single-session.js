@@ -24,7 +24,7 @@ const protocol_version_1 = require("./utils/protocol-version");
 const instance_context_1 = require("./types/instance-context");
 dotenv_1.default.config();
 const DEFAULT_PROTOCOL_VERSION = protocol_version_1.STANDARD_PROTOCOL_VERSION;
-const MAX_SESSIONS = 100;
+const MAX_SESSIONS = Math.max(1, parseInt(process.env.N8N_MCP_MAX_SESSIONS || '100', 10));
 const SESSION_CLEANUP_INTERVAL = 5 * 60 * 1000;
 function extractMultiTenantHeaders(req) {
     return {

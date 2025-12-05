@@ -106,10 +106,15 @@ function cleanWorkflowForUpdate(workflow) {
                 filteredSettings[key] = value;
             }
         }
-        cleanedWorkflow.settings = filteredSettings;
+        if (Object.keys(filteredSettings).length > 0) {
+            cleanedWorkflow.settings = filteredSettings;
+        }
+        else {
+            cleanedWorkflow.settings = { executionOrder: 'v1' };
+        }
     }
     else {
-        cleanedWorkflow.settings = {};
+        cleanedWorkflow.settings = { executionOrder: 'v1' };
     }
     return cleanedWorkflow;
 }
