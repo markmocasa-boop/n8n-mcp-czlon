@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1764938407766,
+  "lastUpdate": 1764955975378,
   "repoUrl": "https://github.com/czlonkowski/n8n-mcp",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "eac4e6710146cfef58e982e4f601acf2c900ee3d",
-          "message": "fix: recognize all trigger node types including executeWorkflowTrigger (#351) (#352)\n\nThis fix addresses issue #351 where Execute Workflow Trigger and other\ntrigger nodes were incorrectly treated as regular nodes, causing\n\"disconnected node\" errors during partial workflow updates.\n\n## Changes\n\n**1. Created Shared Trigger Detection Utilities**\n- src/utils/node-type-utils.ts:\n  - isTriggerNode(): Recognizes ALL trigger types using flexible pattern matching\n  - isActivatableTrigger(): Returns false for executeWorkflowTrigger (not activatable)\n  - getTriggerTypeDescription(): Human-readable trigger descriptions\n\n**2. Updated Workflow Validation**\n- src/services/n8n-validation.ts:\n  - Replaced hardcoded webhookTypes Set with isTriggerNode() function\n  - Added validation preventing activation of workflows with only executeWorkflowTrigger\n  - Now recognizes 200+ trigger types across n8n packages\n\n**3. Updated Workflow Validator**\n- src/services/workflow-validator.ts:\n  - Replaced inline trigger detection with shared isTriggerNode() function\n  - Ensures consistency across all validation code paths\n\n**4. Comprehensive Tests**\n- tests/unit/utils/node-type-utils.test.ts:\n  - Added 30+ tests for trigger detection functions\n  - Validates all trigger types are recognized correctly\n  - Confirms executeWorkflowTrigger is trigger but not activatable\n\n## Impact\n\nBefore:\n- Execute Workflow Trigger flagged as disconnected node\n- Schedule/email/polling triggers also rejected\n- Users forced to keep unnecessary webhook triggers\n\nAfter:\n- ALL trigger types recognized (executeWorkflowTrigger, scheduleTrigger, etc.)\n- No disconnected node errors for triggers\n- Clear error when activating workflow with only executeWorkflowTrigger\n- Future-proof (new triggers automatically supported)\n\n## Testing\n\n- Build: ✅ Passes\n- Typecheck: ✅ Passes\n- Unit tests: ✅ All pass\n- Validation test: ✅ Trigger detection working correctly\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en",
-          "timestamp": "2025-10-23T09:42:46+02:00",
-          "tree_id": "664d0aaabcff6c6564f144a76f095894a58eaa88",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/eac4e6710146cfef58e982e4f601acf2c900ee3d"
-        },
-        "date": 1761205478896,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1540,6 +1509,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/czlonkowski/n8n-mcp/commit/60479e0eb47a7c83e77f36e2667a73e2e3ec115a"
         },
         "date": 1764938407093,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "56956555+czlonkowski@users.noreply.github.com",
+            "name": "Romuald Członkowski",
+            "username": "czlonkowski"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cdaa29e7a2445f1e84144965a7b803be00f6b760",
+          "message": "fix: memory leak in session removal - close MCP server properly (#471) (#472)\n\n- Add close() method to N8NDocumentationMCPServer that:\n  - Calls server.close() (MCP SDK cleanup)\n  - Clears internal cache\n  - Nullifies service references to help GC\n- Update removeSession() to call server.close() before releasing references\n\nRoot cause: removeSession() deleted server from map but didn't call cleanup\nEvidence: Production server memory grew ~1GB in 43 minutes (10% to 35%)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-12-05T18:30:51+01:00",
+          "tree_id": "2e72fdb4e4336b7c17f579b885fbdeae90c0439c",
+          "url": "https://github.com/czlonkowski/n8n-mcp/commit/cdaa29e7a2445f1e84144965a7b803be00f6b760"
+        },
+        "date": 1764955975115,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
