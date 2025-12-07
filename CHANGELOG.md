@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.8] - 2025-12-07
+
+### Bug Fixes
+
+**Multi-tenant: handleValidateWorkflow missing context parameter (#474)**
+
+Fixed `n8n_validate_workflow` tool failing in multi-tenant mode with error:
+`"n8n API not configured. Please set N8N_API_URL and N8N_API_KEY environment variables."`
+
+- **Root Cause**: `handleValidateWorkflow` called `handleGetWorkflow` without passing the `context` parameter
+- **Impact**: Multi-tenant deployments could not use the `n8n_validate_workflow` tool
+- **Solution**: Pass `context` parameter to `handleGetWorkflow` call (line 987)
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.7] - 2025-12-05
 
 ### Bug Fixes

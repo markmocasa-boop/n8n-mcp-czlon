@@ -984,7 +984,7 @@ export async function handleValidateWorkflow(
     const input = validateWorkflowSchema.parse(args);
     
     // First, fetch the workflow from n8n
-    const workflowResponse = await handleGetWorkflow({ id: input.id });
+    const workflowResponse = await handleGetWorkflow({ id: input.id }, context);
     
     if (!workflowResponse.success) {
       return workflowResponse; // Return the error from fetching
