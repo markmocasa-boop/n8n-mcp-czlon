@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.9] - 2025-12-08
+
+### Dependencies
+
+**Updated n8n to 1.123.4**
+
+- Updated n8n from 1.122.4 to 1.123.4
+- Updated n8n-core from 1.121.1 to 1.122.1
+- Updated n8n-workflow from 1.119.1 to 1.120.0
+- Updated @n8n/n8n-nodes-langchain from 1.121.1 to 1.122.1
+- Rebuilt node database with 545 nodes (439 from n8n-nodes-base, 106 from @n8n/n8n-nodes-langchain)
+- Updated README badge with new n8n version
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.8] - 2025-12-07
 
 ### Bug Fixes

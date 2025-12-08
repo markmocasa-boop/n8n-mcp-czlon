@@ -106,8 +106,13 @@ class SingleSessionHTTPServer {
             delete this.servers[sessionId];
             delete this.sessionMetadata[sessionId];
             delete this.sessionContexts[sessionId];
-            if (server) {
-                await server.close();
+            if (server && typeof server.close === 'function') {
+                try {
+                    await server.close();
+                }
+                catch (serverError) {
+                    logger_1.logger.warn('Error closing server', { sessionId, error: serverError });
+                }
             }
             if (transport) {
                 await transport.close();

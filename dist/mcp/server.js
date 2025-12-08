@@ -150,7 +150,17 @@ class N8NDocumentationMCPServer {
     async close() {
         try {
             await this.server.close();
-            this.cache.clear();
+            this.cache.destroy();
+            if (this.db) {
+                try {
+                    this.db.close();
+                }
+                catch (dbError) {
+                    logger_1.logger.warn('Error closing database', {
+                        error: dbError instanceof Error ? dbError.message : String(dbError)
+                    });
+                }
+            }
             this.db = null;
             this.repository = null;
             this.templateService = null;
