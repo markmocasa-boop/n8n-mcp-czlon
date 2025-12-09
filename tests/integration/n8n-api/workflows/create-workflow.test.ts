@@ -74,17 +74,21 @@ describe('Integration: handleCreateWorkflow', () => {
       const result = response.data as Workflow;
 
       // Verify workflow created successfully
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
       expect(result.name).toBe(workflowName);
-      expect(result.nodes).toHaveLength(1);
+      expect((result as any).nodeCount).toBe(1);
 
+      // Fetch actual workflow to verify details
+      const workflow2 = await client.getWorkflow(result.id);
+      expect(workflow2.nodes).toHaveLength(1);
       // Critical: Verify FULL node type format is preserved
-      expect(result.nodes[0].type).toBe('n8n-nodes-base.webhook');
-      expect(result.nodes[0].name).toBe('Webhook');
-      expect(result.nodes[0].parameters).toBeDefined();
+      expect(workflow2.nodes[0].type).toBe('n8n-nodes-base.webhook');
+      expect(workflow2.nodes[0].name).toBe('Webhook');
+      expect(workflow2.nodes[0].parameters).toBeDefined();
     });
   });
 
@@ -104,16 +108,21 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
       expect(result.name).toBe(workflowName);
-      expect(result.nodes).toHaveLength(2);
+      expect((result as any).nodeCount).toBe(2);
+
+      // Fetch actual workflow to verify details
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.nodes).toHaveLength(2);
 
       // Verify both nodes created with FULL type format
-      const webhookNode = result.nodes.find((n: any) => n.name === 'Webhook');
-      const httpNode = result.nodes.find((n: any) => n.name === 'HTTP Request');
+      const webhookNode = actual.nodes.find((n: any) => n.name === 'Webhook');
+      const httpNode = actual.nodes.find((n: any) => n.name === 'HTTP Request');
 
       expect(webhookNode).toBeDefined();
       expect(webhookNode!.type).toBe('n8n-nodes-base.webhook');
@@ -122,8 +131,8 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(httpNode!.type).toBe('n8n-nodes-base.httpRequest');
 
       // Verify connections
-      expect(result.connections).toBeDefined();
-      expect(result.connections.Webhook).toBeDefined();
+      expect(actual.connections).toBeDefined();
+      expect(actual.connections.Webhook).toBeDefined();
     });
 
     it('should create workflow with langchain agent node', async () => {
@@ -137,15 +146,20 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
       expect(result.name).toBe(workflowName);
-      expect(result.nodes).toHaveLength(2);
+      expect((result as any).nodeCount).toBe(2);
+
+      // Fetch actual workflow to verify details
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.nodes).toHaveLength(2);
 
       // Verify langchain node type format
-      const agentNode = result.nodes.find((n: any) => n.name === 'AI Agent');
+      const agentNode = actual.nodes.find((n: any) => n.name === 'AI Agent');
       expect(agentNode).toBeDefined();
       expect(agentNode!.type).toBe('@n8n/n8n-nodes-langchain.agent');
     });
@@ -161,21 +175,26 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
       expect(result.name).toBe(workflowName);
-      expect(result.nodes).toHaveLength(4);
+      expect((result as any).nodeCount).toBe(4);
+
+      // Fetch actual workflow to verify details
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.nodes).toHaveLength(4);
 
       // Verify all node types preserved
-      const nodeTypes = result.nodes.map((n: any) => n.type);
+      const nodeTypes = actual.nodes.map((n: any) => n.type);
       expect(nodeTypes).toContain('n8n-nodes-base.webhook');
       expect(nodeTypes).toContain('n8n-nodes-base.set');
       expect(nodeTypes).toContain('n8n-nodes-base.merge');
 
       // Verify complex connections
-      expect(result.connections.Webhook.main[0]).toHaveLength(2); // Branches to 2 nodes
+      expect(actual.connections.Webhook.main[0]).toHaveLength(2); // Branches to 2 nodes
     });
   });
 
@@ -195,19 +214,23 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
-      expect(result.connections).toBeDefined();
+
+      // Fetch actual workflow to verify connections
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.connections).toBeDefined();
 
       // Verify branching: Webhook -> Set 1 and Set 2
-      const webhookConnections = result.connections.Webhook.main[0];
+      const webhookConnections = actual.connections.Webhook.main[0];
       expect(webhookConnections).toHaveLength(2);
 
       // Verify merging: Set 1 -> Merge (port 0), Set 2 -> Merge (port 1)
-      const set1Connections = result.connections['Set 1'].main[0];
-      const set2Connections = result.connections['Set 2'].main[0];
+      const set1Connections = actual.connections['Set 1'].main[0];
+      const set2Connections = actual.connections['Set 2'].main[0];
 
       expect(set1Connections[0].node).toBe('Merge');
       expect(set1Connections[0].index).toBe(0);
@@ -234,12 +257,16 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
-      expect(result.settings).toBeDefined();
-      expect(result.settings!.executionOrder).toBe('v1');
+
+      // Fetch actual workflow to verify settings
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.settings).toBeDefined();
+      expect(actual.settings!.executionOrder).toBe('v1');
     });
 
     it('should create workflow with n8n expressions', async () => {
@@ -253,14 +280,19 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
-      expect(result.nodes).toHaveLength(2);
+      expect((result as any).nodeCount).toBe(2);
+
+      // Fetch actual workflow to verify expressions
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.nodes).toHaveLength(2);
 
       // Verify Set node with expressions
-      const setNode = result.nodes.find((n: any) => n.name === 'Set Variables');
+      const setNode = actual.nodes.find((n: any) => n.name === 'Set Variables');
       expect(setNode).toBeDefined();
       expect(setNode!.parameters.assignments).toBeDefined();
 
@@ -283,21 +315,26 @@ describe('Integration: handleCreateWorkflow', () => {
       expect(response.success).toBe(true);
       const result = response.data as Workflow;
 
+      // Response now returns minimal data
       expect(result).toBeDefined();
       expect(result.id).toBeTruthy();
       if (!result.id) throw new Error('Workflow ID is missing');
       context.trackWorkflow(result.id);
-      expect(result.nodes).toHaveLength(3);
+      expect((result as any).nodeCount).toBe(3);
+
+      // Fetch actual workflow to verify error handling
+      const actual = await client.getWorkflow(result.id);
+      expect(actual.nodes).toHaveLength(3);
 
       // Verify HTTP node with error handling
-      const httpNode = result.nodes.find((n: any) => n.name === 'HTTP Request');
+      const httpNode = actual.nodes.find((n: any) => n.name === 'HTTP Request');
       expect(httpNode).toBeDefined();
       expect(httpNode!.continueOnFail).toBe(true);
       expect(httpNode!.onError).toBe('continueErrorOutput');
 
       // Verify error connection
-      expect(result.connections['HTTP Request'].error).toBeDefined();
-      expect(result.connections['HTTP Request'].error[0][0].node).toBe('Handle Error');
+      expect(actual.connections['HTTP Request'].error).toBeDefined();
+      expect(actual.connections['HTTP Request'].error[0][0].node).toBe('Handle Error');
     });
   });
 
