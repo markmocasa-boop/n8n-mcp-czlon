@@ -99,7 +99,13 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        const responseData = response.data as any;
+        expect(responseData.id).toBe(created.id);
+        expect(responseData.nodeCount).toBe(2);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         expect(updated.nodes).toHaveLength(2);
         expect(updated.nodes.find((n: any) => n.name === 'Set')).toBeDefined();
       });
@@ -171,7 +177,13 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        const responseData = response.data as any;
+        expect(responseData.id).toBe(created.id);
+        expect(responseData.nodeCount).toBe(1);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         expect(updated.nodes).toHaveLength(1);
         expect(updated.nodes.find((n: any) => n.name === 'HTTP Request')).toBeUndefined();
       });
@@ -238,7 +250,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
         expect(webhookNode.parameters.path).toBe('updated-path');
       });
@@ -274,7 +290,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
         expect(webhookNode.parameters.httpMethod).toBe('POST');
         expect(webhookNode.parameters.path).toBe('new-path');
@@ -312,7 +332,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
         expect(webhookNode.position).toEqual(newPosition);
       });
@@ -346,7 +370,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
         expect(webhookNode.disabled).toBe(true);
       });
@@ -389,7 +417,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
         // After enabling, disabled should be false or undefined (both mean enabled)
         expect(webhookNode.disabled).toBeFalsy();
@@ -434,7 +466,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
+
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         expect(updated.connections).toBeDefined();
         expect(updated.connections.Webhook).toBeDefined();
       });
@@ -658,8 +694,11 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         );
 
         expect(response.success).toBe(true);
-        const updated = response.data as any;
+        // Response now returns minimal data - verify with a follow-up get
+        expect((response.data as any).id).toBe(created.id);
 
+        // Fetch actual workflow to verify changes
+        const updated = await client.getWorkflow(created.id);
         // Note: n8n API may not return all settings in response
         // The operation should succeed even if settings aren't reflected in the response
         expect(updated.settings).toBeDefined();
@@ -822,7 +861,13 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
       );
 
       expect(response.success).toBe(true);
-      const updated = response.data as any;
+      // Response now returns minimal data - verify with a follow-up get
+      const responseData = response.data as any;
+      expect(responseData.id).toBe(created.id);
+      expect(responseData.nodeCount).toBe(2);
+
+      // Fetch actual workflow to verify changes
+      const updated = await client.getWorkflow(created.id);
       expect(updated.nodes).toHaveLength(2);
       expect(updated.connections.Webhook).toBeDefined();
     });
@@ -1040,7 +1085,13 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
 
       // Should succeed
       expect(response.success).toBe(true);
-      const updated = response.data as any;
+      // Response now returns minimal data - verify with a follow-up get
+      const responseData = response.data as any;
+      expect(responseData.id).toBe(created.id);
+      expect(responseData.nodeCount).toBe(5); // Original 4 + 1 new
+
+      // Fetch actual workflow to verify changes
+      const updated = await client.getWorkflow(created.id);
       expect(updated.nodes).toHaveLength(5); // Original 4 + 1 new
       expect(updated.nodes.find((n: any) => n.name === 'Process Data')).toBeDefined();
     });
