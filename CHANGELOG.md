@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Optimized 4 workflow management tools to return minimal responses instead of full workflow objects, reducing token usage by 75-90%:
 
-- **n8n_update_partial_workflow**: Returns `{id, name, active, operationsApplied}` instead of full workflow
+- **n8n_update_partial_workflow**: Returns `{id, name, active, nodeCount, operationsApplied}` instead of full workflow
 - **n8n_create_workflow**: Returns `{id, name, active, nodeCount}` instead of full workflow
 - **n8n_update_full_workflow**: Returns `{id, name, active, nodeCount}` instead of full workflow
 - **n8n_delete_workflow**: Returns `{id, name, deleted: true}` instead of full deleted workflow

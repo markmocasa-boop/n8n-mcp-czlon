@@ -367,6 +367,7 @@ export async function handleUpdatePartialWorkflow(
           id: finalWorkflow.id,
           name: finalWorkflow.name,
           active: finalWorkflow.active,
+          nodeCount: finalWorkflow.nodes?.length || 0,
           operationsApplied: diffResult.operationsApplied
         },
         message: `Workflow "${finalWorkflow.name}" updated successfully. Applied ${diffResult.operationsApplied} operations.${activationMessage} Use n8n_get_workflow with mode 'structure' to verify current state.`,

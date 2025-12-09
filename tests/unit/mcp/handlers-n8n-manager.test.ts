@@ -227,8 +227,13 @@ describe('handlers-n8n-manager', () => {
 
       expect(result).toEqual({
         success: true,
-        data: testWorkflow,
-        message: 'Workflow "Test Workflow" created successfully with ID: test-workflow-id',
+        data: {
+          id: 'test-workflow-id',
+          name: 'Test Workflow',
+          active: true,
+          nodeCount: 1,
+        },
+        message: 'Workflow "Test Workflow" created successfully with ID: test-workflow-id. Use n8n_get_workflow with mode \'structure\' to verify current state.',
       });
 
       // Should send input as-is to API (n8n expects FULL form: n8n-nodes-base.*)
@@ -732,8 +737,12 @@ describe('handlers-n8n-manager', () => {
 
       expect(result).toEqual({
         success: true,
-        data: testWorkflow,
-        message: 'Workflow test-workflow-id deleted successfully',
+        data: {
+          id: 'test-workflow-id',
+          name: 'Test Workflow',
+          deleted: true,
+        },
+        message: 'Workflow "Test Workflow" deleted successfully.',
       });
       expect(mockApiClient.deleteWorkflow).toHaveBeenCalledWith('test-workflow-id');
     });
