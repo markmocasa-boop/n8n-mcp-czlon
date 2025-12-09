@@ -150,13 +150,15 @@ describe('handlers-workflow-diff', () => {
 
       expect(result).toEqual({
         success: true,
-        data: updatedWorkflow,
-        message: 'Workflow "Test Workflow" updated successfully. Applied 1 operations.',
-        details: {
-          operationsApplied: 1,
-          workflowId: 'test-workflow-id',
-          workflowName: 'Test Workflow',
+        data: {
+          id: 'test-workflow-id',
+          name: 'Test Workflow',
           active: true,
+          nodeCount: 3,
+          operationsApplied: 1,
+        },
+        message: 'Workflow "Test Workflow" updated successfully. Applied 1 operations. Use n8n_get_workflow with mode \'structure\' to verify current state.',
+        details: {
           applied: [0],
           failed: [],
           errors: [],
@@ -660,9 +662,15 @@ describe('handlers-workflow-diff', () => {
         }, mockRepository);
 
         expect(result.success).toBe(true);
-        expect(result.data).toEqual(activatedWorkflow);
+        expect(result.data).toEqual({
+          id: 'test-workflow-id',
+          name: 'Test Workflow',
+          active: true,
+          nodeCount: 2,
+          operationsApplied: 1,
+        });
         expect(result.message).toContain('Workflow activated');
-        expect(result.details?.active).toBe(true);
+        expect(result.data.active).toBe(true);
         expect(mockApiClient.activateWorkflow).toHaveBeenCalledWith('test-workflow-id');
       });
 
@@ -689,9 +697,15 @@ describe('handlers-workflow-diff', () => {
         }, mockRepository);
 
         expect(result.success).toBe(true);
-        expect(result.data).toEqual(deactivatedWorkflow);
+        expect(result.data).toEqual({
+          id: 'test-workflow-id',
+          name: 'Test Workflow',
+          active: false,
+          nodeCount: 2,
+          operationsApplied: 1,
+        });
         expect(result.message).toContain('Workflow deactivated');
-        expect(result.details?.active).toBe(false);
+        expect(result.data.active).toBe(false);
         expect(mockApiClient.deactivateWorkflow).toHaveBeenCalledWith('test-workflow-id');
       });
 
