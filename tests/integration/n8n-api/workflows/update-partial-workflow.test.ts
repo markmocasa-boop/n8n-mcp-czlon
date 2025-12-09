@@ -256,7 +256,8 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         // Fetch actual workflow to verify changes
         const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
-        expect(webhookNode.parameters.path).toBe('updated-path');
+        expect(webhookNode).toBeDefined();
+        expect(webhookNode!.parameters.path).toBe('updated-path');
       });
 
       it('should update nested parameters', async () => {
@@ -296,8 +297,9 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         // Fetch actual workflow to verify changes
         const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
-        expect(webhookNode.parameters.httpMethod).toBe('POST');
-        expect(webhookNode.parameters.path).toBe('new-path');
+        expect(webhookNode).toBeDefined();
+        expect(webhookNode!.parameters.httpMethod).toBe('POST');
+        expect(webhookNode!.parameters.path).toBe('new-path');
       });
     });
 
@@ -338,7 +340,8 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         // Fetch actual workflow to verify changes
         const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
-        expect(webhookNode.position).toEqual(newPosition);
+        expect(webhookNode).toBeDefined();
+        expect(webhookNode!.position).toEqual(newPosition);
       });
     });
 
@@ -376,7 +379,8 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         // Fetch actual workflow to verify changes
         const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
-        expect(webhookNode.disabled).toBe(true);
+        expect(webhookNode).toBeDefined();
+        expect(webhookNode!.disabled).toBe(true);
       });
 
       it('should enable a disabled node', async () => {
@@ -423,8 +427,9 @@ describe('Integration: handleUpdatePartialWorkflow', () => {
         // Fetch actual workflow to verify changes
         const updated = await client.getWorkflow(created.id);
         const webhookNode = updated.nodes.find((n: any) => n.name === 'Webhook');
+        expect(webhookNode).toBeDefined();
         // After enabling, disabled should be false or undefined (both mean enabled)
-        expect(webhookNode.disabled).toBeFalsy();
+        expect(webhookNode!.disabled).toBeFalsy();
       });
     });
   });

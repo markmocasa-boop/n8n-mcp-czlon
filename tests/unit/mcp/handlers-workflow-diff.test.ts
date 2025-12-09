@@ -670,7 +670,7 @@ describe('handlers-workflow-diff', () => {
           operationsApplied: 1,
         });
         expect(result.message).toContain('Workflow activated');
-        expect(result.data.active).toBe(true);
+        expect((result.data as any).active).toBe(true);
         expect(mockApiClient.activateWorkflow).toHaveBeenCalledWith('test-workflow-id');
       });
 
@@ -705,7 +705,7 @@ describe('handlers-workflow-diff', () => {
           operationsApplied: 1,
         });
         expect(result.message).toContain('Workflow deactivated');
-        expect(result.data.active).toBe(false);
+        expect((result.data as any).active).toBe(false);
         expect(mockApiClient.deactivateWorkflow).toHaveBeenCalledWith('test-workflow-id');
       });
 
