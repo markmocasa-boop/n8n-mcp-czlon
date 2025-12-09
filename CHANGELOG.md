@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.29.0] - 2025-12-09
+
+### Performance
+
+**Token-Efficient Workflow Tool Responses (#479)**
+
+Optimized 4 workflow management tools to return minimal responses instead of full workflow objects, reducing token usage by 75-90%:
+
+- **n8n_update_partial_workflow**: Returns `{id, name, active, operationsApplied}` instead of full workflow
+- **n8n_create_workflow**: Returns `{id, name, active, nodeCount}` instead of full workflow
+- **n8n_update_full_workflow**: Returns `{id, name, active, nodeCount}` instead of full workflow
+- **n8n_delete_workflow**: Returns `{id, name, deleted: true}` instead of full deleted workflow
+
+**Impact**:
+- ~75-90% reduction in response token usage per operation
+- Messages now guide AI agents to use `n8n_get_workflow` with mode 'structure' if verification needed
+- No functional changes - full workflow data still available via `n8n_get_workflow`
+
+**Files Modified**:
+- `src/mcp/handlers-workflow-diff.ts` - Optimized partial update response
+- `src/mcp/handlers-n8n-manager.ts` - Optimized create, full update, and delete responses
+- `src/mcp/tool-docs/workflow_management/*.ts` - Updated documentation
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.9] - 2025-12-08
 
 ### Dependencies

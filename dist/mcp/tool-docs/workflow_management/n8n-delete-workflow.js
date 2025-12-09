@@ -20,7 +20,7 @@ exports.n8nDeleteWorkflowDoc = {
         parameters: {
             id: { type: 'string', required: true, description: 'Workflow ID to delete permanently' }
         },
-        returns: 'Success confirmation or error if workflow not found/cannot be deleted',
+        returns: 'Minimal confirmation (id, name, deleted: true) for token efficiency.',
         examples: [
             'n8n_delete_workflow({id: "abc123"}) - Delete specific workflow',
             'if (confirm) { n8n_delete_workflow({id: wf.id}); } // With confirmation'

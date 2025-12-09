@@ -24,7 +24,7 @@ exports.n8nCreateWorkflowDoc = {
             connections: { type: 'object', required: true, description: 'Node connections. Keys are source node IDs' },
             settings: { type: 'object', description: 'Optional workflow settings (timezone, error handling, etc.)' }
         },
-        returns: 'Created workflow object with id, name, nodes, connections, active status',
+        returns: 'Minimal summary (id, name, active, nodeCount) for token efficiency. Use n8n_get_workflow with mode "structure" to verify current state if needed.',
         examples: [
             `// Basic webhook to Slack workflow
 n8n_create_workflow({

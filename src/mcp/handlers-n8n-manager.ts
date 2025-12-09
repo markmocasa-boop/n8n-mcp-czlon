@@ -518,8 +518,13 @@ export async function handleCreateWorkflow(args: unknown, context?: InstanceCont
 
     return {
       success: true,
-      data: workflow,
-      message: `Workflow "${workflow.name}" created successfully with ID: ${workflow.id}`
+      data: {
+        id: workflow.id,
+        name: workflow.name,
+        active: workflow.active,
+        nodeCount: workflow.nodes?.length || 0
+      },
+      message: `Workflow "${workflow.name}" created successfully with ID: ${workflow.id}. Use n8n_get_workflow with mode 'structure' to verify current state.`
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -813,8 +818,13 @@ export async function handleUpdateWorkflow(
 
     return {
       success: true,
-      data: workflow,
-      message: `Workflow "${workflow.name}" updated successfully`
+      data: {
+        id: workflow.id,
+        name: workflow.name,
+        active: workflow.active,
+        nodeCount: workflow.nodes?.length || 0
+      },
+      message: `Workflow "${workflow.name}" updated successfully. Use n8n_get_workflow with mode 'structure' to verify current state.`
     };
   } catch (error) {
     // Track failed mutation
@@ -880,8 +890,12 @@ export async function handleDeleteWorkflow(args: unknown, context?: InstanceCont
 
     return {
       success: true,
-      data: deleted,
-      message: `Workflow ${id} deleted successfully`
+      data: {
+        id: deleted?.id || id,
+        name: deleted?.name,
+        deleted: true
+      },
+      message: `Workflow "${deleted?.name || id}" deleted successfully.`
     };
   } catch (error) {
     if (error instanceof z.ZodError) {

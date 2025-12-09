@@ -285,8 +285,13 @@ async function handleCreateWorkflow(args, context) {
         telemetry_1.telemetry.trackWorkflowCreation(workflow, true);
         return {
             success: true,
-            data: workflow,
-            message: `Workflow "${workflow.name}" created successfully with ID: ${workflow.id}`
+            data: {
+                id: workflow.id,
+                name: workflow.name,
+                active: workflow.active,
+                nodeCount: workflow.nodes?.length || 0
+            },
+            message: `Workflow "${workflow.name}" created successfully with ID: ${workflow.id}. Use n8n_get_workflow with mode 'structure' to verify current state.`
         };
     }
     catch (error) {
@@ -537,8 +542,13 @@ async function handleUpdateWorkflow(args, repository, context) {
         }
         return {
             success: true,
-            data: workflow,
-            message: `Workflow "${workflow.name}" updated successfully`
+            data: {
+                id: workflow.id,
+                name: workflow.name,
+                active: workflow.active,
+                nodeCount: workflow.nodes?.length || 0
+            },
+            message: `Workflow "${workflow.name}" updated successfully. Use n8n_get_workflow with mode 'structure' to verify current state.`
         };
     }
     catch (error) {
@@ -594,8 +604,12 @@ async function handleDeleteWorkflow(args, context) {
         const deleted = await client.deleteWorkflow(id);
         return {
             success: true,
-            data: deleted,
-            message: `Workflow ${id} deleted successfully`
+            data: {
+                id: deleted?.id || id,
+                name: deleted?.name,
+                deleted: true
+            },
+            message: `Workflow "${deleted?.name || id}" deleted successfully.`
         };
     }
     catch (error) {
@@ -682,7 +696,7 @@ async function handleValidateWorkflow(args, repository, context) {
     try {
         const client = ensureApiConfigured(context);
         const input = validateWorkflowSchema.parse(args);
-        const workflowResponse = await handleGetWorkflow({ id: input.id });
+        const workflowResponse = await handleGetWorkflow({ id: input.id }, context);
         if (!workflowResponse.success) {
             return workflowResponse;
         }

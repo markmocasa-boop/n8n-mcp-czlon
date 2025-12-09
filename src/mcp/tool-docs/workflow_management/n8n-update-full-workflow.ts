@@ -25,7 +25,7 @@ export const n8nUpdateFullWorkflowDoc: ToolDocumentation = {
       settings: { type: 'object', description: 'Workflow settings to update (timezone, error handling, etc.)' },
       intent: { type: 'string', description: 'Intent of the change - helps to return better response. Include in every tool call. Example: "Migrate workflow to new node versions".' }
     },
-    returns: 'Updated workflow object with all fields including the changes applied',
+    returns: 'Minimal summary (id, name, active, nodeCount) for token efficiency. Use n8n_get_workflow with mode "structure" to verify current state if needed.',
     examples: [
       'n8n_update_full_workflow({id: "abc", intent: "Rename workflow for clarity", name: "New Name"}) - Rename with intent',
       'n8n_update_full_workflow({id: "abc", name: "New Name"}) - Rename only',

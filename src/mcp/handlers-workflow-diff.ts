@@ -363,13 +363,14 @@ export async function handleUpdatePartialWorkflow(
 
       return {
         success: true,
-        data: finalWorkflow,
-        message: `Workflow "${finalWorkflow.name}" updated successfully. Applied ${diffResult.operationsApplied} operations.${activationMessage}`,
-        details: {
-          operationsApplied: diffResult.operationsApplied,
-          workflowId: finalWorkflow.id,
-          workflowName: finalWorkflow.name,
+        data: {
+          id: finalWorkflow.id,
+          name: finalWorkflow.name,
           active: finalWorkflow.active,
+          operationsApplied: diffResult.operationsApplied
+        },
+        message: `Workflow "${finalWorkflow.name}" updated successfully. Applied ${diffResult.operationsApplied} operations.${activationMessage} Use n8n_get_workflow with mode 'structure' to verify current state.`,
+        details: {
           applied: diffResult.applied,
           failed: diffResult.failed,
           errors: diffResult.errors,
