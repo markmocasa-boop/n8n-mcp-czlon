@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.29.0] - 2025-12-12
+
+### Added
+
+**Tool Variant Support for AI Agent Integration**
+
+Added comprehensive support for n8n Tool variants - specialized node versions created for AI Agent tool connections (e.g., `nodes-base.supabaseTool` from `nodes-base.supabase`).
+
+**Key Features:**
+
+- **266 Tool Variants Generated**: During database rebuild, Tool variants are automatically created for all nodes with `usableAsTool: true`
+- **Bidirectional Cross-References**:
+  - Base nodes show `toolVariantInfo.hasToolVariant: true` with guidance to use Tool variant
+  - Tool variants show `toolVariantInfo.isToolVariant: true` with reference to base node
+- **Clear AI Guidance**: Contextual messages help AI assistants choose the correct node type:
+  - Base node guidance: "To use this node with AI Agents, use the Tool variant: nodes-base.supabaseTool"
+  - Tool variant guidance: "This is the Tool variant for AI Agent integration"
+- **Tool Description Property**: Tool variants include `toolDescription` property for AI context
+- **ai_tool Output Type**: Tool variants output `ai_tool` instead of `main` for proper Agent connections
+
+**Database Schema Changes:**
+
+- Added `is_tool_variant` column (1 if Tool variant)
+- Added `tool_variant_of` column (base node type reference)
+- Added `has_tool_variant` column (1 if base node has Tool variant)
+- Added indexes for efficient Tool variant queries
+
+**Files Changed:**
+
+- `src/database/schema.sql` - New columns and indexes
+- `src/parsers/node-parser.ts` - Extended ParsedNode interface
+- `src/services/tool-variant-generator.ts` - **NEW** Tool variant generation service
+- `src/database/node-repository.ts` - Store/retrieve Tool variant fields
+- `src/scripts/rebuild.ts` - Generate Tool variants during rebuild
+- `src/mcp/server.ts` - Add `toolVariantInfo` to get_node responses
+
+**Conceived by Romuald Członkowski - [AiAdvisors](https://www.aiadvisors.pl/en)**
+
 ## [2.28.9] - 2025-12-08
 
 ### Dependencies

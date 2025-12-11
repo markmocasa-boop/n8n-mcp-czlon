@@ -23,12 +23,13 @@ export class NodeRepository {
       INSERT OR REPLACE INTO nodes (
         node_type, package_name, display_name, description,
         category, development_style, is_ai_tool, is_trigger,
-        is_webhook, is_versioned, version, documentation,
+        is_webhook, is_versioned, is_tool_variant, tool_variant_of,
+        has_tool_variant, version, documentation,
         properties_schema, operations, credentials_required,
         outputs, output_names
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       node.nodeType,
       node.packageName,
@@ -40,6 +41,9 @@ export class NodeRepository {
       node.isTrigger ? 1 : 0,
       node.isWebhook ? 1 : 0,
       node.isVersioned ? 1 : 0,
+      node.isToolVariant ? 1 : 0,
+      node.toolVariantOf || null,
+      node.hasToolVariant ? 1 : 0,
       node.version,
       node.documentation || null,
       JSON.stringify(node.properties, null, 2),
@@ -194,6 +198,54 @@ export class NodeRepository {
     return this.getAITools();
   }
 
+  /**
+   * Get the Tool variant for a base node
+   */
+  getToolVariant(baseNodeType: string): any | null {
+    const toolNodeType = `${baseNodeType}Tool`;
+    return this.getNode(toolNodeType);
+  }
+
+  /**
+   * Get the base node for a Tool variant
+   */
+  getBaseNodeForToolVariant(toolNodeType: string): any | null {
+    const row = this.db.prepare(`
+      SELECT tool_variant_of FROM nodes WHERE node_type = ?
+    `).get(toolNodeType) as any;
+
+    if (!row?.tool_variant_of) return null;
+    return this.getNode(row.tool_variant_of);
+  }
+
+  /**
+   * Get all Tool variants
+   */
+  getToolVariants(): any[] {
+    const rows = this.db.prepare(`
+      SELECT node_type, display_name, description, package_name, tool_variant_of
+      FROM nodes
+      WHERE is_tool_variant = 1
+      ORDER BY display_name
+    `).all() as any[];
+
+    return rows.map(row => ({
+      nodeType: row.node_type,
+      displayName: row.display_name,
+      description: row.description,
+      package: row.package_name,
+      toolVariantOf: row.tool_variant_of
+    }));
+  }
+
+  /**
+   * Get count of Tool variants
+   */
+  getToolVariantCount(): number {
+    const result = this.db.prepare('SELECT COUNT(*) as count FROM nodes WHERE is_tool_variant = 1').get() as any;
+    return result.count;
+  }
+
   getNodesByPackage(packageName: string): any[] {
     const rows = this.db.prepare(`
       SELECT * FROM nodes WHERE package_name = ?
@@ -250,6 +302,9 @@ export class NodeRepository {
       isTrigger: Number(row.is_trigger) === 1,
       isWebhook: Number(row.is_webhook) === 1,
       isVersioned: Number(row.is_versioned) === 1,
+      isToolVariant: Number(row.is_tool_variant) === 1,
+      toolVariantOf: row.tool_variant_of || null,
+      hasToolVariant: Number(row.has_tool_variant) === 1,
       version: row.version,
       properties: this.safeJsonParse(row.properties_schema, []),
       operations: this.safeJsonParse(row.operations, []),

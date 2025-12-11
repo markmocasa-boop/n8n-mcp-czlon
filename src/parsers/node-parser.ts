@@ -28,6 +28,10 @@ export interface ParsedNode {
   documentation?: string;
   outputs?: any[];
   outputNames?: string[];
+  // Tool variant fields (for nodes with usableAsTool: true)
+  isToolVariant?: boolean;      // True for *Tool variants (e.g., supabaseTool)
+  toolVariantOf?: string;       // For Tool variants: base node type (e.g., nodes-base.supabase)
+  hasToolVariant?: boolean;     // For base nodes: true if Tool variant exists
 }
 
 export class NodeParser {

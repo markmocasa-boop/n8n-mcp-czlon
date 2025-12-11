@@ -682,7 +682,7 @@ async function handleValidateWorkflow(args, repository, context) {
     try {
         const client = ensureApiConfigured(context);
         const input = validateWorkflowSchema.parse(args);
-        const workflowResponse = await handleGetWorkflow({ id: input.id });
+        const workflowResponse = await handleGetWorkflow({ id: input.id }, context);
         if (!workflowResponse.success) {
             return workflowResponse;
         }
