@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS nodes (
   is_trigger INTEGER DEFAULT 0,
   is_webhook INTEGER DEFAULT 0,
   is_versioned INTEGER DEFAULT 0,
+  is_tool_variant INTEGER DEFAULT 0, -- 1 if this is a *Tool variant for AI Agents
+  tool_variant_of TEXT,              -- For Tool variants: base node type (e.g., nodes-base.supabase)
+  has_tool_variant INTEGER DEFAULT 0, -- For base nodes: 1 if Tool variant exists
   version TEXT,
   documentation TEXT,
   properties_schema TEXT,
@@ -24,6 +27,8 @@ CREATE TABLE IF NOT EXISTS nodes (
 CREATE INDEX IF NOT EXISTS idx_package ON nodes(package_name);
 CREATE INDEX IF NOT EXISTS idx_ai_tool ON nodes(is_ai_tool);
 CREATE INDEX IF NOT EXISTS idx_category ON nodes(category);
+CREATE INDEX IF NOT EXISTS idx_tool_variant ON nodes(is_tool_variant);
+CREATE INDEX IF NOT EXISTS idx_tool_variant_of ON nodes(tool_variant_of);
 
 -- FTS5 full-text search index for nodes
 CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(

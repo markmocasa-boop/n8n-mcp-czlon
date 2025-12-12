@@ -52,6 +52,9 @@ interface NodeRow {
   is_trigger: number;
   is_webhook: number;
   is_versioned: number;
+  is_tool_variant: number;
+  tool_variant_of?: string;
+  has_tool_variant: number;
   version?: string;
   documentation?: string;
   properties_schema?: string;
@@ -65,6 +68,14 @@ interface VersionSummary {
   hasVersionHistory: boolean;
 }
 
+interface ToolVariantGuidance {
+  isToolVariant: boolean;
+  toolVariantOf?: string;
+  hasToolVariant: boolean;
+  toolVariantNodeType?: string;
+  guidance?: string;
+}
+
 interface NodeMinimalInfo {
   nodeType: string;
   workflowNodeType: string;
@@ -75,6 +86,7 @@ interface NodeMinimalInfo {
   isAITool: boolean;
   isTrigger: boolean;
   isWebhook: boolean;
+  toolVariantInfo?: ToolVariantGuidance;
 }
 
 interface NodeStandardInfo {
@@ -88,6 +100,7 @@ interface NodeStandardInfo {
   credentials?: any;
   examples?: any[];
   versionInfo: VersionSummary;
+  toolVariantInfo?: ToolVariantGuidance;
 }
 
 interface NodeFullInfo {
@@ -100,6 +113,7 @@ interface NodeFullInfo {
   credentials?: any;
   documentation?: string;
   versionInfo: VersionSummary;
+  toolVariantInfo?: ToolVariantGuidance;
 }
 
 interface VersionHistoryInfo {
@@ -1376,12 +1390,20 @@ export class N8NDocumentationMCPServer {
       });
     }
 
-    return {
+    const result: any = {
       ...node,
       workflowNodeType: getWorkflowNodeType(node.package ?? 'n8n-nodes-base', node.nodeType),
       aiToolCapabilities,
       outputs
     };
+
+    // Add tool variant guidance if applicable
+    const toolVariantInfo = this.buildToolVariantGuidance(node);
+    if (toolVariantInfo) {
+      result.toolVariantInfo = toolVariantInfo;
+    }
+
+    return result;
   }
 
   /**
@@ -2245,7 +2267,7 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
     // Get the latest version - this is important for AI to use correct typeVersion
     const latestVersion = node.version ?? '1';
 
-    const result = {
+    const result: any = {
       nodeType: node.nodeType,
       workflowNodeType: getWorkflowNodeType(node.package ?? 'n8n-nodes-base', node.nodeType),
       displayName: node.displayName,
@@ -2274,6 +2296,12 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
         developmentStyle: node.developmentStyle ?? 'programmatic'
       }
     };
+
+    // Add tool variant guidance if applicable
+    const toolVariantInfo = this.buildToolVariantGuidance(node);
+    if (toolVariantInfo) {
+      result.toolVariantInfo = toolVariantInfo;
+    }
 
     // Add examples from templates if requested
     if (includeExamples) {
@@ -2426,7 +2454,7 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
           throw new Error(`Node ${nodeType} not found`);
         }
 
-        return {
+        const result: NodeMinimalInfo = {
           nodeType: node.nodeType,
           workflowNodeType: getWorkflowNodeType(node.package ?? 'n8n-nodes-base', node.nodeType),
           displayName: node.displayName,
@@ -2437,6 +2465,14 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
           isTrigger: node.isTrigger,
           isWebhook: node.isWebhook
         };
+
+        // Add tool variant guidance if applicable
+        const toolVariantInfo = this.buildToolVariantGuidance(node);
+        if (toolVariantInfo) {
+          result.toolVariantInfo = toolVariantInfo;
+        }
+
+        return result;
       }
 
       case 'standard': {
@@ -3118,7 +3154,45 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
       'Extend AI agent capabilities'
     ];
   }
-  
+
+  /**
+   * Build tool variant guidance for node responses.
+   * Provides cross-reference information between base nodes and their Tool variants.
+   */
+  private buildToolVariantGuidance(node: any): ToolVariantGuidance | undefined {
+    const isToolVariant = !!node.isToolVariant;
+    const hasToolVariant = !!node.hasToolVariant;
+    const toolVariantOf = node.toolVariantOf;
+
+    // If this is neither a Tool variant nor has one, no guidance needed
+    if (!isToolVariant && !hasToolVariant) {
+      return undefined;
+    }
+
+    if (isToolVariant) {
+      // This IS a Tool variant (e.g., nodes-base.supabaseTool)
+      return {
+        isToolVariant: true,
+        toolVariantOf,
+        hasToolVariant: false,
+        guidance: `This is the Tool variant for AI Agent integration. Use this node type when connecting to AI Agents. The base node is: ${toolVariantOf}`
+      };
+    }
+
+    if (hasToolVariant) {
+      // This base node HAS a Tool variant (e.g., nodes-base.supabase)
+      const toolVariantNodeType = `${node.nodeType}Tool`;
+      return {
+        isToolVariant: false,
+        hasToolVariant: true,
+        toolVariantNodeType,
+        guidance: `To use this node with AI Agents, use the Tool variant: ${toolVariantNodeType}. The Tool variant has an additional 'toolDescription' property and outputs 'ai_tool' instead of 'main'.`
+      };
+    }
+
+    return undefined;
+  }
+
   private getAIToolExamples(nodeType: string): any {
     const exampleMap: Record<string, any> = {
       'nodes-base.slack': {
