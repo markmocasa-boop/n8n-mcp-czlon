@@ -7,13 +7,13 @@ export declare const telemetryEventSchema: z.ZodObject<{
     created_at: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     properties: Record<string, any>;
-    user_id: string;
     event: string;
+    user_id: string;
     created_at?: string | undefined;
 }, {
     properties: Record<string, unknown>;
-    user_id: string;
     event: string;
+    user_id: string;
     created_at?: string | undefined;
 }>;
 export declare const workflowTelemetrySchema: z.ZodObject<{

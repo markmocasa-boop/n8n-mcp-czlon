@@ -53,6 +53,13 @@ interface ValidationIssue {
     nodeName?: string;
     message: string;
     details?: any;
+    code?: string;
+    fix?: {
+        type: string;
+        currentType?: string;
+        suggestedType?: string;
+        description?: string;
+    };
 }
 export interface WorkflowValidationResult {
     valid: boolean;
@@ -86,6 +93,7 @@ export declare class WorkflowValidator {
     private validateConnectionOutputs;
     private validateErrorOutputConfiguration;
     private validateAIToolConnection;
+    private validateAIToolSource;
     private hasCycle;
     private validateExpressions;
     private countExpressionsInObject;

@@ -12,5 +12,6 @@ export declare class NodeTypeNormalizer {
     static normalizeWorkflowNodeTypes(workflow: any): any;
     static isFullForm(type: string): boolean;
     static isShortForm(type: string): boolean;
+    static toWorkflowFormat(type: string): string;
 }
 //# sourceMappingURL=node-type-normalizer.d.ts.map

@@ -70,6 +70,18 @@ class NodeTypeNormalizer {
         return (type.startsWith('nodes-base.') ||
             type.startsWith('nodes-langchain.'));
     }
+    static toWorkflowFormat(type) {
+        if (!type || typeof type !== 'string') {
+            return type;
+        }
+        if (type.startsWith('nodes-base.')) {
+            return type.replace(/^nodes-base\./, 'n8n-nodes-base.');
+        }
+        if (type.startsWith('nodes-langchain.')) {
+            return type.replace(/^nodes-langchain\./, '@n8n/n8n-nodes-langchain.');
+        }
+        return type;
+    }
 }
 exports.NodeTypeNormalizer = NodeTypeNormalizer;
 //# sourceMappingURL=node-type-normalizer.js.map

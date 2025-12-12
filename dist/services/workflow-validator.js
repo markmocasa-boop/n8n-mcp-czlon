@@ -11,8 +11,10 @@ const node_similarity_service_1 = require("./node-similarity-service");
 const node_type_normalizer_1 = require("../utils/node-type-normalizer");
 const logger_1 = require("../utils/logger");
 const ai_node_validator_1 = require("./ai-node-validator");
+const ai_tool_validators_1 = require("./ai-tool-validators");
 const node_type_utils_1 = require("../utils/node-type-utils");
 const node_classification_1 = require("../utils/node-classification");
+const tool_variant_generator_1 = require("./tool-variant-generator");
 const logger = new logger_1.Logger({ prefix: '[WorkflowValidator]' });
 class WorkflowValidator {
     constructor(nodeRepository, nodeValidator) {
@@ -367,6 +369,7 @@ class WorkflowValidator {
                 this.validateConnectionOutputs(sourceName, outputs.error, nodeMap, nodeIdMap, result, 'error');
             }
             if (outputs.ai_tool) {
+                this.validateAIToolSource(sourceNode, result);
                 this.validateConnectionOutputs(sourceName, outputs.ai_tool, nodeMap, nodeIdMap, result, 'ai_tool');
             }
         }
@@ -554,6 +557,52 @@ class WorkflowValidator {
                 message: `Community node "${targetNode.name}" is being used as an AI tool. Ensure N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true is set.`
             });
         }
+    }
+    validateAIToolSource(sourceNode, result) {
+        const normalizedType = node_type_normalizer_1.NodeTypeNormalizer.normalizeToFullForm(sourceNode.type);
+        if ((0, ai_tool_validators_1.isAIToolSubNode)(normalizedType)) {
+            return;
+        }
+        if (tool_variant_generator_1.ToolVariantGenerator.isToolVariantNodeType(normalizedType)) {
+            const nodeInfo = this.nodeRepository.getNode(normalizedType);
+            if (nodeInfo?.isToolVariant) {
+                return;
+            }
+        }
+        const nodeInfo = this.nodeRepository.getNode(normalizedType);
+        if (!nodeInfo) {
+            return;
+        }
+        if (nodeInfo.hasToolVariant) {
+            const toolVariantType = tool_variant_generator_1.ToolVariantGenerator.getToolVariantNodeType(normalizedType);
+            const workflowToolVariantType = node_type_normalizer_1.NodeTypeNormalizer.toWorkflowFormat(toolVariantType);
+            result.errors.push({
+                type: 'error',
+                nodeId: sourceNode.id,
+                nodeName: sourceNode.name,
+                message: `Node "${sourceNode.name}" uses "${sourceNode.type}" which cannot output ai_tool connections. ` +
+                    `Use the Tool variant "${workflowToolVariantType}" instead for AI Agent integration.`,
+                code: 'WRONG_NODE_TYPE_FOR_AI_TOOL',
+                fix: {
+                    type: 'tool-variant-correction',
+                    currentType: sourceNode.type,
+                    suggestedType: workflowToolVariantType,
+                    description: `Change node type from "${sourceNode.type}" to "${workflowToolVariantType}"`
+                }
+            });
+            return;
+        }
+        if (nodeInfo.isAITool) {
+            return;
+        }
+        result.errors.push({
+            type: 'error',
+            nodeId: sourceNode.id,
+            nodeName: sourceNode.name,
+            message: `Node "${sourceNode.name}" of type "${sourceNode.type}" cannot output ai_tool connections. ` +
+                `Only AI tool nodes (e.g., Calculator, HTTP Request Tool) or Tool variants (e.g., *Tool suffix nodes) can be connected to AI Agents as tools.`,
+            code: 'INVALID_AI_TOOL_SOURCE'
+        });
     }
     hasCycle(workflow) {
         const visited = new Set();

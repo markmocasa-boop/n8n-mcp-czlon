@@ -63,6 +63,9 @@ class WorkflowAutoFixer {
         if (!fullConfig.fixTypes || fullConfig.fixTypes.includes('webhook-missing-path')) {
             this.processWebhookPathFixes(validationResult, nodeMap, operations, fixes);
         }
+        if (!fullConfig.fixTypes || fullConfig.fixTypes.includes('tool-variant-correction')) {
+            this.processToolVariantFixes(validationResult, nodeMap, workflow, operations, fixes);
+        }
         if (!fullConfig.fixTypes || fullConfig.fixTypes.includes('typeversion-upgrade')) {
             await this.processVersionUpgradeFixes(workflow, nodeMap, operations, fixes, postUpdateGuidance);
         }
@@ -267,6 +270,42 @@ class WorkflowAutoFixer {
             }
         }
     }
+    processToolVariantFixes(validationResult, nodeMap, workflow, operations, fixes) {
+        for (const error of validationResult.errors) {
+            const errorWithDetails = error;
+            if (errorWithDetails.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !errorWithDetails.fix) {
+                continue;
+            }
+            const fix = errorWithDetails.fix;
+            if (fix.type !== 'tool-variant-correction') {
+                continue;
+            }
+            const nodeName = error.nodeName || error.nodeId;
+            if (!nodeName)
+                continue;
+            const node = nodeMap.get(nodeName);
+            if (!node)
+                continue;
+            fixes.push({
+                node: nodeName,
+                field: 'type',
+                type: 'tool-variant-correction',
+                before: fix.currentType,
+                after: fix.suggestedType,
+                confidence: 'high',
+                description: fix.description
+            });
+            const operation = {
+                type: 'updateNode',
+                nodeId: nodeName,
+                updates: {
+                    type: fix.suggestedType
+                }
+            };
+            operations.push(operation);
+            logger.info(`Generated tool variant correction for ${nodeName}: ${fix.currentType} → ${fix.suggestedType}`);
+        }
+    }
     setNestedValue(obj, path, value) {
         if (!obj || typeof obj !== 'object') {
             throw new Error('Cannot set value on non-object');
@@ -372,7 +411,8 @@ class WorkflowAutoFixer {
                 'node-type-correction': 0,
                 'webhook-missing-path': 0,
                 'typeversion-upgrade': 0,
-                'version-migration': 0
+                'version-migration': 0,
+                'tool-variant-correction': 0
             },
             byConfidence: {
                 'high': 0,
@@ -411,6 +451,9 @@ class WorkflowAutoFixer {
         }
         if (stats.byType['version-migration'] > 0) {
             parts.push(`${stats.byType['version-migration']} version ${stats.byType['version-migration'] === 1 ? 'migration' : 'migrations'}`);
+        }
+        if (stats.byType['tool-variant-correction'] > 0) {
+            parts.push(`${stats.byType['tool-variant-correction']} tool variant ${stats.byType['tool-variant-correction'] === 1 ? 'correction' : 'corrections'}`);
         }
         if (parts.length === 0) {
             return `Fixed ${stats.total} ${stats.total === 1 ? 'issue' : 'issues'}`;

@@ -30,8 +30,9 @@ export type FixType =
   | 'error-output-config'
   | 'node-type-correction'
   | 'webhook-missing-path'
-  | 'typeversion-upgrade'     // NEW: Proactive version upgrades
-  | 'version-migration';       // NEW: Smart version migrations with breaking changes
+  | 'typeversion-upgrade'     // Proactive version upgrades
+  | 'version-migration'       // Smart version migrations with breaking changes
+  | 'tool-variant-correction'; // Fix base nodes used as AI tools when Tool variant exists
 
 export interface AutoFixConfig {
   applyFixes: boolean;
@@ -159,7 +160,12 @@ export class WorkflowAutoFixer {
       this.processWebhookPathFixes(validationResult, nodeMap, operations, fixes);
     }
 
-    // NEW: Process version upgrades (HIGH/MEDIUM confidence)
+    // Process tool variant corrections (HIGH confidence)
+    if (!fullConfig.fixTypes || fullConfig.fixTypes.includes('tool-variant-correction')) {
+      this.processToolVariantFixes(validationResult, nodeMap, workflow, operations, fixes);
+    }
+
+    // Process version upgrades (HIGH/MEDIUM confidence)
     if (!fullConfig.fixTypes || fullConfig.fixTypes.includes('typeversion-upgrade')) {
       await this.processVersionUpgradeFixes(workflow, nodeMap, operations, fixes, postUpdateGuidance);
     }
@@ -460,6 +466,63 @@ export class WorkflowAutoFixer {
   }
 
   /**
+   * Process tool variant corrections for base nodes incorrectly used as AI tools.
+   *
+   * When a base node (e.g., n8n-nodes-base.supabase) is connected via ai_tool output
+   * but has a Tool variant available (e.g., n8n-nodes-base.supabaseTool), this fix
+   * replaces the node type with the correct Tool variant.
+   */
+  private processToolVariantFixes(
+    validationResult: WorkflowValidationResult,
+    nodeMap: Map<string, WorkflowNode>,
+    workflow: Workflow,
+    operations: WorkflowDiffOperation[],
+    fixes: FixOperation[]
+  ): void {
+    for (const error of validationResult.errors) {
+      // Check for errors with the WRONG_NODE_TYPE_FOR_AI_TOOL code
+      const errorWithDetails = error as any;
+      if (errorWithDetails.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !errorWithDetails.fix) {
+        continue;
+      }
+
+      const fix = errorWithDetails.fix;
+      if (fix.type !== 'tool-variant-correction') {
+        continue;
+      }
+
+      const nodeName = error.nodeName || error.nodeId;
+      if (!nodeName) continue;
+
+      const node = nodeMap.get(nodeName);
+      if (!node) continue;
+
+      // Create the fix record
+      fixes.push({
+        node: nodeName,
+        field: 'type',
+        type: 'tool-variant-correction',
+        before: fix.currentType,
+        after: fix.suggestedType,
+        confidence: 'high', // This is a direct match - we know exactly which type to use
+        description: fix.description
+      });
+
+      // Create the update operation
+      const operation: UpdateNodeOperation = {
+        type: 'updateNode',
+        nodeId: nodeName,
+        updates: {
+          type: fix.suggestedType
+        }
+      };
+      operations.push(operation);
+
+      logger.info(`Generated tool variant correction for ${nodeName}: ${fix.currentType} → ${fix.suggestedType}`);
+    }
+  }
+
+  /**
    * Set a nested value in an object using a path array
    * Includes validation to prevent silent failures
    */
@@ -607,7 +670,8 @@ export class WorkflowAutoFixer {
         'node-type-correction': 0,
         'webhook-missing-path': 0,
         'typeversion-upgrade': 0,
-        'version-migration': 0
+        'version-migration': 0,
+        'tool-variant-correction': 0
       },
       byConfidence: {
         'high': 0,
@@ -655,6 +719,9 @@ export class WorkflowAutoFixer {
     }
     if (stats.byType['version-migration'] > 0) {
       parts.push(`${stats.byType['version-migration']} version ${stats.byType['version-migration'] === 1 ? 'migration' : 'migrations'}`);
+    }
+    if (stats.byType['tool-variant-correction'] > 0) {
+      parts.push(`${stats.byType['tool-variant-correction']} tool variant ${stats.byType['tool-variant-correction'] === 1 ? 'correction' : 'corrections'}`);
     }
 
     if (parts.length === 0) {

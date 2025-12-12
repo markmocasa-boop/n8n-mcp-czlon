@@ -231,4 +231,42 @@ export class NodeTypeNormalizer {
       type.startsWith('nodes-langchain.')
     );
   }
+
+  /**
+   * Convert short database format to full n8n workflow format.
+   *
+   * This method converts node types from the SHORT form used in the database
+   * to the FULL form required by the n8n API.
+   *
+   * @param type - Node type in short database format (e.g., 'nodes-base.webhook')
+   * @returns Node type in full workflow format (e.g., 'n8n-nodes-base.webhook')
+   *
+   * @example
+   * toWorkflowFormat('nodes-base.webhook')
+   * // → 'n8n-nodes-base.webhook'
+   *
+   * @example
+   * toWorkflowFormat('nodes-langchain.agent')
+   * // → '@n8n/n8n-nodes-langchain.agent'
+   *
+   * @example
+   * toWorkflowFormat('n8n-nodes-base.webhook')
+   * // → 'n8n-nodes-base.webhook' (already in full format)
+   */
+  static toWorkflowFormat(type: string): string {
+    if (!type || typeof type !== 'string') {
+      return type;
+    }
+
+    // Convert short form to full form (API/workflow format)
+    if (type.startsWith('nodes-base.')) {
+      return type.replace(/^nodes-base\./, 'n8n-nodes-base.');
+    }
+    if (type.startsWith('nodes-langchain.')) {
+      return type.replace(/^nodes-langchain\./, '@n8n/n8n-nodes-langchain.');
+    }
+
+    // Already in full form or community node - return unchanged
+    return type;
+  }
 }
