@@ -35,9 +35,17 @@ export class ToolVariantGenerator {
       return null;
     }
 
+    // Validate nodeType exists
+    if (!baseNode.nodeType) {
+      return null;
+    }
+
     // Generate the Tool variant node type
     // e.g., nodes-base.supabase -> nodes-base.supabaseTool
     const toolNodeType = `${baseNode.nodeType}Tool`;
+
+    // Ensure properties is an array to prevent spread operator errors
+    const baseProperties = Array.isArray(baseNode.properties) ? baseNode.properties : [];
 
     return {
       ...baseNode,
@@ -57,7 +65,7 @@ export class ToolVariantGenerator {
       outputNames: ['Tool'],
 
       // Add toolDescription property at the beginning
-      properties: this.addToolDescriptionProperty(baseNode.properties, baseNode.displayName),
+      properties: this.addToolDescriptionProperty(baseProperties, baseNode.displayName),
     };
   }
 
@@ -115,10 +123,20 @@ export class ToolVariantGenerator {
   }
 
   /**
-   * Check if a node type looks like a Tool variant
+   * Check if a node type looks like a Tool variant.
+   * Valid Tool variants must:
+   * - End with 'Tool' but not 'ToolTool'
+   * - Have a valid package.nodeName pattern (contain a dot)
+   * - Have content after the dot before 'Tool' suffix
    */
   static isToolVariantNodeType(nodeType: string): boolean {
-    return nodeType.endsWith('Tool') && !nodeType.endsWith('ToolTool');
+    if (!nodeType || !nodeType.endsWith('Tool') || nodeType.endsWith('ToolTool')) {
+      return false;
+    }
+    // The base part (without 'Tool' suffix) should be a valid node pattern
+    const basePart = nodeType.slice(0, -4);
+    // Valid pattern: package.nodeName (must contain a dot and have content after it)
+    return basePart.includes('.') && basePart.split('.').pop()!.length > 0;
   }
 
   /**

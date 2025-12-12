@@ -186,6 +186,9 @@ async function rebuild() {
   db.close();
 }
 
+// Expected minimum based on n8n v1.123.4 AI-capable nodes
+const MIN_EXPECTED_TOOL_VARIANTS = 200;
+
 function validateDatabase(repository: NodeRepository): { passed: boolean; issues: string[] } {
   const issues = [];
 
@@ -230,8 +233,8 @@ function validateDatabase(repository: NodeRepository): { passed: boolean; issues
     const toolVariantCount = repository.getToolVariantCount();
     if (toolVariantCount === 0) {
       issues.push('No Tool variants found - check ToolVariantGenerator');
-    } else if (toolVariantCount < 200) {
-      issues.push(`Only ${toolVariantCount} Tool variants found - expected at least 200`);
+    } else if (toolVariantCount < MIN_EXPECTED_TOOL_VARIANTS) {
+      issues.push(`Only ${toolVariantCount} Tool variants found - expected at least ${MIN_EXPECTED_TOOL_VARIANTS}`);
     }
 
     // Check FTS5 table existence and population

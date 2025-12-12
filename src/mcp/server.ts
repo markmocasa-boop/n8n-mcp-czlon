@@ -3179,7 +3179,7 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
       };
     }
 
-    if (hasToolVariant) {
+    if (hasToolVariant && node.nodeType) {
       // This base node HAS a Tool variant (e.g., nodes-base.supabase)
       const toolVariantNodeType = `${node.nodeType}Tool`;
       return {

@@ -202,6 +202,10 @@ export class NodeRepository {
    * Get the Tool variant for a base node
    */
   getToolVariant(baseNodeType: string): any | null {
+    // Validate node type format (must be package.nodeName pattern)
+    if (!baseNodeType || typeof baseNodeType !== 'string' || !baseNodeType.includes('.')) {
+      return null;
+    }
     const toolNodeType = `${baseNodeType}Tool`;
     return this.getNode(toolNodeType);
   }
