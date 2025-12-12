@@ -17,6 +17,9 @@ export interface ParsedNode {
     documentation?: string;
     outputs?: any[];
     outputNames?: string[];
+    isToolVariant?: boolean;
+    toolVariantOf?: string;
+    hasToolVariant?: boolean;
 }
 export declare class NodeParser {
     private propertyExtractor;

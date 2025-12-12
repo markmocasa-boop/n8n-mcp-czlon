@@ -16,12 +16,13 @@ class NodeRepository {
       INSERT OR REPLACE INTO nodes (
         node_type, package_name, display_name, description,
         category, development_style, is_ai_tool, is_trigger,
-        is_webhook, is_versioned, version, documentation,
+        is_webhook, is_versioned, is_tool_variant, tool_variant_of,
+        has_tool_variant, version, documentation,
         properties_schema, operations, credentials_required,
         outputs, output_names
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-        stmt.run(node.nodeType, node.packageName, node.displayName, node.description, node.category, node.style, node.isAITool ? 1 : 0, node.isTrigger ? 1 : 0, node.isWebhook ? 1 : 0, node.isVersioned ? 1 : 0, node.version, node.documentation || null, JSON.stringify(node.properties, null, 2), JSON.stringify(node.operations, null, 2), JSON.stringify(node.credentials, null, 2), node.outputs ? JSON.stringify(node.outputs, null, 2) : null, node.outputNames ? JSON.stringify(node.outputNames, null, 2) : null);
+        stmt.run(node.nodeType, node.packageName, node.displayName, node.description, node.category, node.style, node.isAITool ? 1 : 0, node.isTrigger ? 1 : 0, node.isWebhook ? 1 : 0, node.isVersioned ? 1 : 0, node.isToolVariant ? 1 : 0, node.toolVariantOf || null, node.hasToolVariant ? 1 : 0, node.version, node.documentation || null, JSON.stringify(node.properties, null, 2), JSON.stringify(node.operations, null, 2), JSON.stringify(node.credentials, null, 2), node.outputs ? JSON.stringify(node.outputs, null, 2) : null, node.outputNames ? JSON.stringify(node.outputNames, null, 2) : null);
     }
     getNode(nodeType) {
         const normalizedType = node_type_normalizer_1.NodeTypeNormalizer.normalizeToFullForm(nodeType);
@@ -122,6 +123,40 @@ class NodeRepository {
     getAIToolNodes() {
         return this.getAITools();
     }
+    getToolVariant(baseNodeType) {
+        if (!baseNodeType || typeof baseNodeType !== 'string' || !baseNodeType.includes('.')) {
+            return null;
+        }
+        const toolNodeType = `${baseNodeType}Tool`;
+        return this.getNode(toolNodeType);
+    }
+    getBaseNodeForToolVariant(toolNodeType) {
+        const row = this.db.prepare(`
+      SELECT tool_variant_of FROM nodes WHERE node_type = ?
+    `).get(toolNodeType);
+        if (!row?.tool_variant_of)
+            return null;
+        return this.getNode(row.tool_variant_of);
+    }
+    getToolVariants() {
+        const rows = this.db.prepare(`
+      SELECT node_type, display_name, description, package_name, tool_variant_of
+      FROM nodes
+      WHERE is_tool_variant = 1
+      ORDER BY display_name
+    `).all();
+        return rows.map(row => ({
+            nodeType: row.node_type,
+            displayName: row.display_name,
+            description: row.description,
+            package: row.package_name,
+            toolVariantOf: row.tool_variant_of
+        }));
+    }
+    getToolVariantCount() {
+        const result = this.db.prepare('SELECT COUNT(*) as count FROM nodes WHERE is_tool_variant = 1').get();
+        return result.count;
+    }
     getNodesByPackage(packageName) {
         const rows = this.db.prepare(`
       SELECT * FROM nodes WHERE package_name = ?
@@ -170,6 +205,9 @@ class NodeRepository {
             isTrigger: Number(row.is_trigger) === 1,
             isWebhook: Number(row.is_webhook) === 1,
             isVersioned: Number(row.is_versioned) === 1,
+            isToolVariant: Number(row.is_tool_variant) === 1,
+            toolVariantOf: row.tool_variant_of || null,
+            hasToolVariant: Number(row.has_tool_variant) === 1,
             version: row.version,
             properties: this.safeJsonParse(row.properties_schema, []),
             operations: this.safeJsonParse(row.operations, []),

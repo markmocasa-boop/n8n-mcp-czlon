@@ -15,6 +15,10 @@ export declare class NodeRepository {
     getAllNodes(limit?: number): any[];
     getNodeCount(): number;
     getAIToolNodes(): any[];
+    getToolVariant(baseNodeType: string): any | null;
+    getBaseNodeForToolVariant(toolNodeType: string): any | null;
+    getToolVariants(): any[];
+    getToolVariantCount(): number;
     getNodesByPackage(packageName: string): any[];
     searchNodeProperties(nodeType: string, query: string, maxResults?: number): any[];
     private parseNodeRow;

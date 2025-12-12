@@ -39,6 +39,7 @@ const node_loader_1 = require("../loaders/node-loader");
 const node_parser_1 = require("../parsers/node-parser");
 const docs_mapper_1 = require("../mappers/docs-mapper");
 const node_repository_1 = require("../database/node-repository");
+const tool_variant_generator_1 = require("../services/tool-variant-generator");
 const template_sanitizer_1 = require("../utils/template-sanitizer");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -50,6 +51,7 @@ async function rebuild() {
     const parser = new node_parser_1.NodeParser();
     const mapper = new docs_mapper_1.DocsMapper();
     const repository = new node_repository_1.NodeRepository(db);
+    const toolVariantGenerator = new tool_variant_generator_1.ToolVariantGenerator();
     const schema = fs.readFileSync(path.join(__dirname, '../../src/database/schema.sql'), 'utf8');
     db.exec(schema);
     db.exec('DELETE FROM nodes');
@@ -64,7 +66,8 @@ async function rebuild() {
         webhooks: 0,
         withProperties: 0,
         withOperations: 0,
-        withDocs: 0
+        withDocs: 0,
+        toolVariants: 0
     };
     console.log('🔄 Processing nodes...');
     const processedNodes = [];
@@ -79,6 +82,18 @@ async function rebuild() {
             }
             const docs = await mapper.fetchDocumentation(parsed.nodeType);
             parsed.documentation = docs || undefined;
+            if (parsed.isAITool && !parsed.isTrigger) {
+                const toolVariant = toolVariantGenerator.generateToolVariant(parsed);
+                if (toolVariant) {
+                    parsed.hasToolVariant = true;
+                    processedNodes.push({
+                        parsed: toolVariant,
+                        docs: undefined,
+                        nodeName: `${nodeName}Tool`
+                    });
+                    stats.toolVariants++;
+                }
+            }
             processedNodes.push({ parsed, docs: docs || undefined, nodeName });
         }
         catch (error) {
@@ -135,6 +150,7 @@ async function rebuild() {
     console.log(`   Successful: ${stats.successful}`);
     console.log(`   Failed: ${stats.failed}`);
     console.log(`   AI Tools: ${stats.aiTools}`);
+    console.log(`   Tool Variants: ${stats.toolVariants}`);
     console.log(`   Triggers: ${stats.triggers}`);
     console.log(`   Webhooks: ${stats.webhooks}`);
     console.log(`   With Properties: ${stats.withProperties}`);
@@ -165,6 +181,7 @@ async function rebuild() {
     console.log('\n✨ Rebuild complete!');
     db.close();
 }
+const MIN_EXPECTED_TOOL_VARIANTS = 200;
 function validateDatabase(repository) {
     const issues = [];
     try {
@@ -191,6 +208,13 @@ function validateDatabase(repository) {
         const aiTools = repository.getAITools();
         if (aiTools.length === 0) {
             issues.push('No AI tools found - check detection logic');
+        }
+        const toolVariantCount = repository.getToolVariantCount();
+        if (toolVariantCount === 0) {
+            issues.push('No Tool variants found - check ToolVariantGenerator');
+        }
+        else if (toolVariantCount < MIN_EXPECTED_TOOL_VARIANTS) {
+            issues.push(`Only ${toolVariantCount} Tool variants found - expected at least ${MIN_EXPECTED_TOOL_VARIANTS}`);
         }
         const ftsTableCheck = db.prepare(`
       SELECT name FROM sqlite_master

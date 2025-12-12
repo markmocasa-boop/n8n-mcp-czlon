@@ -59,10 +59,11 @@ describe('NodeRepository - Outputs Handling', () => {
       INSERT OR REPLACE INTO nodes (
         node_type, package_name, display_name, description,
         category, development_style, is_ai_tool, is_trigger,
-        is_webhook, is_versioned, version, documentation,
+        is_webhook, is_versioned, is_tool_variant, tool_variant_of,
+        has_tool_variant, version, documentation,
         properties_schema, operations, credentials_required,
         outputs, output_names
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
       expect(mockStatement.run).toHaveBeenCalledWith(
@@ -72,11 +73,14 @@ describe('NodeRepository - Outputs Handling', () => {
         'Split data into batches',
         'transform',
         'programmatic',
-        0, // false
-        0, // false
-        0, // false
-        0, // false
-        '3',
+        0, // isAITool
+        0, // isTrigger
+        0, // isWebhook
+        0, // isVersioned
+        0, // isToolVariant
+        null, // toolVariantOf
+        0, // hasToolVariant
+        '3', // version
         null, // documentation
         JSON.stringify([], null, 2), // properties
         JSON.stringify([], null, 2), // operations
@@ -114,8 +118,8 @@ describe('NodeRepository - Outputs Handling', () => {
       repository.saveNode(node);
 
       const callArgs = mockStatement.run.mock.calls[0];
-      expect(callArgs[15]).toBe(JSON.stringify(outputs, null, 2)); // outputs
-      expect(callArgs[16]).toBe(null); // output_names should be null
+      expect(callArgs[18]).toBe(JSON.stringify(outputs, null, 2)); // outputs
+      expect(callArgs[19]).toBe(null); // output_names should be null
     });
 
     it('should save node with only outputNames (no outputs)', () => {
@@ -143,8 +147,8 @@ describe('NodeRepository - Outputs Handling', () => {
       repository.saveNode(node);
 
       const callArgs = mockStatement.run.mock.calls[0];
-      expect(callArgs[15]).toBe(null); // outputs should be null
-      expect(callArgs[16]).toBe(JSON.stringify(outputNames, null, 2)); // output_names
+      expect(callArgs[18]).toBe(null); // outputs should be null
+      expect(callArgs[19]).toBe(JSON.stringify(outputNames, null, 2)); // output_names
     });
 
     it('should save node without outputs or outputNames', () => {
@@ -169,8 +173,8 @@ describe('NodeRepository - Outputs Handling', () => {
       repository.saveNode(node);
 
       const callArgs = mockStatement.run.mock.calls[0];
-      expect(callArgs[15]).toBe(null); // outputs should be null
-      expect(callArgs[16]).toBe(null); // output_names should be null
+      expect(callArgs[18]).toBe(null); // outputs should be null
+      expect(callArgs[19]).toBe(null); // output_names should be null
     });
 
     it('should handle empty outputs and outputNames arrays', () => {
@@ -196,8 +200,8 @@ describe('NodeRepository - Outputs Handling', () => {
       repository.saveNode(node);
 
       const callArgs = mockStatement.run.mock.calls[0];
-      expect(callArgs[15]).toBe(JSON.stringify([], null, 2)); // outputs
-      expect(callArgs[16]).toBe(JSON.stringify([], null, 2)); // output_names
+      expect(callArgs[18]).toBe(JSON.stringify([], null, 2)); // outputs
+      expect(callArgs[19]).toBe(JSON.stringify([], null, 2)); // output_names
     });
   });
 
@@ -220,6 +224,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '3',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -244,6 +251,9 @@ describe('NodeRepository - Outputs Handling', () => {
         isTrigger: false,
         isWebhook: false,
         isVersioned: false,
+        isToolVariant: false,
+        toolVariantOf: null,
+        hasToolVariant: false,
         version: '3',
         properties: [],
         operations: [],
@@ -270,6 +280,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '2',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -301,6 +314,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '1',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -330,6 +346,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '4',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -359,6 +378,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '1',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -404,6 +426,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '3',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -441,6 +466,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '1',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -470,6 +498,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '1',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),
@@ -543,6 +574,9 @@ describe('NodeRepository - Outputs Handling', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '3',
         properties_schema: JSON.stringify([]),
         operations: JSON.stringify([]),

@@ -89,10 +89,10 @@ describe('NodeRepository - Core Functionality', () => {
       };
       
       repository.saveNode(parsedNode);
-      
+
       // Verify prepare was called with correct SQL
       expect(mockAdapter.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO nodes'));
-      
+
       // Get the prepared statement and verify run was called
       const stmt = mockAdapter._getStatement(mockAdapter.prepare.mock.lastCall?.[0] || '');
       expect(stmt?.run).toHaveBeenCalledWith(
@@ -106,6 +106,9 @@ describe('NodeRepository - Core Functionality', () => {
         0, // isTrigger
         0, // isWebhook
         1, // isVersioned
+        0, // isToolVariant
+        null, // toolVariantOf
+        0, // hasToolVariant
         '1.0',
         'HTTP Request documentation',
         JSON.stringify([{ name: 'url', type: 'string' }], null, 2),
@@ -135,14 +138,14 @@ describe('NodeRepository - Core Functionality', () => {
       };
       
       repository.saveNode(minimalNode);
-      
+
       const stmt = mockAdapter._getStatement(mockAdapter.prepare.mock.lastCall?.[0] || '');
       const runCall = stmt?.run.mock.lastCall;
-      
+
       expect(runCall?.[2]).toBe('Simple Node'); // displayName
       expect(runCall?.[3]).toBeUndefined(); // description
-      expect(runCall?.[10]).toBeUndefined(); // version
-      expect(runCall?.[11]).toBeNull(); // documentation
+      expect(runCall?.[13]).toBeUndefined(); // version (was 10, now 13 after 3 new columns)
+      expect(runCall?.[14]).toBeNull(); // documentation (was 11, now 14 after 3 new columns)
     });
   });
   
@@ -159,6 +162,9 @@ describe('NodeRepository - Core Functionality', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 1,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: '1.0',
         properties_schema: JSON.stringify([{ name: 'url', type: 'string' }]),
         operations: JSON.stringify([{ name: 'execute' }]),
@@ -167,11 +173,11 @@ describe('NodeRepository - Core Functionality', () => {
         outputs: null,
         output_names: null
       };
-      
+
       mockAdapter._setMockData('node:nodes-base.httpRequest', mockRow);
-      
+
       const result = repository.getNode('nodes-base.httpRequest');
-      
+
       expect(result).toEqual({
         nodeType: 'nodes-base.httpRequest',
         displayName: 'HTTP Request',
@@ -183,6 +189,9 @@ describe('NodeRepository - Core Functionality', () => {
         isTrigger: false,
         isWebhook: false,
         isVersioned: true,
+        isToolVariant: false,
+        toolVariantOf: null,
+        hasToolVariant: false,
         version: '1.0',
         properties: [{ name: 'url', type: 'string' }],
         operations: [{ name: 'execute' }],
@@ -210,6 +219,9 @@ describe('NodeRepository - Core Functionality', () => {
         is_trigger: 0,
         is_webhook: 0,
         is_versioned: 0,
+        is_tool_variant: 0,
+        tool_variant_of: null,
+        has_tool_variant: 0,
         version: null,
         properties_schema: '{invalid json',
         operations: 'not json at all',
@@ -218,11 +230,11 @@ describe('NodeRepository - Core Functionality', () => {
         outputs: null,
         output_names: null
       };
-      
+
       mockAdapter._setMockData('node:nodes-base.broken', mockRow);
-      
+
       const result = repository.getNode('nodes-base.broken');
-      
+
       expect(result?.properties).toEqual([]); // defaultValue from safeJsonParse
       expect(result?.operations).toEqual([]); // defaultValue from safeJsonParse
       expect(result?.credentials).toEqual({ valid: 'json' }); // successfully parsed
@@ -338,11 +350,11 @@ describe('NodeRepository - Core Functionality', () => {
       };
       
       repository.saveNode(node);
-      
+
       const stmt = mockAdapter._getStatement(mockAdapter.prepare.mock.lastCall?.[0] || '');
       const runCall = stmt?.run.mock.lastCall;
-      const savedProperties = runCall?.[12];
-      
+      const savedProperties = runCall?.[15]; // was 12, now 15 after 3 new columns
+
       expect(savedProperties).toBe(JSON.stringify(largeProperties, null, 2));
     });
     
@@ -358,6 +370,9 @@ describe('NodeRepository - Core Functionality', () => {
         is_trigger: 0,
         is_webhook: '1', // String that should be converted
         is_versioned: '0', // String that should be converted
+        is_tool_variant: 1,
+        tool_variant_of: 'nodes-base.bool-base',
+        has_tool_variant: 0,
         version: null,
         properties_schema: '[]',
         operations: '[]',
@@ -366,15 +381,18 @@ describe('NodeRepository - Core Functionality', () => {
         outputs: null,
         output_names: null
       };
-      
+
       mockAdapter._setMockData('node:nodes-base.bool-test', mockRow);
-      
+
       const result = repository.getNode('nodes-base.bool-test');
-      
+
       expect(result?.isAITool).toBe(true);
       expect(result?.isTrigger).toBe(false);
       expect(result?.isWebhook).toBe(true);
       expect(result?.isVersioned).toBe(false);
+      expect(result?.isToolVariant).toBe(true);
+      expect(result?.toolVariantOf).toBe('nodes-base.bool-base');
+      expect(result?.hasToolVariant).toBe(false);
     });
   });
 });

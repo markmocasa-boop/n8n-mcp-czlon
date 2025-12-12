@@ -60,6 +60,7 @@ export declare class N8NDocumentationMCPServer {
     private getNodeAsToolInfo;
     private getOutputDescriptions;
     private getCommonAIToolUseCases;
+    private buildToolVariantGuidance;
     private getAIToolExamples;
     private validateNodeMinimal;
     private getToolsDocumentation;

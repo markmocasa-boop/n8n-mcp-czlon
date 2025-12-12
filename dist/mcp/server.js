@@ -1025,12 +1025,17 @@ class N8NDocumentationMCPServer {
                 };
             });
         }
-        return {
+        const result = {
             ...node,
             workflowNodeType: (0, node_utils_1.getWorkflowNodeType)(node.package ?? 'n8n-nodes-base', node.nodeType),
             aiToolCapabilities,
             outputs
         };
+        const toolVariantInfo = this.buildToolVariantGuidance(node);
+        if (toolVariantInfo) {
+            result.toolVariantInfo = toolVariantInfo;
+        }
+        return result;
     }
     async searchNodes(query, limit = 20, options) {
         await this.ensureInitialized();
@@ -1703,6 +1708,10 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
                 developmentStyle: node.developmentStyle ?? 'programmatic'
             }
         };
+        const toolVariantInfo = this.buildToolVariantGuidance(node);
+        if (toolVariantInfo) {
+            result.toolVariantInfo = toolVariantInfo;
+        }
         if (includeExamples) {
             try {
                 const examples = this.db.prepare(`
@@ -1784,7 +1793,7 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
                 if (!node) {
                     throw new Error(`Node ${nodeType} not found`);
                 }
-                return {
+                const result = {
                     nodeType: node.nodeType,
                     workflowNodeType: (0, node_utils_1.getWorkflowNodeType)(node.package ?? 'n8n-nodes-base', node.nodeType),
                     displayName: node.displayName,
@@ -1795,6 +1804,11 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
                     isTrigger: node.isTrigger,
                     isWebhook: node.isWebhook
                 };
+                const toolVariantInfo = this.buildToolVariantGuidance(node);
+                if (toolVariantInfo) {
+                    result.toolVariantInfo = toolVariantInfo;
+                }
+                return result;
             }
             case 'standard': {
                 const essentials = await this.getNodeEssentials(nodeType, includeExamples);
@@ -2291,6 +2305,32 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
             'Process and transform data',
             'Extend AI agent capabilities'
         ];
+    }
+    buildToolVariantGuidance(node) {
+        const isToolVariant = !!node.isToolVariant;
+        const hasToolVariant = !!node.hasToolVariant;
+        const toolVariantOf = node.toolVariantOf;
+        if (!isToolVariant && !hasToolVariant) {
+            return undefined;
+        }
+        if (isToolVariant) {
+            return {
+                isToolVariant: true,
+                toolVariantOf,
+                hasToolVariant: false,
+                guidance: `This is the Tool variant for AI Agent integration. Use this node type when connecting to AI Agents. The base node is: ${toolVariantOf}`
+            };
+        }
+        if (hasToolVariant && node.nodeType) {
+            const toolVariantNodeType = `${node.nodeType}Tool`;
+            return {
+                isToolVariant: false,
+                hasToolVariant: true,
+                toolVariantNodeType,
+                guidance: `To use this node with AI Agents, use the Tool variant: ${toolVariantNodeType}. The Tool variant has an additional 'toolDescription' property and outputs 'ai_tool' instead of 'main'.`
+            };
+        }
+        return undefined;
     }
     getAIToolExamples(nodeType) {
         const exampleMap = {
