@@ -56,7 +56,7 @@ interface WorkflowJson {
   meta?: any;
 }
 
-interface ValidationIssue {
+export interface ValidationIssue {
   type: 'error' | 'warning';
   nodeId?: string;
   nodeName?: string;
@@ -891,17 +891,16 @@ export class WorkflowValidator {
       return; // Valid - it's a langchain tool
     }
 
+    // Get node info from repository (single lookup, reused below)
+    const nodeInfo = this.nodeRepository.getNode(normalizedType);
+
     // Check if it's a Tool variant (ends with Tool and is in database as isToolVariant)
     if (ToolVariantGenerator.isToolVariantNodeType(normalizedType)) {
       // It looks like a Tool variant, verify it exists in database
-      const nodeInfo = this.nodeRepository.getNode(normalizedType);
       if (nodeInfo?.isToolVariant) {
         return; // Valid - it's a Tool variant
       }
     }
-
-    // Get node info from repository
-    const nodeInfo = this.nodeRepository.getNode(normalizedType);
 
     if (!nodeInfo) {
       // Node not found in database - might be a community node or unknown

@@ -47,7 +47,7 @@ interface WorkflowJson {
     pinData?: any;
     meta?: any;
 }
-interface ValidationIssue {
+export interface ValidationIssue {
     type: 'error' | 'warning';
     nodeId?: string;
     nodeName?: string;

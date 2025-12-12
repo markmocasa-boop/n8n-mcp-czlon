@@ -312,6 +312,122 @@ describe('NodeTypeNormalizer', () => {
     });
   });
 
+  describe('toWorkflowFormat', () => {
+    describe('Base nodes', () => {
+      it('should convert short base form to full workflow format', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.webhook'))
+          .toBe('n8n-nodes-base.webhook');
+      });
+
+      it('should convert multiple base nodes', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.httpRequest'))
+          .toBe('n8n-nodes-base.httpRequest');
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.set'))
+          .toBe('n8n-nodes-base.set');
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.slack'))
+          .toBe('n8n-nodes-base.slack');
+      });
+
+      it('should leave full base form unchanged', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('n8n-nodes-base.webhook'))
+          .toBe('n8n-nodes-base.webhook');
+        expect(NodeTypeNormalizer.toWorkflowFormat('n8n-nodes-base.httpRequest'))
+          .toBe('n8n-nodes-base.httpRequest');
+      });
+    });
+
+    describe('LangChain nodes', () => {
+      it('should convert short langchain form to full workflow format', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-langchain.agent'))
+          .toBe('@n8n/n8n-nodes-langchain.agent');
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-langchain.openAi'))
+          .toBe('@n8n/n8n-nodes-langchain.openAi');
+      });
+
+      it('should leave full langchain form unchanged', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('@n8n/n8n-nodes-langchain.agent'))
+          .toBe('@n8n/n8n-nodes-langchain.agent');
+        expect(NodeTypeNormalizer.toWorkflowFormat('@n8n/n8n-nodes-langchain.openAi'))
+          .toBe('@n8n/n8n-nodes-langchain.openAi');
+      });
+
+      it('should leave n8n-nodes-langchain form unchanged', () => {
+        // Alternative full form without @n8n/ prefix
+        expect(NodeTypeNormalizer.toWorkflowFormat('n8n-nodes-langchain.agent'))
+          .toBe('n8n-nodes-langchain.agent');
+      });
+    });
+
+    describe('Edge cases', () => {
+      it('should handle empty string', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('')).toBe('');
+      });
+
+      it('should handle null', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat(null as any)).toBe(null);
+      });
+
+      it('should handle undefined', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat(undefined as any)).toBe(undefined);
+      });
+
+      it('should handle non-string input', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat(123 as any)).toBe(123);
+        expect(NodeTypeNormalizer.toWorkflowFormat({} as any)).toEqual({});
+      });
+
+      it('should leave community nodes unchanged', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('custom-package.myNode'))
+          .toBe('custom-package.myNode');
+      });
+
+      it('should leave nodes without prefixes unchanged', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('someRandomNode'))
+          .toBe('someRandomNode');
+      });
+    });
+
+    describe('Tool variants', () => {
+      it('should convert short Tool variant to full form', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.supabaseTool'))
+          .toBe('n8n-nodes-base.supabaseTool');
+        expect(NodeTypeNormalizer.toWorkflowFormat('nodes-base.postgresTool'))
+          .toBe('n8n-nodes-base.postgresTool');
+      });
+
+      it('should leave full Tool variant unchanged', () => {
+        expect(NodeTypeNormalizer.toWorkflowFormat('n8n-nodes-base.supabaseTool'))
+          .toBe('n8n-nodes-base.supabaseTool');
+      });
+    });
+
+    describe('Round-trip conversion', () => {
+      it('should maintain workflow format through round trip', () => {
+        const workflowType = 'n8n-nodes-base.webhook';
+
+        // Convert to short (database) form
+        const shortForm = NodeTypeNormalizer.normalizeToFullForm(workflowType);
+        expect(shortForm).toBe('nodes-base.webhook');
+
+        // Convert back to workflow form
+        const backToWorkflow = NodeTypeNormalizer.toWorkflowFormat(shortForm);
+        expect(backToWorkflow).toBe(workflowType);
+      });
+
+      it('should handle langchain round trip', () => {
+        const workflowType = '@n8n/n8n-nodes-langchain.agent';
+
+        // Convert to short form
+        const shortForm = NodeTypeNormalizer.normalizeToFullForm(workflowType);
+        expect(shortForm).toBe('nodes-langchain.agent');
+
+        // Convert back to workflow form
+        const backToWorkflow = NodeTypeNormalizer.toWorkflowFormat(shortForm);
+        expect(backToWorkflow).toBe(workflowType);
+      });
+    });
+  });
+
   describe('Integration scenarios', () => {
     it('should handle the critical use case from P0-R1', () => {
       // This is the exact scenario - normalize full form to match database
@@ -335,6 +451,34 @@ describe('NodeTypeNormalizer', () => {
 
       // All node types should now be in short form for database lookup
       expect(normalized.nodes.every((n: any) => n.type.startsWith('nodes-base.'))).toBe(true);
+    });
+
+    it('should convert database format to workflow format for API calls', () => {
+      // Scenario: Reading from database and sending to n8n API
+      const dbTypes = [
+        'nodes-base.webhook',
+        'nodes-base.httpRequest',
+        'nodes-langchain.agent'
+      ];
+
+      const workflowTypes = dbTypes.map(t => NodeTypeNormalizer.toWorkflowFormat(t));
+
+      expect(workflowTypes).toEqual([
+        'n8n-nodes-base.webhook',
+        'n8n-nodes-base.httpRequest',
+        '@n8n/n8n-nodes-langchain.agent'
+      ]);
+    });
+
+    it('should handle Tool variant correction scenario', () => {
+      // Scenario: Auto-fixer changes base node to Tool variant
+      const baseType = 'n8n-nodes-base.supabase'; // Current type in workflow
+      const toolVariantShort = 'nodes-base.supabaseTool'; // From database/generator
+
+      // Convert to workflow format for the fix
+      const fixedType = NodeTypeNormalizer.toWorkflowFormat(toolVariantShort);
+
+      expect(fixedType).toBe('n8n-nodes-base.supabaseTool');
     });
   });
 });

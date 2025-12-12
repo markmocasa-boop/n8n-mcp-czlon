@@ -563,13 +563,12 @@ class WorkflowValidator {
         if ((0, ai_tool_validators_1.isAIToolSubNode)(normalizedType)) {
             return;
         }
+        const nodeInfo = this.nodeRepository.getNode(normalizedType);
         if (tool_variant_generator_1.ToolVariantGenerator.isToolVariantNodeType(normalizedType)) {
-            const nodeInfo = this.nodeRepository.getNode(normalizedType);
             if (nodeInfo?.isToolVariant) {
                 return;
             }
         }
-        const nodeInfo = this.nodeRepository.getNode(normalizedType);
         if (!nodeInfo) {
             return;
         }

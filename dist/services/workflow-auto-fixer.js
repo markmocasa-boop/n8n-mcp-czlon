@@ -270,13 +270,12 @@ class WorkflowAutoFixer {
             }
         }
     }
-    processToolVariantFixes(validationResult, nodeMap, workflow, operations, fixes) {
+    processToolVariantFixes(validationResult, nodeMap, _workflow, operations, fixes) {
         for (const error of validationResult.errors) {
-            const errorWithDetails = error;
-            if (errorWithDetails.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !errorWithDetails.fix) {
+            if (error.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !error.fix) {
                 continue;
             }
-            const fix = errorWithDetails.fix;
+            const fix = error.fix;
             if (fix.type !== 'tool-variant-correction') {
                 continue;
             }
@@ -293,7 +292,7 @@ class WorkflowAutoFixer {
                 before: fix.currentType,
                 after: fix.suggestedType,
                 confidence: 'high',
-                description: fix.description
+                description: fix.description || `Replace "${fix.currentType}" with Tool variant "${fix.suggestedType}"`
             });
             const operation = {
                 type: 'updateNode',

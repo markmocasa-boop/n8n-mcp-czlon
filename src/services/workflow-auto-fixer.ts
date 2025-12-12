@@ -471,22 +471,28 @@ export class WorkflowAutoFixer {
    * When a base node (e.g., n8n-nodes-base.supabase) is connected via ai_tool output
    * but has a Tool variant available (e.g., n8n-nodes-base.supabaseTool), this fix
    * replaces the node type with the correct Tool variant.
+   *
+   * @param validationResult - Validation result containing errors to process
+   * @param nodeMap - Map of node names/IDs to node objects
+   * @param _workflow - Workflow object (unused, kept for API consistency with other fix methods)
+   * @param operations - Array to push generated diff operations to
+   * @param fixes - Array to push generated fix records to
    */
   private processToolVariantFixes(
     validationResult: WorkflowValidationResult,
     nodeMap: Map<string, WorkflowNode>,
-    workflow: Workflow,
+    _workflow: Workflow,
     operations: WorkflowDiffOperation[],
     fixes: FixOperation[]
   ): void {
     for (const error of validationResult.errors) {
       // Check for errors with the WRONG_NODE_TYPE_FOR_AI_TOOL code
-      const errorWithDetails = error as any;
-      if (errorWithDetails.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !errorWithDetails.fix) {
+      // ValidationIssue interface includes optional code and fix properties
+      if (error.code !== 'WRONG_NODE_TYPE_FOR_AI_TOOL' || !error.fix) {
         continue;
       }
 
-      const fix = errorWithDetails.fix;
+      const fix = error.fix;
       if (fix.type !== 'tool-variant-correction') {
         continue;
       }
@@ -505,7 +511,7 @@ export class WorkflowAutoFixer {
         before: fix.currentType,
         after: fix.suggestedType,
         confidence: 'high', // This is a direct match - we know exactly which type to use
-        description: fix.description
+        description: fix.description || `Replace "${fix.currentType}" with Tool variant "${fix.suggestedType}"`
       });
 
       // Create the update operation
