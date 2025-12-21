@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.30.2] - 2025-12-21
+
+### Fixed
+
+**Restored Template Database**
+
+Fixed missing templates in the database by restoring 2,768 workflow templates from git history while preserving compatibility with latest n8n 2.0.2 node definitions.
+
+**Key Changes:**
+- Restored templates table with 2,768 curated workflow templates
+- Updated nodes table schema to include `is_tool_variant`, `has_tool_variant`, and `tool_variant_of` columns
+- Database now contains 803 nodes (updated for n8n 2.0.2) and 2,768 templates
+
 ## [2.30.1] - 2025-12-17
 
 ### Added
