@@ -18,6 +18,8 @@ services:
       - 'CORS_ORIGIN=*'
       - TRUST_PROXY=1
       - N8N_MODE=true
+      - N8N_MCP_TELEMETRY_DISABLED=true
+      - HOME=/app
 
     volumes:
       - '/home/ubuntu/n8n-mcp:/app/data'
