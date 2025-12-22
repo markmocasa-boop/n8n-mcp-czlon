@@ -248,6 +248,7 @@ jobs:
         if: steps.bump_compose.outputs.changed == 'true' || steps.bump_docs.outputs.changed == '1' || steps.gen_notes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.GHCR_PAT }}
           branch: chore/compose-docs-bump-${{ needs.release.outputs.version }}
           title: "chore: bump compose/docs and add release notes for ${{ needs.release.outputs.version }}"
           commit-message: "chore: compose/docs bump and release notes for ${{ needs.release.outputs.version }}"
