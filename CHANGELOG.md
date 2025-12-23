@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.1] - 2025-12-23
+
+### Fixed
+
+**mcpTrigger Nodes No Longer Incorrectly Flagged as "Disconnected" (Issue #503)**
+
+Fixed a validation bug where `mcpTrigger` nodes were incorrectly flagged as "disconnected nodes" when using `n8n_update_partial_workflow` or `n8n_update_full_workflow`. This blocked ALL updates to MCP server workflows.
+
+**Root Cause:**
+The `validateWorkflowStructure()` function only checked `main` connections when building the connected nodes set, ignoring AI connection types (`ai_tool`, `ai_languageModel`, `ai_memory`, `ai_embedding`, `ai_vectorStore`). Additionally, trigger nodes were only checked for outgoing connections, but `mcpTrigger` only receives inbound `ai_tool` connections.
+
+**Changes:**
+- Extended connection validation to check all 7 connection types (main, error, ai_tool, ai_languageModel, ai_memory, ai_embedding, ai_vectorStore)
+- Updated trigger node validation to accept either outgoing OR inbound connections
+- Added 7 new tests covering all AI connection types
+
+**Impact:**
+- MCP server workflows can now be updated, renamed, and deactivated normally
+- All `n8n_update_*` operations work correctly for AI workflows
+- No breaking changes for existing workflows
+
 ## [2.31.0] - 2025-12-23
 
 ### Added

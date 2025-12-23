@@ -248,23 +248,32 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
       const connectedNodes = new Set<string>();
 
       // Collect all nodes that appear in connections (as source or target)
+      // Check ALL connection types, not just 'main' - AI workflows use ai_tool, ai_languageModel, etc.
+      const ALL_CONNECTION_TYPES = ['main', 'error', 'ai_tool', 'ai_languageModel', 'ai_memory', 'ai_embedding', 'ai_vectorStore'] as const;
+
       Object.entries(workflow.connections).forEach(([sourceName, connection]) => {
         connectedNodes.add(sourceName); // Node has outgoing connection
 
-        if (connection.main && Array.isArray(connection.main)) {
-          connection.main.forEach((outputs) => {
-            if (Array.isArray(outputs)) {
-              outputs.forEach((target) => {
-                connectedNodes.add(target.node); // Node has incoming connection
-              });
-            }
-          });
-        }
+        // Check all connection types for target nodes
+        ALL_CONNECTION_TYPES.forEach(connType => {
+          const connData = (connection as Record<string, unknown>)[connType];
+          if (connData && Array.isArray(connData)) {
+            connData.forEach((outputs) => {
+              if (Array.isArray(outputs)) {
+                outputs.forEach((target: { node: string }) => {
+                  if (target?.node) {
+                    connectedNodes.add(target.node); // Node has incoming connection
+                  }
+                });
+              }
+            });
+          }
+        });
       });
 
       // Find disconnected nodes (excluding non-executable nodes and triggers)
       // Non-executable nodes (sticky notes) are UI-only and don't need connections
-      // Trigger nodes only need outgoing connections
+      // Trigger nodes need either outgoing connections OR inbound AI connections (for mcpTrigger)
       const disconnectedNodes = workflow.nodes.filter(node => {
         // Skip non-executable nodes (sticky notes, etc.) - they're UI-only annotations
         if (isNonExecutableNode(node.type)) {
@@ -274,9 +283,12 @@ export function validateWorkflowStructure(workflow: Partial<Workflow>): string[]
         const isConnected = connectedNodes.has(node.name);
         const isNodeTrigger = isTriggerNode(node.type);
 
-        // Trigger nodes only need outgoing connections
+        // Trigger nodes need outgoing connections OR inbound connections (for mcpTrigger)
+        // mcpTrigger is special: it has "trigger" in its name but only receives inbound ai_tool connections
         if (isNodeTrigger) {
-          return !workflow.connections?.[node.name]; // Disconnected if no outgoing connections
+          const hasOutgoingConnections = !!workflow.connections?.[node.name];
+          const hasInboundConnections = isConnected;
+          return !hasOutgoingConnections && !hasInboundConnections; // Disconnected if NEITHER
         }
 
         // Regular nodes need at least one connection (incoming or outgoing)

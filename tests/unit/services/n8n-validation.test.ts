@@ -884,6 +884,260 @@ describe('n8n-validation', () => {
       const errors = validateWorkflowStructure(workflow);
       expect(errors.some(e => e.includes('Invalid connections'))).toBe(true);
     });
+
+    // Issue #503: mcpTrigger nodes should not be flagged as disconnected
+    describe('AI connection types (Issue #503)', () => {
+      it('should NOT flag mcpTrigger as disconnected when it has ai_tool inbound connections', () => {
+        const workflow = {
+          name: 'MCP Server Workflow',
+          nodes: [
+            {
+              id: 'mcp-server',
+              name: 'MCP Server',
+              type: '@n8n/n8n-nodes-langchain.mcpTrigger',
+              typeVersion: 1,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'tool-1',
+              name: 'Get Weather Tool',
+              type: '@n8n/n8n-nodes-langchain.toolWorkflow',
+              typeVersion: 1.3,
+              position: [300, 200] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'tool-2',
+              name: 'Search Tool',
+              type: '@n8n/n8n-nodes-langchain.toolWorkflow',
+              typeVersion: 1.3,
+              position: [300, 400] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'Get Weather Tool': {
+              ai_tool: [[{ node: 'MCP Server', type: 'ai_tool', index: 0 }]],
+            },
+            'Search Tool': {
+              ai_tool: [[{ node: 'MCP Server', type: 'ai_tool', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should NOT flag nodes as disconnected when connected via ai_languageModel', () => {
+        const workflow = {
+          name: 'AI Agent Workflow',
+          nodes: [
+            {
+              id: 'agent-1',
+              name: 'AI Agent',
+              type: '@n8n/n8n-nodes-langchain.agent',
+              typeVersion: 1.6,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'llm-1',
+              name: 'OpenAI Model',
+              type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+              typeVersion: 1,
+              position: [300, 300] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'OpenAI Model': {
+              ai_languageModel: [[{ node: 'AI Agent', type: 'ai_languageModel', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should NOT flag nodes as disconnected when connected via ai_memory', () => {
+        const workflow = {
+          name: 'AI Memory Workflow',
+          nodes: [
+            {
+              id: 'agent-1',
+              name: 'AI Agent',
+              type: '@n8n/n8n-nodes-langchain.agent',
+              typeVersion: 1.6,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'memory-1',
+              name: 'Buffer Memory',
+              type: '@n8n/n8n-nodes-langchain.memoryBufferWindow',
+              typeVersion: 1,
+              position: [300, 400] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'Buffer Memory': {
+              ai_memory: [[{ node: 'AI Agent', type: 'ai_memory', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should NOT flag nodes as disconnected when connected via ai_embedding', () => {
+        const workflow = {
+          name: 'Vector Store Workflow',
+          nodes: [
+            {
+              id: 'vs-1',
+              name: 'Vector Store',
+              type: '@n8n/n8n-nodes-langchain.vectorStorePinecone',
+              typeVersion: 1,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'embed-1',
+              name: 'OpenAI Embeddings',
+              type: '@n8n/n8n-nodes-langchain.embeddingsOpenAi',
+              typeVersion: 1,
+              position: [300, 300] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'OpenAI Embeddings': {
+              ai_embedding: [[{ node: 'Vector Store', type: 'ai_embedding', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should NOT flag nodes as disconnected when connected via ai_vectorStore', () => {
+        const workflow = {
+          name: 'Retriever Workflow',
+          nodes: [
+            {
+              id: 'retriever-1',
+              name: 'Vector Store Retriever',
+              type: '@n8n/n8n-nodes-langchain.retrieverVectorStore',
+              typeVersion: 1,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'vs-1',
+              name: 'Pinecone Store',
+              type: '@n8n/n8n-nodes-langchain.vectorStorePinecone',
+              typeVersion: 1,
+              position: [300, 300] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'Pinecone Store': {
+              ai_vectorStore: [[{ node: 'Vector Store Retriever', type: 'ai_vectorStore', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should NOT flag nodes as disconnected when connected via error output', () => {
+        const workflow = {
+          name: 'Error Handling Workflow',
+          nodes: [
+            {
+              id: 'http-1',
+              name: 'HTTP Request',
+              type: 'n8n-nodes-base.httpRequest',
+              typeVersion: 4.2,
+              position: [300, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'set-1',
+              name: 'Handle Error',
+              type: 'n8n-nodes-base.set',
+              typeVersion: 3.4,
+              position: [500, 400] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'HTTP Request': {
+              error: [[{ node: 'Handle Error', type: 'error', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors).toHaveLength(0);
+      });
+
+      it('should still flag truly disconnected nodes in AI workflows', () => {
+        const workflow = {
+          name: 'AI Workflow with Disconnected Node',
+          nodes: [
+            {
+              id: 'agent-1',
+              name: 'AI Agent',
+              type: '@n8n/n8n-nodes-langchain.agent',
+              typeVersion: 1.6,
+              position: [500, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'llm-1',
+              name: 'OpenAI Model',
+              type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+              typeVersion: 1,
+              position: [300, 300] as [number, number],
+              parameters: {},
+            },
+            {
+              id: 'disconnected-1',
+              name: 'Disconnected Set',
+              type: 'n8n-nodes-base.set',
+              typeVersion: 3.4,
+              position: [700, 300] as [number, number],
+              parameters: {},
+            },
+          ],
+          connections: {
+            'OpenAI Model': {
+              ai_languageModel: [[{ node: 'AI Agent', type: 'ai_languageModel', index: 0 }]],
+            },
+          },
+        };
+
+        const errors = validateWorkflowStructure(workflow);
+        const disconnectedErrors = errors.filter(e => e.includes('Disconnected'));
+        expect(disconnectedErrors.length).toBeGreaterThan(0);
+        expect(disconnectedErrors[0]).toContain('Disconnected Set');
+      });
+    });
   });
 
   describe('hasWebhookTrigger', () => {

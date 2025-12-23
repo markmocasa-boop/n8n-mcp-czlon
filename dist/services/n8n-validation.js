@@ -152,17 +152,23 @@ function validateWorkflowStructure(workflow) {
         }
         else if (connectionCount > 0 || executableNodes.length > 1) {
             const connectedNodes = new Set();
+            const ALL_CONNECTION_TYPES = ['main', 'error', 'ai_tool', 'ai_languageModel', 'ai_memory', 'ai_embedding', 'ai_vectorStore'];
             Object.entries(workflow.connections).forEach(([sourceName, connection]) => {
                 connectedNodes.add(sourceName);
-                if (connection.main && Array.isArray(connection.main)) {
-                    connection.main.forEach((outputs) => {
-                        if (Array.isArray(outputs)) {
-                            outputs.forEach((target) => {
-                                connectedNodes.add(target.node);
-                            });
-                        }
-                    });
-                }
+                ALL_CONNECTION_TYPES.forEach(connType => {
+                    const connData = connection[connType];
+                    if (connData && Array.isArray(connData)) {
+                        connData.forEach((outputs) => {
+                            if (Array.isArray(outputs)) {
+                                outputs.forEach((target) => {
+                                    if (target?.node) {
+                                        connectedNodes.add(target.node);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
             });
             const disconnectedNodes = workflow.nodes.filter(node => {
                 if ((0, node_classification_1.isNonExecutableNode)(node.type)) {
@@ -171,7 +177,9 @@ function validateWorkflowStructure(workflow) {
                 const isConnected = connectedNodes.has(node.name);
                 const isNodeTrigger = (0, node_type_utils_1.isTriggerNode)(node.type);
                 if (isNodeTrigger) {
-                    return !workflow.connections?.[node.name];
+                    const hasOutgoingConnections = !!workflow.connections?.[node.name];
+                    const hasInboundConnections = isConnected;
+                    return !hasOutgoingConnections && !hasInboundConnections;
                 }
                 return !isConnected;
             });
