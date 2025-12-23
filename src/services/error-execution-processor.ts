@@ -31,7 +31,38 @@ export interface ErrorProcessorOptions {
 
 // Constants
 const MAX_STACK_LINES = 3;
-const SENSITIVE_KEYS = ['password', 'secret', 'token', 'apikey', 'api_key', 'credential', 'auth'];
+
+/**
+ * Keys that could enable prototype pollution attacks
+ * These are blocked entirely from processing
+ */
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Patterns for sensitive data that should be masked in output
+ * Expanded from code review recommendations
+ */
+const SENSITIVE_PATTERNS = [
+  'password',
+  'secret',
+  'token',
+  'apikey',
+  'api_key',
+  'credential',
+  'auth',
+  'private_key',
+  'privatekey',
+  'bearer',
+  'jwt',
+  'oauth',
+  'certificate',
+  'passphrase',
+  'access_token',
+  'refresh_token',
+  'session',
+  'cookie',
+  'authorization'
+];
 
 /**
  * Process execution for error debugging
@@ -213,7 +244,7 @@ function findAllUpstreamNodes(
 }
 
 /**
- * Extract node output with sampling
+ * Extract node output with sampling and sanitization
  */
 function extractNodeOutput(
   nodeName: string,
@@ -225,11 +256,15 @@ function extractNodeOutput(
 
   const items = nodeData[0].data.main[0];
 
+  // Sanitize sample items to remove sensitive data
+  const rawSamples = items.slice(0, itemsLimit);
+  const sanitizedSamples = rawSamples.map((item: unknown) => sanitizeData(item));
+
   return {
     nodeName,
     nodeType: '', // Will be enriched if workflow available
     itemCount: items.length,
-    sampleItems: items.slice(0, itemsLimit),
+    sampleItems: sanitizedSamples,
     dataStructure: extractStructure(items[0])
   };
 }
@@ -452,29 +487,82 @@ function generateSuggestions(
 // Helper functions
 
 /**
+ * Check if a key contains sensitive patterns
+ */
+function isSensitiveKey(key: string): boolean {
+  const lowerKey = key.toLowerCase();
+  return SENSITIVE_PATTERNS.some(pattern => lowerKey.includes(pattern));
+}
+
+/**
+ * Recursively sanitize data by removing dangerous keys and masking sensitive values
+ *
+ * @param data - The data to sanitize
+ * @param depth - Current recursion depth
+ * @param maxDepth - Maximum recursion depth (default: 10)
+ * @returns Sanitized data with sensitive values masked
+ */
+function sanitizeData(data: unknown, depth = 0, maxDepth = 10): unknown {
+  // Prevent infinite recursion
+  if (depth >= maxDepth) {
+    return '[max depth reached]';
+  }
+
+  // Handle null/undefined
+  if (data === null || data === undefined) {
+    return data;
+  }
+
+  // Handle primitives
+  if (typeof data !== 'object') {
+    // Truncate long strings
+    if (typeof data === 'string' && data.length > 500) {
+      return '[truncated]';
+    }
+    return data;
+  }
+
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeData(item, depth + 1, maxDepth));
+  }
+
+  // Handle objects
+  const sanitized: Record<string, unknown> = {};
+  const obj = data as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Block prototype pollution attempts
+    if (DANGEROUS_KEYS.has(key)) {
+      logger.warn(`Blocked potentially dangerous key: ${key}`);
+      continue;
+    }
+
+    // Mask sensitive fields
+    if (isSensitiveKey(key)) {
+      sanitized[key] = '[REDACTED]';
+      continue;
+    }
+
+    // Recursively sanitize nested values
+    sanitized[key] = sanitizeData(value, depth + 1, maxDepth);
+  }
+
+  return sanitized;
+}
+
+/**
  * Extract relevant parameters (filtering sensitive data)
  */
 function extractRelevantParameters(params: unknown): Record<string, unknown> | undefined {
   if (!params || typeof params !== 'object') return undefined;
 
-  const relevant: Record<string, unknown> = {};
-  const p = params as Record<string, unknown>;
-
-  for (const [key, value] of Object.entries(p)) {
-    // Skip sensitive fields
-    const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.some(s => lowerKey.includes(s))) {
-      continue;
-    }
-    // Skip very long values (likely data, not config)
-    if (typeof value === 'string' && value.length > 500) {
-      relevant[key] = '[truncated]';
-    } else {
-      relevant[key] = value;
-    }
+  const sanitized = sanitizeData(params);
+  if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    return undefined;
   }
 
-  return Object.keys(relevant).length > 0 ? relevant : undefined;
+  return Object.keys(sanitized).length > 0 ? sanitized as Record<string, unknown> : undefined;
 }
 
 /**
