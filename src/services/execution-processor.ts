@@ -21,8 +21,10 @@ import {
   FilteredExecutionResponse,
   FilteredNodeData,
   ExecutionStatus,
+  Workflow,
 } from '../types/n8n-api';
 import { logger } from '../utils/logger';
+import { processErrorExecution } from './error-execution-processor';
 
 /**
  * Size estimation and threshold constants
@@ -344,7 +346,8 @@ function truncateItems(
  */
 export function filterExecutionData(
   execution: Execution,
-  options: ExecutionFilterOptions
+  options: ExecutionFilterOptions,
+  workflow?: Workflow
 ): FilteredExecutionResponse {
   const mode = options.mode || 'summary';
 
@@ -385,6 +388,33 @@ export function filterExecutionData(
     const { preview, recommendation } = generatePreview(execution);
     response.preview = preview;
     response.recommendation = recommendation;
+    return response;
+  }
+
+  // Handle error mode
+  if (mode === 'error') {
+    const errorAnalysis = processErrorExecution(execution, {
+      itemsLimit: options.errorItemsLimit ?? 2,
+      includeStackTrace: options.includeStackTrace ?? false,
+      includeExecutionPath: options.includeExecutionPath !== false,
+      workflow
+    });
+
+    const runData = execution.data?.resultData?.runData || {};
+    const executedNodes = Object.keys(runData).length;
+
+    response.errorInfo = errorAnalysis;
+    response.summary = {
+      totalNodes: executedNodes,
+      executedNodes,
+      totalItems: 0,
+      hasMoreData: false
+    };
+
+    if (execution.data?.resultData?.error) {
+      response.error = execution.data.resultData.error as Record<string, unknown>;
+    }
+
     return response;
   }
 
@@ -508,12 +538,13 @@ export function filterExecutionData(
  */
 export function processExecution(
   execution: Execution,
-  options: ExecutionFilterOptions = {}
+  options: ExecutionFilterOptions = {},
+  workflow?: Workflow
 ): FilteredExecutionResponse | Execution {
   // Legacy behavior: if no mode specified and no filtering options, return original
   if (!options.mode && !options.nodeNames && options.itemsLimit === undefined) {
     return execution;
   }
 
-  return filterExecutionData(execution, options);
+  return filterExecutionData(execution, options, workflow);
 }

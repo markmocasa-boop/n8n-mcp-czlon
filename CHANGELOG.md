@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.0] - 2025-12-23
+
+### Added
+
+**New `error` Mode for Execution Debugging**
+
+Added a new `mode='error'` option to `n8n_executions` action=get that's optimized for AI agents debugging workflow failures. This mode provides intelligent error extraction with 80-99% token savings compared to `mode='full'`.
+
+**Key Features:**
+
+- **Error Analysis**: Extracts error message, type, node name, and relevant parameters
+- **Upstream Context**: Samples input data from the node feeding into the error node (configurable limit)
+- **Execution Path**: Shows the node execution sequence from trigger to error
+- **AI Suggestions**: Pattern-based fix suggestions for common errors (missing fields, auth issues, rate limits, etc.)
+- **Workflow Fetch**: Optionally fetches workflow structure for accurate upstream detection
+
+**New Parameters for `mode='error'`:**
+
+- `errorItemsLimit` (default: 2) - Number of sample items from upstream node
+- `includeStackTrace` (default: false) - Include full vs truncated stack trace
+- `includeExecutionPath` (default: true) - Include node execution path
+- `fetchWorkflow` (default: true) - Fetch workflow for accurate upstream detection
+
+**Token Efficiency:**
+
+| Execution Size | Full Mode | Error Mode | Savings |
+|----------------|-----------|------------|---------|
+| 11 items | ~11KB | ~3KB | 73% |
+| 1001 items | ~354KB | ~3KB | 99% |
+
+**AI Suggestion Patterns Detected:**
+
+- Missing required fields
+- Authentication/authorization issues
+- Rate limiting
+- Network/connection errors
+- Invalid JSON format
+- Missing data fields
+- Type mismatches
+- Timeouts
+- Permission denied
+
+**Usage Examples:**
+
+```javascript
+// Basic error debugging
+n8n_executions({action: "get", id: "exec_123", mode: "error"})
+
+// With more sample data
+n8n_executions({action: "get", id: "exec_123", mode: "error", errorItemsLimit: 5})
+
+// With full stack trace
+n8n_executions({action: "get", id: "exec_123", mode: "error", includeStackTrace: true})
+```
+
 ## [2.30.2] - 2025-12-21
 
 ### Fixed
