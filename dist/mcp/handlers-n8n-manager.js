@@ -1024,14 +1024,18 @@ async function handleGetExecution(args, context) {
         const client = ensureApiConfigured(context);
         const schema = zod_1.z.object({
             id: zod_1.z.string(),
-            mode: zod_1.z.enum(['preview', 'summary', 'filtered', 'full']).optional(),
+            mode: zod_1.z.enum(['preview', 'summary', 'filtered', 'full', 'error']).optional(),
             nodeNames: zod_1.z.array(zod_1.z.string()).optional(),
             itemsLimit: zod_1.z.number().optional(),
             includeInputData: zod_1.z.boolean().optional(),
-            includeData: zod_1.z.boolean().optional()
+            includeData: zod_1.z.boolean().optional(),
+            errorItemsLimit: zod_1.z.number().min(0).max(100).optional(),
+            includeStackTrace: zod_1.z.boolean().optional(),
+            includeExecutionPath: zod_1.z.boolean().optional(),
+            fetchWorkflow: zod_1.z.boolean().optional()
         });
         const params = schema.parse(args);
-        const { id, mode, nodeNames, itemsLimit, includeInputData, includeData } = params;
+        const { id, mode, nodeNames, itemsLimit, includeInputData, includeData, errorItemsLimit, includeStackTrace, includeExecutionPath, fetchWorkflow } = params;
         let effectiveMode = mode;
         if (!effectiveMode && includeData !== undefined) {
             effectiveMode = includeData ? 'summary' : undefined;
@@ -1044,13 +1048,28 @@ async function handleGetExecution(args, context) {
                 data: execution
             };
         }
+        let workflow;
+        if (effectiveMode === 'error' && fetchWorkflow !== false && execution.workflowId) {
+            try {
+                workflow = await client.getWorkflow(execution.workflowId);
+            }
+            catch (e) {
+                logger_1.logger.debug('Could not fetch workflow for error analysis', {
+                    workflowId: execution.workflowId,
+                    error: e instanceof Error ? e.message : 'Unknown error'
+                });
+            }
+        }
         const filterOptions = {
             mode: effectiveMode,
             nodeNames,
             itemsLimit,
-            includeInputData
+            includeInputData,
+            errorItemsLimit,
+            includeStackTrace,
+            includeExecutionPath
         };
-        const processedExecution = (0, execution_processor_1.processExecution)(execution, filterOptions);
+        const processedExecution = (0, execution_processor_1.processExecution)(execution, filterOptions, workflow);
         return {
             success: true,
             data: processedExecution

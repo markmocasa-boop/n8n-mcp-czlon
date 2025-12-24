@@ -4,6 +4,7 @@ exports.generatePreview = generatePreview;
 exports.filterExecutionData = filterExecutionData;
 exports.processExecution = processExecution;
 const logger_1 = require("../utils/logger");
+const error_execution_processor_1 = require("./error-execution-processor");
 const THRESHOLDS = {
     CHAR_SIZE_BYTES: 2,
     OVERHEAD_PER_OBJECT: 50,
@@ -231,7 +232,7 @@ function truncateItems(items, limit) {
         },
     };
 }
-function filterExecutionData(execution, options) {
+function filterExecutionData(execution, options, workflow) {
     const mode = options.mode || 'summary';
     let itemsLimit = options.itemsLimit !== undefined ? options.itemsLimit : 2;
     if (itemsLimit !== -1) {
@@ -263,6 +264,27 @@ function filterExecutionData(execution, options) {
         const { preview, recommendation } = generatePreview(execution);
         response.preview = preview;
         response.recommendation = recommendation;
+        return response;
+    }
+    if (mode === 'error') {
+        const errorAnalysis = (0, error_execution_processor_1.processErrorExecution)(execution, {
+            itemsLimit: options.errorItemsLimit ?? 2,
+            includeStackTrace: options.includeStackTrace ?? false,
+            includeExecutionPath: options.includeExecutionPath !== false,
+            workflow
+        });
+        const runData = execution.data?.resultData?.runData || {};
+        const executedNodes = Object.keys(runData).length;
+        response.errorInfo = errorAnalysis;
+        response.summary = {
+            totalNodes: executedNodes,
+            executedNodes,
+            totalItems: 0,
+            hasMoreData: false
+        };
+        if (execution.data?.resultData?.error) {
+            response.error = execution.data.resultData.error;
+        }
         return response;
     }
     if (!execution.data?.resultData?.runData) {
@@ -350,10 +372,10 @@ function filterExecutionData(execution, options) {
     }
     return response;
 }
-function processExecution(execution, options = {}) {
+function processExecution(execution, options = {}, workflow) {
     if (!options.mode && !options.nodeNames && options.itemsLimit === undefined) {
         return execution;
     }
-    return filterExecutionData(execution, options);
+    return filterExecutionData(execution, options, workflow);
 }
 //# sourceMappingURL=execution-processor.js.map

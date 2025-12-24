@@ -267,7 +267,7 @@ export interface McpToolResponse {
     executionId?: string;
     workflowId?: string;
 }
-export type ExecutionMode = 'preview' | 'summary' | 'filtered' | 'full';
+export type ExecutionMode = 'preview' | 'summary' | 'filtered' | 'full' | 'error';
 export interface ExecutionPreview {
     totalNodes: number;
     executedNodes: number;
@@ -296,6 +296,9 @@ export interface ExecutionFilterOptions {
     itemsLimit?: number;
     includeInputData?: boolean;
     fieldsToInclude?: string[];
+    errorItemsLimit?: number;
+    includeStackTrace?: boolean;
+    includeExecutionPath?: boolean;
 }
 export interface FilteredExecutionResponse {
     id: string;
@@ -316,6 +319,7 @@ export interface FilteredExecutionResponse {
     };
     nodes?: Record<string, FilteredNodeData>;
     error?: Record<string, unknown>;
+    errorInfo?: ErrorAnalysis;
 }
 export interface FilteredNodeData {
     executionTime?: number;
@@ -332,5 +336,40 @@ export interface FilteredNodeData {
             truncated: boolean;
         };
     };
+}
+export interface ErrorAnalysis {
+    primaryError: {
+        message: string;
+        errorType: string;
+        nodeName: string;
+        nodeType: string;
+        nodeId?: string;
+        nodeParameters?: Record<string, unknown>;
+        stackTrace?: string;
+    };
+    upstreamContext?: {
+        nodeName: string;
+        nodeType: string;
+        itemCount: number;
+        sampleItems: unknown[];
+        dataStructure: Record<string, unknown>;
+    };
+    executionPath?: Array<{
+        nodeName: string;
+        status: 'success' | 'error' | 'skipped';
+        itemCount: number;
+        executionTime?: number;
+    }>;
+    additionalErrors?: Array<{
+        nodeName: string;
+        message: string;
+    }>;
+    suggestions?: ErrorSuggestion[];
+}
+export interface ErrorSuggestion {
+    type: 'fix' | 'investigate' | 'workaround';
+    title: string;
+    description: string;
+    confidence: 'high' | 'medium' | 'low';
 }
 //# sourceMappingURL=n8n-api.d.ts.map

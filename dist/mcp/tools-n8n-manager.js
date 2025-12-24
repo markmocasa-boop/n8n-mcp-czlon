@@ -336,8 +336,8 @@ exports.n8nManagementTools = [
                 },
                 mode: {
                     type: 'string',
-                    enum: ['preview', 'summary', 'filtered', 'full'],
-                    description: 'For action=get: preview=structure only, summary=2 items (default), filtered=custom, full=all data'
+                    enum: ['preview', 'summary', 'filtered', 'full', 'error'],
+                    description: 'For action=get: preview=structure only, summary=2 items (default), filtered=custom, full=all data, error=optimized error debugging'
                 },
                 nodeNames: {
                     type: 'array',
@@ -351,6 +351,22 @@ exports.n8nManagementTools = [
                 includeInputData: {
                     type: 'boolean',
                     description: 'For action=get: include input data in addition to output (default: false)'
+                },
+                errorItemsLimit: {
+                    type: 'number',
+                    description: 'For action=get with mode=error: sample items from upstream node (default: 2, max: 100)'
+                },
+                includeStackTrace: {
+                    type: 'boolean',
+                    description: 'For action=get with mode=error: include full stack trace (default: false, shows truncated)'
+                },
+                includeExecutionPath: {
+                    type: 'boolean',
+                    description: 'For action=get with mode=error: include execution path leading to error (default: true)'
+                },
+                fetchWorkflow: {
+                    type: 'boolean',
+                    description: 'For action=get with mode=error: fetch workflow for accurate upstream detection (default: true)'
                 },
                 limit: {
                     type: 'number',
