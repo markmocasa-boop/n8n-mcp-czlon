@@ -46,9 +46,9 @@ export const n8nManagementTools: ToolDefinition[] = [
             }
           }
         },
-        connections: { 
-          type: 'object', 
-          description: 'Workflow connections object. Keys are source node IDs, values define output connections' 
+        connections: {
+          type: 'object',
+          description: 'Workflow connections object. Keys are source node names (the name field, not id), values define output connections'
         },
         settings: {
           type: 'object',

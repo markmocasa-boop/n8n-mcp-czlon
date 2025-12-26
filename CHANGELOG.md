@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.3] - 2025-12-26
+
+### Fixed
+
+**Documentation Bug: Connection Keys Say "Node IDs" but Require "Node Names" (Issue #510)**
+
+Fixed documentation that incorrectly stated connection keys should be "node IDs" when n8n actually requires "node names".
+
+**Problem:**
+The `n8n_create_workflow` documentation and examples showed using node IDs (e.g., `"webhook_1"`) as connection keys, but the validator requires node names (e.g., `"Webhook"`). This caused workflow creation failures and contributed to low success rates for AI-generated workflows.
+
+**Changes:**
+- Updated `tools-n8n-manager.ts` parameter description: "Keys are source node names (the name field, not id)"
+- Updated `n8n-create-workflow.ts` documentation: "Keys are source node names (not IDs)"
+- Fixed example to use `"Webhook"` and `"Slack"` instead of `"webhook_1"` and `"slack_1"`
+- Clarified `get-template.ts` return description
+
+**Before (incorrect):**
+```javascript
+connections: {
+  "webhook_1": { "main": [[{node: "slack_1", ...}]] }  // WRONG
+}
+```
+
+**After (correct):**
+```javascript
+connections: {
+  "Webhook": { "main": [[{node: "Slack", ...}]] }  // CORRECT
+}
+```
+
+**Impact:**
+- AI models following documentation will now generate valid workflows
+- Clear distinction between node `id` (internal identifier) and `name` (connection key)
+- No breaking changes - validator behavior unchanged
+
 ## [2.31.2] - 2025-12-24
 
 ### Changed

@@ -42,7 +42,7 @@ export const getTemplateDoc: ToolDocumentation = {
   - url: Link to template on n8n.io
   - workflow: Complete workflow JSON with structure:
     - nodes: Array of node objects (id, name, type, typeVersion, position, parameters)
-    - connections: Object mapping source nodes to targets
+    - connections: Object mapping source node names to targets
     - settings: Workflow configuration (timezone, error handling, etc.)
 - usage: Instructions for using the workflow`,
     examples: [
