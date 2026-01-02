@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach, beforeAll, afterAll, type MockInstance } from 'vitest';
 import { TelemetryBatchProcessor } from '../../../src/telemetry/batch-processor';
-import { TelemetryEvent, WorkflowTelemetry, TELEMETRY_CONFIG } from '../../../src/telemetry/telemetry-types';
+import { TelemetryEvent, WorkflowTelemetry, WorkflowMutationRecord, TELEMETRY_CONFIG } from '../../../src/telemetry/telemetry-types';
 import { TelemetryError, TelemetryErrorType } from '../../../src/telemetry/telemetry-error';
+import { IntentClassification, MutationToolName } from '../../../src/telemetry/mutation-types';
+import { AddNodeOperation } from '../../../src/types/workflow-diff';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Mock logger to avoid console output in tests
@@ -677,6 +679,260 @@ describe('TelemetryBatchProcessor', () => {
 
       expect(flushSpy).toHaveBeenCalled();
       expect(mockProcessExit).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('Issue #517: workflow data preservation', () => {
+    // This test verifies that workflow mutation data is NOT recursively converted to snake_case
+    // Previously, the toSnakeCase function was applied recursively which caused:
+    // - Connection keys like "Webhook" to become "_webhook"
+    // - Node fields like "typeVersion" to become "type_version"
+
+    it('should preserve connection keys exactly as-is (node names)', async () => {
+      const mutation: WorkflowMutationRecord = {
+        userId: 'user1',
+        sessionId: 'session1',
+        workflowBefore: {
+          nodes: [],
+          connections: {}
+        },
+        workflowAfter: {
+          nodes: [
+            { id: '1', name: 'Webhook', type: 'n8n-nodes-base.webhook', typeVersion: 1, position: [0, 0], parameters: {} }
+          ],
+          // Connection keys are NODE NAMES - must be preserved exactly
+          connections: {
+            'Webhook': { main: [[{ node: 'AI Agent', type: 'main', index: 0 }]] },
+            'AI Agent': { main: [[{ node: 'HTTP Request', type: 'main', index: 0 }]] },
+            'HTTP Request': { main: [[{ node: 'Send Email', type: 'main', index: 0 }]] }
+          }
+        },
+        workflowHashBefore: 'hash1',
+        workflowHashAfter: 'hash2',
+        userIntent: 'Test',
+        intentClassification: IntentClassification.ADD_FUNCTIONALITY,
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        operations: [],
+        operationCount: 0,
+        operationTypes: [],
+        validationImproved: null,
+        errorsResolved: 0,
+        errorsIntroduced: 0,
+        nodesAdded: 1,
+        nodesRemoved: 0,
+        nodesModified: 0,
+        connectionsAdded: 3,
+        connectionsRemoved: 0,
+        propertiesChanged: 0,
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      let capturedData: any = null;
+      vi.mocked(mockSupabase.from).mockImplementation((table) => ({
+        insert: vi.fn().mockImplementation((data) => {
+          if (table === 'workflow_mutations') {
+            capturedData = data;
+          }
+          return Promise.resolve(createMockSupabaseResponse());
+        }),
+        url: { href: '' },
+        headers: {},
+        select: vi.fn(),
+        upsert: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn()
+      } as any));
+
+      await batchProcessor.flush(undefined, undefined, [mutation]);
+
+      expect(capturedData).toBeDefined();
+      expect(capturedData).toHaveLength(1);
+
+      const savedMutation = capturedData[0];
+
+      // Top-level keys should be snake_case for Supabase
+      expect(savedMutation).toHaveProperty('user_id');
+      expect(savedMutation).toHaveProperty('session_id');
+      expect(savedMutation).toHaveProperty('workflow_after');
+
+      // Connection keys should be preserved EXACTLY (not "_webhook", "_a_i _agent", etc.)
+      const connections = savedMutation.workflow_after.connections;
+      expect(connections).toHaveProperty('Webhook');  // NOT "_webhook"
+      expect(connections).toHaveProperty('AI Agent'); // NOT "_a_i _agent"
+      expect(connections).toHaveProperty('HTTP Request'); // NOT "_h_t_t_p _request"
+    });
+
+    it('should preserve node field names in camelCase', async () => {
+      const mutation: WorkflowMutationRecord = {
+        userId: 'user1',
+        sessionId: 'session1',
+        workflowBefore: { nodes: [], connections: {} },
+        workflowAfter: {
+          nodes: [
+            {
+              id: '1',
+              name: 'Webhook',
+              type: 'n8n-nodes-base.webhook',
+              // These fields MUST remain in camelCase for n8n API compatibility
+              typeVersion: 2,
+              webhookId: 'abc123',
+              onError: 'continueOnFail',
+              alwaysOutputData: true,
+              continueOnFail: false,
+              retryOnFail: true,
+              maxTries: 3,
+              notesInFlow: true,
+              waitBetweenTries: 1000,
+              executeOnce: false,
+              position: [100, 200],
+              parameters: {}
+            }
+          ],
+          connections: {}
+        },
+        workflowHashBefore: 'hash1',
+        workflowHashAfter: 'hash2',
+        userIntent: 'Test',
+        intentClassification: IntentClassification.ADD_FUNCTIONALITY,
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        operations: [],
+        operationCount: 0,
+        operationTypes: [],
+        validationImproved: null,
+        errorsResolved: 0,
+        errorsIntroduced: 0,
+        nodesAdded: 1,
+        nodesRemoved: 0,
+        nodesModified: 0,
+        connectionsAdded: 0,
+        connectionsRemoved: 0,
+        propertiesChanged: 0,
+        mutationSuccess: true,
+        durationMs: 100
+      };
+
+      let capturedData: any = null;
+      vi.mocked(mockSupabase.from).mockImplementation((table) => ({
+        insert: vi.fn().mockImplementation((data) => {
+          if (table === 'workflow_mutations') {
+            capturedData = data;
+          }
+          return Promise.resolve(createMockSupabaseResponse());
+        }),
+        url: { href: '' },
+        headers: {},
+        select: vi.fn(),
+        upsert: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn()
+      } as any));
+
+      await batchProcessor.flush(undefined, undefined, [mutation]);
+
+      expect(capturedData).toBeDefined();
+      const savedNode = capturedData[0].workflow_after.nodes[0];
+
+      // Node fields should be preserved in camelCase (NOT snake_case)
+      expect(savedNode).toHaveProperty('typeVersion');        // NOT type_version
+      expect(savedNode).toHaveProperty('webhookId');          // NOT webhook_id
+      expect(savedNode).toHaveProperty('onError');            // NOT on_error
+      expect(savedNode).toHaveProperty('alwaysOutputData');   // NOT always_output_data
+      expect(savedNode).toHaveProperty('continueOnFail');     // NOT continue_on_fail
+      expect(savedNode).toHaveProperty('retryOnFail');        // NOT retry_on_fail
+      expect(savedNode).toHaveProperty('maxTries');           // NOT max_tries
+      expect(savedNode).toHaveProperty('notesInFlow');        // NOT notes_in_flow
+      expect(savedNode).toHaveProperty('waitBetweenTries');   // NOT wait_between_tries
+      expect(savedNode).toHaveProperty('executeOnce');        // NOT execute_once
+
+      // Verify values are preserved
+      expect(savedNode.typeVersion).toBe(2);
+      expect(savedNode.webhookId).toBe('abc123');
+      expect(savedNode.maxTries).toBe(3);
+    });
+
+    it('should convert only top-level mutation record fields to snake_case', async () => {
+      const mutation: WorkflowMutationRecord = {
+        userId: 'user1',
+        sessionId: 'session1',
+        workflowBefore: { nodes: [], connections: {} },
+        workflowAfter: { nodes: [], connections: {} },
+        workflowHashBefore: 'hash1',
+        workflowHashAfter: 'hash2',
+        workflowStructureHashBefore: 'struct1',
+        workflowStructureHashAfter: 'struct2',
+        isTrulySuccessful: true,
+        userIntent: 'Test intent',
+        intentClassification: IntentClassification.ADD_FUNCTIONALITY,
+        toolName: MutationToolName.UPDATE_PARTIAL,
+        operations: [{ type: 'addNode', node: { name: 'Test', type: 'n8n-nodes-base.set', position: [0, 0] } } as AddNodeOperation],
+        operationCount: 1,
+        operationTypes: ['addNode'],
+        validationBefore: { valid: false, errors: [] },
+        validationAfter: { valid: true, errors: [] },
+        validationImproved: true,
+        errorsResolved: 1,
+        errorsIntroduced: 0,
+        nodesAdded: 1,
+        nodesRemoved: 0,
+        nodesModified: 0,
+        connectionsAdded: 0,
+        connectionsRemoved: 0,
+        propertiesChanged: 0,
+        mutationSuccess: true,
+        mutationError: undefined,
+        durationMs: 150
+      };
+
+      let capturedData: any = null;
+      vi.mocked(mockSupabase.from).mockImplementation((table) => ({
+        insert: vi.fn().mockImplementation((data) => {
+          if (table === 'workflow_mutations') {
+            capturedData = data;
+          }
+          return Promise.resolve(createMockSupabaseResponse());
+        }),
+        url: { href: '' },
+        headers: {},
+        select: vi.fn(),
+        upsert: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn()
+      } as any));
+
+      await batchProcessor.flush(undefined, undefined, [mutation]);
+
+      expect(capturedData).toBeDefined();
+      const saved = capturedData[0];
+
+      // Top-level fields should be converted to snake_case
+      expect(saved).toHaveProperty('user_id', 'user1');
+      expect(saved).toHaveProperty('session_id', 'session1');
+      expect(saved).toHaveProperty('workflow_before');
+      expect(saved).toHaveProperty('workflow_after');
+      expect(saved).toHaveProperty('workflow_hash_before', 'hash1');
+      expect(saved).toHaveProperty('workflow_hash_after', 'hash2');
+      expect(saved).toHaveProperty('workflow_structure_hash_before', 'struct1');
+      expect(saved).toHaveProperty('workflow_structure_hash_after', 'struct2');
+      expect(saved).toHaveProperty('is_truly_successful', true);
+      expect(saved).toHaveProperty('user_intent', 'Test intent');
+      expect(saved).toHaveProperty('intent_classification');
+      expect(saved).toHaveProperty('tool_name');
+      expect(saved).toHaveProperty('operation_count', 1);
+      expect(saved).toHaveProperty('operation_types');
+      expect(saved).toHaveProperty('validation_before');
+      expect(saved).toHaveProperty('validation_after');
+      expect(saved).toHaveProperty('validation_improved', true);
+      expect(saved).toHaveProperty('errors_resolved', 1);
+      expect(saved).toHaveProperty('errors_introduced', 0);
+      expect(saved).toHaveProperty('nodes_added', 1);
+      expect(saved).toHaveProperty('nodes_removed', 0);
+      expect(saved).toHaveProperty('nodes_modified', 0);
+      expect(saved).toHaveProperty('connections_added', 0);
+      expect(saved).toHaveProperty('connections_removed', 0);
+      expect(saved).toHaveProperty('properties_changed', 0);
+      expect(saved).toHaveProperty('mutation_success', true);
+      expect(saved).toHaveProperty('duration_ms', 150);
     });
   });
 });

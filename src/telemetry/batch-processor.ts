@@ -9,23 +9,34 @@ import { TelemetryError, TelemetryErrorType, TelemetryCircuitBreaker } from './t
 import { logger } from '../utils/logger';
 
 /**
- * Convert camelCase object keys to snake_case
- * Needed because Supabase PostgREST doesn't auto-convert
+ * Convert camelCase key to snake_case
  */
-function toSnakeCase(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(toSnakeCase);
-  if (typeof obj !== 'object') return obj;
+function keyToSnakeCase(key: string): string {
+  return key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
 
-  const result: any = {};
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      // Convert camelCase to snake_case
-      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      // Recursively convert nested objects
-      result[snakeKey] = toSnakeCase(obj[key]);
-    }
+/**
+ * Convert WorkflowMutationRecord to Supabase-compatible format.
+ *
+ * IMPORTANT: Only converts top-level field names to snake_case.
+ * Nested workflow data (workflowBefore, workflowAfter, operations, etc.)
+ * is preserved EXACTLY as-is to maintain n8n API compatibility.
+ *
+ * The Supabase workflow_mutations table stores workflow_before and
+ * workflow_after as JSONB columns, which preserve the original structure.
+ * Only the top-level columns (user_id, session_id, etc.) require snake_case.
+ *
+ * Issue #517: Previously this used recursive conversion which mangled:
+ * - Connection keys (node names like "Webhook" → "_webhook")
+ * - Node field names (typeVersion → type_version)
+ */
+function mutationToSupabaseFormat(mutation: WorkflowMutationRecord): Record<string, any> {
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(mutation)) {
+    result[keyToSnakeCase(key)] = value;
   }
+
   return result;
 }
 
@@ -266,7 +277,7 @@ export class TelemetryBatchProcessor {
       for (const batch of batches) {
         const result = await this.executeWithRetry(async () => {
           // Convert camelCase to snake_case for Supabase
-          const snakeCaseBatch = batch.map(mutation => toSnakeCase(mutation));
+          const snakeCaseBatch = batch.map(mutation => mutationToSupabaseFormat(mutation));
 
           const { error } = await this.supabase!
             .from('workflow_mutations')
