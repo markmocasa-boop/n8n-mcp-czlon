@@ -96,6 +96,7 @@ export const n8nManagementTools: ToolDefinition[] = [
     annotations: {
       title: 'Get Workflow',
       readOnlyHint: true,
+      idempotentHint: true,
       openWorldHint: true,
     },
   },
@@ -232,6 +233,7 @@ export const n8nManagementTools: ToolDefinition[] = [
     annotations: {
       title: 'List Workflows',
       readOnlyHint: true,
+      idempotentHint: true,
       openWorldHint: true,
     },
   },
@@ -274,6 +276,7 @@ export const n8nManagementTools: ToolDefinition[] = [
     annotations: {
       title: 'Validate Workflow',
       readOnlyHint: true,
+      idempotentHint: true,
       openWorldHint: true,
     },
   },
@@ -492,6 +495,7 @@ export const n8nManagementTools: ToolDefinition[] = [
     annotations: {
       title: 'Health Check',
       readOnlyHint: true,
+      idempotentHint: true,
       openWorldHint: true,
     },
   },

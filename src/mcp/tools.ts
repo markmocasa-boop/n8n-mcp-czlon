@@ -28,6 +28,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Tools Documentation',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -62,6 +63,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Search Nodes',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -119,6 +121,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Get Node Info',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -203,6 +206,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Validate Node Config',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -227,6 +231,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Get Template',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -326,6 +331,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Search Templates',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
   {
@@ -415,6 +421,7 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
     annotations: {
       title: 'Validate Workflow',
       readOnlyHint: true,
+      idempotentHint: true,
     },
   },
 ];
