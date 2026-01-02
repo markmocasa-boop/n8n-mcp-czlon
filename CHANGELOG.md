@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.5] - 2026-01-02
+
+### Added
+
+**MCP Tool Annotations (PR #512)**
+
+Added MCP tool annotations to all 20 tools following the [MCP specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/server/tools/#annotations). These annotations help AI assistants understand tool behavior and capabilities.
+
+**Annotations added:**
+- `title`: Human-readable name for each tool
+- `readOnlyHint`: True for tools that don't modify state (11 tools)
+- `destructiveHint`: True for delete operations (3 tools)
+- `idempotentHint`: True for operations that produce same result when called repeatedly (14 tools)
+- `openWorldHint`: True for tools accessing external n8n API (13 tools)
+
+**Documentation tools** (7): All marked `readOnlyHint=true`, `idempotentHint=true`
+- `tools_documentation`, `search_nodes`, `get_node`, `validate_node`, `get_template`, `search_templates`, `validate_workflow`
+
+**Management tools** (13): All marked `openWorldHint=true`
+- Read-only: `n8n_get_workflow`, `n8n_list_workflows`, `n8n_validate_workflow`, `n8n_health_check`
+- Idempotent updates: `n8n_update_full_workflow`, `n8n_update_partial_workflow`, `n8n_autofix_workflow`
+- Destructive: `n8n_delete_workflow`, `n8n_executions` (delete action), `n8n_workflow_versions` (delete/truncate)
+
 ## [2.31.4] - 2026-01-02
 
 ### Fixed
