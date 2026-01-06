@@ -7,6 +7,13 @@ export interface MCPServerConfig {
     host: string;
     authToken?: string;
 }
+export interface ToolAnnotations {
+    title?: string;
+    readOnlyHint?: boolean;
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
+}
 export interface ToolDefinition {
     name: string;
     description: string;
@@ -22,6 +29,7 @@ export interface ToolDefinition {
         required?: string[];
         additionalProperties?: boolean | Record<string, any>;
     };
+    annotations?: ToolAnnotations;
 }
 export interface ResourceDefinition {
     uri: string;

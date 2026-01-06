@@ -42,7 +42,7 @@ exports.n8nManagementTools = [
                 },
                 connections: {
                     type: 'object',
-                    description: 'Workflow connections object. Keys are source node IDs, values define output connections'
+                    description: 'Workflow connections object. Keys are source node names (the name field, not id), values define output connections'
                 },
                 settings: {
                     type: 'object',
@@ -60,7 +60,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['name', 'nodes', 'connections']
-        }
+        },
+        annotations: {
+            title: 'Create Workflow',
+            readOnlyHint: false,
+            destructiveHint: false,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_get_workflow',
@@ -80,7 +86,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id']
-        }
+        },
+        annotations: {
+            title: 'Get Workflow',
+            readOnlyHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_update_full_workflow',
@@ -114,7 +126,14 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id']
-        }
+        },
+        annotations: {
+            title: 'Update Full Workflow',
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_update_partial_workflow',
@@ -145,7 +164,14 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id', 'operations']
-        }
+        },
+        annotations: {
+            title: 'Update Partial Workflow',
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_delete_workflow',
@@ -159,7 +185,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id']
-        }
+        },
+        annotations: {
+            title: 'Delete Workflow',
+            readOnlyHint: false,
+            destructiveHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_list_workflows',
@@ -193,7 +225,13 @@ exports.n8nManagementTools = [
                     description: 'Exclude pinned data from response (default: true)'
                 }
             }
-        }
+        },
+        annotations: {
+            title: 'List Workflows',
+            readOnlyHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_validate_workflow',
@@ -230,7 +268,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id']
-        }
+        },
+        annotations: {
+            title: 'Validate Workflow',
+            readOnlyHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_autofix_workflow',
@@ -265,7 +309,14 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['id']
-        }
+        },
+        annotations: {
+            title: 'Autofix Workflow',
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_test_workflow',
@@ -317,7 +368,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['workflowId']
-        }
+        },
+        annotations: {
+            title: 'Test Workflow',
+            readOnlyHint: false,
+            destructiveHint: false,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_executions',
@@ -395,7 +452,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['action']
-        }
+        },
+        annotations: {
+            title: 'Manage Executions',
+            readOnlyHint: false,
+            destructiveHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_health_check',
@@ -414,7 +477,13 @@ exports.n8nManagementTools = [
                     description: 'Include extra details in diagnostic mode (default: false)'
                 }
             }
-        }
+        },
+        annotations: {
+            title: 'Health Check',
+            readOnlyHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_workflow_versions',
@@ -468,7 +537,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['mode']
-        }
+        },
+        annotations: {
+            title: 'Workflow Versions',
+            readOnlyHint: false,
+            destructiveHint: true,
+            openWorldHint: true,
+        },
     },
     {
         name: 'n8n_deploy_template',
@@ -501,7 +576,13 @@ exports.n8nManagementTools = [
                 }
             },
             required: ['templateId']
-        }
+        },
+        annotations: {
+            title: 'Deploy Template',
+            readOnlyHint: false,
+            destructiveHint: false,
+            openWorldHint: true,
+        },
     }
 ];
 //# sourceMappingURL=tools-n8n-manager.js.map

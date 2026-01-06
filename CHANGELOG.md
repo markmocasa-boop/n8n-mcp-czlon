@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.7] - 2026-01-06
+
+### Changed
+
+- Updated n8n from 2.1.5 to 2.2.3
+- Updated n8n-core from 2.1.4 to 2.2.2
+- Updated n8n-workflow from 2.1.1 to 2.2.2
+- Updated @n8n/n8n-nodes-langchain from 2.1.4 to 2.2.2
+- Rebuilt node database with 540 nodes (434 from n8n-nodes-base, 106 from @n8n/n8n-nodes-langchain)
+
 ## [2.31.6] - 2026-01-03
 
 ### Changed
