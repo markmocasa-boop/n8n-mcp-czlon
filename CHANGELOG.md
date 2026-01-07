@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.9] - 2026-01-07
+
+### Fixed
+
+**Dynamic AI Tool Nodes Not Recognized by Validator (Issue #522)**
+
+Fixed a validator false positive where dynamically-generated AI Tool nodes like `googleDriveTool` and `googleSheetsTool` were incorrectly reported as "unknown node type".
+
+**Root Cause:** n8n creates Tool variants at runtime when ANY node is connected to an AI Agent's tool slot (e.g., `googleDrive` → `googleDriveTool`). These dynamic nodes don't exist in npm packages, so the MCP database couldn't discover them during rebuild.
+
+**Solution:** Added validation-time inference that checks if the base node exists when a `*Tool` node type is not found. If the base node exists, the Tool variant is treated as valid with an informative warning.
+
+**Changes:**
+- `workflow-validator.ts`: Added inference logic for dynamic Tool variants
+- `node-similarity-service.ts`: Added high-confidence (98%) suggestion for valid Tool variants
+- Added 7 new unit tests for inferred tool variant functionality
+
+**Behavior:**
+- `googleDriveTool` with existing `googleDrive` → Warning: `INFERRED_TOOL_VARIANT`
+- `googleSheetsTool` with existing `googleSheets` → Warning: `INFERRED_TOOL_VARIANT`
+- `unknownNodeTool` without base node → Error: "Unknown node type"
+- `supabaseTool` (in database) → Uses database record (no inference)
+
+This fix ensures AI Agent workflows with dynamic tools validate correctly without false positives.
+
 ## [2.31.8] - 2026-01-07
 
 ### Deprecated

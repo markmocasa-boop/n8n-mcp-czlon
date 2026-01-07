@@ -599,4 +599,294 @@ describe('WorkflowValidator - Tool Variant Validation', () => {
       expect(invalidToolErrors.length).toBeGreaterThan(0);
     });
   });
+
+  describe('validateAllNodes - Inferred Tool Variants (Issue #522)', () => {
+    /**
+     * Tests for dynamic AI Tool nodes that are created at runtime by n8n
+     * when ANY node is used in an AI Agent's tool slot.
+     *
+     * These nodes (e.g., googleDriveTool, googleSheetsTool) don't exist in npm packages
+     * but are valid when the base node exists.
+     */
+
+    beforeEach(() => {
+      // Update mock repository to include Google nodes
+      mockRepository.getNode = vi.fn((nodeType: string) => {
+        // Base node with Tool variant
+        if (nodeType === 'nodes-base.supabase') {
+          return {
+            nodeType: 'nodes-base.supabase',
+            displayName: 'Supabase',
+            isAITool: true,
+            hasToolVariant: true,
+            isToolVariant: false,
+            isTrigger: false,
+            properties: []
+          };
+        }
+
+        // Tool variant in database
+        if (nodeType === 'nodes-base.supabaseTool') {
+          return {
+            nodeType: 'nodes-base.supabaseTool',
+            displayName: 'Supabase Tool',
+            isAITool: true,
+            hasToolVariant: false,
+            isToolVariant: true,
+            toolVariantOf: 'nodes-base.supabase',
+            isTrigger: false,
+            properties: []
+          };
+        }
+
+        // Google Drive base node (exists, but no Tool variant in DB)
+        if (nodeType === 'nodes-base.googleDrive') {
+          return {
+            nodeType: 'nodes-base.googleDrive',
+            displayName: 'Google Drive',
+            isAITool: false, // Not marked as AI tool in npm package
+            hasToolVariant: false, // No Tool variant in database
+            isToolVariant: false,
+            isTrigger: false,
+            properties: [],
+            category: 'files'
+          };
+        }
+
+        // Google Sheets base node (exists, but no Tool variant in DB)
+        if (nodeType === 'nodes-base.googleSheets') {
+          return {
+            nodeType: 'nodes-base.googleSheets',
+            displayName: 'Google Sheets',
+            isAITool: false,
+            hasToolVariant: false,
+            isToolVariant: false,
+            isTrigger: false,
+            properties: [],
+            category: 'productivity'
+          };
+        }
+
+        // AI Agent node
+        if (nodeType === 'nodes-langchain.agent') {
+          return {
+            nodeType: 'nodes-langchain.agent',
+            displayName: 'AI Agent',
+            isAITool: false,
+            hasToolVariant: false,
+            isToolVariant: false,
+            isTrigger: false,
+            properties: []
+          };
+        }
+
+        return null; // Unknown node
+      }) as any;
+    });
+
+    it('should pass validation for googleDriveTool when googleDrive exists', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'drive-tool-1',
+            name: 'Google Drive Tool',
+            type: 'n8n-nodes-base.googleDriveTool',
+            typeVersion: 3,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {}
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      // Should NOT have "Unknown node type" error
+      const unknownErrors = result.errors.filter(e =>
+        e.message && e.message.includes('Unknown node type')
+      );
+      expect(unknownErrors).toHaveLength(0);
+
+      // Should have INFERRED_TOOL_VARIANT warning
+      const inferredWarnings = result.warnings.filter(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+      expect(inferredWarnings).toHaveLength(1);
+      expect(inferredWarnings[0].message).toContain('googleDriveTool');
+      expect(inferredWarnings[0].message).toContain('Google Drive');
+    });
+
+    it('should pass validation for googleSheetsTool when googleSheets exists', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'sheets-tool-1',
+            name: 'Google Sheets Tool',
+            type: 'n8n-nodes-base.googleSheetsTool',
+            typeVersion: 4,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {}
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      // Should NOT have "Unknown node type" error
+      const unknownErrors = result.errors.filter(e =>
+        e.message && e.message.includes('Unknown node type')
+      );
+      expect(unknownErrors).toHaveLength(0);
+
+      // Should have INFERRED_TOOL_VARIANT warning
+      const inferredWarnings = result.warnings.filter(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+      expect(inferredWarnings).toHaveLength(1);
+      expect(inferredWarnings[0].message).toContain('googleSheetsTool');
+      expect(inferredWarnings[0].message).toContain('Google Sheets');
+    });
+
+    it('should report error for unknownNodeTool when base node does not exist', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'unknown-tool-1',
+            name: 'Unknown Tool',
+            type: 'n8n-nodes-base.nonExistentNodeTool',
+            typeVersion: 1,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {}
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      // Should have "Unknown node type" error
+      const unknownErrors = result.errors.filter(e =>
+        e.message && e.message.includes('Unknown node type')
+      );
+      expect(unknownErrors).toHaveLength(1);
+
+      // Should NOT have INFERRED_TOOL_VARIANT warning
+      const inferredWarnings = result.warnings.filter(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+      expect(inferredWarnings).toHaveLength(0);
+    });
+
+    it('should handle multiple inferred tool variants in same workflow', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'drive-tool-1',
+            name: 'Google Drive Tool',
+            type: 'n8n-nodes-base.googleDriveTool',
+            typeVersion: 3,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          },
+          {
+            id: 'sheets-tool-1',
+            name: 'Google Sheets Tool',
+            type: 'n8n-nodes-base.googleSheetsTool',
+            typeVersion: 4,
+            position: [250, 400] as [number, number],
+            parameters: {}
+          },
+          {
+            id: 'agent-1',
+            name: 'AI Agent',
+            type: '@n8n/n8n-nodes-langchain.agent',
+            typeVersion: 1.7,
+            position: [450, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {
+          'Google Drive Tool': {
+            ai_tool: [[{ node: 'AI Agent', type: 'ai_tool', index: 0 }]]
+          },
+          'Google Sheets Tool': {
+            ai_tool: [[{ node: 'AI Agent', type: 'ai_tool', index: 0 }]]
+          }
+        }
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      // Should NOT have "Unknown node type" errors
+      const unknownErrors = result.errors.filter(e =>
+        e.message && e.message.includes('Unknown node type')
+      );
+      expect(unknownErrors).toHaveLength(0);
+
+      // Should have 2 INFERRED_TOOL_VARIANT warnings
+      const inferredWarnings = result.warnings.filter(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+      expect(inferredWarnings).toHaveLength(2);
+    });
+
+    it('should prefer database record over inference for supabaseTool', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'supabase-tool-1',
+            name: 'Supabase Tool',
+            type: 'n8n-nodes-base.supabaseTool',
+            typeVersion: 1,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {}
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      // Should NOT have "Unknown node type" error
+      const unknownErrors = result.errors.filter(e =>
+        e.message && e.message.includes('Unknown node type')
+      );
+      expect(unknownErrors).toHaveLength(0);
+
+      // Should NOT have INFERRED_TOOL_VARIANT warning (it's in database)
+      const inferredWarnings = result.warnings.filter(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+      expect(inferredWarnings).toHaveLength(0);
+    });
+
+    it('should include helpful message in warning', async () => {
+      const workflow = {
+        nodes: [
+          {
+            id: 'drive-tool-1',
+            name: 'Google Drive Tool',
+            type: 'n8n-nodes-base.googleDriveTool',
+            typeVersion: 3,
+            position: [250, 300] as [number, number],
+            parameters: {}
+          }
+        ],
+        connections: {}
+      };
+
+      const result = await validator.validateWorkflow(workflow);
+
+      const inferredWarning = result.warnings.find(e =>
+        (e as any).code === 'INFERRED_TOOL_VARIANT'
+      );
+
+      expect(inferredWarning).toBeDefined();
+      expect(inferredWarning!.message).toContain('inferred as a dynamic AI Tool variant');
+      expect(inferredWarning!.message).toContain('nodes-base.googleDrive');
+      expect(inferredWarning!.message).toContain('Google Drive');
+      expect(inferredWarning!.message).toContain('AI Agent');
+    });
+  });
 });
