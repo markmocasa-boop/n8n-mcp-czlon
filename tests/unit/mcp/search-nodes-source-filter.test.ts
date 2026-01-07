@@ -323,10 +323,12 @@ describe('MCP Server - search_nodes source filter', () => {
     });
 
     it('should handle case-insensitive search with source filter', () => {
+      // Note: "VERIFIED" matches both "Verified Community Node" and "Unverified Community Node"
+      // because "VERIFIED" is a substring of both when doing case-insensitive search
       const result = searchWithSourceFilter(sampleNodes, 'VERIFIED', 'community');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].display_name).toBe('Verified Community Node');
+      expect(result).toHaveLength(2); // Both match the search term
+      expect(result.every((n) => n.is_community === 1)).toBe(true);
     });
   });
 
