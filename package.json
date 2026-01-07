@@ -1,6 +1,6 @@
 {
   "name": "n8n-mcp",
-  "version": "2.31.8",
+  "version": "2.32.0",
   "description": "Integration between n8n workflow automation and Model Context Protocol (MCP)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,6 +50,9 @@
     "fetch:templates:update": "node dist/scripts/fetch-templates.js --update",
     "fetch:templates:extract": "node dist/scripts/fetch-templates.js --extract-only",
     "fetch:templates:robust": "node dist/scripts/fetch-templates-robust.js",
+    "fetch:community": "node dist/scripts/fetch-community-nodes.js",
+    "fetch:community:verified": "node dist/scripts/fetch-community-nodes.js --verified-only",
+    "fetch:community:update": "node dist/scripts/fetch-community-nodes.js --update",
     "prebuild:fts5": "npx tsx scripts/prebuild-fts5.ts",
     "test:templates": "node dist/scripts/test-templates.js",
     "test:protocol-negotiation": "npx tsx src/scripts/test-protocol-negotiation.ts",

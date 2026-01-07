@@ -3,6 +3,20 @@ import { ParsedNode } from '../parsers/node-parser';
 import { SQLiteStorageService } from '../services/sqlite-storage-service';
 import { NodeTypeNormalizer } from '../utils/node-type-normalizer';
 
+/**
+ * Community node extension fields
+ */
+export interface CommunityNodeFields {
+  isCommunity: boolean;
+  isVerified: boolean;
+  authorName?: string;
+  authorGithubUrl?: string;
+  npmPackageName?: string;
+  npmVersion?: string;
+  npmDownloads?: number;
+  communityFetchedAt?: string;
+}
+
 export class NodeRepository {
   private db: DatabaseAdapter;
   
@@ -17,8 +31,9 @@ export class NodeRepository {
   
   /**
    * Save node with proper JSON serialization
+   * Supports both core and community nodes via optional community fields
    */
-  saveNode(node: ParsedNode): void {
+  saveNode(node: ParsedNode & Partial<CommunityNodeFields>): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO nodes (
         node_type, package_name, display_name, description,
@@ -26,8 +41,10 @@ export class NodeRepository {
         is_webhook, is_versioned, is_tool_variant, tool_variant_of,
         has_tool_variant, version, documentation,
         properties_schema, operations, credentials_required,
-        outputs, output_names
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        outputs, output_names,
+        is_community, is_verified, author_name, author_github_url,
+        npm_package_name, npm_version, npm_downloads, community_fetched_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -50,7 +67,16 @@ export class NodeRepository {
       JSON.stringify(node.operations, null, 2),
       JSON.stringify(node.credentials, null, 2),
       node.outputs ? JSON.stringify(node.outputs, null, 2) : null,
-      node.outputNames ? JSON.stringify(node.outputNames, null, 2) : null
+      node.outputNames ? JSON.stringify(node.outputNames, null, 2) : null,
+      // Community node fields
+      node.isCommunity ? 1 : 0,
+      node.isVerified ? 1 : 0,
+      node.authorName || null,
+      node.authorGithubUrl || null,
+      node.npmPackageName || null,
+      node.npmVersion || null,
+      node.npmDownloads || 0,
+      node.communityFetchedAt || null
     );
   }
   
@@ -315,7 +341,16 @@ export class NodeRepository {
       credentials: this.safeJsonParse(row.credentials_required, []),
       hasDocumentation: !!row.documentation,
       outputs: row.outputs ? this.safeJsonParse(row.outputs, null) : null,
-      outputNames: row.output_names ? this.safeJsonParse(row.output_names, null) : null
+      outputNames: row.output_names ? this.safeJsonParse(row.output_names, null) : null,
+      // Community node fields
+      isCommunity: Number(row.is_community) === 1,
+      isVerified: Number(row.is_verified) === 1,
+      authorName: row.author_name || null,
+      authorGithubUrl: row.author_github_url || null,
+      npmPackageName: row.npm_package_name || null,
+      npmVersion: row.npm_version || null,
+      npmDownloads: row.npm_downloads || 0,
+      communityFetchedAt: row.community_fetched_at || null
     };
   }
 
@@ -520,6 +555,99 @@ export class NodeRepository {
     }
 
     return undefined;
+  }
+
+  // ========================================
+  // Community Node Methods
+  // ========================================
+
+  /**
+   * Get community nodes with optional filters
+   */
+  getCommunityNodes(options?: {
+    verified?: boolean;
+    limit?: number;
+    orderBy?: 'downloads' | 'name' | 'updated';
+  }): any[] {
+    let sql = 'SELECT * FROM nodes WHERE is_community = 1';
+    const params: any[] = [];
+
+    if (options?.verified !== undefined) {
+      sql += ' AND is_verified = ?';
+      params.push(options.verified ? 1 : 0);
+    }
+
+    // Order by
+    switch (options?.orderBy) {
+      case 'downloads':
+        sql += ' ORDER BY npm_downloads DESC';
+        break;
+      case 'updated':
+        sql += ' ORDER BY community_fetched_at DESC';
+        break;
+      case 'name':
+      default:
+        sql += ' ORDER BY display_name';
+    }
+
+    if (options?.limit) {
+      sql += ' LIMIT ?';
+      params.push(options.limit);
+    }
+
+    const rows = this.db.prepare(sql).all(...params) as any[];
+    return rows.map(row => this.parseNodeRow(row));
+  }
+
+  /**
+   * Get community node statistics
+   */
+  getCommunityStats(): { total: number; verified: number; unverified: number } {
+    const totalResult = this.db.prepare(
+      'SELECT COUNT(*) as count FROM nodes WHERE is_community = 1'
+    ).get() as any;
+
+    const verifiedResult = this.db.prepare(
+      'SELECT COUNT(*) as count FROM nodes WHERE is_community = 1 AND is_verified = 1'
+    ).get() as any;
+
+    return {
+      total: totalResult.count,
+      verified: verifiedResult.count,
+      unverified: totalResult.count - verifiedResult.count
+    };
+  }
+
+  /**
+   * Check if a node exists by npm package name
+   */
+  hasNodeByNpmPackage(npmPackageName: string): boolean {
+    const result = this.db.prepare(
+      'SELECT 1 FROM nodes WHERE npm_package_name = ? LIMIT 1'
+    ).get(npmPackageName) as any;
+    return !!result;
+  }
+
+  /**
+   * Get node by npm package name
+   */
+  getNodeByNpmPackage(npmPackageName: string): any | null {
+    const row = this.db.prepare(
+      'SELECT * FROM nodes WHERE npm_package_name = ?'
+    ).get(npmPackageName) as any;
+
+    if (!row) return null;
+    return this.parseNodeRow(row);
+  }
+
+  /**
+   * Delete all community nodes (for rebuild)
+   */
+  deleteCommunityNodes(): number {
+    const result = this.db.prepare(
+      'DELETE FROM nodes WHERE is_community = 1'
+    ).run();
+    return result.changes;
   }
 
   /**

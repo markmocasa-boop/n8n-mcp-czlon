@@ -1072,7 +1072,11 @@ export class N8NDocumentationMCPServer {
         this.validateToolParams(name, args, ['query']);
         // Convert limit to number if provided, otherwise use default
         const limit = args.limit !== undefined ? Number(args.limit) || 20 : 20;
-        return this.searchNodes(args.query, limit, { mode: args.mode, includeExamples: args.includeExamples });
+        return this.searchNodes(args.query, limit, {
+          mode: args.mode,
+          includeExamples: args.includeExamples,
+          source: args.source
+        });
       case 'get_node':
         this.validateToolParams(name, args, ['nodeType']);
         // Handle consolidated modes: docs, search_properties
@@ -1422,6 +1426,7 @@ export class N8NDocumentationMCPServer {
       mode?: 'OR' | 'AND' | 'FUZZY';
       includeSource?: boolean;
       includeExamples?: boolean;
+      source?: 'all' | 'core' | 'community' | 'verified';
     }
   ): Promise<any> {
     await this.ensureInitialized();
@@ -1460,7 +1465,11 @@ export class N8NDocumentationMCPServer {
     query: string,
     limit: number,
     mode: 'OR' | 'AND' | 'FUZZY',
-    options?: { includeSource?: boolean; includeExamples?: boolean; }
+    options?: {
+      includeSource?: boolean;
+      includeExamples?: boolean;
+      source?: 'all' | 'core' | 'community' | 'verified';
+    }
   ): Promise<any> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -1500,6 +1509,22 @@ export class N8NDocumentationMCPServer {
     }
     
     try {
+      // Build source filter SQL
+      let sourceFilter = '';
+      const sourceValue = options?.source || 'all';
+      switch (sourceValue) {
+        case 'core':
+          sourceFilter = 'AND n.is_community = 0';
+          break;
+        case 'community':
+          sourceFilter = 'AND n.is_community = 1';
+          break;
+        case 'verified':
+          sourceFilter = 'AND n.is_community = 1 AND n.is_verified = 1';
+          break;
+        // 'all' - no filter
+      }
+
       // Use FTS5 with ranking
       const nodes = this.db.prepare(`
         SELECT
@@ -1508,6 +1533,7 @@ export class N8NDocumentationMCPServer {
         FROM nodes n
         JOIN nodes_fts ON n.rowid = nodes_fts.rowid
         WHERE nodes_fts MATCH ?
+        ${sourceFilter}
         ORDER BY
           CASE
             WHEN LOWER(n.display_name) = LOWER(?) THEN 0
@@ -1551,15 +1577,31 @@ export class N8NDocumentationMCPServer {
       
       const result: any = {
         query,
-        results: scoredNodes.map(node => ({
-          nodeType: node.node_type,
-          workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
-          displayName: node.display_name,
-          description: node.description,
-          category: node.category,
-          package: node.package_name,
-          relevance: this.calculateRelevance(node, cleanedQuery)
-        })),
+        results: scoredNodes.map(node => {
+          const nodeResult: any = {
+            nodeType: node.node_type,
+            workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
+            displayName: node.display_name,
+            description: node.description,
+            category: node.category,
+            package: node.package_name,
+            relevance: this.calculateRelevance(node, cleanedQuery)
+          };
+
+          // Add community metadata if this is a community node
+          if ((node as any).is_community === 1) {
+            nodeResult.isCommunity = true;
+            nodeResult.isVerified = (node as any).is_verified === 1;
+            if ((node as any).author_name) {
+              nodeResult.authorName = (node as any).author_name;
+            }
+            if ((node as any).npm_downloads) {
+              nodeResult.npmDownloads = (node as any).npm_downloads;
+            }
+          }
+
+          return nodeResult;
+        }),
         totalCount: scoredNodes.length
       };
 
@@ -1775,9 +1817,29 @@ export class N8NDocumentationMCPServer {
   private async searchNodesLIKE(
     query: string,
     limit: number,
-    options?: { includeSource?: boolean; includeExamples?: boolean; }
+    options?: {
+      includeSource?: boolean;
+      includeExamples?: boolean;
+      source?: 'all' | 'core' | 'community' | 'verified';
+    }
   ): Promise<any> {
     if (!this.db) throw new Error('Database not initialized');
+
+    // Build source filter SQL
+    let sourceFilter = '';
+    const sourceValue = options?.source || 'all';
+    switch (sourceValue) {
+      case 'core':
+        sourceFilter = 'AND is_community = 0';
+        break;
+      case 'community':
+        sourceFilter = 'AND is_community = 1';
+        break;
+      case 'verified':
+        sourceFilter = 'AND is_community = 1 AND is_verified = 1';
+        break;
+      // 'all' - no filter
+    }
 
     // This is the existing LIKE-based implementation
     // Handle exact phrase searches with quotes
@@ -1785,7 +1847,8 @@ export class N8NDocumentationMCPServer {
       const exactPhrase = query.slice(1, -1);
       const nodes = this.db!.prepare(`
         SELECT * FROM nodes
-        WHERE node_type LIKE ? OR display_name LIKE ? OR description LIKE ?
+        WHERE (node_type LIKE ? OR display_name LIKE ? OR description LIKE ?)
+        ${sourceFilter}
         LIMIT ?
       `).all(`%${exactPhrase}%`, `%${exactPhrase}%`, `%${exactPhrase}%`, limit * 3) as NodeRow[];
 
@@ -1794,14 +1857,30 @@ export class N8NDocumentationMCPServer {
 
       const result: any = {
         query,
-        results: rankedNodes.map(node => ({
-          nodeType: node.node_type,
-          workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
-          displayName: node.display_name,
-          description: node.description,
-          category: node.category,
-          package: node.package_name
-        })),
+        results: rankedNodes.map(node => {
+          const nodeResult: any = {
+            nodeType: node.node_type,
+            workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
+            displayName: node.display_name,
+            description: node.description,
+            category: node.category,
+            package: node.package_name
+          };
+
+          // Add community metadata if this is a community node
+          if ((node as any).is_community === 1) {
+            nodeResult.isCommunity = true;
+            nodeResult.isVerified = (node as any).is_verified === 1;
+            if ((node as any).author_name) {
+              nodeResult.authorName = (node as any).author_name;
+            }
+            if ((node as any).npm_downloads) {
+              nodeResult.npmDownloads = (node as any).npm_downloads;
+            }
+          }
+
+          return nodeResult;
+        }),
         totalCount: rankedNodes.length
       };
 
@@ -1853,8 +1932,9 @@ export class N8NDocumentationMCPServer {
     params.push(limit * 3);
     
     const nodes = this.db!.prepare(`
-      SELECT DISTINCT * FROM nodes 
-      WHERE ${conditions}
+      SELECT DISTINCT * FROM nodes
+      WHERE (${conditions})
+      ${sourceFilter}
       LIMIT ?
     `).all(...params) as NodeRow[];
     
@@ -1863,14 +1943,30 @@ export class N8NDocumentationMCPServer {
 
     const result: any = {
       query,
-      results: rankedNodes.map(node => ({
-        nodeType: node.node_type,
-        workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
-        displayName: node.display_name,
-        description: node.description,
-        category: node.category,
-        package: node.package_name
-      })),
+      results: rankedNodes.map(node => {
+        const nodeResult: any = {
+          nodeType: node.node_type,
+          workflowNodeType: getWorkflowNodeType(node.package_name, node.node_type),
+          displayName: node.display_name,
+          description: node.description,
+          category: node.category,
+          package: node.package_name
+        };
+
+        // Add community metadata if this is a community node
+        if ((node as any).is_community === 1) {
+          nodeResult.isCommunity = true;
+          nodeResult.isVerified = (node as any).is_verified === 1;
+          if ((node as any).author_name) {
+            nodeResult.authorName = (node as any).author_name;
+          }
+          if ((node as any).npm_downloads) {
+            nodeResult.npmDownloads = (node as any).npm_downloads;
+          }
+        }
+
+        return nodeResult;
+      }),
       totalCount: rankedNodes.length
     };
 

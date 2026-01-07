@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.32.0] - 2026-01-07
+
+### Added
+
+**Community Nodes Support (Issues #23, #490)**
+
+Added comprehensive support for n8n community nodes, expanding the node database from 537 core nodes to 1,084 total nodes (537 core + 547 community).
+
+**New Features:**
+- **547 community nodes** indexed (301 verified + 246 popular npm packages)
+- **`source` filter** for `search_nodes`: Filter by `all`, `core`, `community`, or `verified`
+- **Community metadata** in search results: `isCommunity`, `isVerified`, `authorName`, `npmDownloads`
+- **Full schema support** for verified community nodes (no additional parsing needed)
+
+**Data Sources:**
+- Verified nodes fetched from n8n Strapi API (`api.n8n.io/api/community-nodes`)
+- Popular npm packages from npm registry (keyword: `n8n-community-node-package`)
+
+**New CLI Commands:**
+```bash
+npm run fetch:community              # Full rebuild (verified + top 100 npm)
+npm run fetch:community:verified     # Verified nodes only (fast)
+npm run fetch:community:update       # Incremental update (skip existing)
+```
+
+**Example Usage:**
+```javascript
+// Search only community nodes
+search_nodes({query: "scraping", source: "community"})
+
+// Search verified community nodes
+search_nodes({query: "pdf", source: "verified"})
+
+// Results include community metadata
+{
+  nodeType: "n8n-nodes-brightdata.brightData",
+  displayName: "BrightData",
+  isCommunity: true,
+  isVerified: true,
+  authorName: "brightdata.com",
+  npmDownloads: 1234
+}
+```
+
+**Files Added:**
+- `src/community/community-node-service.ts` - Business logic for syncing community nodes
+- `src/community/community-node-fetcher.ts` - API integration for Strapi and npm
+- `src/scripts/fetch-community-nodes.ts` - CLI script for fetching community nodes
+
+**Files Modified:**
+- `src/database/schema.sql` - Added community columns and indexes
+- `src/database/node-repository.ts` - Extended for community node fields
+- `src/mcp/tools.ts` - Added `source` parameter to `search_nodes`
+- `src/mcp/server.ts` - Added source filtering and community metadata to results
+- `src/mcp/tool-docs/discovery/search-nodes.ts` - Updated documentation
+
 ## [2.31.8] - 2026-01-07
 
 ### Deprecated

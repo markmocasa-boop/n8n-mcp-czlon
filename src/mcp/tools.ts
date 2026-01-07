@@ -57,6 +57,12 @@ export const n8nDocumentationToolsFinal: ToolDefinition[] = [
           description: 'Include top 2 real-world configuration examples from popular templates (default: false)',
           default: false,
         },
+        source: {
+          type: 'string',
+          enum: ['all', 'core', 'community', 'verified'],
+          description: 'Filter by node source: all=everything (default), core=n8n base nodes, community=community nodes, verified=verified community nodes only',
+          default: 'all',
+        },
       },
       required: ['query'],
     },
