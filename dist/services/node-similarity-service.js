@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NodeSimilarityService = void 0;
 const logger_1 = require("../utils/logger");
+const tool_variant_generator_1 = require("./tool-variant-generator");
 class NodeSimilarityService {
     constructor(repository) {
         this.nodeCache = null;
@@ -66,6 +67,22 @@ class NodeSimilarityService {
     async findSimilarNodes(invalidType, limit = 5) {
         if (!invalidType || invalidType.trim() === '') {
             return [];
+        }
+        if (tool_variant_generator_1.ToolVariantGenerator.isToolVariantNodeType(invalidType)) {
+            const baseNodeType = tool_variant_generator_1.ToolVariantGenerator.getBaseNodeType(invalidType);
+            if (baseNodeType) {
+                const baseNode = this.repository.getNode(baseNodeType);
+                if (baseNode) {
+                    return [{
+                            nodeType: invalidType,
+                            displayName: `${baseNode.displayName} Tool`,
+                            confidence: 0.98,
+                            reason: `Dynamic AI Tool variant of ${baseNode.displayName}`,
+                            category: baseNode.category,
+                            description: 'Runtime-generated Tool variant for AI Agent integration'
+                        }];
+                }
+            }
         }
         const suggestions = [];
         const mistakeSuggestion = this.checkCommonMistakes(invalidType);

@@ -1,5 +1,6 @@
 import { NodeRepository } from '../database/node-repository';
 import { logger } from '../utils/logger';
+import { ToolVariantGenerator } from './tool-variant-generator';
 
 export interface NodeSuggestion {
   nodeType: string;
@@ -124,6 +125,25 @@ export class NodeSimilarityService {
   async findSimilarNodes(invalidType: string, limit: number = 5): Promise<NodeSuggestion[]> {
     if (!invalidType || invalidType.trim() === '') {
       return [];
+    }
+
+    // Check if this is a Tool variant and base node exists (Issue #522)
+    // Dynamic AI Tool variants like googleDriveTool are created at runtime by n8n
+    if (ToolVariantGenerator.isToolVariantNodeType(invalidType)) {
+      const baseNodeType = ToolVariantGenerator.getBaseNodeType(invalidType);
+      if (baseNodeType) {
+        const baseNode = this.repository.getNode(baseNodeType);
+        if (baseNode) {
+          return [{
+            nodeType: invalidType,
+            displayName: `${baseNode.displayName} Tool`,
+            confidence: 0.98,
+            reason: `Dynamic AI Tool variant of ${baseNode.displayName}`,
+            category: baseNode.category,
+            description: 'Runtime-generated Tool variant for AI Agent integration'
+          }];
+        }
+      }
     }
 
     const suggestions: NodeSuggestion[] = [];

@@ -398,7 +398,39 @@ export class WorkflowValidator {
         const normalizedType = NodeTypeNormalizer.normalizeToFullForm(node.type);
 
         // Get node definition using normalized type (needed for typeVersion validation)
-        const nodeInfo = this.nodeRepository.getNode(normalizedType);
+        let nodeInfo = this.nodeRepository.getNode(normalizedType);
+
+        // Check if this is a dynamic Tool variant (e.g., googleDriveTool, googleSheetsTool)
+        // n8n creates these at runtime when ANY node is used in an AI Agent's tool slot,
+        // but they don't exist in npm packages. We infer validity if the base node exists.
+        // See: https://github.com/czlonkowski/n8n-mcp/issues/522
+        if (!nodeInfo && ToolVariantGenerator.isToolVariantNodeType(normalizedType)) {
+          const baseNodeType = ToolVariantGenerator.getBaseNodeType(normalizedType);
+          if (baseNodeType) {
+            const baseNodeInfo = this.nodeRepository.getNode(baseNodeType);
+            if (baseNodeInfo) {
+              // Valid inferred tool variant - base node exists
+              result.warnings.push({
+                type: 'warning',
+                nodeId: node.id,
+                nodeName: node.name,
+                message: `Node type "${node.type}" is inferred as a dynamic AI Tool variant of "${baseNodeType}". ` +
+                  `This Tool variant is created by n8n at runtime when connecting "${baseNodeInfo.displayName}" to an AI Agent.`,
+                code: 'INFERRED_TOOL_VARIANT'
+              });
+
+              // Create synthetic nodeInfo for validation continuity
+              nodeInfo = {
+                ...baseNodeInfo,
+                nodeType: normalizedType,
+                displayName: `${baseNodeInfo.displayName} Tool`,
+                isToolVariant: true,
+                toolVariantOf: baseNodeType,
+                isInferred: true
+              };
+            }
+          }
+        }
 
         if (!nodeInfo) {
 
@@ -491,6 +523,13 @@ export class WorkflowValidator {
         // Langchain nodes have dedicated AI-specific validators in validateAISpecificNodes()
         // which handle their unique parameter structures (AI connections, tool ports, etc.)
         if (normalizedType.startsWith('nodes-langchain.')) {
+          continue;
+        }
+
+        // Skip PARAMETER validation for inferred tool variants (Issue #522)
+        // They have a different property structure (toolDescription added at runtime)
+        // that doesn't match the base node's schema. TypeVersion validation above still runs.
+        if ((nodeInfo as any).isInferred) {
           continue;
         }
 

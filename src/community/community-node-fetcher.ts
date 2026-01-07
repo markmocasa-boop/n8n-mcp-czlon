@@ -1,5 +1,25 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { logger } from '../utils/logger';
+
+/**
+ * Configuration constants for community node fetching
+ */
+const FETCH_CONFIG = {
+  /** Default timeout for Strapi API requests (ms) */
+  STRAPI_TIMEOUT: 30000,
+  /** Default timeout for npm registry requests (ms) */
+  NPM_REGISTRY_TIMEOUT: 15000,
+  /** Default timeout for npm downloads API (ms) */
+  NPM_DOWNLOADS_TIMEOUT: 10000,
+  /** Base delay between retries (ms) */
+  RETRY_DELAY: 1000,
+  /** Maximum number of retry attempts */
+  MAX_RETRIES: 3,
+  /** Default delay between requests for rate limiting (ms) */
+  RATE_LIMIT_DELAY: 300,
+  /** Default delay after hitting 429 (ms) */
+  RATE_LIMIT_429_DELAY: 60000,
+} as const;
 
 /**
  * Strapi API response types for verified community nodes
@@ -93,10 +113,13 @@ export class CommunityNodeFetcher {
   private readonly strapiBaseUrl: string;
   private readonly npmSearchUrl = 'https://registry.npmjs.org/-/v1/search';
   private readonly npmRegistryUrl = 'https://registry.npmjs.org';
-  private readonly maxRetries = 3;
-  private readonly retryDelay = 1000; // 1 second base delay
+  private readonly maxRetries = FETCH_CONFIG.MAX_RETRIES;
+  private readonly retryDelay = FETCH_CONFIG.RETRY_DELAY;
   private readonly strapiPageSize = 25;
   private readonly npmPageSize = 250; // npm API max
+
+  /** Regex for validating npm package names per npm naming rules */
+  private readonly npmPackageNameRegex = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
   constructor(environment: 'production' | 'staging' = 'production') {
     this.strapiBaseUrl =
@@ -106,27 +129,67 @@ export class CommunityNodeFetcher {
   }
 
   /**
+   * Validates npm package name to prevent path traversal and injection attacks.
+   * @see https://github.com/npm/validate-npm-package-name
+   */
+  private validatePackageName(packageName: string): boolean {
+    if (!packageName || typeof packageName !== 'string') {
+      return false;
+    }
+    // Max length per npm spec
+    if (packageName.length > 214) {
+      return false;
+    }
+    // Must match npm naming pattern
+    if (!this.npmPackageNameRegex.test(packageName)) {
+      return false;
+    }
+    // Block path traversal attempts
+    if (packageName.includes('..') || packageName.includes('//')) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Checks if an error is a rate limit (429) response
+   */
+  private isRateLimitError(error: unknown): boolean {
+    return axios.isAxiosError(error) && error.response?.status === 429;
+  }
+
+  /**
    * Retry helper for API calls (same pattern as TemplateFetcher)
+   * Handles 429 rate limit responses with extended delay
    */
   private async retryWithBackoff<T>(
     fn: () => Promise<T>,
     context: string,
     maxRetries: number = this.maxRetries
   ): Promise<T | null> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await fn();
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
 
         if (attempt < maxRetries) {
-          const delay = this.retryDelay * attempt; // Exponential backoff
-          logger.warn(
-            `${context} - Attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms...`
-          );
-          await this.sleep(delay);
+          // Handle 429 rate limit with longer delay
+          if (this.isRateLimitError(error)) {
+            const delay = FETCH_CONFIG.RATE_LIMIT_429_DELAY;
+            logger.warn(
+              `${context} - Rate limited (429), waiting ${delay / 1000}s before retry...`
+            );
+            await this.sleep(delay);
+          } else {
+            const delay = this.retryDelay * attempt; // Exponential backoff
+            logger.warn(
+              `${context} - Attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms...`
+            );
+            await this.sleep(delay);
+          }
         }
       }
     }
@@ -159,7 +222,7 @@ export class CommunityNodeFetcher {
                 'pagination[page]': page,
                 'pagination[pageSize]': this.strapiPageSize,
               },
-              timeout: 30000,
+              timeout: FETCH_CONFIG.STRAPI_TIMEOUT,
             }
           );
           return response.data;
@@ -198,7 +261,7 @@ export class CommunityNodeFetcher {
 
       // Rate limiting
       if (hasMore) {
-        await this.sleep(300);
+        await this.sleep(FETCH_CONFIG.RATE_LIMIT_DELAY);
       }
     }
 
@@ -239,7 +302,7 @@ export class CommunityNodeFetcher {
               popularity: 1,
               maintenance: 0,
             },
-            timeout: 30000,
+            timeout: FETCH_CONFIG.STRAPI_TIMEOUT,
           });
           return response.data;
         },
@@ -268,7 +331,7 @@ export class CommunityNodeFetcher {
       offset += size;
 
       // Rate limiting
-      await this.sleep(300);
+      await this.sleep(FETCH_CONFIG.RATE_LIMIT_DELAY);
     }
 
     // Sort by popularity score (highest first)
@@ -280,15 +343,22 @@ export class CommunityNodeFetcher {
 
   /**
    * Fetch package.json for a specific npm package to get the n8n node configuration.
+   * Validates package name to prevent path traversal attacks.
    */
   async fetchPackageJson(packageName: string, version?: string): Promise<any | null> {
+    // Validate package name to prevent path traversal
+    if (!this.validatePackageName(packageName)) {
+      logger.warn(`Invalid package name rejected: ${packageName}`);
+      return null;
+    }
+
     const url = version
-      ? `${this.npmRegistryUrl}/${packageName}/${version}`
-      : `${this.npmRegistryUrl}/${packageName}/latest`;
+      ? `${this.npmRegistryUrl}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`
+      : `${this.npmRegistryUrl}/${encodeURIComponent(packageName)}/latest`;
 
     return this.retryWithBackoff(
       async () => {
-        const response = await axios.get(url, { timeout: 15000 });
+        const response = await axios.get(url, { timeout: FETCH_CONFIG.NPM_REGISTRY_TIMEOUT });
         return response.data;
       },
       `Fetching package.json for ${packageName}${version ? `@${version}` : ''}`
@@ -322,16 +392,23 @@ export class CommunityNodeFetcher {
 
   /**
    * Get download statistics for a package from npm.
+   * Validates package name to prevent path traversal attacks.
    */
   async getPackageDownloads(
     packageName: string,
     period: 'last-week' | 'last-month' = 'last-week'
   ): Promise<number | null> {
+    // Validate package name to prevent path traversal
+    if (!this.validatePackageName(packageName)) {
+      logger.warn(`Invalid package name rejected for downloads: ${packageName}`);
+      return null;
+    }
+
     return this.retryWithBackoff(
       async () => {
         const response = await axios.get(
-          `https://api.npmjs.org/downloads/point/${period}/${packageName}`,
-          { timeout: 10000 }
+          `https://api.npmjs.org/downloads/point/${period}/${encodeURIComponent(packageName)}`,
+          { timeout: FETCH_CONFIG.NPM_DOWNLOADS_TIMEOUT }
         );
         return response.data.downloads;
       },

@@ -236,7 +236,31 @@ class WorkflowValidator {
                     }
                 }
                 const normalizedType = node_type_normalizer_1.NodeTypeNormalizer.normalizeToFullForm(node.type);
-                const nodeInfo = this.nodeRepository.getNode(normalizedType);
+                let nodeInfo = this.nodeRepository.getNode(normalizedType);
+                if (!nodeInfo && tool_variant_generator_1.ToolVariantGenerator.isToolVariantNodeType(normalizedType)) {
+                    const baseNodeType = tool_variant_generator_1.ToolVariantGenerator.getBaseNodeType(normalizedType);
+                    if (baseNodeType) {
+                        const baseNodeInfo = this.nodeRepository.getNode(baseNodeType);
+                        if (baseNodeInfo) {
+                            result.warnings.push({
+                                type: 'warning',
+                                nodeId: node.id,
+                                nodeName: node.name,
+                                message: `Node type "${node.type}" is inferred as a dynamic AI Tool variant of "${baseNodeType}". ` +
+                                    `This Tool variant is created by n8n at runtime when connecting "${baseNodeInfo.displayName}" to an AI Agent.`,
+                                code: 'INFERRED_TOOL_VARIANT'
+                            });
+                            nodeInfo = {
+                                ...baseNodeInfo,
+                                nodeType: normalizedType,
+                                displayName: `${baseNodeInfo.displayName} Tool`,
+                                isToolVariant: true,
+                                toolVariantOf: baseNodeType,
+                                isInferred: true
+                            };
+                        }
+                    }
+                }
                 if (!nodeInfo) {
                     const suggestions = await this.similarityService.findSimilarNodes(node.type, 3);
                     let message = `Unknown node type: "${node.type}".`;
@@ -308,6 +332,9 @@ class WorkflowValidator {
                     }
                 }
                 if (normalizedType.startsWith('nodes-langchain.')) {
+                    continue;
+                }
+                if (nodeInfo.isInferred) {
                     continue;
                 }
                 const paramsWithVersion = {
