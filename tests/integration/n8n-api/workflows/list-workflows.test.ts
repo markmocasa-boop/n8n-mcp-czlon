@@ -42,23 +42,15 @@ describe('Integration: handleListWorkflows', () => {
 
   describe('No Filters', () => {
     it('should list all workflows without filters', async () => {
-      // Create test workflows
-      const workflow1 = {
+      // Create a test workflow to ensure at least one exists
+      const workflow = {
         ...SIMPLE_WEBHOOK_WORKFLOW,
-        name: createTestWorkflowName('List - All 1'),
+        name: createTestWorkflowName('List - Basic'),
         tags: ['mcp-integration-test']
       };
 
-      const workflow2 = {
-        ...SIMPLE_HTTP_WORKFLOW,
-        name: createTestWorkflowName('List - All 2'),
-        tags: ['mcp-integration-test']
-      };
-
-      const created1 = await client.createWorkflow(workflow1);
-      const created2 = await client.createWorkflow(workflow2);
-      context.trackWorkflow(created1.id!);
-      context.trackWorkflow(created2.id!);
+      const created = await client.createWorkflow(workflow);
+      context.trackWorkflow(created.id!);
 
       // List workflows without filters
       const response = await handleListWorkflows({}, mcpContext);
@@ -67,14 +59,22 @@ describe('Integration: handleListWorkflows', () => {
       expect(response.data).toBeDefined();
 
       const data = response.data as any;
+
+      // Verify response structure
       expect(Array.isArray(data.workflows)).toBe(true);
       expect(data.workflows.length).toBeGreaterThan(0);
+      expect(typeof data.returned).toBe('number');
+      expect(typeof data.hasMore).toBe('boolean');
 
-      // Our workflows should be in the list
-      const workflow1Found = data.workflows.find((w: any) => w.id === created1.id);
-      const workflow2Found = data.workflows.find((w: any) => w.id === created2.id);
-      expect(workflow1Found).toBeDefined();
-      expect(workflow2Found).toBeDefined();
+      // Verify workflow objects have expected shape
+      const firstWorkflow = data.workflows[0];
+      expect(firstWorkflow).toHaveProperty('id');
+      expect(firstWorkflow).toHaveProperty('name');
+      expect(firstWorkflow).toHaveProperty('active');
+
+      // Note: We don't assert our specific workflow is in results because
+      // with many workflows in CI, it may not be in the default first page.
+      // Specific workflow finding is tested in pagination tests.
     });
   });
 
