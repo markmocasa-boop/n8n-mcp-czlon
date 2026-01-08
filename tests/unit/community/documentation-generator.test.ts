@@ -986,4 +986,247 @@ describe('DocumentationGenerator', () => {
       expect(result.summary.limitations).toContain('Documentation could not be automatically generated');
     });
   });
+
+  describe('truncateArrayFields helper', () => {
+    it('should truncate capabilities array to 10 items', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: Array.from({ length: 15 }, (_, i) => `capability${i}`),
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(10);
+      expect(result.capabilities[0]).toBe('capability0');
+      expect(result.capabilities[9]).toBe('capability9');
+    });
+
+    it('should truncate commonUseCases array to 5 items', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: [],
+        authentication: 'None',
+        commonUseCases: Array.from({ length: 8 }, (_, i) => `useCase${i}`),
+        limitations: [],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.commonUseCases).toHaveLength(5);
+      expect(result.commonUseCases[0]).toBe('useCase0');
+      expect(result.commonUseCases[4]).toBe('useCase4');
+    });
+
+    it('should truncate limitations array to 5 items', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: [],
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: Array.from({ length: 10 }, (_, i) => `limitation${i}`),
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.limitations).toHaveLength(5);
+      expect(result.limitations[0]).toBe('limitation0');
+      expect(result.limitations[4]).toBe('limitation4');
+    });
+
+    it('should truncate relatedNodes array to 5 items', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: [],
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: Array.from({ length: 7 }, (_, i) => `node${i}`),
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.relatedNodes).toHaveLength(5);
+      expect(result.relatedNodes[0]).toBe('node0');
+      expect(result.relatedNodes[4]).toBe('node4');
+    });
+
+    it('should not modify arrays within limits', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: ['cap1', 'cap2', 'cap3'],
+        authentication: 'None',
+        commonUseCases: ['use1', 'use2'],
+        limitations: ['lim1'],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(3);
+      expect(result.commonUseCases).toHaveLength(2);
+      expect(result.limitations).toHaveLength(1);
+      expect(result.relatedNodes).toHaveLength(0);
+    });
+
+    it('should not modify arrays at exact limits', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: Array.from({ length: 10 }, (_, i) => `cap${i}`),
+        authentication: 'None',
+        commonUseCases: Array.from({ length: 5 }, (_, i) => `use${i}`),
+        limitations: Array.from({ length: 5 }, (_, i) => `lim${i}`),
+        relatedNodes: Array.from({ length: 5 }, (_, i) => `node${i}`),
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(10);
+      expect(result.commonUseCases).toHaveLength(5);
+      expect(result.limitations).toHaveLength(5);
+      expect(result.relatedNodes).toHaveLength(5);
+    });
+
+    it('should handle empty arrays', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: [],
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(0);
+      expect(result.commonUseCases).toHaveLength(0);
+      expect(result.limitations).toHaveLength(0);
+      expect(result.relatedNodes).toHaveLength(0);
+    });
+
+    it('should preserve non-array fields unchanged', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'This is a long purpose string',
+        capabilities: Array.from({ length: 15 }, (_, i) => `cap${i}`),
+        authentication: 'OAuth2 with refresh token',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+        extraField: 'should be preserved',
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.purpose).toBe('This is a long purpose string');
+      expect(result.authentication).toBe('OAuth2 with refresh token');
+      expect(result.extraField).toBe('should be preserved');
+    });
+
+    it('should handle missing array fields gracefully', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        authentication: 'None',
+        // Missing: capabilities, commonUseCases, limitations, relatedNodes
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.purpose).toBe('Test purpose');
+      expect(result.authentication).toBe('None');
+      expect(result.capabilities).toBeUndefined();
+    });
+
+    it('should truncate multiple arrays simultaneously', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: Array.from({ length: 12 }, (_, i) => `cap${i}`),
+        authentication: 'None',
+        commonUseCases: Array.from({ length: 8 }, (_, i) => `use${i}`),
+        limitations: Array.from({ length: 6 }, (_, i) => `lim${i}`),
+        relatedNodes: Array.from({ length: 10 }, (_, i) => `node${i}`),
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(10);
+      expect(result.commonUseCases).toHaveLength(5);
+      expect(result.limitations).toHaveLength(5);
+      expect(result.relatedNodes).toHaveLength(5);
+    });
+
+    it('should preserve order of items when truncating', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'],
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities[0]).toBe('first');
+      expect(result.capabilities[9]).toBe('tenth');
+      expect(result.capabilities).not.toContain('eleventh');
+      expect(result.capabilities).not.toContain('twelfth');
+    });
+
+    it('should handle non-string array items', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const input = {
+        purpose: 'Test purpose',
+        capabilities: Array.from({ length: 12 }, (_, i) => ({ id: i, name: `cap${i}` })),
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+      };
+
+      const result = truncateMethod(input);
+
+      expect(result.capabilities).toHaveLength(10);
+      expect(result.capabilities[0]).toEqual({ id: 0, name: 'cap0' });
+      expect(result.capabilities[9]).toEqual({ id: 9, name: 'cap9' });
+    });
+
+    it('should create a new object and not mutate the original', () => {
+      const truncateMethod = (generator as any).truncateArrayFields.bind(generator);
+      const original = {
+        purpose: 'Test purpose',
+        capabilities: Array.from({ length: 15 }, (_, i) => `cap${i}`),
+        authentication: 'None',
+        commonUseCases: [],
+        limitations: [],
+        relatedNodes: [],
+      };
+      const originalCapabilitiesLength = original.capabilities.length;
+
+      const result = truncateMethod(original);
+
+      // Original should not be mutated
+      expect(original.capabilities).toHaveLength(originalCapabilitiesLength);
+      // Result should be truncated
+      expect(result.capabilities).toHaveLength(10);
+      // They should not be the same reference
+      expect(result).not.toBe(original);
+    });
+  });
 });
