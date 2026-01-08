@@ -60,6 +60,9 @@ interface NodeRow {
   properties_schema?: string;
   operations?: string;
   credentials_required?: string;
+  // AI documentation fields
+  ai_documentation_summary?: string;
+  ai_summary_generated_at?: string;
 }
 
 interface VersionSummary {
@@ -2191,31 +2194,34 @@ export class N8NDocumentationMCPServer {
     // First try with normalized type
     const normalizedType = NodeTypeNormalizer.normalizeToFullForm(nodeType);
     let node = this.db!.prepare(`
-      SELECT node_type, display_name, documentation, description 
-      FROM nodes 
+      SELECT node_type, display_name, documentation, description,
+             ai_documentation_summary, ai_summary_generated_at
+      FROM nodes
       WHERE node_type = ?
     `).get(normalizedType) as NodeRow | undefined;
-    
+
     // If not found and normalization changed the type, try original
     if (!node && normalizedType !== nodeType) {
       node = this.db!.prepare(`
-        SELECT node_type, display_name, documentation, description 
-        FROM nodes 
+        SELECT node_type, display_name, documentation, description,
+               ai_documentation_summary, ai_summary_generated_at
+        FROM nodes
         WHERE node_type = ?
       `).get(nodeType) as NodeRow | undefined;
     }
-    
+
     // If still not found, try alternatives
     if (!node) {
       const alternatives = getNodeTypeAlternatives(normalizedType);
-      
+
       for (const alt of alternatives) {
         node = this.db!.prepare(`
-          SELECT node_type, display_name, documentation, description 
-          FROM nodes 
+          SELECT node_type, display_name, documentation, description,
+                 ai_documentation_summary, ai_summary_generated_at
+          FROM nodes
           WHERE node_type = ?
         `).get(alt) as NodeRow | undefined;
-        
+
         if (node) break;
       }
     }
@@ -2224,6 +2230,11 @@ export class N8NDocumentationMCPServer {
       throw new Error(`Node ${nodeType} not found`);
     }
     
+    // Parse AI documentation summary if present
+    const aiDocSummary = node.ai_documentation_summary
+      ? this.safeJsonParse(node.ai_documentation_summary, null)
+      : null;
+
     // If no documentation, generate fallback with null safety
     if (!node.documentation) {
       const essentials = await this.getNodeEssentials(nodeType);
@@ -2247,7 +2258,9 @@ ${essentials?.commonProperties?.length > 0 ?
 ## Note
 Full documentation is being prepared. For now, use get_node_essentials for configuration help.
 `,
-        hasDocumentation: false
+        hasDocumentation: false,
+        aiDocumentationSummary: aiDocSummary,
+        aiSummaryGeneratedAt: node.ai_summary_generated_at || null,
       };
     }
 
@@ -2256,7 +2269,17 @@ Full documentation is being prepared. For now, use get_node_essentials for confi
       displayName: node.display_name || 'Unknown Node',
       documentation: node.documentation,
       hasDocumentation: true,
+      aiDocumentationSummary: aiDocSummary,
+      aiSummaryGeneratedAt: node.ai_summary_generated_at || null,
     };
+  }
+
+  private safeJsonParse(json: string, defaultValue: any = null): any {
+    try {
+      return JSON.parse(json);
+    } catch {
+      return defaultValue;
+    }
   }
 
   private async getDatabaseStatistics(): Promise<any> {

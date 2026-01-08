@@ -17,8 +17,8 @@ export const DocumentationSummarySchema = z.object({
   capabilities: z.array(z.string()).max(10).describe('Key features and operations'),
   authentication: z.string().describe('How to authenticate (API key, OAuth, None, etc.)'),
   commonUseCases: z.array(z.string()).max(5).describe('Practical use case examples'),
-  limitations: z.array(z.string()).describe('Known limitations or caveats'),
-  relatedNodes: z.array(z.string()).describe('Related n8n nodes if mentioned'),
+  limitations: z.array(z.string()).max(5).describe('Known limitations or caveats'),
+  relatedNodes: z.array(z.string()).max(5).describe('Related n8n nodes if mentioned'),
 });
 
 export type DocumentationSummary = z.infer<typeof DocumentationSummarySchema>;
@@ -124,8 +124,11 @@ export class DocumentationGenerator {
       const jsonContent = this.extractJson(content);
       const parsed = JSON.parse(jsonContent);
 
+      // Truncate arrays to fit schema limits before validation
+      const truncated = this.truncateArrayFields(parsed);
+
       // Validate with Zod
-      const validated = DocumentationSummarySchema.parse(parsed);
+      const validated = DocumentationSummarySchema.parse(truncated);
 
       return {
         nodeType: input.nodeType,
@@ -253,6 +256,29 @@ Guidelines:
 
     // Return as-is if no extraction needed
     return content.trim();
+  }
+
+  /**
+   * Truncate array fields to fit schema limits
+   * Ensures LLM responses with extra items still validate
+   */
+  private truncateArrayFields(parsed: Record<string, unknown>): Record<string, unknown> {
+    const limits: Record<string, number> = {
+      capabilities: 10,
+      commonUseCases: 5,
+      limitations: 5,
+      relatedNodes: 5,
+    };
+
+    const result = { ...parsed };
+
+    for (const [field, maxLength] of Object.entries(limits)) {
+      if (Array.isArray(result[field]) && result[field].length > maxLength) {
+        result[field] = (result[field] as unknown[]).slice(0, maxLength);
+      }
+    }
+
+    return result;
   }
 
   /**

@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.33.0] - 2026-01-08
+
+### Added
+
+**AI-Powered Documentation for Community Nodes**
+
+Added AI-generated documentation summaries for 537 community nodes, making them accessible through the MCP `get_node` tool.
+
+**Features:**
+- **README Fetching**: Automatically fetches README content from npm registry for all community nodes
+- **AI Summary Generation**: Uses local LLM (Qwen or compatible) to generate structured documentation summaries
+- **MCP Integration**: AI summaries exposed in `get_node` with `mode='docs'`
+
+**AI Documentation Structure:**
+```json
+{
+  "aiDocumentationSummary": {
+    "purpose": "What this node does",
+    "capabilities": ["key features"],
+    "authentication": "API key, OAuth, etc.",
+    "commonUseCases": ["practical examples"],
+    "limitations": ["known caveats"],
+    "relatedNodes": ["related n8n nodes"]
+  },
+  "aiSummaryGeneratedAt": "2026-01-08T10:45:31.000Z"
+}
+```
+
+**New CLI Commands:**
+```bash
+npm run generate:docs              # Full generation (README + AI summary)
+npm run generate:docs:readme-only  # Only fetch READMEs from npm
+npm run generate:docs:summary-only # Only generate AI summaries
+npm run generate:docs:incremental  # Skip nodes with existing data
+npm run generate:docs:stats        # Show documentation statistics
+npm run migrate:readme-columns     # Migrate database schema
+```
+
+**Environment Variables:**
+```bash
+N8N_MCP_LLM_BASE_URL=http://localhost:1234/v1  # LLM server URL
+N8N_MCP_LLM_MODEL=qwen3-4b-thinking-2507       # Model name
+N8N_MCP_LLM_TIMEOUT=60000                       # Request timeout
+```
+
+**Files Added:**
+- `src/community/documentation-generator.ts` - LLM integration with Zod validation
+- `src/community/documentation-batch-processor.ts` - Batch processing with progress tracking
+- `src/scripts/generate-community-docs.ts` - CLI entry point
+- `src/scripts/migrate-readme-columns.ts` - Database migration script
+
+**Files Modified:**
+- `src/database/schema.sql` - Added `npm_readme`, `ai_documentation_summary`, `ai_summary_generated_at` columns
+- `src/database/node-repository.ts` - Added AI documentation methods and fields
+- `src/community/community-node-fetcher.ts` - Added `fetchPackageWithReadme()` and batch fetching
+- `src/community/index.ts` - Exported new classes
+- `src/mcp/server.ts` - Added AI documentation to `get_node` docs mode response
+
+**Statistics:**
+- 538/547 community nodes have README content
+- 537/547 community nodes have AI-generated summaries
+
 ## [2.32.1] - 2026-01-08
 
 ### Fixed

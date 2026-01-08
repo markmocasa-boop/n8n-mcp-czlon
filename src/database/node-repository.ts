@@ -362,7 +362,13 @@ export class NodeRepository {
       npmPackageName: row.npm_package_name || null,
       npmVersion: row.npm_version || null,
       npmDownloads: row.npm_downloads || 0,
-      communityFetchedAt: row.community_fetched_at || null
+      communityFetchedAt: row.community_fetched_at || null,
+      // AI documentation fields
+      npmReadme: row.npm_readme || null,
+      aiDocumentationSummary: row.ai_documentation_summary
+        ? this.safeJsonParse(row.ai_documentation_summary, null)
+        : null,
+      aiSummaryGeneratedAt: row.ai_summary_generated_at || null,
     };
   }
 
