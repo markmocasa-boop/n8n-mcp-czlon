@@ -40,7 +40,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Add a 10-minute timeout to prevent hanging
+    timeout-minutes: 15  # Increased from 10 to accommodate larger database with community nodes
     steps:
       - uses: actions/checkout@v4
       
