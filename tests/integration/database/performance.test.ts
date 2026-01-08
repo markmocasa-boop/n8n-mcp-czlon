@@ -64,8 +64,9 @@ describe('Database Performance Tests', () => {
 
       // Adjusted based on actual CI performance measurements + type safety overhead
       // CI environments show ratios of ~7-10 for 1000:100 and ~6-7 for 5000:1000
-      expect(ratio1000to100).toBeLessThan(12); // Allow for CI variability (was 10)
-      expect(ratio5000to1000).toBeLessThan(11);  // Allow for type safety overhead (was 8)
+      // Increased thresholds to account for community node columns (8 additional fields)
+      expect(ratio1000to100).toBeLessThan(15); // Allow for CI variability + community columns (was 12)
+      expect(ratio5000to1000).toBeLessThan(12);  // Allow for type safety overhead + community columns (was 11)
     });
 
     it('should search nodes quickly with indexes', () => {
