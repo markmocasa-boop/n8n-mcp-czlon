@@ -251,7 +251,10 @@ describe('NodeRepository - Outputs Handling', () => {
         npm_package_name: null,
         npm_version: null,
         npm_downloads: 0,
-        community_fetched_at: null
+        community_fetched_at: null,
+        npm_readme: null,
+        ai_documentation_summary: null,
+        ai_summary_generated_at: null
       };
 
       mockStatement.get.mockReturnValue(mockRow);
@@ -286,7 +289,10 @@ describe('NodeRepository - Outputs Handling', () => {
         npmPackageName: null,
         npmVersion: null,
         npmDownloads: 0,
-        communityFetchedAt: null
+        communityFetchedAt: null,
+        npmReadme: null,
+        aiDocumentationSummary: null,
+        aiSummaryGeneratedAt: null
       });
     });
 
