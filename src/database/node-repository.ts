@@ -103,6 +103,18 @@ export class NodeRepository {
       }
     }
 
+    // Fallback: case-insensitive lookup for community nodes
+    // Handles cases where node type casing differs (e.g., .Chatwoot vs .chatwoot)
+    if (!row) {
+      const caseInsensitiveRow = this.db.prepare(`
+        SELECT * FROM nodes WHERE LOWER(node_type) = LOWER(?)
+      `).get(nodeType) as any;
+
+      if (caseInsensitiveRow) {
+        return this.parseNodeRow(caseInsensitiveRow);
+      }
+    }
+
     if (!row) return null;
 
     return this.parseNodeRow(row);

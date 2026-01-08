@@ -519,9 +519,9 @@ describe('CommunityNodeService', () => {
 
       expect(mockRepository.saveNode).toHaveBeenCalledWith(
         expect.objectContaining({
-          nodeType: 'n8n-nodes-npm-test.NpmTest',
+          nodeType: 'n8n-nodes-npm-test.npmtest',
           packageName: 'n8n-nodes-npm-test',
-          displayName: 'NpmTest',
+          displayName: 'npmtest',
           description: 'A test npm community node',
           isCommunity: true,
           isVerified: false,
@@ -546,7 +546,7 @@ describe('CommunityNodeService', () => {
 
       expect(mockRepository.saveNode).toHaveBeenCalledWith(
         expect.objectContaining({
-          displayName: 'Custom',
+          displayName: 'custom',
         })
       );
     });

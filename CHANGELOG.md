@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.32.1] - 2026-01-08
+
+### Fixed
+
+- **Community node case sensitivity bug**: Fixed `extractNodeNameFromPackage` to use lowercase node names, matching n8n's community node convention (e.g., `chatwoot` instead of `Chatwoot`). This resolves validation failures for community nodes with incorrect casing.
+- **Case-insensitive node lookup**: Added fallback in `getNode` to handle case differences between stored and requested node types for better robustness.
+
 ## [2.32.0] - 2026-01-07
 
 ### Added

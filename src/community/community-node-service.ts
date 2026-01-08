@@ -355,9 +355,13 @@ export class CommunityNodeService {
   }
 
   /**
-   * Extract a readable node name from npm package name.
-   * e.g., "n8n-nodes-globals" -> "Globals"
-   * e.g., "@company/n8n-nodes-mynode" -> "Mynode"
+   * Extract node name from npm package name.
+   * n8n community nodes typically use lowercase node class names.
+   * e.g., "n8n-nodes-chatwoot" -> "chatwoot"
+   * e.g., "@company/n8n-nodes-mynode" -> "mynode"
+   *
+   * Note: We use lowercase because most community nodes follow this convention.
+   * Verified nodes from Strapi have the correct casing in nodeDesc.name.
    */
   private extractNodeNameFromPackage(packageName: string): string {
     // Remove scope if present
@@ -366,11 +370,9 @@ export class CommunityNodeService {
     // Remove n8n-nodes- prefix
     name = name.replace(/^n8n-nodes-/, '');
 
-    // Capitalize first letter of each word
-    return name
-      .split('-')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join('');
+    // Remove hyphens and keep lowercase (n8n community node convention)
+    // e.g., "bright-data" -> "brightdata", "chatwoot" -> "chatwoot"
+    return name.replace(/-/g, '').toLowerCase();
   }
 
   /**
