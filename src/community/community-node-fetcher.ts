@@ -106,6 +106,27 @@ export interface NpmSearchResponse {
 }
 
 /**
+ * Response type for full package data including README
+ */
+export interface NpmPackageWithReadme {
+  name: string;
+  version: string;
+  description?: string;
+  readme?: string;
+  readmeFilename?: string;
+  homepage?: string;
+  repository?: {
+    type?: string;
+    url?: string;
+  };
+  keywords?: string[];
+  license?: string;
+  'dist-tags'?: {
+    latest?: string;
+  };
+}
+
+/**
  * Fetches community nodes from n8n Strapi API and npm registry.
  * Follows the pattern from template-fetcher.ts.
  */
@@ -388,6 +409,85 @@ export class CommunityNodeFetcher {
     }
 
     return null;
+  }
+
+  /**
+   * Fetch full package data including README from npm registry.
+   * Uses the base package URL (not /latest) to get the README field.
+   * Validates package name to prevent path traversal attacks.
+   *
+   * @param packageName npm package name (e.g., "n8n-nodes-brightdata")
+   * @returns Full package data including readme, or null if fetch failed
+   */
+  async fetchPackageWithReadme(packageName: string): Promise<NpmPackageWithReadme | null> {
+    // Validate package name to prevent path traversal
+    if (!this.validatePackageName(packageName)) {
+      logger.warn(`Invalid package name rejected for README fetch: ${packageName}`);
+      return null;
+    }
+
+    const url = `${this.npmRegistryUrl}/${encodeURIComponent(packageName)}`;
+
+    return this.retryWithBackoff(
+      async () => {
+        const response = await axios.get<NpmPackageWithReadme>(url, {
+          timeout: FETCH_CONFIG.NPM_REGISTRY_TIMEOUT,
+        });
+        return response.data;
+      },
+      `Fetching package with README for ${packageName}`
+    );
+  }
+
+  /**
+   * Fetch READMEs for multiple packages in batch with rate limiting.
+   * Returns a Map of packageName -> readme content.
+   *
+   * @param packageNames Array of npm package names
+   * @param progressCallback Optional callback for progress updates
+   * @param concurrency Number of concurrent requests (default: 1 for rate limiting)
+   * @returns Map of packageName to README content (null if not found)
+   */
+  async fetchReadmesBatch(
+    packageNames: string[],
+    progressCallback?: (message: string, current: number, total: number) => void,
+    concurrency: number = 1
+  ): Promise<Map<string, string | null>> {
+    const results = new Map<string, string | null>();
+    const total = packageNames.length;
+
+    logger.info(`Fetching READMEs for ${total} packages (concurrency: ${concurrency})...`);
+
+    // Process in batches based on concurrency
+    for (let i = 0; i < packageNames.length; i += concurrency) {
+      const batch = packageNames.slice(i, i + concurrency);
+
+      // Process batch concurrently
+      const batchPromises = batch.map(async (packageName) => {
+        const data = await this.fetchPackageWithReadme(packageName);
+        return { packageName, readme: data?.readme || null };
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+
+      for (const { packageName, readme } of batchResults) {
+        results.set(packageName, readme);
+      }
+
+      if (progressCallback) {
+        progressCallback('Fetching READMEs', Math.min(i + concurrency, total), total);
+      }
+
+      // Rate limiting between batches
+      if (i + concurrency < packageNames.length) {
+        await this.sleep(FETCH_CONFIG.RATE_LIMIT_DELAY);
+      }
+    }
+
+    const foundCount = Array.from(results.values()).filter((v) => v !== null).length;
+    logger.info(`Fetched ${foundCount}/${total} READMEs successfully`);
+
+    return results;
   }
 
   /**

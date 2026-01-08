@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS nodes (
   npm_version TEXT,                   -- npm package version
   npm_downloads INTEGER DEFAULT 0,    -- Weekly/monthly download count
   community_fetched_at DATETIME,      -- When the community node was last synced
+  -- AI-enhanced documentation fields
+  npm_readme TEXT,                    -- Raw README markdown from npm registry
+  ai_documentation_summary TEXT,      -- AI-generated structured summary (JSON)
+  ai_summary_generated_at DATETIME,   -- When the AI summary was generated
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

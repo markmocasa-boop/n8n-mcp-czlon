@@ -662,6 +662,89 @@ export class NodeRepository {
     return result.changes;
   }
 
+  // ========================================
+  // AI Documentation Methods
+  // ========================================
+
+  /**
+   * Update the README content for a node
+   */
+  updateNodeReadme(nodeType: string, readme: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE nodes SET npm_readme = ? WHERE node_type = ?
+    `);
+    stmt.run(readme, nodeType);
+  }
+
+  /**
+   * Update the AI-generated documentation summary for a node
+   */
+  updateNodeAISummary(nodeType: string, summary: object): void {
+    const stmt = this.db.prepare(`
+      UPDATE nodes
+      SET ai_documentation_summary = ?, ai_summary_generated_at = datetime('now')
+      WHERE node_type = ?
+    `);
+    stmt.run(JSON.stringify(summary), nodeType);
+  }
+
+  /**
+   * Get community nodes that are missing README content
+   */
+  getCommunityNodesWithoutReadme(): any[] {
+    const rows = this.db.prepare(`
+      SELECT * FROM nodes
+      WHERE is_community = 1 AND (npm_readme IS NULL OR npm_readme = '')
+      ORDER BY npm_downloads DESC
+    `).all() as any[];
+    return rows.map(row => this.parseNodeRow(row));
+  }
+
+  /**
+   * Get community nodes that are missing AI documentation summary
+   */
+  getCommunityNodesWithoutAISummary(): any[] {
+    const rows = this.db.prepare(`
+      SELECT * FROM nodes
+      WHERE is_community = 1
+        AND npm_readme IS NOT NULL AND npm_readme != ''
+        AND (ai_documentation_summary IS NULL OR ai_documentation_summary = '')
+      ORDER BY npm_downloads DESC
+    `).all() as any[];
+    return rows.map(row => this.parseNodeRow(row));
+  }
+
+  /**
+   * Get documentation statistics for community nodes
+   */
+  getDocumentationStats(): {
+    total: number;
+    withReadme: number;
+    withAISummary: number;
+    needingReadme: number;
+    needingAISummary: number;
+  } {
+    const total = (this.db.prepare(
+      'SELECT COUNT(*) as count FROM nodes WHERE is_community = 1'
+    ).get() as any).count;
+
+    const withReadme = (this.db.prepare(
+      "SELECT COUNT(*) as count FROM nodes WHERE is_community = 1 AND npm_readme IS NOT NULL AND npm_readme != ''"
+    ).get() as any).count;
+
+    const withAISummary = (this.db.prepare(
+      "SELECT COUNT(*) as count FROM nodes WHERE is_community = 1 AND ai_documentation_summary IS NOT NULL AND ai_documentation_summary != ''"
+    ).get() as any).count;
+
+    return {
+      total,
+      withReadme,
+      withAISummary,
+      needingReadme: total - withReadme,
+      needingAISummary: withReadme - withAISummary
+    };
+  }
+
   /**
    * VERSION MANAGEMENT METHODS
    * Methods for working with node_versions and version_property_changes tables

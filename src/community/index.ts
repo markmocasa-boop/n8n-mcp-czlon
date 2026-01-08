@@ -6,6 +6,7 @@ export {
   NpmPackageInfo,
   NpmSearchResult,
   NpmSearchResponse,
+  NpmPackageWithReadme,
 } from './community-node-fetcher';
 
 export {
@@ -14,3 +15,19 @@ export {
   SyncResult,
   SyncOptions,
 } from './community-node-service';
+
+export {
+  DocumentationGenerator,
+  DocumentationGeneratorConfig,
+  DocumentationInput,
+  DocumentationResult,
+  DocumentationSummary,
+  DocumentationSummarySchema,
+  createDocumentationGenerator,
+} from './documentation-generator';
+
+export {
+  DocumentationBatchProcessor,
+  BatchProcessorOptions,
+  BatchProcessorResult,
+} from './documentation-batch-processor';
