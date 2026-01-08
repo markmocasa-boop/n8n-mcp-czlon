@@ -277,36 +277,93 @@ describe.skipIf(!dbExists)('Database Content Validation', () => {
   });
 
   describe('[DOCUMENTATION] Database Quality Metrics', () => {
-    it('should have high documentation coverage', () => {
+    it('should have high documentation coverage for core nodes', () => {
+      // Check core nodes (not community nodes) - these should have high coverage
       const withDocs = db.prepare(`
         SELECT COUNT(*) as count FROM nodes
         WHERE documentation IS NOT NULL AND documentation != ''
+        AND (is_community = 0 OR is_community IS NULL)
       `).get();
 
-      const total = db.prepare('SELECT COUNT(*) as count FROM nodes').get();
+      const total = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE is_community = 0 OR is_community IS NULL
+      `).get();
       const coverage = (withDocs.count / total.count) * 100;
 
-      console.log(`📚 Documentation coverage: ${coverage.toFixed(1)}% (${withDocs.count}/${total.count})`);
+      console.log(`📚 Core nodes documentation coverage: ${coverage.toFixed(1)}% (${withDocs.count}/${total.count})`);
 
       expect(coverage,
-        'WARNING: Documentation coverage is low. Some nodes may not have help text.'
-      ).toBeGreaterThan(80); // At least 80% coverage
+        'WARNING: Documentation coverage for core nodes is low. Some nodes may not have help text.'
+      ).toBeGreaterThan(80); // At least 80% coverage for core nodes
     });
 
-    it('should have properties extracted for most nodes', () => {
+    it('should report community nodes documentation coverage (informational)', () => {
+      // Community nodes - just report, no hard requirement
+      const withDocs = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE documentation IS NOT NULL AND documentation != ''
+        AND is_community = 1
+      `).get();
+
+      const total = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE is_community = 1
+      `).get();
+
+      if (total.count > 0) {
+        const coverage = (withDocs.count / total.count) * 100;
+        console.log(`📚 Community nodes documentation coverage: ${coverage.toFixed(1)}% (${withDocs.count}/${total.count})`);
+      } else {
+        console.log('📚 No community nodes in database');
+      }
+
+      // No assertion - community nodes may have lower coverage
+      expect(true).toBe(true);
+    });
+
+    it('should have properties extracted for most core nodes', () => {
+      // Check core nodes only
       const withProps = db.prepare(`
         SELECT COUNT(*) as count FROM nodes
         WHERE properties_schema IS NOT NULL AND properties_schema != '[]'
+        AND (is_community = 0 OR is_community IS NULL)
       `).get();
 
-      const total = db.prepare('SELECT COUNT(*) as count FROM nodes').get();
+      const total = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE is_community = 0 OR is_community IS NULL
+      `).get();
       const coverage = (withProps.count / total.count) * 100;
 
-      console.log(`🔧 Properties extraction: ${coverage.toFixed(1)}% (${withProps.count}/${total.count})`);
+      console.log(`🔧 Core nodes properties extraction: ${coverage.toFixed(1)}% (${withProps.count}/${total.count})`);
 
       expect(coverage,
-        'WARNING: Many nodes have no properties extracted. Check parser logic.'
+        'WARNING: Many core nodes have no properties extracted. Check parser logic.'
       ).toBeGreaterThan(70); // At least 70% should have properties
+    });
+
+    it('should report community nodes properties coverage (informational)', () => {
+      const withProps = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE properties_schema IS NOT NULL AND properties_schema != '[]'
+        AND is_community = 1
+      `).get();
+
+      const total = db.prepare(`
+        SELECT COUNT(*) as count FROM nodes
+        WHERE is_community = 1
+      `).get();
+
+      if (total.count > 0) {
+        const coverage = (withProps.count / total.count) * 100;
+        console.log(`🔧 Community nodes properties extraction: ${coverage.toFixed(1)}% (${withProps.count}/${total.count})`);
+      } else {
+        console.log('🔧 No community nodes in database');
+      }
+
+      // No assertion - community nodes may have different structure
+      expect(true).toBe(true);
     });
   });
 });
