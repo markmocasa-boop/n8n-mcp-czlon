@@ -427,7 +427,18 @@ jobs:
             exit 1
           fi
           echo "✅ Sufficient disk space: ${AVAILABLE_GB}GB available"
-      
+
+      - name: Sync runtime version for Docker
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.runtime.json'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.runtime.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "✅ Synced package.runtime.json to version $VERSION"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       

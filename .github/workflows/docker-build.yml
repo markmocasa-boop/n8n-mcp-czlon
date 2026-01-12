@@ -53,13 +53,24 @@ jobs:
     permissions:
       contents: read
       packages: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
-        
+
+      - name: Sync runtime version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.runtime.json'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.runtime.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "✅ Synced package.runtime.json to version $VERSION"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         
@@ -144,13 +155,24 @@ jobs:
     permissions:
       contents: read
       packages: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
-        
+
+      - name: Sync runtime version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.runtime.json'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.runtime.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "✅ Synced package.runtime.json to version $VERSION"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         
