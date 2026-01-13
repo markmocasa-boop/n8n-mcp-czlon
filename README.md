@@ -65,7 +65,10 @@ Get n8n-MCP running in minutes:
 **Prerequisites:** [Node.js](https://nodejs.org/) installed on your system
 
 ```bash
-# Run directly with npx (no installation needed!)
+# Install n8n-mcp
+npm install -g n8n-mcp
+
+# Run directly with npx
 npx n8n-mcp
 ```
 
