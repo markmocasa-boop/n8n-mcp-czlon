@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import * as https from 'https';
 import { logger } from '../utils/logger';
 import {
   Workflow,
@@ -36,6 +37,8 @@ export interface N8nApiClientConfig {
   apiKey: string;
   timeout?: number;
   maxRetries?: number;
+  cert?: Buffer;
+  skipSslVerification?: boolean;
 }
 
 export class N8nApiClient {
@@ -44,9 +47,10 @@ export class N8nApiClient {
   private baseUrl: string;
   private versionInfo: N8nVersionInfo | null = null;
   private versionPromise: Promise<N8nVersionInfo | null> | null = null;
+  private httpsAgent?: https.Agent;
 
   constructor(config: N8nApiClientConfig) {
-    const { baseUrl, apiKey, timeout = 30000, maxRetries = 3 } = config;
+    const { baseUrl, apiKey, timeout = 30000, maxRetries = 3, cert, skipSslVerification = false } = config;
 
     this.maxRetries = maxRetries;
     this.baseUrl = baseUrl;
@@ -56,6 +60,26 @@ export class N8nApiClient {
       ? baseUrl
       : `${baseUrl.replace(/\/$/, '')}/api/v1`;
 
+    // Create HTTPS agent with appropriate SSL configuration
+    if (cert || skipSslVerification) {
+      const agentOptions: https.AgentOptions = {};
+
+      if (cert) {
+        // Use provided certificate as trusted CA
+        agentOptions.ca = cert;
+        logger.info('Using custom SSL certificate for n8n API connection');
+      }
+
+      if (skipSslVerification) {
+        // Only disable SSL verification if explicitly requested
+        agentOptions.rejectUnauthorized = false;
+        logger.warn('⚠️  SSL verification is DISABLED. This is insecure and should only be used for development.');
+        logger.warn('⚠️  To fix this, provide a valid certificate via N8N_CERT_PATH instead.');
+      }
+
+      this.httpsAgent = new https.Agent(agentOptions);
+    }
+
     this.client = axios.create({
       baseURL: apiUrl,
       timeout,
@@ -63,6 +87,7 @@ export class N8nApiClient {
         'X-N8N-API-KEY': apiKey,
         'Content-Type': 'application/json',
       },
+      httpsAgent: this.httpsAgent,
     });
 
     // Request interceptor for logging
@@ -149,7 +174,8 @@ export class N8nApiClient {
 
       const response = await axios.get(healthzUrl, {
         timeout: 5000,
-        validateStatus: (status) => status < 500
+        validateStatus: (status) => status < 500,
+        httpsAgent: this.httpsAgent
       });
 
       // Also fetch version info (will be cached)
@@ -371,6 +397,7 @@ export class N8nApiClient {
       const webhookClient = axios.create({
         baseURL: new URL('/', webhookUrl).toString(),
         validateStatus: (status: number) => status < 500, // Don't throw on 4xx
+        httpsAgent: this.httpsAgent,
       });
 
       const response = await webhookClient.request(config);
