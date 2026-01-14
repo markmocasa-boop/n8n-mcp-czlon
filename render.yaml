@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: n8n-mcp-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    plan: starter
+    healthCheckPath: /health
+    region: oregon
+    
+    # Environment Variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MCP_MODE
+        value: http
+      - key: USE_FIXED_HTTP
+        value: true
+      - key: IS_DOCKER
+        value: true
+      - key: LOG_LEVEL
+        value: info
+      - key: TRUST_PROXY
+        value: "1"
+      - key: HOST
+        value: 0.0.0.0
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: AUTH_TOKEN
+        generateValue: true
+        
+    # Auto-deploy settings
+    autoDeploy: true
+    
+    # Build command override (optional - handled by Dockerfile)
+    # buildCommand: npm run build
+    
+    # Start command override (optional - handled by Dockerfile)
+    # startCommand: node dist/mcp/index.js
+    
+    # Disk settings (for persistent storage if needed)
+    disk:
+      name: n8n-mcp-data
+      mountPath: /app/data
+      sizeGB: 1
+      
+databases:
+  # Optional: If you want to use external PostgreSQL instead of SQLite
+  # - name: n8n-mcp-db
+  #   databaseName: n8nmcp
+  #   user: n8nmcp
+  #   plan: starter
