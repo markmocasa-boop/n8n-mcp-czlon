@@ -87,7 +87,7 @@ export class Logger {
           console.warn(formattedMessage, ...args);
           break;
         default:
-          console.log(formattedMessage, ...args);
+          console.error(formattedMessage, ...args);
       }
     }
   }
