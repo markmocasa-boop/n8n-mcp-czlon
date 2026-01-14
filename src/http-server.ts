@@ -27,6 +27,7 @@ import {
   logProtocolNegotiation,
   N8N_PROTOCOL_VERSION 
 } from './utils/protocol-version';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -180,6 +181,31 @@ export async function startFixedHTTPServer() {
     }
     next();
   });
+  
+  // Rate limiting (optional, disabled by default)
+  // Enable via ENABLE_RATE_LIMITING=true environment variable
+  if (process.env.ENABLE_RATE_LIMITING === 'true') {
+    const limiter = rateLimit({
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute default
+      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // 100 requests per window
+      message: {
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: 'Too many requests, please try again later.'
+        },
+        id: null
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    
+    app.use('/mcp', limiter);
+    logger.info('Rate limiting enabled', { 
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), 
+      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100') 
+    });
+  }
   
   // Request logging
   app.use((req, res, next) => {
