@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768503010084,
+  "lastUpdate": 1768505228911,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "47d9f55dc55b600b953d885bad2dba729f5baecc",
-          "message": "chore: update n8n to 1.120.3 and bump version to 2.22.20 (#430)\n\n- Updated n8n from 1.119.1 to 1.120.3\n- Updated n8n-core from 1.118.0 to 1.119.2\n- Updated n8n-workflow from 1.116.0 to 1.117.0\n- Updated @n8n/n8n-nodes-langchain from 1.118.0 to 1.119.1\n- Rebuilt node database with 544 nodes (439 from n8n-nodes-base, 105 from @n8n/n8n-nodes-langchain)\n- Updated README badge with new n8n version\n- Updated CHANGELOG with dependency changes\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-19T11:31:51+01:00",
-          "tree_id": "89d14ead67bd7b1f340ea82e53fef8e96c82beec",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/47d9f55dc55b600b953d885bad2dba729f5baecc"
-        },
-        "date": 1763548440457,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e0c440b1e37b455c226aba0793dcafd87f0f1e65"
         },
         "date": 1768503009595,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f7d2b1f219e1efadec25a4a34683afdc2a48cb0",
+          "message": "Merge pull request #4 from markmocasa-boop/claude/linkedin-post-automation-UrcHu\n\nClaude/linkedin post automation urc hu",
+          "timestamp": "2026-01-15T20:25:04+01:00",
+          "tree_id": "d4b9fb4f28c8beb043c1e774ffd5e027c600f2bd",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7f7d2b1f219e1efadec25a4a34683afdc2a48cb0"
+        },
+        "date": 1768505228189,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
