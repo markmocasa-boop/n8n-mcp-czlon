@@ -1,0 +1,679 @@
+{
+  "name": "YouTube Video Dubbing (DE)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube-dubbing",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "youtube-dubbing-webhook"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "youtubeUrl",
+              "value": "={{ $json.body.youtubeUrl }}"
+            },
+            {
+              "name": "avatarOverlayUrl",
+              "value": "={{ $json.body.avatarOverlayUrl || '' }}"
+            },
+            {
+              "name": "avatarX",
+              "value": "={{ $json.body.avatarX || '0' }}"
+            },
+            {
+              "name": "avatarY",
+              "value": "={{ $json.body.avatarY || '0' }}"
+            },
+            {
+              "name": "avatarWidth",
+              "value": "={{ $json.body.avatarWidth || '200' }}"
+            },
+            {
+              "name": "avatarHeight",
+              "value": "={{ $json.body.avatarHeight || '200' }}"
+            },
+            {
+              "name": "videoTitle",
+              "value": "={{ $json.body.videoTitle || 'Dubbed Video' }}"
+            },
+            {
+              "name": "videoDescription",
+              "value": "={{ $json.body.videoDescription || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-parameters",
+      "name": "Set Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://youtube-video-download-info.p.rapidapi.com/dl",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.youtubeUrl.match(/(?:v=|youtu\\.be\\/)([a-zA-Z0-9_-]{11})/)?.[1] }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Key",
+              "value": "={{ $env.RAPIDAPI_KEY }}"
+            },
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "youtube-video-download-info.p.rapidapi.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "download-video-info",
+      "name": "Get Video Download URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "videoDownloadUrl",
+              "value": "={{ $json.link.find(l => l.qualityLabel === '720p' || l.qualityLabel === '1080p')?.url || $json.link[0]?.url }}"
+            },
+            {
+              "name": "audioDownloadUrl",
+              "value": "={{ $json.adaptiveFormats?.find(f => f.mimeType?.includes('audio'))?.url || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-urls",
+      "name": "Extract Download URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Extract Download URLs').item.json.audioDownloadUrl || $('Extract Download URLs').item.json.videoDownloadUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-audio",
+      "name": "Download Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "data",
+        "options": {
+          "language": "auto",
+          "responseFormat": "verbose_json",
+          "temperature": 0
+        }
+      },
+      "id": "transcribe-audio",
+      "name": "Transcribe (Whisper)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1100, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "originalText",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "segments",
+              "value": "={{ JSON.stringify($json.segments) }}"
+            },
+            {
+              "name": "detectedLanguage",
+              "value": "={{ $json.language }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-transcription",
+      "name": "Store Transcription",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "operation": "translate",
+        "text": "={{ $json.originalText }}",
+        "translateTo": "DE"
+      },
+      "id": "translate-deepl",
+      "name": "Translate to German (DeepL)",
+      "type": "n8n-nodes-base.deepL",
+      "typeVersion": 1,
+      "position": [1540, 0],
+      "credentials": {
+        "deepLApi": {
+          "id": "deepl-credentials",
+          "name": "DeepL API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "germanText",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-translation",
+      "name": "Store Translation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "generate",
+        "model": "tts-1-hd",
+        "input": "={{ $json.germanText }}",
+        "voice": "onyx",
+        "options": {
+          "responseFormat": "mp3"
+        }
+      },
+      "id": "generate-tts",
+      "name": "Generate German Audio (TTS)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1980, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.shotstack.io/v1/render",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.SHOTSTACK_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"timeline\": {\n    \"soundtrack\": {\n      \"src\": \"{{ $binary.data ? 'data:audio/mp3;base64,' + $binary.data.toString('base64') : '' }}\",\n      \"effect\": \"fadeOut\"\n    },\n    \"tracks\": [\n      {\n        \"clips\": [\n          {\n            \"asset\": {\n              \"type\": \"video\",\n              \"src\": \"{{ $('Extract Download URLs').item.json.videoDownloadUrl }}\",\n              \"volume\": 0\n            },\n            \"start\": 0,\n            \"length\": \"auto\"\n          }\n        ]\n      },\n      {\n        \"clips\": [\n          {\n            \"asset\": {\n              \"type\": \"image\",\n              \"src\": \"{{ $('Set Parameters').item.json.avatarOverlayUrl }}\"\n            },\n            \"start\": 0,\n            \"length\": \"auto\",\n            \"position\": \"{{ $('Set Parameters').item.json.avatarX && $('Set Parameters').item.json.avatarY ? 'custom' : 'topRight' }}\",\n            \"offset\": {\n              \"x\": {{ parseFloat($('Set Parameters').item.json.avatarX) || 0 }},\n              \"y\": {{ parseFloat($('Set Parameters').item.json.avatarY) || 0 }}\n            },\n            \"scale\": 1,\n            \"fit\": \"none\"\n          }\n        ]\n      }\n    ]\n  },\n  \"output\": {\n    \"format\": \"mp4\",\n    \"resolution\": \"hd\",\n    \"fps\": 30\n  }\n}",
+        "options": {}
+      },
+      "id": "render-video-shotstack",
+      "name": "Render Video (Shotstack)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 0]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "renderId",
+              "value": "={{ $json.response.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "store-render-id",
+      "name": "Store Render ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2420, 0]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-for-render",
+      "name": "Wait for Render",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2640, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.shotstack.io/v1/render/{{ $('Store Render ID').item.json.renderId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.SHOTSTACK_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-render-status",
+      "name": "Check Render Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "render-done",
+              "leftValue": "={{ $json.response.status }}",
+              "rightValue": "done",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-if-done",
+      "name": "Render Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3080, 0]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "finalVideoUrl",
+              "value": "={{ $json.response.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-final-url",
+      "name": "Get Final Video URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3300, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.finalVideoUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-final-video",
+      "name": "Download Final Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, 0]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('Set Parameters').item.json.videoTitle }}",
+        "categoryId": 27,
+        "options": {
+          "description": "={{ $('Set Parameters').item.json.videoDescription }}",
+          "privacyStatus": "private",
+          "defaultLanguage": "de"
+        }
+      },
+      "id": "upload-youtube",
+      "name": "Upload to YouTube",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [3740, 0],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "youtube-credentials",
+          "name": "YouTube OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "success",
+              "value": "true"
+            },
+            {
+              "name": "youtubeVideoId",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "youtubeUrl",
+              "value": "=https://www.youtube.com/watch?v={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3960, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, youtubeUrl: $json.youtubeUrl, videoId: $json.youtubeVideoId }) }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [4180, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Parameters": {
+      "main": [
+        [
+          {
+            "node": "Get Video Download URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Download URL": {
+      "main": [
+        [
+          {
+            "node": "Extract Download URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Download URLs": {
+      "main": [
+        [
+          {
+            "node": "Download Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribe (Whisper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe (Whisper)": {
+      "main": [
+        [
+          {
+            "node": "Store Transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Transcription": {
+      "main": [
+        [
+          {
+            "node": "Translate to German (DeepL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate to German (DeepL)": {
+      "main": [
+        [
+          {
+            "node": "Store Translation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Translation": {
+      "main": [
+        [
+          {
+            "node": "Generate German Audio (TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate German Audio (TTS)": {
+      "main": [
+        [
+          {
+            "node": "Render Video (Shotstack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Video (Shotstack)": {
+      "main": [
+        [
+          {
+            "node": "Store Render ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Render ID": {
+      "main": [
+        [
+          {
+            "node": "Wait for Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Render": {
+      "main": [
+        [
+          {
+            "node": "Check Render Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Render Status": {
+      "main": [
+        [
+          {
+            "node": "Render Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Done?": {
+      "main": [
+        [
+          {
+            "node": "Get Final Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Final Video URL": {
+      "main": [
+        [
+          {
+            "node": "Download Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Final Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to YouTube": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "description": "YouTube Video Dubbing Workflow - Downloads a YouTube video, transcribes it, translates to German, generates German TTS audio, overlays a static image to cover avatar, and uploads to YouTube.",
+    "templateCredsSetupCompleted": false
+  }
+}
