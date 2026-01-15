@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768322967774,
-  "repoUrl": "https://github.com/czlonkowski/n8n-mcp",
+  "lastUpdate": 1768503010084,
+  "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "5575630711733f121edf298a64c94ab971051243",
-          "message": "fix: eliminate stack overflow in session removal (#427) (#428)\n\nCritical bug fix for production crashes during session cleanup.\n\n**Root Cause:**\nInfinite recursion caused by circular event handler chain:\n- removeSession() called transport.close()\n- transport.close() triggered onclose event handler\n- onclose handler called removeSession() again\n- Loop continued until stack overflow\n\n**Solution:**\nDelete transport from registry BEFORE closing to break circular reference:\n1. Store transport reference\n2. Delete from this.transports first\n3. Close transport after deletion\n4. When onclose fires, transport no longer found, no recursion\n\n**Impact:**\n- Eliminates \"RangeError: Maximum call stack size exceeded\" errors\n- Fixes session cleanup crashes every 5 minutes in production\n- Prevents potential memory leaks from failed cleanup\n\n**Testing:**\n- Added regression test for infinite recursion prevention\n- All 39 session management tests pass\n- Build and typecheck succeed\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\nCloses #427",
-          "timestamp": "2025-11-18T17:41:17+01:00",
-          "tree_id": "805eca371f4ec079e7e97a0a2badeeecd7af28a2",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/5575630711733f121edf298a64c94ab971051243"
-        },
-        "date": 1763484189965,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/czlonkowski/n8n-mcp/commit/974a9fb3492fe2c4984ee0549085d531cdc6242a"
         },
         "date": 1768322967350,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0c440b1e37b455c226aba0793dcafd87f0f1e65",
+          "message": "Merge pull request #3 from markmocasa-boop/claude/n8n-youtube-transcription-V7ApL\n\nfeat: add YouTube video dubbing workflow for German translation",
+          "timestamp": "2026-01-15T19:48:16+01:00",
+          "tree_id": "fb3be80d3ca1387c961962f43b5c983bdc407f9b",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e0c440b1e37b455c226aba0793dcafd87f0f1e65"
+        },
+        "date": 1768503009595,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
