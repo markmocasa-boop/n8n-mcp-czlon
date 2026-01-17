@@ -1,0 +1,722 @@
+{
+  "name": "Gmail Inbound Agent - Effizienzheld",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": ""
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "emailId",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "threadId",
+              "value": "={{ $json.threadId }}"
+            },
+            {
+              "name": "from",
+              "value": "={{ $json.from.text || $json.from }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.text || $json.snippet }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $json.date }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-email-data",
+      "name": "Email-Daten extrahieren",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "openai-classifier",
+      "name": "OpenAI Classifier Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [440, 100],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.subject }}\n\n{{ $json.body }}",
+        "options": {
+          "systemMessage": "Du bist ein E-Mail-Klassifizierungs-Assistent für Effizienzheld, eine KI Marketing Automations Agentur.\n\nEffizienzheld bietet folgende Dienstleistungen an:\n- Automatische Lead-Generierung\n- Kalter LinkedIn und Email Outreach\n- KI Telefon Agenten\n- Prozessoptimierung\n\nAnalysiere die eingehende E-Mail und klassifiziere sie in GENAU EINE der folgenden Kategorien:\n\n1. SUPPORT - Technische Anfragen, Probleme mit bestehenden Automatisierungen, Hilfe-Anfragen von Kunden\n\n2. VERKAUF - Neue Interessenten, Anfragen zu Preisen, Demo-Anfragen, potenzielle Neukunden\n\n3. BUCHHALTUNG - Rechnungen, Gutschriften, Zahlungsanfragen, finanzielle Dokumente\n\n4. DRINGEND - Kritische Probleme, Ausfälle, zeitkritische Anfragen, Eskalationen\n\nAntworte NUR mit einem einzigen Wort: SUPPORT, VERKAUF, BUCHHALTUNG oder DRINGEND"
+        }
+      },
+      "id": "classification-agent",
+      "name": "Klassifizierungs-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "SUPPORT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "VERKAUF",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "verkauf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "BUCHHALTUNG",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "buchhaltung"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "DRINGEND",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "dringend"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-category",
+      "name": "Kategorie-Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-support",
+      "name": "OpenAI Support Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [880, -100],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "E-Mail von: {{ $('Email-Daten extrahieren').item.json.from }}\nBetreff: {{ $('Email-Daten extrahieren').item.json.subject }}\n\nInhalt:\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "systemMessage": "Du bist ein freundlicher und kompetenter Support-Mitarbeiter bei Effizienzheld, einer KI Marketing Automations Agentur.\n\nEffizienzheld bietet:\n- Automatische Lead-Generierung\n- Kalter LinkedIn und Email Outreach\n- KI Telefon Agenten\n- Prozessoptimierung\n\nFormuliere eine professionelle, hilfreiche Antwort auf die Support-Anfrage. Die Antwort sollte:\n- Freundlich und verständnisvoll sein\n- Das Problem anerkennen\n- Konkrete nächste Schritte oder Lösungen vorschlagen\n- Bei Bedarf auf weiterführende Ressourcen verweisen\n\nFormatiere die Antwort als E-Mail-Text (ohne Betreffzeile). Beginne mit einer persönlichen Anrede und ende mit freundlichen Grüßen vom Effizienzheld Support Team."
+        }
+      },
+      "id": "support-agent",
+      "name": "Support-Antwort-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "operation": "createDraft",
+        "subject": "Re: {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "threadId": "={{ $('Email-Daten extrahieren').item.json.threadId }}"
+        }
+      },
+      "id": "support-draft",
+      "name": "Support-Entwurf erstellen",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-verkauf",
+      "name": "OpenAI Verkauf Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [880, 200],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "E-Mail von: {{ $('Email-Daten extrahieren').item.json.from }}\nBetreff: {{ $('Email-Daten extrahieren').item.json.subject }}\n\nInhalt:\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "systemMessage": "Du bist ein freundlicher Vertriebsmitarbeiter bei Effizienzheld, einer KI Marketing Automations Agentur.\n\nEffizienzheld hilft Unternehmen mit:\n- Automatischer Lead-Generierung\n- Kaltem LinkedIn und Email Outreach\n- KI Telefon Agenten\n- Prozessoptimierung\n\nSchreibe eine personalisierte, warme Antwort an den potenziellen Kunden. Die Nachricht sollte:\n- Den Kunden persönlich ansprechen\n- Interesse an seinem Anliegen zeigen\n- Bestätigen, dass wir uns innerhalb von 24 Stunden bei ihm melden werden\n- Kurz erwähnen, wie wir ihm helfen können (basierend auf seiner Anfrage)\n\nEnde mit freundlichen Grüßen vom Effizienzheld Team.\n\nHalte die Nachricht kurz und prägnant (max. 150 Wörter)."
+        }
+      },
+      "id": "verkauf-agent",
+      "name": "Verkauf-Antwort-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}",
+        "labelIds": ["Label_green"]
+      },
+      "id": "verkauf-label",
+      "name": "Grüne Kennzeichnung",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Email-Daten extrahieren').item.json.from }}",
+        "subject": "Re: {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Verkauf-Antwort-Agent').item.json.output }}",
+        "options": {
+          "threadId": "={{ $('Email-Daten extrahieren').item.json.threadId }}"
+        }
+      },
+      "id": "verkauf-reply",
+      "name": "Verkauf-Antwort senden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1320, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}",
+        "labelIds": ["Label_blue"]
+      },
+      "id": "buchhaltung-label",
+      "name": "Blaue Kennzeichnung",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "openai-dringend",
+      "name": "OpenAI Dringend Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [880, 700],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "E-Mail von: {{ $('Email-Daten extrahieren').item.json.from }}\nBetreff: {{ $('Email-Daten extrahieren').item.json.subject }}\nDatum: {{ $('Email-Daten extrahieren').item.json.date }}\n\nInhalt:\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "systemMessage": "Du bist ein Assistent für dringende E-Mail-Zusammenfassungen bei Effizienzheld.\n\nErstelle eine knappe, aber vollständige Zusammenfassung der dringenden E-Mail. Die Zusammenfassung sollte:\n\n1. ABSENDER: Wer hat die E-Mail geschickt?\n2. BETREFF: Worum geht es?\n3. DRINGLICHKEIT: Warum ist es dringend?\n4. KERNPROBLEM: Was ist das Hauptanliegen in 2-3 Sätzen?\n5. HANDLUNGSBEDARF: Welche Aktion wird erwartet?\n\nHalte die Zusammenfassung kurz und auf das Wesentliche fokussiert (max. 100 Wörter).\nVerwende Bullet Points für bessere Lesbarkeit."
+        }
+      },
+      "id": "dringend-agent",
+      "name": "Dringend-Zusammenfassung-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [880, 900]
+    },
+    {
+      "parameters": {
+        "sendTo": "info@effizienzheld.com",
+        "subject": "[WICHTIG] Dringende E-Mail: {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "⚠️ DRINGENDE E-MAIL EINGEGANGEN\n\n{{ $json.output }}\n\n---\nOriginal-Absender: {{ $('Email-Daten extrahieren').item.json.from }}\nOriginal-Betreff: {{ $('Email-Daten extrahieren').item.json.subject }}\nEingegangen: {{ $('Email-Daten extrahieren').item.json.date }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "dringend-forward",
+      "name": "Dringend-Benachrichtigung senden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 900],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}",
+        "labelIds": ["IMPORTANT"]
+      },
+      "id": "dringend-label",
+      "name": "Als wichtig markieren",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1320, 900],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "id": "mark-as-read-support",
+      "name": "Als gelesen markieren (Support)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1320, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "id": "mark-as-read-verkauf",
+      "name": "Als gelesen markieren (Verkauf)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1540, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "id": "mark-as-read-buchhaltung",
+      "name": "Als gelesen markieren (Buchhaltung)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "id": "mark-as-read-dringend",
+      "name": "Als gelesen markieren (Dringend)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1540, 900],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email-Daten extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email-Daten extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Klassifizierungs-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Classifier Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Klassifizierungs-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Klassifizierungs-Agent": {
+      "main": [
+        [
+          {
+            "node": "Kategorie-Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kategorie-Router": {
+      "main": [
+        [
+          {
+            "node": "Support-Antwort-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verkauf-Antwort-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Blaue Kennzeichnung",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dringend-Zusammenfassung-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Support Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Support-Antwort-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support-Antwort-Agent": {
+      "main": [
+        [
+          {
+            "node": "Support-Entwurf erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support-Entwurf erstellen": {
+      "main": [
+        [
+          {
+            "node": "Als gelesen markieren (Support)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Verkauf Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Verkauf-Antwort-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verkauf-Antwort-Agent": {
+      "main": [
+        [
+          {
+            "node": "Grüne Kennzeichnung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grüne Kennzeichnung": {
+      "main": [
+        [
+          {
+            "node": "Verkauf-Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verkauf-Antwort senden": {
+      "main": [
+        [
+          {
+            "node": "Als gelesen markieren (Verkauf)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blaue Kennzeichnung": {
+      "main": [
+        [
+          {
+            "node": "Als gelesen markieren (Buchhaltung)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Dringend Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Dringend-Zusammenfassung-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dringend-Zusammenfassung-Agent": {
+      "main": [
+        [
+          {
+            "node": "Dringend-Benachrichtigung senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dringend-Benachrichtigung senden": {
+      "main": [
+        [
+          {
+            "node": "Als wichtig markieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Als wichtig markieren": {
+      "main": [
+        [
+          {
+            "node": "Als gelesen markieren (Dringend)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "email-automation"
+    },
+    {
+      "name": "ai-agent"
+    },
+    {
+      "name": "effizienzheld"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}
