@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768505228911,
+  "lastUpdate": 1768640271663,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "fc37907348692bf46ff60286354677a59bfa98f8",
-          "message": "fix: resolve empty settings validation error in workflow updates (#431) (#432)",
-          "timestamp": "2025-11-20T19:19:08+01:00",
-          "tree_id": "f8f8f5774ac636412fd1d434c4671e173586056b",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/fc37907348692bf46ff60286354677a59bfa98f8"
-        },
-        "date": 1763662852189,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7f7d2b1f219e1efadec25a4a34683afdc2a48cb0"
         },
         "date": 1768505228189,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4cf440666b31f22c4729260dd070b7e23999532a",
+          "message": "Merge pull request #5 from markmocasa-boop/claude/gmail-inbound-agent-2LW7E\n\nfeat: add Gmail Inbound Agent workflow for Effizienzheld",
+          "timestamp": "2026-01-17T09:55:41+01:00",
+          "tree_id": "fd6dcbb5dfe44a3f1f10d2ec6c8ae68863fdd04f",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4cf440666b31f22c4729260dd070b7e23999532a"
+        },
+        "date": 1768640271011,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
