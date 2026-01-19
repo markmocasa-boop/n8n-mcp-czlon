@@ -178,42 +178,64 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $json.imageUrl }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file"
+        "method": "POST",
+        "url": "https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formData",
+              "inputDataFieldName": "={{ $('Combine Text & Image').first().json.imageUrl }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET }}"
+            },
+            {
+              "name": "folder",
+              "value": "linkedin-posts"
             }
-          }
-        }
+          ]
+        },
+        "options": {}
       },
-      "id": "download-image",
-      "name": "Download Image",
+      "id": "upload-to-cloudinary",
+      "name": "Upload to Cloudinary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1760, 200]
     },
     {
       "parameters": {
-        "resource": "post",
-        "operation": "create",
-        "person": "={{ $env.LINKEDIN_PERSON_URN }}",
-        "text": "={{ $('Combine Text & Image').first().json.postText }}",
-        "additionalFields": {
-          "mediaCategory": "IMAGE",
-          "visibility": "PUBLIC"
-        }
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($('Combine Text & Image').first().json.postText) }},\n      \"mediaUrls\": [\"{{ $json.secure_url }}\"],\n      \"platform\": \"linkedin\"\n    },\n    \"target\": {\n      \"targetType\": \"linkedin\"\n    }\n  }\n}",
+        "options": {}
       },
-      "id": "post-to-linkedin",
-      "name": "Post to LinkedIn",
-      "type": "n8n-nodes-base.linkedIn",
-      "typeVersion": 1,
+      "id": "post-to-blotato",
+      "name": "Post to Blotato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [1980, 200],
       "credentials": {
-        "linkedInOAuth2Api": {
-          "id": "linkedin-credentials",
-          "name": "LinkedIn OAuth2"
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
         }
       }
     },
@@ -231,7 +253,7 @@
             },
             {
               "name": "postId",
-              "value": "={{ $json.id || $json.postId || 'unknown' }}"
+              "value": "={{ $json.postSubmissionId || $json.id || 'unknown' }}"
             },
             {
               "name": "postedAt",
@@ -443,7 +465,7 @@
       "main": [
         [
           {
-            "node": "Download Image",
+            "node": "Upload to Cloudinary",
             "type": "main",
             "index": 0
           }
@@ -457,18 +479,18 @@
         ]
       ]
     },
-    "Download Image": {
+    "Upload to Cloudinary": {
       "main": [
         [
           {
-            "node": "Post to LinkedIn",
+            "node": "Post to Blotato",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Post to LinkedIn": {
+    "Post to Blotato": {
       "main": [
         [
           {
@@ -509,7 +531,7 @@
   "tags": ["linkedin", "automation", "content", "social-media"],
   "triggerCount": 1,
   "meta": {
-    "description": "Automated LinkedIn posting system with 7 post types, 40 prompts, Gemini text generation, and Banana Pro image generation. Reads content plan from Google Sheets, posts Mon-Sat at 9AM.",
+    "description": "Automated LinkedIn posting via Blotato with 7 post types, 40 prompts, Gemini text generation, and Banana Pro image generation. Images uploaded to Cloudinary. Reads content plan from Google Sheets, posts Mon-Sat at 9AM.",
     "templateCredsSetupCompleted": false
   }
 }
