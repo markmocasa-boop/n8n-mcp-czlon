@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768823051654,
+  "lastUpdate": 1768846989138,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "9050967cd6de4a8f2e3f067f2d093f111b8881c3",
-          "message": "Release v2.24.0: Unified get_node Tool with Code Review Fixes (#437)\n\n* feat(tools): unify node information retrieval with get_node tool\n\nImplements v2.24.0 featuring a unified node information tool that consolidates\nget_node_info and get_node_essentials functionality while adding version history\nand type structure metadata capabilities.\n\nKey Features:\n- Unified get_node tool with progressive detail levels (minimal/standard/full)\n- Version history access (versions, compare, breaking changes, migrations)\n- Type structure metadata integration from v2.23.0\n- Token-efficient defaults optimized for AI agents\n- Backward-compatible via private method preservation\n\nBreaking Changes:\n- Removed get_node_info tool (replaced by get_node with detail='full')\n- Removed get_node_essentials tool (replaced by get_node with detail='standard')\n- Tool count: 40 → 39 tools\n\nImplementation:\n- src/mcp/tools.ts: Added unified get_node tool definition\n- src/mcp/server.ts: Implemented getNode() with 7 mode-specific methods\n- Type structure integration via TypeStructureService.getStructure()\n- Updated documentation in CHANGELOG.md and README.md\n- Version bumped to 2.24.0\n\nToken Costs:\n- minimal: ~200 tokens (basic metadata)\n- standard: ~1000-2000 tokens (essential properties, default)\n- full: ~3000-8000 tokens (complete information)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* docs: update tools-documentation.ts to reference unified get_node tool\n\nUpdated all references from deprecated get_node_essentials and get_node_info\nto the new unified get_node tool with appropriate detail levels.\n\nChanges:\n- Standard Workflow Pattern: Updated to show get_node with detail levels\n- Configuration Tools: Replaced two separate tool descriptions with unified get_node\n- Performance Characteristics: Updated to reference get_node detail levels\n- Usage Notes: Updated recommendation to use get_node with detail='standard'\n\nThis completes the v2.24.0 unified get_node tool implementation.\nAll 13/13 test scenarios passed in n8n-mcp-tester agent validation.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n* test: update tests to reference unified get_node tool\n\nUpdated test files to replace references to deprecated get_node_info and\nget_node_essentials tools with the new unified get_node tool.\n\nChanges:\n- tests/unit/mcp/tools.test.ts: Updated get_node tests and removed references\n  to get_node_essentials in toolsWithExamples array and categories object\n- tests/unit/mcp/parameter-validation.test.ts: Updated all get_node_info\n  references to get_node throughout the test suite\n\nTest results: Successfully reduced test failures from 11 to 3 non-critical failures:\n- 1 description length test (expected for unified tool with comprehensive docs)\n- 1 database initialization issue (test infrastructure, not related to changes)\n- 1 timeout issue (unrelated to changes)\n\nAll get_node_info → get_node migration tests now pass successfully.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n* fix: implement all code review fixes for v2.24.0 unified get_node tool\n\nComprehensive improvements addressing all critical, high-priority, and code quality issues identified in code review.\n\n## Critical Fixes (Phase 1)\n- Add missing getNode mock in parameter-validation tests\n- Shorten tool description from 670 to 288 characters (under 300 limit)\n\n## High Priority Fixes (Phase 2)\n- Add null safety check in enrichPropertyWithTypeInfo (prevent crashes on null properties)\n- Add nodeType context to all error messages in handleVersionMode (better debugging)\n- Optimize version summary fetch (conditional on detail level, skip for minimal mode)\n- Add comprehensive parameter validation for detail and mode with clear error messages\n\n## Code Quality Improvements (Phase 3)\n- Refactor property enrichment with new enrichPropertiesWithTypeInfo helper (eliminate duplication)\n- Add TypeScript interfaces for all return types (replace any with proper union types)\n- Implement version data caching with 24-hour TTL (improve performance)\n- Enhance JSDoc documentation with detailed parameter explanations\n\n## New TypeScript Interfaces\n- VersionSummary: Version metadata structure\n- NodeMinimalInfo: ~200 token response for minimal detail\n- NodeStandardInfo: ~1-2K token response for standard detail\n- NodeFullInfo: ~3-8K token response for full detail\n- VersionHistoryInfo: Version history response\n- VersionComparisonInfo: Version comparison response\n- NodeInfoResponse: Union type for all possible responses\n\n## Testing\n- All 130 test files passed (3778 tests, 42 skipped)\n- Build successful with no TypeScript errors\n- Proper test mocking for unified get_node tool\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: update integration tests to use unified get_node tool\n\nReplace all references to deprecated get_node_info and get_node_essentials\nwith the new unified get_node tool in integration tests.\n\n## Changes\n- Replace get_node_info → get_node in 6 integration test files\n- Replace get_node_essentials → get_node in 2 integration test files\n- All tool calls now use unified interface\n\n## Files Updated\n- tests/integration/mcp-protocol/error-handling.test.ts\n- tests/integration/mcp-protocol/performance.test.ts\n- tests/integration/mcp-protocol/session-management.test.ts\n- tests/integration/mcp-protocol/tool-invocation.test.ts\n- tests/integration/mcp-protocol/protocol-compliance.test.ts\n- tests/integration/telemetry/mcp-telemetry.test.ts\n\nThis fixes CI test failures caused by calling removed tools.\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* test: add comprehensive tests for unified get_node tool\n\nAdd 81 comprehensive unit tests for the unified get_node tool to improve\ncode coverage of the v2.24.0 implementation.\n\n## Test Coverage\n\n### Parameter Validation (6 tests)\n- Invalid detail/mode validation with clear error messages\n- All valid parameter combinations\n- Default values and node type normalization\n\n### Info Mode Tests (21 tests)\n- Minimal detail: Basic metadata only, no version info (~200 tokens)\n- Standard detail: Essentials with version info (~1-2K tokens)\n- Full detail: Complete info with version info (~3-8K tokens)\n- includeTypeInfo and includeExamples parameter handling\n\n### Version Mode Tests (24 tests)\n- versions: Version history and details\n- compare: Version comparison with proper error handling\n- breaking: Breaking changes with upgradeSafe flags\n- migrations: Auto-migratable changes detection\n\n### Helper Methods (18 tests)\n- enrichPropertyWithTypeInfo: Null safety, type handling, structure hints\n- enrichPropertiesWithTypeInfo: Array handling, mixed properties\n- getVersionSummary: Caching with 24-hour TTL\n\n### Error Handling (3 tests)\n- Repository initialization checks\n- NodeType context in error messages\n- Invalid mode/detail handling\n\n### Integration Tests (8 tests)\n- Mode routing logic\n- Cache effectiveness across calls\n- Type safety validation\n- Edge cases (empty data, alternatives, long names)\n\n## Results\n- 81 tests passing\n- 100% coverage of new get_node methods\n- All parameter combinations tested\n- All error conditions covered\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: update integration test assertions for unified get_node tool\n\nUpdated integration tests to match the new unified get_node response structure:\n- error-handling.test.ts: Added detail='full' parameter for large payload test\n- tool-invocation.test.ts: Updated property assertions for standard/full detail levels\n- Fixed duplicate describe block and comparison logic\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: correct property names in integration test for standard detail\n\nUpdated test to check for requiredProperties and commonProperties\ninstead of essentialProperties to match actual get_node response structure.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-24T17:06:21+01:00",
-          "tree_id": "7c2eb1bc27a182c2c5fde4b0fdbf5d3a7eb4e8b2",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/9050967cd6de4a8f2e3f067f2d093f111b8881c3"
-        },
-        "date": 1764000493345,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/570fff83ef604a60b415571a6cf522cc5ffb52f0"
         },
         "date": 1768823051255,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ccdf6c97d2709f28bbb42bec9b5bfa49bdee3cf",
+          "message": "Merge pull request #7 from markmocasa-boop/claude/linkedin-dm-tracking-aKYx2\n\nfeat: add LinkedIn DM Follow-up Tracking workflow with PhantomBuster",
+          "timestamp": "2026-01-19T19:21:11+01:00",
+          "tree_id": "c9cdf2d676ddcad4824ca32c0e605bc595f555c3",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3ccdf6c97d2709f28bbb42bec9b5bfa49bdee3cf"
+        },
+        "date": 1768846988835,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
