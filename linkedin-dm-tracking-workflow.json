@@ -1,0 +1,725 @@
+{
+  "name": "LinkedIn DM Follow-up Tracking - PhantomBuster",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "daily-followup-check",
+      "name": "Daily Follow-up Check (Mon-Fri 10AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "linkedin-dm-send",
+        "options": {}
+      },
+      "id": "manual-dm-trigger",
+      "name": "Manual DM Trigger (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 600],
+      "webhookId": "linkedin-dm-send"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {
+          "range": "A:L"
+        }
+      },
+      "id": "read-leads-sheet",
+      "name": "Read Leads Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter leads that need follow-up\n// Expected columns: A:Name, B:LinkedInURL, C:Company, D:Position, E:LastDMDate, F:DMCount, G:Status, H:NextFollowUp, I:Notes, J:LeadScore, K:ResponseReceived, L:RowNumber\n\nconst leads = $input.all();\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst leadsNeedingFollowUp = [];\n\nfor (let i = 0; i < leads.length; i++) {\n  const lead = leads[i].json;\n  \n  // Skip if no LinkedIn URL\n  if (!lead.LinkedInURL || lead.LinkedInURL.trim() === '') continue;\n  \n  // Skip if status is 'Closed', 'Responded', or 'Not Interested'\n  const status = (lead.Status || '').toLowerCase();\n  if (['closed', 'responded', 'not interested', 'converted'].includes(status)) continue;\n  \n  // Skip if response was received\n  if (lead.ResponseReceived === 'Yes' || lead.ResponseReceived === 'TRUE') continue;\n  \n  // Check if follow-up is due\n  let needsFollowUp = false;\n  let reason = '';\n  \n  const lastDMDate = lead.LastDMDate ? new Date(lead.LastDMDate) : null;\n  const nextFollowUp = lead.NextFollowUp ? new Date(lead.NextFollowUp) : null;\n  const dmCount = parseInt(lead.DMCount) || 0;\n  \n  // Never contacted - needs initial DM\n  if (!lastDMDate && dmCount === 0) {\n    needsFollowUp = true;\n    reason = 'Initial contact needed';\n  }\n  // Has scheduled follow-up date that's today or past\n  else if (nextFollowUp && nextFollowUp <= today) {\n    needsFollowUp = true;\n    reason = 'Scheduled follow-up due';\n  }\n  // Last DM was more than 5 days ago and less than 4 DMs sent\n  else if (lastDMDate && dmCount < 4) {\n    const daysSinceLastDM = Math.floor((today - lastDMDate) / (1000 * 60 * 60 * 24));\n    if (daysSinceLastDM >= 5) {\n      needsFollowUp = true;\n      reason = `${daysSinceLastDM} days since last DM`;\n    }\n  }\n  \n  if (needsFollowUp) {\n    leadsNeedingFollowUp.push({\n      ...lead,\n      rowNumber: i + 2, // +2 for header row and 0-index\n      followUpReason: reason,\n      dmCount: dmCount,\n      isFirstContact: dmCount === 0\n    });\n  }\n}\n\n// Limit to 10 per day to avoid LinkedIn restrictions\nconst limitedLeads = leadsNeedingFollowUp.slice(0, 10);\n\nreturn limitedLeads.map(lead => ({ json: lead }));"
+      },
+      "id": "filter-followup-leads",
+      "name": "Filter Leads Needing Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-leads",
+              "leftValue": "={{ $input.all().length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-leads-exist",
+      "name": "Leads to Contact?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate personalized DM based on lead info and contact history\nconst lead = $input.first().json;\n\n// Message templates based on DM count\nconst templates = {\n  initial: [\n    `Hallo {{name}},\\n\\nich bin auf Ihr Profil gestoßen und fand Ihre Arbeit bei {{company}} sehr interessant.\\n\\nIch helfe Unternehmen dabei, ihre Prozesse zu optimieren und messbare Ergebnisse zu erzielen.\\n\\nHätten Sie Interesse an einem kurzen Austausch?\\n\\nBeste Grüße`,\n    `Hallo {{name}},\\n\\nIhre Position als {{position}} bei {{company}} hat mein Interesse geweckt.\\n\\nIch arbeite mit Führungskräften zusammen, die ihre Effizienz steigern möchten.\\n\\nWürden Sie sich über einen kurzen Call austauschen wollen?\\n\\nViele Grüße`,\n    `Hallo {{name}},\\n\\nich vernetze mich gerne mit Entscheidern aus dem Bereich {{position}}.\\n\\nBei {{company}} scheinen Sie spannende Themen zu bearbeiten.\\n\\nLassen Sie uns connecten?\\n\\nBeste Grüße`\n  ],\n  followUp1: [\n    `Hallo {{name}},\\n\\nich wollte nur kurz nachhaken - haben Sie meine letzte Nachricht gesehen?\\n\\nIch denke, ein Austausch könnte für uns beide wertvoll sein.\\n\\nWie sieht Ihre Woche aus?\\n\\nBeste Grüße`,\n    `Hallo {{name}},\\n\\nkurze Erinnerung an meine Nachricht von letzter Woche.\\n\\nFalls Sie gerade viel um die Ohren haben - kein Problem. Lassen Sie mich wissen, wann ein guter Zeitpunkt wäre.\\n\\nViele Grüße`\n  ],\n  followUp2: [\n    `Hallo {{name}},\\n\\nich möchte nicht aufdringlich sein, aber ich glaube wirklich, dass wir voneinander profitieren könnten.\\n\\nEin 15-minütiger Call - mehr braucht es nicht.\\n\\nWas meinen Sie?\\n\\nBeste Grüße`,\n    `Hallo {{name}},\\n\\nletzter Versuch von meiner Seite 😊\\n\\nFalls jetzt nicht der richtige Zeitpunkt ist, verstehe ich das völlig.\\n\\nAber falls doch - ich bin nur eine Nachricht entfernt.\\n\\nAlles Gute!`\n  ],\n  followUp3: [\n    `Hallo {{name}},\\n\\nich respektiere Ihre Zeit und werde nicht weiter nachhaken.\\n\\nFalls sich in Zukunft etwas ändert und Sie Unterstützung brauchen - melden Sie sich gerne.\\n\\nAlles Gute für Sie und {{company}}!\\n\\nBeste Grüße`\n  ]\n};\n\n// Select template based on DM count\nlet templateArray;\nif (lead.dmCount === 0) {\n  templateArray = templates.initial;\n} else if (lead.dmCount === 1) {\n  templateArray = templates.followUp1;\n} else if (lead.dmCount === 2) {\n  templateArray = templates.followUp2;\n} else {\n  templateArray = templates.followUp3;\n}\n\n// Random selection\nconst template = templateArray[Math.floor(Math.random() * templateArray.length)];\n\n// Fill in placeholders\nlet message = template\n  .replace(/\\{\\{name\\}\\}/g, lead.Name ? lead.Name.split(' ')[0] : 'there')\n  .replace(/\\{\\{company\\}\\}/g, lead.Company || 'Ihrem Unternehmen')\n  .replace(/\\{\\{position\\}\\}/g, lead.Position || 'Ihrer Position');\n\n// Extract LinkedIn profile ID from URL\nlet linkedInId = '';\nif (lead.LinkedInURL) {\n  const match = lead.LinkedInURL.match(/linkedin\\.com\\/in\\/([^/\\?]+)/);\n  linkedInId = match ? match[1] : lead.LinkedInURL;\n}\n\nreturn {\n  ...lead,\n  generatedMessage: message,\n  linkedInId: linkedInId,\n  messageType: lead.dmCount === 0 ? 'initial' : `followUp${lead.dmCount}`,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "generate-dm-message",
+      "name": "Generate Personalized DM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.phantombuster.com/api/v2/agents/launch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Phantombuster-Key",
+              "value": "={{ $env.PHANTOMBUSTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id\": \"{{ $env.PHANTOMBUSTER_MESSAGE_AGENT_ID }}\",\n  \"argument\": {\n    \"sessionCookie\": \"{{ $env.LINKEDIN_SESSION_COOKIE }}\",\n    \"profileUrl\": \"{{ $json.LinkedInURL }}\",\n    \"message\": {{ JSON.stringify($json.generatedMessage) }},\n    \"sendIfAlreadyConnected\": true\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "send-dm-phantombuster",
+      "name": "Send DM via PhantomBuster",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process PhantomBuster response and prepare logging data\nconst pbResponse = $input.first().json;\nconst leadData = $('Generate Personalized DM').first().json;\n\nconst now = new Date();\nconst success = pbResponse.containerId || pbResponse.status === 'launched' || !pbResponse.error;\n\n// Calculate next follow-up date (5 days from now, skip weekends)\nlet nextFollowUp = new Date(now);\nnextFollowUp.setDate(nextFollowUp.getDate() + 5);\nwhile (nextFollowUp.getDay() === 0 || nextFollowUp.getDay() === 6) {\n  nextFollowUp.setDate(nextFollowUp.getDate() + 1);\n}\n\n// Format dates for Google Sheets\nconst formatDate = (date) => {\n  return date.toISOString().split('T')[0];\n};\n\nreturn {\n  // For updating leads sheet\n  rowNumber: leadData.rowNumber,\n  Name: leadData.Name,\n  LinkedInURL: leadData.LinkedInURL,\n  Company: leadData.Company,\n  Position: leadData.Position,\n  LastDMDate: formatDate(now),\n  DMCount: (leadData.dmCount || 0) + 1,\n  Status: leadData.dmCount >= 3 ? 'Max Reached' : 'In Progress',\n  NextFollowUp: leadData.dmCount >= 3 ? '' : formatDate(nextFollowUp),\n  Notes: leadData.Notes || '',\n  LeadScore: leadData.LeadScore || '',\n  ResponseReceived: leadData.ResponseReceived || 'No',\n  \n  // For DM log\n  sentAt: now.toISOString(),\n  messageType: leadData.messageType,\n  messageSent: leadData.generatedMessage,\n  phantombusterStatus: success ? 'Success' : 'Failed',\n  phantombusterContainerId: pbResponse.containerId || '',\n  error: pbResponse.error || ''\n};"
+      },
+      "id": "process-pb-response",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 200]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "LastDMDate": "={{ $json.LastDMDate }}",
+            "DMCount": "={{ $json.DMCount }}",
+            "Status": "={{ $json.Status }}",
+            "NextFollowUp": "={{ $json.NextFollowUp }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "valueInputMode": "USER_ENTERED"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "LinkedInURL",
+              "lookupValue": "={{ $json.LinkedInURL }}"
+            }
+          ]
+        }
+      },
+      "id": "update-lead-status",
+      "name": "Update Lead Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1540, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "DMLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.sentAt }}",
+            "Name": "={{ $json.Name }}",
+            "LinkedInURL": "={{ $json.LinkedInURL }}",
+            "Company": "={{ $json.Company }}",
+            "MessageType": "={{ $json.messageType }}",
+            "Message": "={{ $json.messageSent }}",
+            "Status": "={{ $json.phantombusterStatus }}",
+            "ContainerId": "={{ $json.phantombusterContainerId }}",
+            "Error": "={{ $json.error }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-dm-sent",
+      "name": "Log DM to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1540, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-failed",
+              "leftValue": "={{ $json.phantombusterStatus }}",
+              "rightValue": "Failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-dm-failed",
+      "name": "DM Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1760, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ErrorLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.sentAt }}",
+            "Name": "={{ $json.Name }}",
+            "LinkedInURL": "={{ $json.LinkedInURL }}",
+            "Error": "={{ $json.error }}",
+            "Type": "PhantomBuster DM Error"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1980, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Summary of today's DM activity\nconst allResults = $('Process Response').all();\n\nconst summary = {\n  totalProcessed: allResults.length,\n  successful: allResults.filter(r => r.json.phantombusterStatus === 'Success').length,\n  failed: allResults.filter(r => r.json.phantombusterStatus === 'Failed').length,\n  initialContacts: allResults.filter(r => r.json.messageType === 'initial').length,\n  followUps: allResults.filter(r => r.json.messageType !== 'initial').length,\n  timestamp: new Date().toISOString()\n};\n\nreturn summary;"
+      },
+      "id": "generate-summary",
+      "name": "Generate Daily Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 100]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "DailySummary",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.timestamp.split('T')[0] }}",
+            "TotalSent": "={{ $json.totalProcessed }}",
+            "Successful": "={{ $json.successful }}",
+            "Failed": "={{ $json.failed }}",
+            "InitialContacts": "={{ $json.initialContacts }}",
+            "FollowUps": "={{ $json.followUps }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-daily-summary",
+      "name": "Log Daily Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2200, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "No leads need follow-up today"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "no-leads-today",
+      "name": "No Leads Today",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle manual webhook trigger for single lead DM\nconst webhookData = $input.first().json;\n\n// Expected webhook payload:\n// { \"linkedInUrl\": \"...\", \"name\": \"...\", \"company\": \"...\", \"position\": \"...\", \"customMessage\": \"...\" }\n\nif (!webhookData.linkedInUrl && !webhookData.LinkedInURL) {\n  throw new Error('linkedInUrl is required in webhook payload');\n}\n\nreturn {\n  Name: webhookData.name || webhookData.Name || 'Lead',\n  LinkedInURL: webhookData.linkedInUrl || webhookData.LinkedInURL,\n  Company: webhookData.company || webhookData.Company || '',\n  Position: webhookData.position || webhookData.Position || '',\n  Notes: webhookData.notes || webhookData.Notes || '',\n  customMessage: webhookData.customMessage || null,\n  dmCount: 0,\n  isFirstContact: true,\n  rowNumber: null,\n  followUpReason: 'Manual trigger',\n  isManualTrigger: true\n};"
+      },
+      "id": "process-webhook-data",
+      "name": "Process Webhook Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate DM for manual webhook trigger\nconst lead = $input.first().json;\n\n// Use custom message if provided, otherwise use template\nlet message;\nif (lead.customMessage) {\n  message = lead.customMessage\n    .replace(/\\{\\{name\\}\\}/g, lead.Name ? lead.Name.split(' ')[0] : 'there')\n    .replace(/\\{\\{company\\}\\}/g, lead.Company || 'Ihrem Unternehmen')\n    .replace(/\\{\\{position\\}\\}/g, lead.Position || 'Ihrer Position');\n} else {\n  const templates = [\n    `Hallo {{name}},\\n\\nich bin auf Ihr Profil gestoßen und fand Ihre Arbeit bei {{company}} sehr interessant.\\n\\nIch helfe Unternehmen dabei, ihre Prozesse zu optimieren und messbare Ergebnisse zu erzielen.\\n\\nHätten Sie Interesse an einem kurzen Austausch?\\n\\nBeste Grüße`,\n    `Hallo {{name}},\\n\\nIhre Position als {{position}} bei {{company}} hat mein Interesse geweckt.\\n\\nIch arbeite mit Führungskräften zusammen, die ihre Effizienz steigern möchten.\\n\\nWürden Sie sich über einen kurzen Call austauschen wollen?\\n\\nViele Grüße`\n  ];\n  \n  const template = templates[Math.floor(Math.random() * templates.length)];\n  message = template\n    .replace(/\\{\\{name\\}\\}/g, lead.Name ? lead.Name.split(' ')[0] : 'there')\n    .replace(/\\{\\{company\\}\\}/g, lead.Company || 'Ihrem Unternehmen')\n    .replace(/\\{\\{position\\}\\}/g, lead.Position || 'Ihrer Position');\n}\n\n// Extract LinkedIn profile ID from URL\nlet linkedInId = '';\nif (lead.LinkedInURL) {\n  const match = lead.LinkedInURL.match(/linkedin\\.com\\/in\\/([^/\\?]+)/);\n  linkedInId = match ? match[1] : lead.LinkedInURL;\n}\n\nreturn {\n  ...lead,\n  generatedMessage: message,\n  linkedInId: linkedInId,\n  messageType: 'initial',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "generate-manual-dm",
+      "name": "Generate Manual DM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.phantombuster.com/api/v2/agents/launch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Phantombuster-Key",
+              "value": "={{ $env.PHANTOMBUSTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id\": \"{{ $env.PHANTOMBUSTER_MESSAGE_AGENT_ID }}\",\n  \"argument\": {\n    \"sessionCookie\": \"{{ $env.LINKEDIN_SESSION_COOKIE }}\",\n    \"profileUrl\": \"{{ $json.LinkedInURL }}\",\n    \"message\": {{ JSON.stringify($json.generatedMessage) }},\n    \"sendIfAlreadyConnected\": true\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "send-manual-dm",
+      "name": "Send Manual DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process manual DM response\nconst pbResponse = $input.first().json;\nconst leadData = $('Generate Manual DM').first().json;\n\nconst now = new Date();\nconst success = pbResponse.containerId || pbResponse.status === 'launched' || !pbResponse.error;\n\nreturn {\n  success: success,\n  Name: leadData.Name,\n  LinkedInURL: leadData.LinkedInURL,\n  Company: leadData.Company,\n  Position: leadData.Position,\n  messageSent: leadData.generatedMessage,\n  sentAt: now.toISOString(),\n  containerId: pbResponse.containerId || '',\n  error: pbResponse.error || '',\n  message: success ? 'DM sent successfully' : 'Failed to send DM'\n};"
+      },
+      "id": "process-manual-response",
+      "name": "Process Manual Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 600]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LINKEDIN_LEADS_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "DMLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.sentAt }}",
+            "Name": "={{ $json.Name }}",
+            "LinkedInURL": "={{ $json.LinkedInURL }}",
+            "Company": "={{ $json.Company }}",
+            "MessageType": "manual",
+            "Message": "={{ $json.messageSent }}",
+            "Status": "={{ $json.success ? 'Success' : 'Failed' }}",
+            "ContainerId": "={{ $json.containerId }}",
+            "Error": "={{ $json.error }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-manual-dm",
+      "name": "Log Manual DM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, 600],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1320, 600]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "DM sent successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dm-success",
+      "name": "DM Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1980, 200]
+    }
+  ],
+  "connections": {
+    "Daily Follow-up Check (Mon-Fri 10AM)": {
+      "main": [
+        [
+          {
+            "node": "Read Leads Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Leads Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter Leads Needing Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Leads Needing Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Leads to Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads to Contact?": {
+      "main": [
+        [
+          {
+            "node": "Generate Personalized DM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Personalized DM": {
+      "main": [
+        [
+          {
+            "node": "Send DM via PhantomBuster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send DM via PhantomBuster": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Status",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log DM to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Generate Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log DM to Sheet": {
+      "main": [
+        [
+          {
+            "node": "DM Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DM Failed?": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DM Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Log Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual DM Trigger (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Manual DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Manual DM": {
+      "main": [
+        [
+          {
+            "node": "Send Manual DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Manual DM": {
+      "main": [
+        [
+          {
+            "node": "Process Manual Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Manual Response": {
+      "main": [
+        [
+          {
+            "node": "Log Manual DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Manual DM": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["linkedin", "dm", "tracking", "phantombuster", "follow-up"],
+  "triggerCount": 2,
+  "meta": {
+    "description": "LinkedIn DM Follow-up Tracking via PhantomBuster. Reads leads from Google Sheets, sends personalized DMs, logs all activity, and manages follow-up sequences. Includes daily scheduled runs and manual webhook trigger.",
+    "templateCredsSetupCompleted": false
+  }
+}
