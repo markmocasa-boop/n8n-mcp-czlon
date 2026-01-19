@@ -1,0 +1,828 @@
+{
+  "name": "Lead Magnet Builder - Multi-Platform Distribution",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Lead Magnet Builder",
+        "formDescription": "Erstelle deinen Lead Magnet in unter 30 Minuten. Fülle die Felder aus und der Content wird automatisch generiert und auf alle Plattformen verteilt.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Thema / Problem",
+              "fieldType": "text",
+              "placeholder": "z.B. LinkedIn Content Strategie, Sales Automation, etc.",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Zielgruppe (ICP)",
+              "fieldType": "text",
+              "placeholder": "z.B. B2B-Unternehmer, Marketing Manager, Freelancer",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Format",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "Framework Post (Schritt-für-Schritt System)" },
+                  { "option": "Checklist Post (X Dinge zum tun/vermeiden)" },
+                  { "option": "Audit/Template (Tool zum sofortigen Anwenden)" }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Gewünschtes Ergebnis",
+              "fieldType": "text",
+              "placeholder": "z.B. 3x mehr Leads, 50% mehr Engagement, etc.",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Name für Framework/System",
+              "fieldType": "text",
+              "placeholder": "z.B. IMPACT, FOCUS, SCALE (Akronym empfohlen)",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Pro Tip (optional)",
+              "fieldType": "textarea",
+              "placeholder": "Ein unerwarteter Insight, der den Lead Magnet einzigartig macht"
+            },
+            {
+              "fieldLabel": "CTA Typ",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "DM für Details (DM me 'framework')" },
+                  { "option": "Featured Section Link" },
+                  { "option": "Calendar Link (Beratung buchen)" }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "CTA Link (falls Calendar/Featured)",
+              "fieldType": "text",
+              "placeholder": "https://calendly.com/... oder Link zur Featured Section"
+            },
+            {
+              "fieldLabel": "Sprache",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "Deutsch" },
+                  { "option": "English" }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "Dein Lead Magnet wird erstellt und auf alle Plattformen verteilt! Du erhältst eine Benachrichtigung, sobald alles fertig ist."
+            }
+          }
+        }
+      },
+      "id": "form-trigger",
+      "name": "Lead Magnet Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 300],
+      "webhookId": "lead-magnet-builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process form submission and prepare prompts\nconst formData = $input.first().json;\n\n// Extract form values\nconst topic = formData['Thema / Problem'];\nconst icp = formData['Zielgruppe (ICP)'];\nconst format = formData['Format'];\nconst outcome = formData['Gewünschtes Ergebnis'];\nconst frameworkName = formData['Name für Framework/System'];\nconst proTip = formData['Pro Tip (optional)'] || '';\nconst ctaType = formData['CTA Typ'];\nconst ctaLink = formData['CTA Link (falls Calendar/Featured)'] || '';\nconst language = formData['Sprache'];\n\n// Determine format type\nlet formatType = 'framework';\nif (format.includes('Checklist')) formatType = 'checklist';\nif (format.includes('Audit') || format.includes('Template')) formatType = 'audit';\n\n// Build CTA based on type\nlet cta = '';\nif (ctaType.includes('DM')) {\n  cta = language === 'Deutsch' \n    ? `Willst du Hilfe bei der Umsetzung? Schreib mir \"${frameworkName}\" als DM und ich sende dir die detaillierte Anleitung.`\n    : `Want help implementing this? DM me \"${frameworkName}\" and I'll send you the detailed breakdown.`;\n} else if (ctaType.includes('Featured')) {\n  cta = language === 'Deutsch'\n    ? `Ich habe eine vollständige Implementierungsanleitung erstellt. Du findest sie in meinem Featured-Bereich.${ctaLink ? ' Link: ' + ctaLink : ''}`\n    : `I built a full implementation guide for this. It's in my featured section.${ctaLink ? ' Link: ' + ctaLink : ''}`;\n} else if (ctaType.includes('Calendar')) {\n  cta = language === 'Deutsch'\n    ? `Das nutzen wir mit unseren Kunden, um ${outcome} zu erreichen. Wenn du sehen willst, wie es für dich funktioniert, buche einen Termin: ${ctaLink || '[Link einfügen]'}`\n    : `This is what we use with clients to ${outcome}. If you want to see how it'd work for your situation, grab a spot on my calendar: ${ctaLink || '[insert link]'}`;\n}\n\n// Build the main prompt for text generation\nconst textPrompt = `Create a LinkedIn Lead Magnet post following this EXACT structure:\n\n**FORMAT**: ${formatType === 'framework' ? 'Framework Post (step-by-step system)' : formatType === 'checklist' ? 'Checklist Post' : 'Audit/Template'}\n\n**TOPIC**: ${topic}\n**TARGET AUDIENCE (ICP)**: ${icp}\n**DESIRED OUTCOME**: ${outcome}\n**FRAMEWORK/SYSTEM NAME**: ${frameworkName}\n${proTip ? `**PRO TIP TO INCLUDE**: ${proTip}` : ''}\n\n**STRUCTURE TO FOLLOW**:\n\n1. **Title**: The ${frameworkName} ${formatType === 'framework' ? 'Framework' : formatType === 'checklist' ? 'Checklist' : 'Template'} for ${outcome}\n\n2. **Hook**: One powerful sentence about the problem this solves for ${icp}\n\n3. **Context**: 2-3 sentences about why this matters NOW (use current trends, urgency)\n\n4. **The Content**: \n${formatType === 'framework' ? '   - 4-6 clear steps with brief explanations\n   - Each step should be actionable and specific\n   - Use the letters of the framework name as step headers if it works' : ''}\n${formatType === 'checklist' ? '   - 5-8 items to check/do/avoid\n   - Each item should be immediately actionable\n   - Mix dos and don\\'ts for variety' : ''}\n${formatType === 'audit' ? '   - A template or audit framework they can use immediately\n   - Include specific questions or sections to evaluate\n   - Make it practical and self-serve' : ''}\n\n5. **Pro Tip**: ${proTip || 'One unexpected insight that makes this memorable and unique'}\n\n6. **Save CTA**: \"Speichere diesen Post für später. Du wirst ihn brauchen.\" / \"Save this for later. You'll need it.\"\n\n7. **Soft CTA**: ${cta}\n\n**FORMATTING RULES**:\n- Use clear numbered steps or bullet points\n- Use emoji breaks between sections (sparingly, max 5-6 total)\n- Use white space (short paragraphs, line breaks after every 2-3 lines)\n- Bold key points using **text** format\n- Keep it scannable - someone should understand the value in 5 seconds\n- Total length: 1200-1500 characters\n\n**LANGUAGE**: Write the ENTIRE post in ${language}. This is critical.\n\n**TONE**: Professional but engaging. Confident but helpful. No fluff, only value.`;\n\n// Build image prompt\nconst imagePrompt = `Create a clean, professional LinkedIn post image for a Lead Magnet about: ${topic}\n\nStyle requirements:\n- Clean, modern design\n- Professional business aesthetic\n- Bold typography showing \"${frameworkName}\" prominently\n- Visual representation of ${formatType === 'framework' ? 'a step-by-step process or system' : formatType === 'checklist' ? 'a checklist or to-do list' : 'a template or audit framework'}\n- Color scheme: Professional blues, or warm business colors\n- 1200x1200 pixels (square format for optimal display)\n- Include subtle icons or graphics related to ${topic}\n- NO lengthy text, just the framework name and maybe 1-3 key words\n- High contrast for readability on mobile`;\n\n// Build video script prompt for TikTok/YouTube Shorts\nconst videoScriptPrompt = `Create a 30-45 second video script for a TikTok/YouTube Short about this Lead Magnet:\n\n**TOPIC**: ${topic}\n**FRAMEWORK NAME**: ${frameworkName}\n**TARGET AUDIENCE**: ${icp}\n**OUTCOME**: ${outcome}\n\n**SCRIPT FORMAT**:\n\nHOOK (first 3 seconds - most important!):\n[Something attention-grabbing that makes them stop scrolling]\n\nMAIN CONTENT (20-30 seconds):\n[Quick overview of the ${formatType} - hit the key points fast]\n[Each point should be 3-5 seconds max]\n\nCTA (5-7 seconds):\n[Tell them to check the full post on LinkedIn / follow for more]\n\n**RULES**:\n- Fast-paced, punchy delivery\n- Speak directly to camera\n- Use simple language\n- Include 2-3 text overlays for key points\n- End with clear next step\n- Language: ${language}\n\nOutput the script with timing markers like [0:00-0:03] HOOK: etc.`;\n\nreturn {\n  // Form data\n  topic,\n  icp,\n  format,\n  formatType,\n  outcome,\n  frameworkName,\n  proTip,\n  ctaType,\n  ctaLink,\n  cta,\n  language,\n  \n  // Prompts\n  textPrompt,\n  imagePrompt,\n  videoScriptPrompt,\n  \n  // Metadata\n  submittedAt: new Date().toISOString()\n};"
+      },
+      "id": "process-form",
+      "name": "Process Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($json.textPrompt) }}\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.8,\n    \"topK\": 40,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 2048\n  }\n}",
+        "options": {}
+      },
+      "id": "generate-text",
+      "name": "Generate Lead Magnet Text (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.bananabrain.pro/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BANANA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemini-3.0-nano\",\n  \"prompt\": {{ JSON.stringify($json.imagePrompt) }},\n  \"n\": 1,\n  \"size\": \"1024x1024\",\n  \"style\": \"vivid\"\n}",
+        "options": {}
+      },
+      "id": "generate-image",
+      "name": "Generate Image (Banana Pro)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($json.videoScriptPrompt) }}\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.9,\n    \"topK\": 40,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 1024\n  }\n}",
+        "options": {}
+      },
+      "id": "generate-video-script",
+      "name": "Generate Video Script (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all generated content\nconst formData = $('Process Form Data').first().json;\nconst textResult = $('Generate Lead Magnet Text (Gemini)').first().json;\nconst imageResult = $('Generate Image (Banana Pro)').first().json;\nconst videoScriptResult = $('Generate Video Script (Gemini)').first().json;\n\n// Extract generated text\nlet postText = '';\ntry {\n  postText = textResult.candidates?.[0]?.content?.parts?.[0]?.text || '';\n} catch (e) {\n  postText = 'Error generating text: ' + e.message;\n}\n\n// Extract image URL\nlet imageUrl = '';\ntry {\n  imageUrl = imageResult.data?.[0]?.url || imageResult.url || '';\n} catch (e) {\n  imageUrl = '';\n}\n\n// Extract video script\nlet videoScript = '';\ntry {\n  videoScript = videoScriptResult.candidates?.[0]?.content?.parts?.[0]?.text || '';\n} catch (e) {\n  videoScript = 'Error generating video script: ' + e.message;\n}\n\n// Clean up post text\npostText = postText.trim();\n\n// Create shortened versions for different platforms\n// Instagram/Facebook might need shorter content\nconst shortText = postText.length > 2000 \n  ? postText.substring(0, 1997) + '...'\n  : postText;\n\n// Create TikTok/YouTube caption (very short)\nconst videoCaption = `${formData.frameworkName}: ${formData.outcome} | Full breakdown on LinkedIn 👆 #${formData.topic.replace(/\\s+/g, '').substring(0, 20)} #leadmagnet #businesstips`;\n\nreturn {\n  // Original form data\n  ...formData,\n  \n  // Generated content\n  postText,\n  shortText,\n  imageUrl,\n  videoScript,\n  videoCaption,\n  \n  // Validation\n  hasValidText: postText.length > 100,\n  hasValidImage: !!imageUrl,\n  hasValidVideoScript: videoScript.length > 50,\n  \n  // Metadata\n  generatedAt: new Date().toISOString()\n};"
+      },
+      "id": "combine-content",
+      "name": "Combine Generated Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "valid-content",
+              "leftValue": "={{ $json.hasValidText && $json.hasValidImage }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-content",
+      "name": "Content Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formData",
+              "inputDataFieldName": "={{ $json.imageUrl }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET }}"
+            },
+            {
+              "name": "folder",
+              "value": "lead-magnets"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upload-image-cloudinary",
+      "name": "Upload Image to Cloudinary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.d-id.com/talks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"script\": {\n    \"type\": \"text\",\n    \"input\": {{ JSON.stringify($('Combine Generated Content').first().json.videoScript.substring(0, 500)) }},\n    \"provider\": {\n      \"type\": \"microsoft\",\n      \"voice_id\": \"{{ $('Combine Generated Content').first().json.language === 'Deutsch' ? 'de-DE-KatjaNeural' : 'en-US-JennyNeural' }}\"\n    }\n  },\n  \"source_url\": \"{{ $('Combine Generated Content').first().json.imageUrl }}\",\n  \"config\": {\n    \"stitch\": true,\n    \"result_format\": \"mp4\"\n  }\n}",
+        "options": {}
+      },
+      "id": "generate-video-did",
+      "name": "Generate Video (D-ID)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "d-id-api-key",
+          "name": "D-ID API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for platform distribution\nconst content = $('Combine Generated Content').first().json;\nconst cloudinaryResult = $('Upload Image to Cloudinary').first().json;\nconst videoResult = $('Generate Video (D-ID)').first().json;\n\nconst imageUrl = cloudinaryResult.secure_url || cloudinaryResult.url || content.imageUrl;\n\n// D-ID returns a talk ID, we need to poll for the result\n// For now, we'll use the image as fallback if video isn't ready\nconst videoUrl = videoResult.result_url || '';\nconst videoId = videoResult.id || '';\n\nreturn {\n  // Content\n  postText: content.postText,\n  shortText: content.shortText,\n  videoCaption: content.videoCaption,\n  videoScript: content.videoScript,\n  \n  // Media URLs\n  imageUrl,\n  videoUrl,\n  videoId,\n  \n  // Metadata\n  frameworkName: content.frameworkName,\n  topic: content.topic,\n  language: content.language,\n  \n  // For Blotato\n  readyForDistribution: true\n};"
+      },
+      "id": "prepare-distribution",
+      "name": "Prepare for Distribution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_LINKEDIN_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.postText) }},\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"],\n      \"platform\": \"linkedin\"\n    },\n    \"target\": {\n      \"targetType\": \"linkedin\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "post-linkedin",
+      "name": "Post to LinkedIn (Blotato)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_META_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.shortText) }},\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"],\n      \"platform\": \"facebook\"\n    },\n    \"target\": {\n      \"targetType\": \"facebook\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "post-meta-facebook",
+      "name": "Post to Facebook (Blotato)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 250],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_META_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.shortText) }},\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"],\n      \"platform\": \"instagram\"\n    },\n    \"target\": {\n      \"targetType\": \"instagram\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "post-meta-instagram",
+      "name": "Post to Instagram (Blotato)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_TIKTOK_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.videoCaption) }},\n      \"mediaUrls\": [\"{{ $json.videoUrl || $json.imageUrl }}\"],\n      \"platform\": \"tiktok\"\n    },\n    \"target\": {\n      \"targetType\": \"tiktok\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "post-tiktok",
+      "name": "Post to TikTok (Blotato)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 550],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"{{ $env.BLOTATO_YOUTUBE_ACCOUNT_ID }}\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.videoCaption) }},\n      \"mediaUrls\": [\"{{ $json.videoUrl || $json.imageUrl }}\"],\n      \"platform\": \"youtube\"\n    },\n    \"target\": {\n      \"targetType\": \"youtube_shorts\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "post-youtube",
+      "name": "Post to YouTube Shorts (Blotato)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 700],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "blotato-api-key",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all posting results\nconst linkedinResult = $('Post to LinkedIn (Blotato)').first().json;\nconst facebookResult = $('Post to Facebook (Blotato)').first().json;\nconst instagramResult = $('Post to Instagram (Blotato)').first().json;\nconst tiktokResult = $('Post to TikTok (Blotato)').first().json;\nconst youtubeResult = $('Post to YouTube Shorts (Blotato)').first().json;\nconst content = $('Prepare for Distribution').first().json;\n\nconst results = {\n  linkedin: {\n    success: !!linkedinResult?.postSubmissionId || !!linkedinResult?.id,\n    postId: linkedinResult?.postSubmissionId || linkedinResult?.id || 'unknown'\n  },\n  facebook: {\n    success: !!facebookResult?.postSubmissionId || !!facebookResult?.id,\n    postId: facebookResult?.postSubmissionId || facebookResult?.id || 'unknown'\n  },\n  instagram: {\n    success: !!instagramResult?.postSubmissionId || !!instagramResult?.id,\n    postId: instagramResult?.postSubmissionId || instagramResult?.id || 'unknown'\n  },\n  tiktok: {\n    success: !!tiktokResult?.postSubmissionId || !!tiktokResult?.id,\n    postId: tiktokResult?.postSubmissionId || tiktokResult?.id || 'unknown'\n  },\n  youtube: {\n    success: !!youtubeResult?.postSubmissionId || !!youtubeResult?.id,\n    postId: youtubeResult?.postSubmissionId || youtubeResult?.id || 'unknown'\n  }\n};\n\nconst successCount = Object.values(results).filter(r => r.success).length;\n\nreturn {\n  status: successCount >= 3 ? 'success' : 'partial',\n  frameworkName: content.frameworkName,\n  topic: content.topic,\n  platforms: results,\n  successCount,\n  totalPlatforms: 5,\n  completedAt: new Date().toISOString()\n};"
+      },
+      "id": "collect-results",
+      "name": "Collect Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LEAD_MAGNET_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "LeadMagnetLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.completedAt }}",
+            "FrameworkName": "={{ $json.frameworkName }}",
+            "Topic": "={{ $json.topic }}",
+            "Status": "={{ $json.status }}",
+            "SuccessCount": "={{ $json.successCount }}",
+            "LinkedIn": "={{ $json.platforms.linkedin.success ? 'Yes' : 'No' }}",
+            "Facebook": "={{ $json.platforms.facebook.success ? 'Yes' : 'No' }}",
+            "Instagram": "={{ $json.platforms.instagram.success ? 'Yes' : 'No' }}",
+            "TikTok": "={{ $json.platforms.tiktok.success ? 'Yes' : 'No' }}",
+            "YouTube": "={{ $json.platforms.youtube.success ? 'Yes' : 'No' }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheet",
+      "name": "Log to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1980, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "error"
+            },
+            {
+              "name": "error",
+              "value": "Content generation failed - missing text or image"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "handle-error",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.LEAD_MAGNET_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ErrorLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Status": "={{ $json.status }}",
+            "Error": "={{ $json.error }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1320, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lead Magnet Form": {
+      "main": [
+        [
+          {
+            "node": "Process Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Form Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Lead Magnet Text (Gemini)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Image (Banana Pro)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Video Script (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Lead Magnet Text (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Combine Generated Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image (Banana Pro)": {
+      "main": [
+        [
+          {
+            "node": "Combine Generated Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Script (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Combine Generated Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Generated Content": {
+      "main": [
+        [
+          {
+            "node": "Content Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Valid?": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to Cloudinary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Video (D-ID)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image to Cloudinary": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video (D-ID)": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Distribution": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn (Blotato)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to Facebook (Blotato)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to Instagram (Blotato)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to TikTok (Blotato)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to YouTube Shorts (Blotato)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn (Blotato)": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Facebook (Blotato)": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Instagram (Blotato)": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to TikTok (Blotato)": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to YouTube Shorts (Blotato)": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["lead-magnet", "automation", "multi-platform", "social-media", "blotato"],
+  "triggerCount": 1,
+  "meta": {
+    "description": "Lead Magnet Builder Workflow - Creates lead magnets from form input and distributes them across LinkedIn (text+image), Meta/Facebook/Instagram (text+image), TikTok (short video), and YouTube Shorts (short video) via Blotato. Uses Gemini for text generation, Banana Pro for images, and D-ID for video generation.",
+    "templateCredsSetupCompleted": false
+  }
+}
