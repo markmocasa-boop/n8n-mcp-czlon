@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768847294358,
+  "lastUpdate": 1769001089373,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "ff69e4cccaf0008107072bfeda245b0dfec14c7c",
-          "message": "feat: Tool Consolidation - Reduce MCP Tools by 38% (v2.26.0) (#439)\n\n* feat: Remove 9 low-value tools and consolidate n8n_health_check (v2.25.0)\n\nTelemetry-driven tool cleanup to improve API clarity:\n\n**Removed Tools (9):**\n- list_nodes - Use search_nodes instead\n- list_ai_tools - Use search_nodes with isAITool filter\n- list_tasks - Low usage (0.02%)\n- get_database_statistics - Use n8n_health_check\n- list_templates - Use search_templates or get_templates_for_task\n- get_node_as_tool_info - Documented in get_node\n- validate_workflow_connections - Use validate_workflow\n- validate_workflow_expressions - Use validate_workflow\n- n8n_list_available_tools - Use n8n_health_check\n- n8n_diagnostic - Merged into n8n_health_check\n\n**Consolidated Tool:**\n- n8n_health_check now supports mode='diagnostic' for detailed troubleshooting\n\n**Tool Count:**\n- Before: 38 tools\n- After: 31 tools (18% reduction)\n\nConcieved by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: cleanup stale references and update tests after tool removal\n\n- Remove handleListAvailableTools dead code from handlers-n8n-manager.ts\n- Update error messages to reference n8n_health_check(mode=\"diagnostic\") instead of n8n_diagnostic\n- Update tool counts in diagnostic messages (14 doc tools, 31 total)\n- Fix error-handling.test.ts to use valid tools (search_nodes, tools_documentation)\n- Remove obsolete list-tools.test.ts integration tests\n- Remove unused ListToolsResponse type from response-types.ts\n- Update tools.ts QUICK REFERENCE to remove list_nodes references\n- Update tools-documentation.ts to remove references to removed tools\n- Update tool-docs files to remove stale relatedTools references\n- Fix tools.test.ts to not test removed tools (list_nodes, list_ai_tools, etc.)\n- Fix parameter-validation.test.ts to not test removed tools\n- Update handlers-n8n-manager.test.ts error message expectations\n\nAll 399 MCP unit tests now pass.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: update integration tests to use valid tools after v2.25.0 removal\n\nReplaced all references to removed tools in integration tests:\n- list_nodes -> search_nodes\n- get_database_statistics -> tools_documentation\n- list_ai_tools -> search_nodes/tools_documentation\n- list_tasks -> tools_documentation\n- get_node_as_tool_info -> removed test section\n\nUpdated test files:\n- tests/integration/mcp-protocol/basic-connection.test.ts\n- tests/integration/mcp-protocol/performance.test.ts\n- tests/integration/mcp-protocol/session-management.test.ts\n- tests/integration/mcp-protocol/test-helpers.ts\n- tests/integration/mcp-protocol/tool-invocation.test.ts\n- tests/integration/telemetry/mcp-telemetry.test.ts\n- tests/unit/mcp/disabled-tools.test.ts\n- tests/unit/mcp/tools-documentation.test.ts\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* feat: Tool consolidation v2.26.0 - reduce tools by 38% (31 → 19)\n\nMajor consolidation of MCP tools using mode-based parameters for better\nAI agent ergonomics:\n\nNode Tools:\n- get_node_documentation → get_node with mode='documentation'\n- search_node_properties → get_node with mode='search_properties'\n- get_property_dependencies → removed\n\nValidation Tools:\n- validate_node_operation + validate_node_minimal → validate_node with mode param\n\nTemplate Tools:\n- list_node_templates → search_templates with searchMode='nodes'\n- search_templates_by_metadata → search_templates with searchMode='metadata'\n- get_templates_for_task → search_templates with searchMode='task'\n\nWorkflow Getters:\n- n8n_get_workflow_details/structure/minimal → n8n_get_workflow with mode param\n\nExecution Tools:\n- n8n_list/get/delete_execution → n8n_executions with action param\n\nTest updates for all consolidated tools.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n* docs: comprehensive README update for v2.26.0 tool consolidation\n\n- Quick Start: Added hosted service (dashboard.n8n-mcp.com) as primary option\n- Self-hosting: Renamed options to A (npx), B (Docker), C (Local), D (Railway)\n- Removed: \"Memory Leak Fix (v2.20.2)\" section (outdated)\n- Removed: \"Known Issues\" section (outdated container management)\n- Claude Project Setup: Updated all tool references to v2.26.0 consolidated tools\n  - validate_node({mode: 'minimal'|'full'}) instead of separate tools\n  - search_templates({searchMode: ...}) unified template search\n  - get_node({mode: 'docs'|'search_properties'}) for documentation\n  - n8n_executions({action: ...}) unified execution management\n- Available MCP Tools: Updated to show 19 consolidated tools (7 core + 12 mgmt)\n- Recent Updates: Simplified to just link to CHANGELOG.md\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n* fix: update tool count from 31 to 19 in diagnostic message\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix(tests): update tool count expectations for v2.26.0\n\nUpdate handlers-n8n-manager.test.ts to expect new consolidated\ntool counts (7/12/19) after v2.26.0 tool consolidation.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-25T18:39:00+01:00",
-          "tree_id": "a53dcf4b08f889d1e23f3c820e3820fde0b8db8a",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/ff69e4cccaf0008107072bfeda245b0dfec14c7c"
-        },
-        "date": 1764092468869,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7b15b8c5dd7dd385d4db61ebb56c3b840f7ca1e5"
         },
         "date": 1768847293909,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "50d5370bf3919e953f05594937d3f84817b02484",
+          "message": "Merge pull request #9 from markmocasa-boop/claude/n8n-funnel-reporting-workflow-tDIl2\n\nfeat: add Funnel & Conversion Reporting workflow (weekly)",
+          "timestamp": "2026-01-21T14:09:33+01:00",
+          "tree_id": "0d44c4ccaa422e172108dfbfc4355a62d53d36d0",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/50d5370bf3919e953f05594937d3f84817b02484"
+        },
+        "date": 1769001088597,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
