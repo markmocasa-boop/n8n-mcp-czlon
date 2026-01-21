@@ -1,0 +1,484 @@
+{
+  "name": "2. Funnel- & Conversion-Reporting (Weekly)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Monday 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "Triggers every Monday at 09:00 Europe/Berlin timezone"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// DATE RANGE CALCULATION\n// Calculates the last complete week (Mon-Sun)\n// ========================================\n\nconst now = new Date();\n\n// Find last Monday (start of last complete week)\nconst dayOfWeek = now.getDay();\nconst daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;\nconst daysToStartOfLastWeek = daysToLastMonday + 7;\n\nconst lastWeekStart = new Date(now);\nlastWeekStart.setDate(now.getDate() - daysToStartOfLastWeek);\nlastWeekStart.setHours(0, 0, 0, 0);\n\n// Last Sunday (end of last complete week)\nconst lastWeekEnd = new Date(lastWeekStart);\nlastWeekEnd.setDate(lastWeekStart.getDate() + 6);\nlastWeekEnd.setHours(23, 59, 59, 999);\n\n// Format dates for APIs\nconst formatDate = (d) => d.toISOString().split('T')[0];\n\nconst startDate = formatDate(lastWeekStart);\nconst endDate = formatDate(lastWeekEnd);\n\n// Get workflow variables (set these in n8n workflow settings)\nconst gscSiteUrl = $env.GSC_SITE_URL || 'https://example.com/';\nconst ga4PropertyId = $env.GA4_PROPERTY_ID || '123456789';\nconst slackChannel = $env.SLACK_CHANNEL || '#marketing-reports';\nconst reportRecipient = $env.REPORT_RECIPIENT || 'team@example.com';\nconst enableSlack = $env.ENABLE_SLACK !== 'false';\nconst enableEmail = $env.ENABLE_EMAIL !== 'false';\nconst enableSheets = $env.ENABLE_SHEETS === 'true';\n\nreturn {\n  startDate,\n  endDate,\n  dateRange: `${startDate} bis ${endDate}`,\n  gscSiteUrl,\n  ga4PropertyId,\n  slackChannel,\n  reportRecipient,\n  enableSlack,\n  enableEmail,\n  enableSheets,\n  weekNumber: getWeekNumber(lastWeekStart)\n};\n\nfunction getWeekNumber(d) {\n  const onejan = new Date(d.getFullYear(), 0, 1);\n  return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);\n}"
+      },
+      "id": "date-range-calc",
+      "name": "Calculate Date Range",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "notes": "Calculates last complete week dates and loads environment variables"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.gscSiteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $json.startDate }}\",\n  \"endDate\": \"{{ $json.endDate }}\",\n  \"dimensions\": [\"device\", \"page\"],\n  \"rowLimit\": 1000,\n  \"aggregationType\": \"auto\"\n}",
+        "options": {}
+      },
+      "id": "gsc-request",
+      "name": "GSC Search Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, -100],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH_CREDENTIAL_ID",
+          "name": "Google OAuth2 (GSC)"
+        }
+      },
+      "notes": "Fetches click, impression, CTR data from Google Search Console"
+    },
+    {
+      "parameters": {
+        "operation": "report",
+        "propertyId": "={{ $('Calculate Date Range').item.json.ga4PropertyId }}",
+        "dateRange": "custom",
+        "startDate": "={{ $('Calculate Date Range').item.json.startDate }}",
+        "endDate": "={{ $('Calculate Date Range').item.json.endDate }}",
+        "metricsGA4": {
+          "metricValues": [
+            { "name": "sessions" },
+            { "name": "screenPageViews" },
+            { "name": "ecommerce:itemViews" },
+            { "name": "addToCarts" },
+            { "name": "checkouts" },
+            { "name": "purchases" },
+            { "name": "totalRevenue" },
+            { "name": "advertiserAdCost" },
+            { "name": "advertiserAdClicks" }
+          ]
+        },
+        "dimensionsGA4": {
+          "dimensionValues": [
+            { "name": "deviceCategory" },
+            { "name": "sessionDefaultChannelGroup" },
+            { "name": "landingPage" }
+          ]
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "ga4-report",
+      "name": "GA4 Funnel Report",
+      "type": "n8n-nodes-base.googleAnalytics",
+      "typeVersion": 2,
+      "position": [440, 100],
+      "credentials": {
+        "googleAnalyticsOAuth2Api": {
+          "id": "GA4_OAUTH_CREDENTIAL_ID",
+          "name": "Google Analytics OAuth2"
+        }
+      },
+      "notes": "Fetches funnel metrics from GA4: sessions, views, checkouts, purchases with device/channel splits"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// FUNNEL KPI CALCULATION & REPORT GENERATION\n// ========================================\n\n// Get input data\nconst dateConfig = $('Calculate Date Range').first().json;\nconst gscData = $('GSC Search Analytics').first().json;\nconst ga4Data = $('GA4 Funnel Report').all();\n\n// ========================================\n// 1. PROCESS GSC DATA\n// ========================================\nlet gscMetrics = {\n  totalClicks: 0,\n  totalImpressions: 0,\n  totalCtr: 0,\n  byDevice: {},\n  topPages: []\n};\n\nif (gscData && gscData.rows) {\n  // Aggregate totals\n  gscData.rows.forEach(row => {\n    gscMetrics.totalClicks += row.clicks || 0;\n    gscMetrics.totalImpressions += row.impressions || 0;\n    \n    // By device\n    const device = row.keys[0] || 'unknown';\n    if (!gscMetrics.byDevice[device]) {\n      gscMetrics.byDevice[device] = { clicks: 0, impressions: 0 };\n    }\n    gscMetrics.byDevice[device].clicks += row.clicks || 0;\n    gscMetrics.byDevice[device].impressions += row.impressions || 0;\n  });\n  \n  // Calculate CTRs\n  gscMetrics.totalCtr = gscMetrics.totalImpressions > 0 \n    ? (gscMetrics.totalClicks / gscMetrics.totalImpressions * 100).toFixed(2) \n    : 0;\n  \n  Object.keys(gscMetrics.byDevice).forEach(device => {\n    const d = gscMetrics.byDevice[device];\n    d.ctr = d.impressions > 0 ? (d.clicks / d.impressions * 100).toFixed(2) : 0;\n  });\n  \n  // Top pages by clicks\n  const pageMap = {};\n  gscData.rows.forEach(row => {\n    const page = row.keys[1] || 'unknown';\n    if (!pageMap[page]) pageMap[page] = { clicks: 0, impressions: 0 };\n    pageMap[page].clicks += row.clicks || 0;\n    pageMap[page].impressions += row.impressions || 0;\n  });\n  gscMetrics.topPages = Object.entries(pageMap)\n    .map(([page, data]) => ({ page, ...data, ctr: data.impressions > 0 ? (data.clicks / data.impressions * 100).toFixed(2) : 0 }))\n    .sort((a, b) => b.clicks - a.clicks)\n    .slice(0, 5);\n}\n\n// ========================================\n// 2. PROCESS GA4 DATA\n// ========================================\nlet ga4Metrics = {\n  total: {\n    sessions: 0,\n    pageViews: 0,\n    itemViews: 0,\n    addToCarts: 0,\n    checkouts: 0,\n    purchases: 0,\n    revenue: 0,\n    adCost: 0,\n    adClicks: 0\n  },\n  byDevice: {},\n  byChannel: {},\n  byLandingPage: {}\n};\n\n// Map GA4 metric names\nconst metricMapping = {\n  'sessions': 'sessions',\n  'screenPageViews': 'pageViews',\n  'itemViews': 'itemViews',\n  'addToCarts': 'addToCarts',\n  'checkouts': 'checkouts',\n  'purchases': 'purchases',\n  'totalRevenue': 'revenue',\n  'advertiserAdCost': 'adCost',\n  'advertiserAdClicks': 'adClicks'\n};\n\nga4Data.forEach(row => {\n  const device = row.json.deviceCategory || 'unknown';\n  const channel = row.json.sessionDefaultChannelGroup || 'unknown';\n  const landingPage = row.json.landingPage || 'unknown';\n  \n  // Initialize device/channel buckets\n  if (!ga4Metrics.byDevice[device]) {\n    ga4Metrics.byDevice[device] = { sessions: 0, itemViews: 0, addToCarts: 0, checkouts: 0, purchases: 0, revenue: 0 };\n  }\n  if (!ga4Metrics.byChannel[channel]) {\n    ga4Metrics.byChannel[channel] = { sessions: 0, itemViews: 0, addToCarts: 0, checkouts: 0, purchases: 0, revenue: 0 };\n  }\n  if (!ga4Metrics.byLandingPage[landingPage]) {\n    ga4Metrics.byLandingPage[landingPage] = { sessions: 0, checkouts: 0, purchases: 0 };\n  }\n  \n  // Aggregate metrics\n  const sessions = parseFloat(row.json.sessions) || 0;\n  const pageViews = parseFloat(row.json.screenPageViews) || 0;\n  const itemViews = parseFloat(row.json.itemViews || row.json['ecommerce:itemViews']) || 0;\n  const addToCarts = parseFloat(row.json.addToCarts) || 0;\n  const checkouts = parseFloat(row.json.checkouts) || 0;\n  const purchases = parseFloat(row.json.purchases) || 0;\n  const revenue = parseFloat(row.json.totalRevenue) || 0;\n  const adCost = parseFloat(row.json.advertiserAdCost) || 0;\n  const adClicks = parseFloat(row.json.advertiserAdClicks) || 0;\n  \n  // Add to totals\n  ga4Metrics.total.sessions += sessions;\n  ga4Metrics.total.pageViews += pageViews;\n  ga4Metrics.total.itemViews += itemViews;\n  ga4Metrics.total.addToCarts += addToCarts;\n  ga4Metrics.total.checkouts += checkouts;\n  ga4Metrics.total.purchases += purchases;\n  ga4Metrics.total.revenue += revenue;\n  ga4Metrics.total.adCost += adCost;\n  ga4Metrics.total.adClicks += adClicks;\n  \n  // By device\n  ga4Metrics.byDevice[device].sessions += sessions;\n  ga4Metrics.byDevice[device].itemViews += itemViews;\n  ga4Metrics.byDevice[device].addToCarts += addToCarts;\n  ga4Metrics.byDevice[device].checkouts += checkouts;\n  ga4Metrics.byDevice[device].purchases += purchases;\n  ga4Metrics.byDevice[device].revenue += revenue;\n  \n  // By channel\n  ga4Metrics.byChannel[channel].sessions += sessions;\n  ga4Metrics.byChannel[channel].itemViews += itemViews;\n  ga4Metrics.byChannel[channel].addToCarts += addToCarts;\n  ga4Metrics.byChannel[channel].checkouts += checkouts;\n  ga4Metrics.byChannel[channel].purchases += purchases;\n  ga4Metrics.byChannel[channel].revenue += revenue;\n  \n  // By landing page\n  ga4Metrics.byLandingPage[landingPage].sessions += sessions;\n  ga4Metrics.byLandingPage[landingPage].checkouts += checkouts;\n  ga4Metrics.byLandingPage[landingPage].purchases += purchases;\n});\n\n// ========================================\n// 3. CALCULATE KPIs\n// ========================================\nconst t = ga4Metrics.total;\n\n// CPC (Cost per Click) - nur wenn Kosten vorhanden\nconst cpc = t.adCost > 0 && t.adClicks > 0 \n  ? (t.adCost / t.adClicks).toFixed(2) \n  : null;\nconst cpcAvailable = cpc !== null;\n\n// Landing Page Conversion Rate (LP-CR)\n// Definition: Checkouts / Sessions (wie viele Sessions führen zum Checkout)\nconst lpCr = t.sessions > 0 \n  ? (t.checkouts / t.sessions * 100).toFixed(2) \n  : 0;\n\n// Checkout Conversion Rate (Checkout-CR)\n// Definition: Purchases / Checkouts\nconst checkoutCr = t.checkouts > 0 \n  ? (t.purchases / t.checkouts * 100).toFixed(2) \n  : 0;\n\n// Product Page to Checkout Rate\nconst productToCheckoutRate = t.itemViews > 0 \n  ? (t.checkouts / t.itemViews * 100).toFixed(2) \n  : 0;\n\n// Abbruchraten (Drop-off Rates)\n// Produktseiten-Abbruch: 1 - (Checkouts / ItemViews)\nconst productDropOff = t.itemViews > 0 \n  ? ((1 - t.checkouts / t.itemViews) * 100).toFixed(2) \n  : 0;\n\n// Checkout-Abbruch: 1 - (Purchases / Checkouts)\nconst checkoutDropOff = t.checkouts > 0 \n  ? ((1 - t.purchases / t.checkouts) * 100).toFixed(2) \n  : 0;\n\n// Add-to-Cart Rate (wenn vorhanden)\nconst addToCartRate = t.itemViews > 0 && t.addToCarts > 0\n  ? (t.addToCarts / t.itemViews * 100).toFixed(2)\n  : null;\n\n// ========================================\n// 4. DECISION LOGIC - Where is the leak?\n// ========================================\nconst issues = [];\nconst recommendations = [];\n\n// CTR Analysis (GSC)\nconst ctrValue = parseFloat(gscMetrics.totalCtr);\nif (ctrValue < 2.0) {\n  issues.push({ area: 'CTR', severity: 'high', value: ctrValue + '%' });\n  recommendations.push('🎯 **CTR niedrig (<2%)**: Meta-Titles und Descriptions optimieren, strukturierte Daten prüfen, Featured Snippets anstreben');\n} else if (ctrValue < 4.0) {\n  issues.push({ area: 'CTR', severity: 'medium', value: ctrValue + '%' });\n  recommendations.push('📊 **CTR verbesserungswürdig**: A/B-Tests für Titles durchführen, emotionale Trigger einbauen');\n}\n\n// LP-CR Analysis\nconst lpCrValue = parseFloat(lpCr);\nif (lpCrValue < 2.0) {\n  issues.push({ area: 'LP-CR', severity: 'high', value: lpCr + '%' });\n  recommendations.push('🚨 **LP-CR kritisch niedrig (<2%)**: Landingpage komplett überarbeiten - Ladezeit, Above-the-fold, CTA, Message Match prüfen');\n} else if (lpCrValue < 5.0) {\n  issues.push({ area: 'LP-CR', severity: 'medium', value: lpCr + '%' });\n  recommendations.push('📄 **LP-CR verbesserungswürdig**: Heatmaps analysieren, Trust-Elemente hinzufügen, CTA-Positionen testen');\n}\n\n// Product Page Drop-off\nconst productDropOffValue = parseFloat(productDropOff);\nif (productDropOffValue > 90) {\n  issues.push({ area: 'Produktseite', severity: 'high', value: productDropOff + '% Abbruch' });\n  recommendations.push('🛍️ **Produktseiten-Abbruch sehr hoch (>90%)**: Offer/Preis überprüfen, Produktbilder verbessern, Versandkosten früher zeigen, Trust-Badges hinzufügen');\n} else if (productDropOffValue > 80) {\n  issues.push({ area: 'Produktseite', severity: 'medium', value: productDropOff + '% Abbruch' });\n  recommendations.push('📦 **Produktseiten-Abbruch hoch**: Social Proof verstärken, Produktbeschreibungen optimieren, Zoom/Video hinzufügen');\n}\n\n// Checkout Drop-off\nconst checkoutDropOffValue = parseFloat(checkoutDropOff);\nif (checkoutDropOffValue > 80) {\n  issues.push({ area: 'Checkout', severity: 'high', value: checkoutDropOff + '% Abbruch' });\n  recommendations.push('💳 **Checkout-Abbruch kritisch (>80%)**: Checkout-Prozess vereinfachen, Zahlungsmethoden erweitern, Gast-Checkout ermöglichen, versteckte Kosten eliminieren');\n} else if (checkoutDropOffValue > 60) {\n  issues.push({ area: 'Checkout', severity: 'medium', value: checkoutDropOff + '% Abbruch' });\n  recommendations.push('🛒 **Checkout-Abbruch hoch**: Progress-Indicator hinzufügen, Formularfelder reduzieren, Abandoned Cart Emails einrichten');\n}\n\n// Determine biggest leak\nlet biggestLeak = 'Keine kritischen Probleme identifiziert';\nlet optimizationFocus = 'Allgemeine Optimierung';\n\nconst highIssues = issues.filter(i => i.severity === 'high');\nif (highIssues.length > 0) {\n  const leakMap = {\n    'CTR': { leak: 'Suchmaschinen-Sichtbarkeit (CTR)', focus: 'Creatives/Meta-Daten' },\n    'LP-CR': { leak: 'Landingpage-Conversion', focus: 'Landingpage' },\n    'Produktseite': { leak: 'Produktseiten-Performance', focus: 'Offer/Produktseite' },\n    'Checkout': { leak: 'Checkout-Prozess', focus: 'Checkout' }\n  };\n  const firstHighIssue = highIssues[0];\n  biggestLeak = leakMap[firstHighIssue.area]?.leak || firstHighIssue.area;\n  optimizationFocus = leakMap[firstHighIssue.area]?.focus || 'Allgemein';\n}\n\n// Top 3 Recommendations\nconst top3Recommendations = recommendations.slice(0, 3);\nif (top3Recommendations.length === 0) {\n  top3Recommendations.push('✅ Alle KPIs im grünen Bereich - Fokus auf Skalierung und A/B-Tests für inkrementelle Verbesserungen');\n}\n\n// ========================================\n// 5. BUILD DEVICE SPLIT TABLE\n// ========================================\nlet deviceTable = '| Device | Sessions | Checkouts | Purchases | LP-CR | Checkout-CR |\\n';\ndeviceTable += '|--------|----------|-----------|-----------|-------|-------------|\\n';\n\nObject.entries(ga4Metrics.byDevice).forEach(([device, data]) => {\n  const deviceLpCr = data.sessions > 0 ? (data.checkouts / data.sessions * 100).toFixed(1) : '0.0';\n  const deviceCheckoutCr = data.checkouts > 0 ? (data.purchases / data.checkouts * 100).toFixed(1) : '0.0';\n  deviceTable += `| ${device} | ${Math.round(data.sessions)} | ${Math.round(data.checkouts)} | ${Math.round(data.purchases)} | ${deviceLpCr}% | ${deviceCheckoutCr}% |\\n`;\n});\n\n// ========================================\n// 6. BUILD TRAFFIC SPLIT TABLE\n// ========================================\nlet trafficTable = '| Channel | Sessions | Checkouts | Purchases | LP-CR | Checkout-CR |\\n';\ntrafficTable += '|---------|----------|-----------|-----------|-------|-------------|\\n';\n\nconst sortedChannels = Object.entries(ga4Metrics.byChannel)\n  .sort((a, b) => b[1].sessions - a[1].sessions)\n  .slice(0, 10);\n\nsortedChannels.forEach(([channel, data]) => {\n  const channelLpCr = data.sessions > 0 ? (data.checkouts / data.sessions * 100).toFixed(1) : '0.0';\n  const channelCheckoutCr = data.checkouts > 0 ? (data.purchases / data.checkouts * 100).toFixed(1) : '0.0';\n  trafficTable += `| ${channel} | ${Math.round(data.sessions)} | ${Math.round(data.checkouts)} | ${Math.round(data.purchases)} | ${channelLpCr}% | ${channelCheckoutCr}% |\\n`;\n});\n\n// ========================================\n// 7. TOP LANDING PAGES BY WORST CR\n// ========================================\nlet worstLpTable = '';\nconst landingPages = Object.entries(ga4Metrics.byLandingPage)\n  .filter(([_, data]) => data.sessions >= 10) // Mindestens 10 Sessions\n  .map(([page, data]) => ({\n    page: page.length > 50 ? page.substring(0, 47) + '...' : page,\n    sessions: data.sessions,\n    checkouts: data.checkouts,\n    lpCr: data.sessions > 0 ? (data.checkouts / data.sessions * 100) : 0\n  }))\n  .sort((a, b) => a.lpCr - b.lpCr)\n  .slice(0, 5);\n\nif (landingPages.length > 0) {\n  worstLpTable = '| Landingpage | Sessions | Checkouts | LP-CR |\\n';\n  worstLpTable += '|-------------|----------|-----------|-------|\\n';\n  landingPages.forEach(lp => {\n    worstLpTable += `| ${lp.page} | ${Math.round(lp.sessions)} | ${Math.round(lp.checkouts)} | ${lp.lpCr.toFixed(1)}% |\\n`;\n  });\n}\n\n// ========================================\n// 8. GENERATE MARKDOWN REPORT\n// ========================================\nconst report = `# 📊 Funnel & Conversion Report\n\n**Zeitraum:** ${dateConfig.dateRange} (KW ${dateConfig.weekNumber})\n**Erstellt:** ${new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n\n---\n\n## 🎯 KPI-Übersicht\n\n| Metrik | Wert | Status |\n|--------|------|--------|\n| **CTR (GSC)** | ${gscMetrics.totalCtr}% | ${ctrValue >= 4 ? '🟢' : ctrValue >= 2 ? '🟡' : '🔴'} |\n| **CPC** | ${cpcAvailable ? cpc + ' €' : '⚠️ nicht verfügbar'} | ${cpcAvailable ? '📊' : '❓'} |\n| **LP-CR** | ${lpCr}% | ${lpCrValue >= 5 ? '🟢' : lpCrValue >= 2 ? '🟡' : '🔴'} |\n| **Checkout-CR** | ${checkoutCr}% | ${parseFloat(checkoutCr) >= 40 ? '🟢' : parseFloat(checkoutCr) >= 20 ? '🟡' : '🔴'} |\n\n${!cpcAvailable ? '> ⚠️ **CPC nicht verfügbar:** Keine Kosten-/Klickdaten in GA4. Für CPC-Tracking Google Ads mit GA4 verknüpfen.\\n' : ''}\n\n---\n\n## 📉 Abbruchraten (Drop-off)\n\n| Funnel-Schritt | Abbruchrate | Bewertung |\n|----------------|-------------|------------|\n| **Produktseite → Checkout** | ${productDropOff}% | ${productDropOffValue <= 80 ? '🟢' : productDropOffValue <= 90 ? '🟡' : '🔴'} |\n| **Checkout → Kauf** | ${checkoutDropOff}% | ${checkoutDropOffValue <= 60 ? '🟢' : checkoutDropOffValue <= 80 ? '🟡' : '🔴'} |\n${addToCartRate ? `| **Add-to-Cart Rate** | ${addToCartRate}% | 📊 |\\n` : ''}\n\n---\n\n## 📱 Device-Split\n\n${deviceTable}\n\n---\n\n## 🚦 Traffic-Split (Top 10 Channels)\n\n${trafficTable}\n\n---\n\n## 🚨 Biggest Leak & Empfehlung\n\n**Größtes Problem:** ${biggestLeak}\n\n**Empfohlener Optimierungsfokus:** ${optimizationFocus}\n\n### Next Actions:\n\n${top3Recommendations.map((r, i) => `${i + 1}. ${r}`).join('\\n\\n')}\n\n---\n\n${worstLpTable ? `## 📄 Top 5 Landingpages mit schlechtester CR (min. 10 Sessions)\\n\\n${worstLpTable}\\n\\n---\\n` : ''}\n\n## 📈 Rohdaten-Zusammenfassung\n\n**GSC:**\n- Impressions: ${gscMetrics.totalImpressions.toLocaleString('de-DE')}\n- Clicks: ${gscMetrics.totalClicks.toLocaleString('de-DE')}\n\n**GA4:**\n- Sessions: ${Math.round(t.sessions).toLocaleString('de-DE')}\n- Page Views: ${Math.round(t.pageViews).toLocaleString('de-DE')}\n- Item Views: ${Math.round(t.itemViews).toLocaleString('de-DE')}\n- Checkouts: ${Math.round(t.checkouts).toLocaleString('de-DE')}\n- Purchases: ${Math.round(t.purchases).toLocaleString('de-DE')}\n- Revenue: ${t.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}\n\n---\n\n*Dieser Report wurde automatisch generiert. Bei Fragen wenden Sie sich an das Marketing-Team.*\n`;\n\n// ========================================\n// 9. PREPARE OUTPUT FOR DOWNSTREAM NODES\n// ========================================\nreturn {\n  report,\n  reportPlainText: report.replace(/[#*|`]/g, '').replace(/---/g, '\\n'),\n  kpis: {\n    ctr: gscMetrics.totalCtr,\n    cpc,\n    lpCr,\n    checkoutCr,\n    productDropOff,\n    checkoutDropOff\n  },\n  raw: {\n    gsc: gscMetrics,\n    ga4: ga4Metrics.total\n  },\n  config: dateConfig,\n  biggestLeak,\n  optimizationFocus,\n  recommendations: top3Recommendations,\n  sheetsRow: [\n    dateConfig.startDate,\n    dateConfig.endDate,\n    gscMetrics.totalCtr,\n    cpc || '',\n    lpCr,\n    checkoutCr,\n    productDropOff,\n    checkoutDropOff,\n    Math.round(t.sessions),\n    Math.round(t.purchases),\n    t.revenue.toFixed(2),\n    biggestLeak,\n    optimizationFocus\n  ]\n};"
+      },
+      "id": "kpi-calculation",
+      "name": "Calculate KPIs & Generate Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "notes": "Processes GSC + GA4 data, calculates KPIs, determines biggest leak, generates Markdown report"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "sheets-condition",
+              "leftValue": "={{ $('Calculate Date Range').item.json.enableSheets }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-sheets-enabled",
+      "name": "IF Sheets Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Funnel KPIs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Start Date": "={{ $json.sheetsRow[0] }}",
+            "End Date": "={{ $json.sheetsRow[1] }}",
+            "CTR %": "={{ $json.sheetsRow[2] }}",
+            "CPC": "={{ $json.sheetsRow[3] }}",
+            "LP-CR %": "={{ $json.sheetsRow[4] }}",
+            "Checkout-CR %": "={{ $json.sheetsRow[5] }}",
+            "Product Drop-off %": "={{ $json.sheetsRow[6] }}",
+            "Checkout Drop-off %": "={{ $json.sheetsRow[7] }}",
+            "Sessions": "={{ $json.sheetsRow[8] }}",
+            "Purchases": "={{ $json.sheetsRow[9] }}",
+            "Revenue": "={{ $json.sheetsRow[10] }}",
+            "Biggest Leak": "={{ $json.sheetsRow[11] }}",
+            "Optimization Focus": "={{ $json.sheetsRow[12] }}"
+          },
+          "matchingColumns": ["Start Date"],
+          "schema": [
+            { "id": "Start Date", "displayName": "Start Date", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "End Date", "displayName": "End Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "CTR %", "displayName": "CTR %", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "CPC", "displayName": "CPC", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "LP-CR %", "displayName": "LP-CR %", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Checkout-CR %", "displayName": "Checkout-CR %", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Product Drop-off %", "displayName": "Product Drop-off %", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Checkout Drop-off %", "displayName": "Checkout Drop-off %", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Sessions", "displayName": "Sessions", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Purchases", "displayName": "Purchases", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Revenue", "displayName": "Revenue", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Biggest Leak", "displayName": "Biggest Leak", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Optimization Focus", "displayName": "Optimization Focus", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {}
+      },
+      "id": "google-sheets-append",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, -100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Optional: Appends KPI data to Google Sheets for historical tracking"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "slack-condition",
+              "leftValue": "={{ $('Calculate Date Range').item.json.enableSlack }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-slack-enabled",
+      "name": "IF Slack Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Calculate Date Range').item.json.slackChannel }}"
+        },
+        "text": "={{ $('Calculate KPIs & Generate Report').item.json.report }}",
+        "otherOptions": {
+          "mrkdwn": true,
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "slack-send",
+      "name": "Send Slack Report",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [1100, 100],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "SLACK_CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      },
+      "notes": "Sends the Markdown report to configured Slack channel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "email-condition",
+              "leftValue": "={{ $('Calculate Date Range').item.json.enableEmail }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-enabled",
+      "name": "IF Email Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM || 'reports@example.com' }}",
+        "toEmail": "={{ $('Calculate Date Range').item.json.reportRecipient }}",
+        "subject": "=📊 Funnel Report KW{{ $('Calculate Date Range').item.json.weekNumber }}: {{ $('Calculate KPIs & Generate Report').item.json.biggestLeak }}",
+        "emailType": "html",
+        "html": "=<html>\n<head>\n<style>\nbody { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }\nh1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }\nh2 { color: #374151; margin-top: 30px; }\ntable { border-collapse: collapse; width: 100%; margin: 15px 0; }\nth, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }\nth { background-color: #f9fafb; font-weight: 600; }\ntr:nth-child(even) { background-color: #f9fafb; }\n.kpi-good { color: #059669; }\n.kpi-warning { color: #d97706; }\n.kpi-bad { color: #dc2626; }\n.recommendation { background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 10px 0; }\n.footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 0.9em; color: #6b7280; }\n</style>\n</head>\n<body>\n<h1>📊 Funnel & Conversion Report</h1>\n<p><strong>Zeitraum:</strong> {{ $('Calculate Date Range').item.json.dateRange }} (KW {{ $('Calculate Date Range').item.json.weekNumber }})</p>\n\n<h2>🎯 KPI-Übersicht</h2>\n<table>\n<tr><th>Metrik</th><th>Wert</th></tr>\n<tr><td>CTR (GSC)</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.ctr }}%</td></tr>\n<tr><td>CPC</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.cpc ? $('Calculate KPIs & Generate Report').item.json.kpis.cpc + ' €' : 'nicht verfügbar' }}</td></tr>\n<tr><td>LP-CR</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.lpCr }}%</td></tr>\n<tr><td>Checkout-CR</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.checkoutCr }}%</td></tr>\n</table>\n\n<h2>📉 Abbruchraten</h2>\n<table>\n<tr><th>Funnel-Schritt</th><th>Abbruchrate</th></tr>\n<tr><td>Produktseite → Checkout</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.productDropOff }}%</td></tr>\n<tr><td>Checkout → Kauf</td><td>{{ $('Calculate KPIs & Generate Report').item.json.kpis.checkoutDropOff }}%</td></tr>\n</table>\n\n<h2>🚨 Optimierungsempfehlung</h2>\n<div class=\"recommendation\">\n<p><strong>Größtes Problem:</strong> {{ $('Calculate KPIs & Generate Report').item.json.biggestLeak }}</p>\n<p><strong>Fokus:</strong> {{ $('Calculate KPIs & Generate Report').item.json.optimizationFocus }}</p>\n</div>\n\n<div class=\"footer\">\n<p>Dieser Report wurde automatisch generiert. Den vollständigen Report mit Device- und Traffic-Splits finden Sie im Slack-Channel.</p>\n</div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "email-send",
+      "name": "Send Email Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1100, 300],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Credentials"
+        }
+      },
+      "notes": "Sends HTML-formatted email report with KPI summary"
+    },
+    {
+      "parameters": {},
+      "id": "no-op-end",
+      "name": "Workflow Complete",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1320, 100],
+      "notes": "End of workflow - all reports sent"
+    }
+  ],
+  "connections": {
+    "Weekly Monday 09:00": {
+      "main": [
+        [
+          {
+            "node": "Calculate Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Date Range": {
+      "main": [
+        [
+          {
+            "node": "GSC Search Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GA4 Funnel Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GSC Search Analytics": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs & Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4 Funnel Report": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs & Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate KPIs & Generate Report": {
+      "main": [
+        [
+          {
+            "node": "IF Sheets Enabled",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Slack Enabled",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Email Enabled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Sheets Enabled": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Slack Enabled": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Email Enabled": {
+      "main": [
+        [
+          {
+            "node": "Send Email Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Report": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Report": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Marketing",
+      "id": "marketing-tag"
+    },
+    {
+      "name": "Reporting",
+      "id": "reporting-tag"
+    },
+    {
+      "name": "Weekly",
+      "id": "weekly-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}
