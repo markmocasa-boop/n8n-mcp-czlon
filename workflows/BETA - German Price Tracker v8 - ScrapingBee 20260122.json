@@ -641,7 +641,7 @@
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll\"},{\"wait\":1000},{\"click\":\".cc-btn.cc-allow\"},{\"wait\":1000},{\"click\":\"button[data-cookie-consent='accept']\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":5000},{\"evaluate\":\"document.querySelector('#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll, .cc-btn.cc-allow, button[data-cookie-consent=accept], #onetrust-accept-btn-handler')?.click()\"},{\"wait\":2000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             },
             {
               "name": "screenshot",
@@ -1073,7 +1073,7 @@
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#onetrust-accept-btn-handler\"},{\"wait\":1000},{\"click\":\"button[data-testid='cookie-accept-all']\"},{\"wait\":1000},{\"click\":\".cookie-accept-all\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":5000},{\"evaluate\":\"document.querySelector('#onetrust-accept-btn-handler, button[data-testid=cookie-accept-all], .cookie-accept-all, .consent-banner button')?.click()\"},{\"wait\":2000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             }
           ]
         },
@@ -1148,7 +1148,7 @@
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#onetrust-accept-btn-handler\"},{\"wait\":1000},{\"click\":\"button[data-testid='cookie-consent-accept-all']\"},{\"wait\":1000},{\"click\":\".cookie-consent-accept\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":5000},{\"evaluate\":\"document.querySelector('#onetrust-accept-btn-handler, button[data-testid=cookie-consent-accept-all], .cookie-consent-accept, #cookie-consent-accept')?.click()\"},{\"wait\":2000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             }
           ]
         },
@@ -1223,7 +1223,7 @@
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#onetrust-accept-btn-handler\"},{\"wait\":1000},{\"click\":\"button[data-testid='cookie-accept-all']\"},{\"wait\":1000},{\"click\":\".didomi-continue-without-agreeing\"},{\"wait\":1000},{\"click\":\"#didomi-notice-agree-button\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":5000},{\"evaluate\":\"document.querySelector('#onetrust-accept-btn-handler, #didomi-notice-agree-button, .didomi-continue-without-agreeing, button[data-testid=cookie-accept-all]')?.click()\"},{\"wait\":2000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             }
           ]
         },
