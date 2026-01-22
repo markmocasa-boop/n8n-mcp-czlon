@@ -1,0 +1,384 @@
+{
+  "name": "LinkedIn Message Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 7AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.UNIPILE_DSN }}/api/v1/accounts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-accounts",
+      "name": "Get Unipile Accounts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "UNIPILE_CREDENTIALS_ID",
+          "name": "Unipile API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.UNIPILE_DSN }}/api/v1/chats",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "account_type",
+              "value": "LINKEDIN"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-chats",
+      "name": "Get LinkedIn Chats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "UNIPILE_CREDENTIALS_ID",
+          "name": "Unipile API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-chats",
+      "name": "Loop Over Chats",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.UNIPILE_DSN }}/api/v1/chats/{{ $json.id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-messages",
+      "name": "Get Chat Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "UNIPILE_CREDENTIALS_ID",
+          "name": "Unipile API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get chat info and messages from previous nodes\nconst chatData = $('Loop Over Chats').first().json;\nconst messagesResponse = $input.first().json;\nconst messages = messagesResponse.items || messagesResponse.data || [];\n\n// Get account info to identify \"me\"\nconst accounts = $('Get Unipile Accounts').first().json;\nconst linkedInAccount = (accounts.items || accounts.data || []).find(a => a.type === 'LINKEDIN');\nconst myAccountId = linkedInAccount?.id;\n\nif (!messages.length) {\n  return [{ json: { skip: true } }];\n}\n\n// Sort messages by date (newest first)\nconst sortedMessages = messages.sort((a, b) => \n  new Date(b.timestamp || b.created_at || b.date) - new Date(a.timestamp || a.created_at || a.date)\n);\n\nconst lastMessage = sortedMessages[0];\nconst lastMessageDate = new Date(lastMessage.timestamp || lastMessage.created_at || lastMessage.date);\nconst now = new Date();\nconst daysSinceLastMessage = (now - lastMessageDate) / (1000 * 60 * 60 * 24);\n\n// Check if the last message was sent by me\nconst lastMessageFromMe = lastMessage.sender_id === myAccountId || \n                          lastMessage.is_sender === true ||\n                          lastMessage.direction === 'outbound';\n\n// Filter: 3-8 days old and sent by me (waiting for response)\nif (lastMessageFromMe && daysSinceLastMessage >= 3 && daysSinceLastMessage <= 8) {\n  // Get attendee/contact name\n  const attendees = chatData.attendees || [];\n  const contactName = attendees\n    .filter(a => a.id !== myAccountId)\n    .map(a => a.name || a.display_name || 'Unknown')\n    .join(', ') || chatData.name || 'Unknown Contact';\n  \n  return [{\n    json: {\n      chatId: chatData.id,\n      contactName: contactName,\n      lastMessageDate: lastMessageDate.toISOString(),\n      daysSinceLastMessage: Math.floor(daysSinceLastMessage),\n      lastMessagePreview: (lastMessage.text || lastMessage.body || '').substring(0, 100),\n      profileUrl: chatData.provider_url || `https://www.linkedin.com/messaging/thread/${chatData.provider_id || chatData.id}`\n    }\n  }];\n}\n\nreturn [{ json: { skip: true } }];"
+      },
+      "id": "filter-messages",
+      "name": "Filter Unanswered (3-8 days)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-not-skip",
+      "name": "If Not Skipped",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "unansweredChats",
+        "options": {}
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const chats = $input.first().json.unansweredChats || [];\n\nif (chats.length === 0) {\n  return [{ json: { hasResults: false, emailBody: '' } }];\n}\n\n// Build email HTML\nlet emailBody = `\n<h2>LinkedIn Nachrichten - Erinnerung</h2>\n<p>Die folgenden Kontakte haben seit 3-8 Tagen nicht auf Ihre Nachricht geantwortet:</p>\n<table style=\"border-collapse: collapse; width: 100%;\">\n  <tr style=\"background-color: #0077B5; color: white;\">\n    <th style=\"padding: 10px; text-align: left;\">Kontakt</th>\n    <th style=\"padding: 10px; text-align: left;\">Tage ohne Antwort</th>\n    <th style=\"padding: 10px; text-align: left;\">Letzte Nachricht</th>\n    <th style=\"padding: 10px; text-align: left;\">Vorschau</th>\n  </tr>\n`;\n\nchats.forEach((chat, index) => {\n  const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';\n  emailBody += `\n  <tr style=\"background-color: ${bgColor};\">\n    <td style=\"padding: 10px; border-bottom: 1px solid #ddd;\">\n      <a href=\"${chat.profileUrl}\" style=\"color: #0077B5;\">${chat.contactName}</a>\n    </td>\n    <td style=\"padding: 10px; border-bottom: 1px solid #ddd;\">${chat.daysSinceLastMessage} Tage</td>\n    <td style=\"padding: 10px; border-bottom: 1px solid #ddd;\">${new Date(chat.lastMessageDate).toLocaleDateString('de-DE')}</td>\n    <td style=\"padding: 10px; border-bottom: 1px solid #ddd; font-style: italic;\">${chat.lastMessagePreview}...</td>\n  </tr>\n`;\n});\n\nemailBody += `\n</table>\n<p style=\"margin-top: 20px; color: #666;\">Generiert am ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')}</p>\n`;\n\nreturn [{\n  json: {\n    hasResults: true,\n    emailBody: emailBody,\n    totalCount: chats.length,\n    subject: `LinkedIn: ${chats.length} unbeantwortete Nachricht${chats.length > 1 ? 'en' : ''} (3-8 Tage)`\n  }\n}];"
+      },
+      "id": "build-email",
+      "name": "Build Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-results",
+              "leftValue": "={{ $json.hasResults }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-results",
+      "name": "If Has Results",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2200, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "send-gmail",
+      "name": "Send Gmail Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2420, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIALS_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-action",
+      "name": "No Unanswered Messages",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2420, 100]
+    }
+  ],
+  "connections": {
+    "Daily 7AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Unipile Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unipile Accounts": {
+      "main": [
+        [
+          {
+            "node": "Get LinkedIn Chats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get LinkedIn Chats": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Chats": {
+      "main": [
+        [
+          {
+            "node": "Get Chat Messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chat Messages": {
+      "main": [
+        [
+          {
+            "node": "Filter Unanswered (3-8 days)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Unanswered (3-8 days)": {
+      "main": [
+        [
+          {
+            "node": "If Not Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Not Skipped": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chats",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Chats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Build Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email Content": {
+      "main": [
+        [
+          {
+            "node": "If Has Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Results": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Unanswered Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": [
+    {
+      "name": "LinkedIn",
+      "id": "linkedin"
+    },
+    {
+      "name": "Monitoring",
+      "id": "monitoring"
+    }
+  ]
+}
