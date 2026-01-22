@@ -1219,11 +1219,11 @@
             },
             {
               "name": "window_height",
-              "value": "1080"
+              "value": "2160"
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#onetrust-accept-btn-handler\"},{\"wait\":1000},{\"click\":\"button[data-testid='cookie-accept-all']\"},{\"wait\":1000},{\"click\":\".didomi-continue-without-agreeing\"},{\"wait\":1000},{\"click\":\"#didomi-notice-agree-button\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             }
           ]
         },
