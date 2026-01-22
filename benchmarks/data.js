@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769084672719,
+  "lastUpdate": 1769096310472,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "bac4936c6d4b1c5675a893f18ba3ffcd2e58dc08",
-          "message": "fix: add n8n 1.121 availableInMCP and callerPolicy settings support (v2.26.4) (#445)\n\n* fix: add n8n 1.121 availableInMCP and callerPolicy settings support (v2.26.4)\n\nn8n 1.121 introduced a new workflow setting `availableInMCP` (boolean)\nthat controls whether a workflow is \"Available in MCP\". The sanitization\nwhitelist was missing this field, causing it to be silently stripped\nduring workflow updates.\n\nChanges:\n- Added `availableInMCP` to Zod schema in workflowSettingsSchema\n- Added `availableInMCP` and `callerPolicy` to safeSettingsProperties whitelist\n- Both settings are now preserved during workflow updates\n- Settings can be toggled via updateSettings operation\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n* test: update tests for callerPolicy and availableInMCP whitelist changes\n\nUpdated 5 tests in n8n-validation.test.ts that expected callerPolicy\nto be filtered out. Since callerPolicy and availableInMCP are now\nwhitelisted (n8n 1.121+), the tests now verify these settings are\npreserved during workflow updates.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-26T20:17:34+01:00",
-          "tree_id": "212b8cc8337c320b7564f184f2f686f1fd60557a",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/bac4936c6d4b1c5675a893f18ba3ffcd2e58dc08"
-        },
-        "date": 1764184761981,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7abc9dc164b6c3f4cee86aaa3b639708d695517f"
         },
         "date": 1769084671966,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dbecfa9c74cd84e25ed6d02b721c2ae709d8ef60",
+          "message": "Merge pull request #12 from markmocasa-boop/claude/linkedin-message-monitoring-vyNbP\n\nfeat: add LinkedIn message monitoring workflow with Unipile API",
+          "timestamp": "2026-01-22T16:36:38+01:00",
+          "tree_id": "6a32a870398d6be56d14c73f260825271eecc0b7",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/dbecfa9c74cd84e25ed6d02b721c2ae709d8ef60"
+        },
+        "date": 1769096310157,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
