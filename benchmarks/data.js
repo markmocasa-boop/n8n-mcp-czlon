@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769066555114,
+  "lastUpdate": 1769084672719,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "25784142fe12ebaebde961f3488577311755cd05",
-          "message": "fix: address tools documentation gaps and outdated references (v2.26.3) (#443)",
-          "timestamp": "2025-11-26T00:57:15+01:00",
-          "tree_id": "adccab663f47aabed599b8585de91aa7a6e955eb",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/25784142fe12ebaebde961f3488577311755cd05"
-        },
-        "date": 1764115140293,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/386fa94289ac7dea5f83df2db76b7bcf9b35683c"
         },
         "date": 1769066554724,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7abc9dc164b6c3f4cee86aaa3b639708d695517f",
+          "message": "Merge pull request #11 from markmocasa-boop/claude/german-price-tracker-yEgwi\n\nClaude/german price tracker y egwi",
+          "timestamp": "2026-01-22T13:22:41+01:00",
+          "tree_id": "ecaf67603b07ce8063bdc49e3ff2d1dd99dafede",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7abc9dc164b6c3f4cee86aaa3b639708d695517f"
+        },
+        "date": 1769084671966,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
