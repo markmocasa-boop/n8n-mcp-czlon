@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## German Price Tracker v8 - ScrapingBee\n\n**NEU: ScrapingBee statt Apify für problematische Shops**\n\n- Lohmeier, Motorland, Agrieuro, Simon-Profi: ScrapingBee\n- Preispiraten: Apify (funktioniert)\n\n**Vorteile ScrapingBee:**\n- JavaScript-Rendering\n- Cloudflare-Bypass\n- Premium Proxies\n\n**WICHTIG:** ScrapingBee API Key in Credentials eintragen!",
+        "content": "## German Price Tracker v9 - ScrapingBee\n\n**NEU: 9 Shops parallel mit ScrapingBee**\n\n**ScrapingBee Shops (Screenshot + AI):**\n- Lohmeier, Motorland, Agrieuro, Simon-Profi\n- Otto, Kaufland, Galaxus, ManoMano\n\n**Apify:**\n- Preispiraten (Aggregator)\n\n**Vorteile ScrapingBee:**\n- JavaScript-Rendering\n- Cloudflare-Bypass\n- Premium Proxies\n\n**WICHTIG:** ScrapingBee API Key in Credentials eintragen!",
         "height": 416,
         "width": 360,
         "color": 5
@@ -224,7 +224,7 @@
     },
     {
       "parameters": {
-        "numberInputs": 5
+        "numberInputs": 9
       },
       "id": "4a8a788e-3e16-4f91-b7dc-7deb1b215056",
       "name": "Merge All",
@@ -954,6 +954,426 @@
     },
     {
       "parameters": {
+        "url": "https://app.scrapingbee.com/api/v1/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "=https://www.otto.de/suche/{{ encodeURIComponent($json.produktname + ' ' + $json.ean) }}/"
+            },
+            {
+              "name": "render_js",
+              "value": "true"
+            },
+            {
+              "name": "premium_proxy",
+              "value": "true"
+            },
+            {
+              "name": "wait",
+              "value": "8000"
+            },
+            {
+              "name": "block_ads",
+              "value": "true"
+            },
+            {
+              "name": "screenshot",
+              "value": "true"
+            },
+            {
+              "name": "screenshot_full_page",
+              "value": "false"
+            },
+            {
+              "name": "window_width",
+              "value": "1920"
+            },
+            {
+              "name": "window_height",
+              "value": "1080"
+            },
+            {
+              "name": "js_scenario",
+              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "otto-scrapingbee-001",
+      "name": "Otto (ScrapingBee)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1200
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "85og68HfIOpCLbf1",
+          "name": "Scraping Bee"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://app.scrapingbee.com/api/v1/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "=https://www.kaufland.de/s/?search_value={{ encodeURIComponent($json.produktname + ' ' + $json.ean) }}"
+            },
+            {
+              "name": "render_js",
+              "value": "true"
+            },
+            {
+              "name": "premium_proxy",
+              "value": "true"
+            },
+            {
+              "name": "wait",
+              "value": "8000"
+            },
+            {
+              "name": "block_ads",
+              "value": "true"
+            },
+            {
+              "name": "screenshot",
+              "value": "true"
+            },
+            {
+              "name": "screenshot_full_page",
+              "value": "false"
+            },
+            {
+              "name": "window_width",
+              "value": "1920"
+            },
+            {
+              "name": "window_height",
+              "value": "1080"
+            },
+            {
+              "name": "js_scenario",
+              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "kaufland-scrapingbee-001",
+      "name": "Kaufland (ScrapingBee)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1392
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "85og68HfIOpCLbf1",
+          "name": "Scraping Bee"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://app.scrapingbee.com/api/v1/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "=https://www.galaxus.de/de/search?q={{ encodeURIComponent($json.produktname + ' ' + $json.ean) }}"
+            },
+            {
+              "name": "render_js",
+              "value": "true"
+            },
+            {
+              "name": "premium_proxy",
+              "value": "true"
+            },
+            {
+              "name": "wait",
+              "value": "8000"
+            },
+            {
+              "name": "block_ads",
+              "value": "true"
+            },
+            {
+              "name": "screenshot",
+              "value": "true"
+            },
+            {
+              "name": "screenshot_full_page",
+              "value": "false"
+            },
+            {
+              "name": "window_width",
+              "value": "1920"
+            },
+            {
+              "name": "window_height",
+              "value": "1080"
+            },
+            {
+              "name": "js_scenario",
+              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "galaxus-scrapingbee-001",
+      "name": "Galaxus (ScrapingBee)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1584
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "85og68HfIOpCLbf1",
+          "name": "Scraping Bee"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://app.scrapingbee.com/api/v1/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "=https://www.manomano.de/suche/{{ encodeURIComponent($json.produktname + ' ' + $json.ean) }}"
+            },
+            {
+              "name": "render_js",
+              "value": "true"
+            },
+            {
+              "name": "premium_proxy",
+              "value": "true"
+            },
+            {
+              "name": "wait",
+              "value": "8000"
+            },
+            {
+              "name": "block_ads",
+              "value": "true"
+            },
+            {
+              "name": "screenshot",
+              "value": "true"
+            },
+            {
+              "name": "screenshot_full_page",
+              "value": "false"
+            },
+            {
+              "name": "window_width",
+              "value": "1920"
+            },
+            {
+              "name": "window_height",
+              "value": "1080"
+            },
+            {
+              "name": "js_scenario",
+              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "manomano-scrapingbee-001",
+      "name": "ManoMano (ScrapingBee)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1776
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "85og68HfIOpCLbf1",
+          "name": "Scraping Bee"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "=Analysiere diesen Screenshot von Otto.de.\n\nGESUCHTES PRODUKT: {{ $('Set Data').item.json.produktname }}\n\nWICHTIG - PREISE LESEN:\n- Der AKTUELLE Preis steht in GROSSER SCHRIFT\n- Durchgestrichene Preise sind ALTE Preise - IGNORIEREN!\n- Lies den Preis EXAKT ab - nicht raten!\n- NUR komplette Motorsaegen (400-2000 Euro), KEINE Zubehoerteile!\n\nAntworte NUR mit JSON:\n{\"gefunden\": true/false, \"shop\": \"Otto\", \"preis\": XXX.XX, \"produkt_gefunden\": \"Name\", \"notiz\": \"...\"}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "ai-otto-001",
+      "name": "AI Otto",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1600,
+        1200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "=Analysiere diesen Screenshot von Kaufland.de.\n\nGESUCHTES PRODUKT: {{ $('Set Data').item.json.produktname }}\n\nWICHTIG - PREISE LESEN:\n- Der AKTUELLE Preis steht in GROSSER SCHRIFT\n- Durchgestrichene Preise sind ALTE Preise - IGNORIEREN!\n- Lies den Preis EXAKT ab - nicht raten!\n- NUR komplette Motorsaegen (400-2000 Euro), KEINE Zubehoerteile!\n\nAntworte NUR mit JSON:\n{\"gefunden\": true/false, \"shop\": \"Kaufland\", \"preis\": XXX.XX, \"produkt_gefunden\": \"Name\", \"notiz\": \"...\"}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "ai-kaufland-001",
+      "name": "AI Kaufland",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1600,
+        1392
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "=Analysiere diesen Screenshot von Galaxus.de.\n\nGESUCHTES PRODUKT: {{ $('Set Data').item.json.produktname }}\n\nWICHTIG - PREISE LESEN:\n- Der AKTUELLE Preis steht in GROSSER SCHRIFT\n- Durchgestrichene Preise sind ALTE Preise - IGNORIEREN!\n- Lies den Preis EXAKT ab - nicht raten!\n- NUR komplette Motorsaegen (400-2000 Euro), KEINE Zubehoerteile!\n\nAntworte NUR mit JSON:\n{\"gefunden\": true/false, \"shop\": \"Galaxus\", \"preis\": XXX.XX, \"produkt_gefunden\": \"Name\", \"notiz\": \"...\"}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "ai-galaxus-001",
+      "name": "AI Galaxus",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1600,
+        1584
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "=Analysiere diesen Screenshot von ManoMano.de.\n\nGESUCHTES PRODUKT: {{ $('Set Data').item.json.produktname }}\n\nWICHTIG - PREISE LESEN:\n- Der AKTUELLE Preis steht in GROSSER SCHRIFT\n- Durchgestrichene Preise sind ALTE Preise - IGNORIEREN!\n- Lies den Preis EXAKT ab - nicht raten!\n- NUR komplette Motorsaegen (400-2000 Euro), KEINE Zubehoerteile!\n\nAntworte NUR mit JSON:\n{\"gefunden\": true/false, \"shop\": \"ManoMano\", \"preis\": XXX.XX, \"produkt_gefunden\": \"Name\", \"notiz\": \"...\"}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "ai-manomano-001",
+      "name": "AI ManoMano",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1600,
+        1776
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
           "value": "1XjSI5pmrXXe3OQvzgBVU7pYp3Ggyl-mBVbMIgpKa9bk",
@@ -1111,6 +1531,26 @@
             "node": "SP (ScrapingBee)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Otto (ScrapingBee)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kaufland (ScrapingBee)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Galaxus (ScrapingBee)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ManoMano (ScrapingBee)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1265,6 +1705,94 @@
             "node": "Merge All",
             "type": "main",
             "index": 4
+          }
+        ]
+      ]
+    },
+    "Otto (ScrapingBee)": {
+      "main": [
+        [
+          {
+            "node": "AI Otto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kaufland (ScrapingBee)": {
+      "main": [
+        [
+          {
+            "node": "AI Kaufland",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Galaxus (ScrapingBee)": {
+      "main": [
+        [
+          {
+            "node": "AI Galaxus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ManoMano (ScrapingBee)": {
+      "main": [
+        [
+          {
+            "node": "AI ManoMano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Otto": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "AI Kaufland": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "AI Galaxus": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "AI ManoMano": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 8
           }
         ]
       ]
