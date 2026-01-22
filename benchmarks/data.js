@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769096310472,
+  "lastUpdate": 1769100007862,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c7e7bda5051b1e3a28ecca2a174a4a82870edc2c",
-          "message": "fix: remove historical migration info from tools documentation (v2.26.5) (#448)\n\n- Remove \"Replaces X, Y, Z...\" sentences from full.description in:\n  - get_node, validate_node, search_templates, n8n_executions, n8n_get_workflow\n- Remove version/issue references from n8n_update_partial_workflow\n- Clean up consolidation comments in index.ts\n- Documentation now starts directly with functional content\n- Estimated token savings: ~128 tokens per full documentation request\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-27T13:50:45+01:00",
-          "tree_id": "58364b70cce2ede7f3441e7f68a55122477feb12",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/c7e7bda5051b1e3a28ecca2a174a4a82870edc2c"
-        },
-        "date": 1764247962585,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/dbecfa9c74cd84e25ed6d02b721c2ae709d8ef60"
         },
         "date": 1769096310157,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be10ff1f577c8f0c8471374b12e62d471ecabef8",
+          "message": "Merge pull request #13 from markmocasa-boop/claude/linkedin-message-monitoring-vyNbP\n\nfeat: add PhantomBuster alternative for LinkedIn message monitoring",
+          "timestamp": "2026-01-22T17:38:20+01:00",
+          "tree_id": "63f15383d7165ad6fa92543226adb745913891b0",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/be10ff1f577c8f0c8471374b12e62d471ecabef8"
+        },
+        "date": 1769100007327,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
