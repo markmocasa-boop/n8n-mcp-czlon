@@ -633,15 +633,15 @@
             },
             {
               "name": "window_width",
-              "value": "1280"
+              "value": "1920"
             },
             {
               "name": "window_height",
-              "value": "800"
+              "value": "2160"
             },
             {
               "name": "js_scenario",
-              "value": "{\"instructions\":[{\"wait\":3000},{\"scroll_y\":400},{\"wait\":2000}]}"
+              "value": "{\"instructions\":[{\"wait\":3000},{\"click\":\"#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll\"},{\"wait\":1000},{\"click\":\".cc-btn.cc-allow\"},{\"wait\":1000},{\"click\":\"button[data-cookie-consent='accept']\"},{\"wait\":1000},{\"scroll_y\":600},{\"wait\":2000},{\"scroll_y\":400},{\"wait\":2000}]}"
             },
             {
               "name": "screenshot",
