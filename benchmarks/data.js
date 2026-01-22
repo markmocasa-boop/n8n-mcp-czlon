@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769001089373,
+  "lastUpdate": 1769065084166,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c974947c84f939475ad0a37c8ca3dfb998921550",
-          "message": "chore: update n8n to 1.121.2 (#441)\n\n* chore: update n8n to 1.121.2 and bump version to 2.26.1\n\n- Updated n8n from 1.120.3 to 1.121.2\n- Updated n8n-core from 1.119.2 to 1.120.1\n- Updated n8n-workflow from 1.117.0 to 1.118.1\n- Updated @n8n/n8n-nodes-langchain from 1.119.1 to 1.120.1\n- Rebuilt node database with 545 nodes (439 from n8n-nodes-base, 106 from @n8n/n8n-nodes-langchain)\n- Updated README badge with new n8n version\n- Updated CHANGELOG with dependency changes\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* chore: expand template database to 2,768 templates\n\n- Added 170 new workflow templates from n8n.io\n- Sanitized 27 templates containing API tokens\n- Updated CHANGELOG with template expansion info\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-25T19:21:26+01:00",
-          "tree_id": "b78a49195d5f03e525c29f33b86a92a70a63bf9a",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/c974947c84f939475ad0a37c8ca3dfb998921550"
-        },
-        "date": 1764095014574,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/50d5370bf3919e953f05594937d3f84817b02484"
         },
         "date": 1769001088597,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "324ae141f1a0065a561b504add4b9ae594c94d7d",
+          "message": "Add files via upload",
+          "timestamp": "2026-01-22T07:56:14+01:00",
+          "tree_id": "514c23c5bf2e3fe086a4ddf50fd4498429f00739",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/324ae141f1a0065a561b504add4b9ae594c94d7d"
+        },
+        "date": 1769065083867,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
