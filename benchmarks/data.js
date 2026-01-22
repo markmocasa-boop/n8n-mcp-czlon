@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769065084166,
+  "lastUpdate": 1769066555114,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "1be06c217f088d6d9a7e273c773fe8ab1e8de7dc",
-          "message": "fix: synchronize tool documentation with v2.26.0 tool consolidation (v2.26.2) (#442)\n\n* fix: synchronize tool documentation with v2.26.0 tool consolidation (v2.26.2)\n\n- Delete 23 obsolete documentation files for removed tools\n- Create consolidated documentation for get_node, validate_node, n8n_executions\n- Update search_templates with all searchModes\n- Update n8n_get_workflow with all modes\n- Fix stale relatedTools references\n- Update tools-documentation.ts overview to reflect 19 consolidated tools\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: address code review - fix remaining stale tool references\n\n- Fix relatedTools in system/tools-documentation.ts (get_node_for_task → search_templates)\n- Fix relatedTools in validation/validate-workflow.ts (remove references to removed tools)\n- Fix relatedTools in n8n-autofix-workflow.ts (remove references to removed tools)\n- Update tools-n8n-friendly.ts with consolidated tools (validate_node, get_node, search_templates)\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: address final code review - fix remaining stale references\n\n- Fix ai-agents-guide.ts: get_node_essentials → get_node, remove list_ai_tools\n- Fix get-template.ts: list_node_templates → search_templates, remove get_templates_for_task\n- Fix n8n-list-workflows.ts: n8n_get_workflow_minimal → n8n_get_workflow, n8n_list_executions → n8n_executions\n- Fix n8n-trigger-webhook-workflow.ts: n8n_get_execution/n8n_list_executions → n8n_executions\n- Fix n8n-delete-workflow.ts: n8n_get_workflow_minimal → n8n_get_workflow, n8n_delete_execution → n8n_executions\n- Fix CHANGELOG date typo: 2025-01-25 → 2025-11-25\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* test: adjust comprehensive docs threshold after tool consolidation\n\nReduce expected character count from 5000 to 4000 in tool-invocation.test.ts\nto account for reduced documentation after v2.26.0 tool consolidation\n(31→19 tools, actual output is ~4645 chars).\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-25T21:28:11+01:00",
-          "tree_id": "985ac102ed667d28285a6fec8838582171744aa1",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/1be06c217f088d6d9a7e273c773fe8ab1e8de7dc"
-        },
-        "date": 1764102788423,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/324ae141f1a0065a561b504add4b9ae594c94d7d"
         },
         "date": 1769065083867,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "386fa94289ac7dea5f83df2db76b7bcf9b35683c",
+          "message": "Merge pull request #10 from markmocasa-boop/claude/german-price-tracker-yEgwi\n\nfeat: add 4 new ScrapingBee shops (Otto, Kaufland, Galaxus, ManoMano)",
+          "timestamp": "2026-01-22T08:20:48+01:00",
+          "tree_id": "a3a12eef1a14ddfef6475c36a49548254e6c5931",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/386fa94289ac7dea5f83df2db76b7bcf9b35683c"
+        },
+        "date": 1769066554724,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
