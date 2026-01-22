@@ -1123,6 +1123,10 @@
               "value": "true"
             },
             {
+              "name": "stealth_proxy",
+              "value": "true"
+            },
+            {
               "name": "wait",
               "value": "8000"
             },
