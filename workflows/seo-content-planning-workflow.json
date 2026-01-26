@@ -1,0 +1,1148 @@
+{
+  "name": "SEO Content Planning - Keyword Research & Content Strategy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "seo-content-planning",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "01 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "seo-content-planning-webhook",
+      "notes": "POST endpoint for SEO content planning. Accepts topic, language, location, and optional parameters."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 02 INPUT VALIDATION\n// Validates required fields and data types\n// ========================================\n\nconst input = $input.first().json;\nconst errors = [];\n\n// Required field: topic\nif (!input.topic || typeof input.topic !== 'string' || input.topic.trim().length < 2) {\n  errors.push('\"topic\" is required and must be a non-empty string (min 2 characters)');\n}\n\n// Validate language (optional, default: de)\nif (input.language && typeof input.language !== 'string') {\n  errors.push('\"language\" must be a string (ISO code, e.g., \"de\", \"en\")');\n}\n\n// Validate location (optional, default: DE)\nif (input.location && typeof input.location !== 'string') {\n  errors.push('\"location\" must be a string (country code, e.g., \"DE\", \"US\")');\n}\n\n// Validate business_goal\nconst validGoals = ['traffic', 'leads', 'sales'];\nif (input.business_goal && !validGoals.includes(input.business_goal)) {\n  errors.push(`\"business_goal\" must be one of: ${validGoals.join(', ')}`);\n}\n\n// Validate seed_keywords (optional array)\nif (input.seed_keywords) {\n  if (!Array.isArray(input.seed_keywords)) {\n    errors.push('\"seed_keywords\" must be an array of strings');\n  } else if (input.seed_keywords.some(k => typeof k !== 'string')) {\n    errors.push('All items in \"seed_keywords\" must be strings');\n  }\n}\n\n// Validate max_clusters (optional number)\nif (input.max_clusters !== undefined) {\n  const mc = parseInt(input.max_clusters);\n  if (isNaN(mc) || mc < 1 || mc > 10) {\n    errors.push('\"max_clusters\" must be a number between 1 and 10');\n  }\n}\n\n// Validate supporting_per_cluster (optional number)\nif (input.supporting_per_cluster !== undefined) {\n  const spc = parseInt(input.supporting_per_cluster);\n  if (isNaN(spc) || spc < 1 || spc > 10) {\n    errors.push('\"supporting_per_cluster\" must be a number between 1 and 10');\n  }\n}\n\n// Validate dataforseo credentials\nif (!input.dataforseo || !input.dataforseo.login || !input.dataforseo.password) {\n  errors.push('\"dataforseo.login\" and \"dataforseo.password\" are required');\n}\n\n// Validate LLM config if provided\nif (input.llm && input.llm.provider) {\n  const validProviders = ['openai', 'anthropic', 'none'];\n  if (!validProviders.includes(input.llm.provider)) {\n    errors.push(`\"llm.provider\" must be one of: ${validProviders.join(', ')}`);\n  }\n  if (input.llm.provider !== 'none' && !input.llm.api_key) {\n    errors.push(`\"llm.api_key\" is required when llm.provider is \"${input.llm.provider}\"`);\n  }\n}\n\n// Return validation result\nif (errors.length > 0) {\n  return {\n    valid: false,\n    errors,\n    input\n  };\n}\n\nreturn {\n  valid: true,\n  errors: [],\n  input\n};"
+      },
+      "id": "validate-input",
+      "name": "02 Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "notes": "Validates all input parameters and returns structured validation result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-check",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid",
+      "name": "03 IF Valid Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "notes": "Routes to error response if validation failed, otherwise continues"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Validation failed\",\n  \"details\": {{ JSON.stringify($json.errors) }},\n  \"received_input\": {{ JSON.stringify($json.input) }}\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "error-response-validation",
+      "name": "03a Error Response (Validation)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500],
+      "notes": "Returns 400 Bad Request with validation errors"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 04 NORMALIZE DEFAULTS\n// Sets default values and normalizes input\n// ========================================\n\nconst input = $input.first().json.input;\nconst crypto = require('crypto');\n\n// Generate request_id for idempotency\nconst idempotencyString = [\n  input.topic,\n  input.language || 'de',\n  input.location || 'DE',\n  (input.seed_keywords || []).sort().join(',')\n].join('|');\nconst request_id = crypto.createHash('md5').update(idempotencyString).digest('hex');\n\n// Determine primary search intent based on business goal\nconst goalToIntent = {\n  'traffic': 'informational',\n  'leads': 'commercial',\n  'sales': 'transactional'\n};\n\nconst business_goal = input.business_goal || 'traffic';\nconst primary_intent = goalToIntent[business_goal];\n\n// Normalize topic\nconst normalized_topic = input.topic.trim().toLowerCase();\n\n// Set all defaults\nconst config = {\n  request_id,\n  topic: input.topic.trim(),\n  normalized_topic,\n  language: (input.language || 'de').toLowerCase(),\n  location: (input.location || 'DE').toUpperCase(),\n  industry: input.industry || null,\n  target_audience: input.target_audience || 'Allgemeine Zielgruppe',\n  business_goal,\n  primary_intent,\n  seed_keywords: input.seed_keywords || [],\n  max_clusters: parseInt(input.max_clusters) || 4,\n  supporting_per_cluster: parseInt(input.supporting_per_cluster) || 5,\n  include_commercial_piece: input.include_commercial_piece !== false,\n  \n  // DataForSEO credentials\n  dataforseo: {\n    login: input.dataforseo.login,\n    password: input.dataforseo.password,\n    auth_header: 'Basic ' + Buffer.from(input.dataforseo.login + ':' + input.dataforseo.password).toString('base64')\n  },\n  \n  // LLM configuration\n  llm: {\n    provider: input.llm?.provider || 'none',\n    api_key: input.llm?.api_key || null,\n    model: input.llm?.model || null,\n    enabled: input.llm?.provider && input.llm.provider !== 'none' && input.llm.api_key\n  },\n  \n  // Metadata\n  generated_at: new Date().toISOString(),\n  assumptions: []\n};\n\n// Track assumptions\nif (!input.language) config.assumptions.push('Language defaulted to \"de\"');\nif (!input.location) config.assumptions.push('Location defaulted to \"DE\"');\nif (!input.business_goal) config.assumptions.push('Business goal defaulted to \"traffic\"');\nif (!input.seed_keywords || input.seed_keywords.length === 0) {\n  config.assumptions.push('No seed keywords provided - will generate from topic');\n}\nif (!config.llm.enabled) {\n  config.assumptions.push('No LLM configured - using heuristic methods for clustering and content generation');\n}\n\nreturn config;"
+      },
+      "id": "normalize-defaults",
+      "name": "04 Normalize Defaults",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300],
+      "notes": "Sets default values, generates request_id, prepares configuration"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-seeds",
+              "leftValue": "={{ $json.seed_keywords.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-needs-seeds",
+      "name": "05 IF Needs Seed Generation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "notes": "Checks if seed keywords need to be generated"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "llm-enabled",
+              "leftValue": "={{ $json.llm.enabled }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-llm-for-seeds",
+      "name": "05a IF LLM Available (Seeds)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 200],
+      "notes": "Routes to LLM or heuristic seed generation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.llm.provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://api.anthropic.com/v1/messages' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "={{ $json.llm.provider === 'openai' ? 'Authorization' : 'x-api-key' }}",
+              "value": "={{ $json.llm.provider === 'openai' ? 'Bearer ' + $json.llm.api_key : $json.llm.api_key }}"
+            },
+            {
+              "name": "={{ $json.llm.provider === 'anthropic' ? 'anthropic-version' : 'X-Dummy' }}",
+              "value": "={{ $json.llm.provider === 'anthropic' ? '2023-06-01' : 'ignored' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.llm.provider === 'openai' ? JSON.stringify({\n  model: $json.llm.model || 'gpt-4o-mini',\n  messages: [\n    {\n      role: 'system',\n      content: 'Du bist ein SEO-Experte. Generiere Seed-Keywords für Keyword-Recherche. Antworte NUR mit einem JSON-Array von 8-12 Keywords, keine Erklärungen.'\n    },\n    {\n      role: 'user', \n      content: `Thema: ${$json.topic}\\nSprache: ${$json.language}\\nBranche: ${$json.industry || 'Allgemein'}\\nZielgruppe: ${$json.target_audience}\\nZiel: ${$json.business_goal}\\n\\nGeneriere 8-12 relevante Seed-Keywords für dieses Thema. Mische: Hauptbegriffe, Long-Tail, Fragen (wie, was, warum), kommerzielle Begriffe (beste, vergleich, kosten). Antworte NUR mit JSON-Array.`\n    }\n  ],\n  temperature: 0.7,\n  max_tokens: 500\n}) : JSON.stringify({\n  model: $json.llm.model || 'claude-3-haiku-20240307',\n  max_tokens: 500,\n  messages: [\n    {\n      role: 'user',\n      content: `Du bist ein SEO-Experte. Generiere Seed-Keywords für Keyword-Recherche.\\n\\nThema: ${$json.topic}\\nSprache: ${$json.language}\\nBranche: ${$json.industry || 'Allgemein'}\\nZielgruppe: ${$json.target_audience}\\nZiel: ${$json.business_goal}\\n\\nGeneriere 8-12 relevante Seed-Keywords. Mische: Hauptbegriffe, Long-Tail, Fragen, kommerzielle Begriffe.\\n\\nAntworte NUR mit einem JSON-Array von Strings, keine Erklärungen. Beispiel: [\"keyword1\", \"keyword2\"]`\n    }\n  ]\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "llm-generate-seeds",
+      "name": "05b LLM Generate Seeds",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100],
+      "notes": "Calls OpenAI or Anthropic API to generate seed keywords",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 05c PARSE LLM SEEDS RESPONSE\n// Extracts keywords from LLM response\n// ========================================\n\nconst config = $('04 Normalize Defaults').first().json;\nconst llmResponse = $input.first().json;\n\nlet seeds = [];\n\ntry {\n  // Handle OpenAI response\n  if (config.llm.provider === 'openai' && llmResponse.choices) {\n    const content = llmResponse.choices[0]?.message?.content || '[]';\n    // Try to extract JSON array from response\n    const jsonMatch = content.match(/\\[([^\\]]+)\\]/);\n    if (jsonMatch) {\n      seeds = JSON.parse(jsonMatch[0]);\n    }\n  }\n  // Handle Anthropic response\n  else if (config.llm.provider === 'anthropic' && llmResponse.content) {\n    const content = llmResponse.content[0]?.text || '[]';\n    const jsonMatch = content.match(/\\[([^\\]]+)\\]/);\n    if (jsonMatch) {\n      seeds = JSON.parse(jsonMatch[0]);\n    }\n  }\n} catch (e) {\n  // If parsing fails, fall back to empty (will use heuristic)\n  seeds = [];\n}\n\n// Validate seeds are strings and clean them\nseeds = seeds\n  .filter(s => typeof s === 'string' && s.trim().length > 0)\n  .map(s => s.trim().toLowerCase())\n  .slice(0, 12);\n\n// If LLM failed, use heuristic fallback\nif (seeds.length < 3) {\n  const topic = config.normalized_topic;\n  seeds = [\n    topic,\n    `${topic} definition`,\n    `${topic} erklärt`,\n    `was ist ${topic}`,\n    `${topic} beispiele`,\n    `${topic} vorteile`,\n    `${topic} anleitung`,\n    `beste ${topic}`,\n    `${topic} tipps`,\n    `${topic} für anfänger`\n  ];\n  config.assumptions.push('LLM seed generation failed - used heuristic fallback');\n}\n\nreturn {\n  ...config,\n  seed_keywords: seeds,\n  seed_source: seeds.length >= 3 ? 'llm' : 'heuristic_fallback'\n};"
+      },
+      "id": "parse-llm-seeds",
+      "name": "05c Parse LLM Seeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100],
+      "notes": "Parses LLM response and extracts seed keywords with fallback"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 05d HEURISTIC SEED GENERATION\n// Generates seeds without LLM using patterns\n// ========================================\n\nconst config = $input.first().json;\nconst topic = config.normalized_topic;\nconst language = config.language;\n\n// German seed patterns\nconst germanPatterns = [\n  topic,\n  `${topic} definition`,\n  `${topic} erklärt`,\n  `was ist ${topic}`,\n  `${topic} bedeutung`,\n  `${topic} beispiele`,\n  `${topic} vorteile`,\n  `${topic} nachteile`,\n  `${topic} anleitung`,\n  `${topic} tutorial`,\n  `${topic} tipps`,\n  `${topic} für anfänger`,\n  `beste ${topic}`,\n  `${topic} vergleich`,\n  `${topic} kosten`,\n  `${topic} tools`,\n  `${topic} software`,\n  `wie funktioniert ${topic}`,\n  `warum ${topic}`,\n  `${topic} 2024`\n];\n\n// English seed patterns\nconst englishPatterns = [\n  topic,\n  `${topic} definition`,\n  `what is ${topic}`,\n  `${topic} meaning`,\n  `${topic} examples`,\n  `${topic} benefits`,\n  `${topic} guide`,\n  `${topic} tutorial`,\n  `${topic} tips`,\n  `${topic} for beginners`,\n  `best ${topic}`,\n  `${topic} comparison`,\n  `${topic} cost`,\n  `${topic} tools`,\n  `${topic} software`,\n  `how does ${topic} work`,\n  `why ${topic}`,\n  `${topic} 2024`\n];\n\n// Select patterns based on language\nlet seeds = language === 'en' ? englishPatterns : germanPatterns;\n\n// Add industry-specific seeds if industry provided\nif (config.industry) {\n  const ind = config.industry.toLowerCase();\n  seeds.push(`${topic} ${ind}`);\n  seeds.push(`${topic} für ${ind}`);\n  seeds.push(`${ind} ${topic}`);\n}\n\n// Adjust for business goal\nif (config.business_goal === 'leads') {\n  seeds.push(`${topic} beratung`);\n  seeds.push(`${topic} agentur`);\n  seeds.push(`${topic} dienstleister`);\n} else if (config.business_goal === 'sales') {\n  seeds.push(`${topic} kaufen`);\n  seeds.push(`${topic} preis`);\n  seeds.push(`${topic} anbieter`);\n  seeds.push(`${topic} test`);\n}\n\n// Take first 12 unique seeds\nseeds = [...new Set(seeds)].slice(0, 12);\n\nreturn {\n  ...config,\n  seed_keywords: seeds,\n  seed_source: 'heuristic'\n};"
+      },
+      "id": "heuristic-seeds",
+      "name": "05d Heuristic Seeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "notes": "Generates seed keywords using pattern-based heuristics"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 05e PASS THROUGH (Seeds Exist)\n// Just passes config when seeds already provided\n// ========================================\n\nconst config = $input.first().json;\n\nreturn {\n  ...config,\n  seed_source: 'user_provided'\n};"
+      },
+      "id": "pass-seeds",
+      "name": "05e Pass Through (Has Seeds)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 500],
+      "notes": "Passes through when user provided seed keywords"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-after-seeds",
+      "name": "06 Merge After Seeds",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1760, 300],
+      "notes": "Combines all seed generation paths"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 07 PREPARE DATAFORSEO BATCHES\n// Splits seeds into batches for API calls\n// ========================================\n\nconst config = $input.first().json;\nconst seeds = config.seed_keywords;\n\n// DataForSEO allows up to 100 keywords per request\n// We'll batch by 10 for better rate limit handling\nconst batchSize = 10;\nconst batches = [];\n\nfor (let i = 0; i < seeds.length; i += batchSize) {\n  batches.push({\n    batch_index: Math.floor(i / batchSize),\n    keywords: seeds.slice(i, i + batchSize),\n    config: config\n  });\n}\n\nreturn batches;"
+      },
+      "id": "prepare-batches",
+      "name": "07 Prepare DataForSEO Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 300],
+      "notes": "Prepares keyword batches for DataForSEO API calls"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "08 Split Into Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2200, 300],
+      "notes": "Processes keyword batches one at a time for rate limiting"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.config.dataforseo.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"keywords\": {{ JSON.stringify($json.keywords) }},\n    \"language_code\": \"{{ $json.config.language }}\",\n    \"location_code\": {{ $json.config.location === 'DE' ? 2276 : $json.config.location === 'AT' ? 2040 : $json.config.location === 'CH' ? 2756 : $json.config.location === 'US' ? 2840 : $json.config.location === 'GB' ? 2826 : 2276 }}\n  }\n]",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "dataforseo-volume",
+      "name": "09 DataForSEO Search Volume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 300],
+      "notes": "Fetches search volume data from DataForSEO",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-rate-limit",
+      "name": "10 Wait (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2640, 300],
+      "notes": "Waits between DataForSEO API calls to respect rate limits"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('08 Split Into Batches').item.json.config.dataforseo.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"keywords\": {{ JSON.stringify($('08 Split Into Batches').item.json.keywords) }},\n    \"language_code\": \"{{ $('08 Split Into Batches').item.json.config.language }}\",\n    \"location_code\": {{ $('08 Split Into Batches').item.json.config.location === 'DE' ? 2276 : $('08 Split Into Batches').item.json.config.location === 'AT' ? 2040 : $('08 Split Into Batches').item.json.config.location === 'CH' ? 2756 : $('08 Split Into Batches').item.json.config.location === 'US' ? 2840 : $('08 Split Into Batches').item.json.config.location === 'GB' ? 2826 : 2276 }}\n  }\n]",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "dataforseo-related",
+      "name": "11 DataForSEO Related Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 300],
+      "notes": "Fetches related/suggested keywords from DataForSEO",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 12 AGGREGATE KEYWORD DATA\n// Combines volume and related keyword data\n// ========================================\n\nconst volumeData = $('09 DataForSEO Search Volume').first().json;\nconst relatedData = $('11 DataForSEO Related Keywords').first().json;\nconst batchConfig = $('08 Split Into Batches').first().json;\n\nconst keywords = [];\nconst seenKeywords = new Set();\n\n// Process search volume results\nif (volumeData?.tasks?.[0]?.result) {\n  volumeData.tasks[0].result.forEach(item => {\n    if (item.keyword && !seenKeywords.has(item.keyword.toLowerCase())) {\n      seenKeywords.add(item.keyword.toLowerCase());\n      keywords.push({\n        keyword: item.keyword,\n        volume: item.search_volume || 0,\n        cpc: item.cpc || 0,\n        competition: item.competition || 0,\n        competition_level: item.competition_level || 'unknown',\n        intent_guess: guessIntent(item.keyword),\n        parent_topic_guess: guessParentTopic(item.keyword, batchConfig.config.topic),\n        source: 'dataforseo_volume',\n        monthly_searches: item.monthly_searches || []\n      });\n    }\n  });\n}\n\n// Process related keywords\nif (relatedData?.tasks?.[0]?.result) {\n  relatedData.tasks[0].result.forEach(item => {\n    if (item.keyword && !seenKeywords.has(item.keyword.toLowerCase())) {\n      seenKeywords.add(item.keyword.toLowerCase());\n      keywords.push({\n        keyword: item.keyword,\n        volume: item.search_volume || 0,\n        cpc: item.cpc || 0,\n        competition: item.competition || 0,\n        competition_level: item.competition_level || 'unknown',\n        intent_guess: guessIntent(item.keyword),\n        parent_topic_guess: guessParentTopic(item.keyword, batchConfig.config.topic),\n        source: 'dataforseo_related',\n        monthly_searches: item.monthly_searches || []\n      });\n    }\n  });\n}\n\n// Helper function to guess search intent\nfunction guessIntent(keyword) {\n  const kw = keyword.toLowerCase();\n  \n  // Transactional indicators\n  if (/kaufen|bestellen|preis|kosten|günstig|billig|angebot|rabatt|buy|price|cheap|discount|order/i.test(kw)) {\n    return 'transactional';\n  }\n  \n  // Commercial investigation indicators\n  if (/beste|bester|vergleich|test|review|bewertung|erfahrung|vs|alternative|top \\d|best|comparison|versus/i.test(kw)) {\n    return 'commercial';\n  }\n  \n  // Navigational indicators\n  if (/login|anmelden|website|homepage|official|offiziell/i.test(kw)) {\n    return 'navigational';\n  }\n  \n  // Default to informational\n  return 'informational';\n}\n\n// Helper function to guess parent topic\nfunction guessParentTopic(keyword, mainTopic) {\n  const kw = keyword.toLowerCase();\n  const topic = mainTopic.toLowerCase();\n  \n  // If keyword contains main topic, use it as parent\n  if (kw.includes(topic)) {\n    return mainTopic;\n  }\n  \n  // Extract first 2-3 words as potential parent topic\n  const words = kw.split(/\\s+/);\n  if (words.length >= 2) {\n    return words.slice(0, 2).join(' ');\n  }\n  \n  return mainTopic;\n}\n\nreturn {\n  batch_index: batchConfig.batch_index,\n  keywords,\n  config: batchConfig.config,\n  api_success: keywords.length > 0,\n  api_error: keywords.length === 0 ? 'No keywords returned from DataForSEO' : null\n};"
+      },
+      "id": "aggregate-keywords",
+      "name": "12 Aggregate Keyword Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 300],
+      "notes": "Combines and processes keyword data from both API calls"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 13 COLLECT ALL BATCHES\n// Merges all batch results into single array\n// ========================================\n\nconst allItems = $input.all();\nlet allKeywords = [];\nlet config = null;\nlet apiErrors = [];\n\nallItems.forEach(item => {\n  if (item.json.keywords) {\n    allKeywords = allKeywords.concat(item.json.keywords);\n  }\n  if (!config && item.json.config) {\n    config = item.json.config;\n  }\n  if (item.json.api_error) {\n    apiErrors.push(item.json.api_error);\n  }\n});\n\n// Deduplicate by keyword\nconst seen = new Set();\nallKeywords = allKeywords.filter(kw => {\n  const key = kw.keyword.toLowerCase();\n  if (seen.has(key)) return false;\n  seen.add(key);\n  return true;\n});\n\nreturn {\n  keywords: allKeywords,\n  config,\n  api_errors: apiErrors,\n  data_incomplete: allKeywords.length < 5\n};"
+      },
+      "id": "collect-batches",
+      "name": "13 Collect All Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 300],
+      "notes": "Collects and deduplicates all keyword results from batches"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 14 CLEAN AND SCORE KEYWORDS\n// Filters, scores, and ranks keywords\n// ========================================\n\nconst input = $input.first().json;\nlet keywords = input.keywords || [];\nconst config = input.config;\nconst topic = config.normalized_topic;\n\n// Remove duplicates, too short, or irrelevant keywords\nkeywords = keywords.filter(kw => {\n  const k = kw.keyword.toLowerCase();\n  \n  // Minimum length\n  if (k.length < 3) return false;\n  \n  // Remove pure numbers\n  if (/^\\d+$/.test(k)) return false;\n  \n  // Remove very generic single words (unless it's the topic)\n  if (k.split(/\\s+/).length === 1 && k !== topic && kw.volume > 100000) {\n    return false;\n  }\n  \n  return true;\n});\n\n// Score keywords based on multiple factors\nkeywords = keywords.map(kw => {\n  let score = 0;\n  \n  // Volume score (log scale to not over-weight high volume)\n  score += Math.log10(Math.max(kw.volume, 1)) * 10;\n  \n  // Topic relevance (contains main topic)\n  if (kw.keyword.toLowerCase().includes(topic)) {\n    score += 30;\n  }\n  \n  // Intent alignment with business goal\n  const goalIntent = config.primary_intent;\n  if (kw.intent_guess === goalIntent) {\n    score += 20;\n  } else if (\n    (goalIntent === 'commercial' && kw.intent_guess === 'transactional') ||\n    (goalIntent === 'transactional' && kw.intent_guess === 'commercial')\n  ) {\n    score += 10;\n  }\n  \n  // Competition penalty (lower competition = better)\n  score -= kw.competition * 10;\n  \n  // CPC bonus (higher CPC often means higher value)\n  score += Math.min(kw.cpc * 5, 25);\n  \n  // Long-tail bonus (2-4 words is optimal)\n  const wordCount = kw.keyword.split(/\\s+/).length;\n  if (wordCount >= 2 && wordCount <= 4) {\n    score += 15;\n  } else if (wordCount > 4) {\n    score += 5;\n  }\n  \n  // Question keywords bonus\n  if (/^(was|wie|warum|wann|wo|wer|welche|what|how|why|when|where|who|which)/i.test(kw.keyword)) {\n    score += 10;\n  }\n  \n  return {\n    ...kw,\n    relevance_score: Math.round(score * 100) / 100\n  };\n});\n\n// Sort by score\nkeywords.sort((a, b) => b.relevance_score - a.relevance_score);\n\n// Take top 100 keywords\nkeywords = keywords.slice(0, 100);\n\n// Calculate difficulty estimate\nkeywords = keywords.map(kw => ({\n  ...kw,\n  difficulty: Math.round((kw.competition * 70 + (kw.volume > 10000 ? 30 : kw.volume > 1000 ? 20 : 10)) * 100) / 100\n}));\n\nreturn {\n  keywords,\n  config,\n  keyword_count: keywords.length,\n  data_incomplete: input.data_incomplete || keywords.length < 10\n};"
+      },
+      "id": "clean-score-keywords",
+      "name": "14 Clean and Score Keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 300],
+      "notes": "Filters out irrelevant keywords and calculates relevance scores"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "llm-clustering",
+              "leftValue": "={{ $json.config.llm.enabled }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-llm-clustering",
+      "name": "15 IF LLM for Clustering",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3740, 300],
+      "notes": "Routes to LLM or heuristic clustering"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.config.llm.provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://api.anthropic.com/v1/messages' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "={{ $json.config.llm.provider === 'openai' ? 'Authorization' : 'x-api-key' }}",
+              "value": "={{ $json.config.llm.provider === 'openai' ? 'Bearer ' + $json.config.llm.api_key : $json.config.llm.api_key }}"
+            },
+            {
+              "name": "={{ $json.config.llm.provider === 'anthropic' ? 'anthropic-version' : 'X-Dummy' }}",
+              "value": "={{ $json.config.llm.provider === 'anthropic' ? '2023-06-01' : 'ignored' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \nconst keywords = $json.keywords.slice(0, 50).map(k => k.keyword);\nconst maxClusters = $json.config.max_clusters;\nconst prompt = `Du bist ein SEO-Experte für Content-Clustering.\n\nHauptthema: ${$json.config.topic}\nBusiness-Ziel: ${$json.config.business_goal}\nZielgruppe: ${$json.config.target_audience}\n\nKeywords zum Clustern:\n${keywords.join('\\n')}\n\nErstelle ${maxClusters} semantische Cluster. Jeder Cluster sollte:\n- Einen klaren Cluster-Namen haben\n- Ein Core-Keyword (höchstes Suchvolumen/wichtigstes)\n- 5-15 verwandte Keywords\n\nAntworte NUR mit JSON im folgenden Format:\n{\n  \"clusters\": [\n    {\n      \"cluster_name\": \"Name des Clusters\",\n      \"core_keyword\": \"hauptkeyword\",\n      \"cluster_goal\": \"traffic|leads|sales\",\n      \"keywords\": [\"keyword1\", \"keyword2\", ...]\n    }\n  ]\n}`;\n\nif ($json.config.llm.provider === 'openai') {\n  return JSON.stringify({\n    model: $json.config.llm.model || 'gpt-4o-mini',\n    messages: [\n      { role: 'system', content: 'Du bist ein SEO-Experte. Antworte nur mit validem JSON.' },\n      { role: 'user', content: prompt }\n    ],\n    temperature: 0.5,\n    max_tokens: 2000,\n    response_format: { type: 'json_object' }\n  });\n} else {\n  return JSON.stringify({\n    model: $json.config.llm.model || 'claude-3-haiku-20240307',\n    max_tokens: 2000,\n    messages: [\n      { role: 'user', content: prompt }\n    ]\n  });\n}\n}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "llm-clustering",
+      "name": "15a LLM Clustering",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3960, 200],
+      "notes": "Uses LLM to semantically cluster keywords",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 15b PARSE LLM CLUSTERS\n// Extracts clusters from LLM response\n// ========================================\n\nconst prevData = $('14 Clean and Score Keywords').first().json;\nconst llmResponse = $input.first().json;\nconst config = prevData.config;\n\nlet clusters = [];\n\ntry {\n  let content = '';\n  \n  // Handle OpenAI response\n  if (config.llm.provider === 'openai' && llmResponse.choices) {\n    content = llmResponse.choices[0]?.message?.content || '{}';\n  }\n  // Handle Anthropic response\n  else if (config.llm.provider === 'anthropic' && llmResponse.content) {\n    content = llmResponse.content[0]?.text || '{}';\n  }\n  \n  // Try to parse JSON\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    clusters = parsed.clusters || [];\n  }\n} catch (e) {\n  clusters = [];\n}\n\n// Validate and enrich clusters\nclusters = clusters.filter(c => c.cluster_name && c.core_keyword && c.keywords?.length > 0);\n\n// Add keyword data to clusters\nconst keywordMap = {};\nprevData.keywords.forEach(kw => {\n  keywordMap[kw.keyword.toLowerCase()] = kw;\n});\n\nclusters = clusters.map(cluster => {\n  // Enrich keywords with data\n  const enrichedKeywords = cluster.keywords\n    .map(kw => keywordMap[kw.toLowerCase()])\n    .filter(Boolean)\n    .sort((a, b) => b.volume - a.volume);\n  \n  // Find best core keyword\n  let coreKw = keywordMap[cluster.core_keyword.toLowerCase()];\n  if (!coreKw && enrichedKeywords.length > 0) {\n    coreKw = enrichedKeywords[0];\n  }\n  \n  return {\n    cluster_name: cluster.cluster_name,\n    core_keyword: coreKw?.keyword || cluster.core_keyword,\n    core_keyword_data: coreKw || { keyword: cluster.core_keyword, volume: 0, cpc: 0 },\n    cluster_goal: cluster.cluster_goal || config.business_goal,\n    keywords: enrichedKeywords.map(kw => kw.keyword),\n    keyword_data: enrichedKeywords.slice(0, 20)\n  };\n});\n\n// If LLM failed, fall back to heuristic\nif (clusters.length < 2) {\n  prevData.config.assumptions.push('LLM clustering failed - using heuristic fallback');\n  return {\n    keywords: prevData.keywords,\n    config: prevData.config,\n    clusters: [],\n    use_heuristic: true\n  };\n}\n\nreturn {\n  keywords: prevData.keywords,\n  config: prevData.config,\n  clusters,\n  cluster_source: 'llm'\n};"
+      },
+      "id": "parse-llm-clusters",
+      "name": "15b Parse LLM Clusters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 200],
+      "notes": "Parses and validates LLM clustering response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 15c HEURISTIC CLUSTERING\n// Clusters keywords without LLM using tokens\n// ========================================\n\nconst input = $input.first().json;\nconst keywords = input.keywords;\nconst config = input.config;\nconst maxClusters = config.max_clusters;\nconst topic = config.normalized_topic;\n\n// Extract common n-grams from keywords\nfunction extractNgrams(keyword, n) {\n  const words = keyword.toLowerCase().split(/\\s+/);\n  const ngrams = [];\n  for (let i = 0; i <= words.length - n; i++) {\n    ngrams.push(words.slice(i, i + n).join(' '));\n  }\n  return ngrams;\n}\n\n// Count n-gram frequencies\nconst ngramCounts = {};\nkeywords.forEach(kw => {\n  const bigrams = extractNgrams(kw.keyword, 2);\n  bigrams.forEach(ng => {\n    if (ng !== topic && ng.length > 3) {\n      ngramCounts[ng] = (ngramCounts[ng] || 0) + 1;\n    }\n  });\n});\n\n// Find top n-grams as cluster seeds\nconst topNgrams = Object.entries(ngramCounts)\n  .filter(([ng, count]) => count >= 2)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, maxClusters)\n  .map(([ng]) => ng);\n\n// If not enough n-grams, use intent-based clustering\nif (topNgrams.length < maxClusters) {\n  const intents = ['informational', 'commercial', 'transactional'];\n  intents.forEach(intent => {\n    if (topNgrams.length < maxClusters) {\n      const intentKw = keywords.find(kw => kw.intent_guess === intent && !topNgrams.includes(kw.keyword.toLowerCase()));\n      if (intentKw) {\n        topNgrams.push(intentKw.keyword.toLowerCase());\n      }\n    }\n  });\n}\n\n// Assign keywords to clusters\nconst clusterAssignments = {};\ntopNgrams.forEach(ng => {\n  clusterAssignments[ng] = [];\n});\n\nconst assignedKeywords = new Set();\n\nkeywords.forEach(kw => {\n  const kwLower = kw.keyword.toLowerCase();\n  \n  // Find best matching cluster\n  for (const ng of topNgrams) {\n    if (kwLower.includes(ng) || ng.includes(kwLower.split(' ')[0])) {\n      if (!assignedKeywords.has(kwLower)) {\n        clusterAssignments[ng].push(kw);\n        assignedKeywords.add(kwLower);\n        break;\n      }\n    }\n  }\n});\n\n// Assign unassigned keywords to closest cluster by topic\nkeywords.forEach(kw => {\n  if (!assignedKeywords.has(kw.keyword.toLowerCase())) {\n    // Add to first cluster or create 'Other' cluster\n    const firstCluster = topNgrams[0];\n    if (firstCluster && clusterAssignments[firstCluster].length < 25) {\n      clusterAssignments[firstCluster].push(kw);\n    }\n  }\n});\n\n// Build cluster objects\nconst clusters = topNgrams\n  .filter(ng => clusterAssignments[ng].length >= 3)\n  .map(ng => {\n    const clusterKeywords = clusterAssignments[ng].sort((a, b) => b.volume - a.volume);\n    const coreKw = clusterKeywords[0];\n    \n    // Determine cluster goal based on predominant intent\n    const intentCounts = { informational: 0, commercial: 0, transactional: 0 };\n    clusterKeywords.forEach(kw => {\n      intentCounts[kw.intent_guess] = (intentCounts[kw.intent_guess] || 0) + 1;\n    });\n    const dominantIntent = Object.entries(intentCounts).sort((a, b) => b[1] - a[1])[0][0];\n    const goalMap = { informational: 'traffic', commercial: 'leads', transactional: 'sales' };\n    \n    return {\n      cluster_name: capitalizeWords(ng),\n      core_keyword: coreKw.keyword,\n      core_keyword_data: coreKw,\n      cluster_goal: goalMap[dominantIntent] || config.business_goal,\n      keywords: clusterKeywords.map(kw => kw.keyword),\n      keyword_data: clusterKeywords.slice(0, 20)\n    };\n  })\n  .slice(0, maxClusters);\n\nfunction capitalizeWords(str) {\n  return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');\n}\n\nreturn {\n  keywords,\n  config,\n  clusters,\n  cluster_source: 'heuristic'\n};"
+      },
+      "id": "heuristic-clustering",
+      "name": "15c Heuristic Clustering",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3960, 400],
+      "notes": "Clusters keywords using n-gram and intent-based heuristics"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-after-clustering",
+      "name": "16 Merge After Clustering",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [4400, 300],
+      "notes": "Combines LLM and heuristic clustering paths"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-heuristic-fallback",
+              "leftValue": "={{ $json.use_heuristic }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-needs-heuristic-fallback",
+      "name": "16a IF Needs Heuristic Fallback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4620, 300],
+      "notes": "Routes to heuristic if LLM clustering failed"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 17 SELECT CONTENT PIECES\n// Selects pillar, supporting, commercial keywords\n// ========================================\n\nconst input = $input.first().json;\nconst clusters = input.clusters;\nconst config = input.config;\n\n// Process each cluster to select content pieces\nconst processedClusters = clusters.map(cluster => {\n  const kwData = cluster.keyword_data;\n  const supportingCount = config.supporting_per_cluster;\n  \n  // 1. Select Pillar keyword (highest volume, broad topic)\n  const pillarKw = kwData.find(kw => \n    kw.intent_guess === 'informational' || kw.intent_guess === 'commercial'\n  ) || kwData[0];\n  \n  // 2. Select Supporting keywords (long-tail, specific questions)\n  const supportingKws = kwData\n    .filter(kw => kw.keyword !== pillarKw.keyword)\n    .filter(kw => kw.keyword.split(/\\s+/).length >= 2)\n    .slice(0, supportingCount);\n  \n  // 3. Select Commercial keyword if enabled\n  let commercialKw = null;\n  if (config.include_commercial_piece) {\n    commercialKw = kwData.find(kw => \n      kw.keyword !== pillarKw.keyword &&\n      !supportingKws.includes(kw) &&\n      (kw.intent_guess === 'commercial' || kw.intent_guess === 'transactional' ||\n       /beste|vergleich|test|alternative|top/i.test(kw.keyword))\n    );\n    \n    // If no commercial keyword found, create one\n    if (!commercialKw) {\n      commercialKw = {\n        keyword: `beste ${cluster.core_keyword}`,\n        volume: 0,\n        cpc: 0,\n        intent_guess: 'commercial',\n        synthetic: true\n      };\n    }\n  }\n  \n  return {\n    ...cluster,\n    pillar_keyword: pillarKw,\n    supporting_keywords: supportingKws,\n    commercial_keyword: commercialKw\n  };\n});\n\nreturn {\n  keywords: input.keywords,\n  config,\n  clusters: processedClusters\n};"
+      },
+      "id": "select-content-pieces",
+      "name": "17 Select Content Pieces",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4840, 300],
+      "notes": "Selects pillar, supporting, and commercial keywords for each cluster"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "llm-content",
+              "leftValue": "={{ $json.config.llm.enabled }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-llm-content",
+      "name": "18 IF LLM for Content",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [5060, 300],
+      "notes": "Routes to LLM or template-based content generation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.config.llm.provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://api.anthropic.com/v1/messages' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "={{ $json.config.llm.provider === 'openai' ? 'Authorization' : 'x-api-key' }}",
+              "value": "={{ $json.config.llm.provider === 'openai' ? 'Bearer ' + $json.config.llm.api_key : $json.config.llm.api_key }}"
+            },
+            {
+              "name": "={{ $json.config.llm.provider === 'anthropic' ? 'anthropic-version' : 'X-Dummy' }}",
+              "value": "={{ $json.config.llm.provider === 'anthropic' ? '2023-06-01' : 'ignored' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \nconst clusters = $json.clusters;\nconst config = $json.config;\n\nconst clusterSummary = clusters.map(c => ({\n  cluster_name: c.cluster_name,\n  pillar: c.pillar_keyword.keyword,\n  supporting: c.supporting_keywords.map(k => k.keyword).slice(0, 5),\n  commercial: c.commercial_keyword?.keyword\n}));\n\nconst prompt = `Du bist ein erfahrener SEO Content Stratege.\n\nThema: ${config.topic}\nZielgruppe: ${config.target_audience}\nBusiness-Ziel: ${config.business_goal}\nSprache: ${config.language}\n\nClusters mit Keywords:\n${JSON.stringify(clusterSummary, null, 2)}\n\nErstelle für JEDEN Cluster Content-Pieces mit Outlines.\n\nFür jeden Cluster:\n1. Pillar Page (2200-3500 Wörter)\n2. ${config.supporting_per_cluster} Supporting Articles (900-1600 Wörter)\n${config.include_commercial_piece ? '3. 1 Commercial Piece (1200-2200 Wörter)' : ''}\n\nJedes Content-Piece braucht:\n- title: SEO-optimierter Titel\n- slug: URL-freundlicher Slug\n- primary_keyword\n- secondary_keywords (3-5)\n- intent: informational/commercial/transactional\n- funnel_stage: TOFU/MOFU/BOFU\n- recommended_word_count\n- outline: Array von {h: \"H1\"/\"H2\"/\"H3\", t: \"Überschrift\"}\n- faq: 3-5 FAQ-Fragen\n\nAntworte NUR mit JSON:\n{\n  \"clusters\": [\n    {\n      \"cluster_name\": \"...\",\n      \"content_pieces\": [\n        {\n          \"type\": \"pillar|supporting|commercial\",\n          \"title\": \"...\",\n          \"slug\": \"...\",\n          \"primary_keyword\": \"...\",\n          \"secondary_keywords\": [...],\n          \"intent\": \"...\",\n          \"funnel_stage\": \"...\",\n          \"recommended_word_count\": 0,\n          \"outline\": [...],\n          \"faq\": [...]\n        }\n      ]\n    }\n  ]\n}`;\n\nif (config.llm.provider === 'openai') {\n  return JSON.stringify({\n    model: config.llm.model || 'gpt-4o-mini',\n    messages: [\n      { role: 'system', content: 'Du bist ein SEO Content Stratege. Antworte nur mit validem JSON.' },\n      { role: 'user', content: prompt }\n    ],\n    temperature: 0.7,\n    max_tokens: 4000,\n    response_format: { type: 'json_object' }\n  });\n} else {\n  return JSON.stringify({\n    model: config.llm.model || 'claude-3-haiku-20240307',\n    max_tokens: 4000,\n    messages: [\n      { role: 'user', content: prompt }\n    ]\n  });\n}\n}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "llm-content-generation",
+      "name": "18a LLM Content Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5280, 200],
+      "notes": "Uses LLM to generate content pieces with outlines",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 18b PARSE LLM CONTENT\n// Extracts content pieces from LLM response\n// ========================================\n\nconst prevData = $('17 Select Content Pieces').first().json;\nconst llmResponse = $input.first().json;\nconst config = prevData.config;\n\nlet llmClusters = [];\n\ntry {\n  let content = '';\n  \n  if (config.llm.provider === 'openai' && llmResponse.choices) {\n    content = llmResponse.choices[0]?.message?.content || '{}';\n  } else if (config.llm.provider === 'anthropic' && llmResponse.content) {\n    content = llmResponse.content[0]?.text || '{}';\n  }\n  \n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    llmClusters = parsed.clusters || [];\n  }\n} catch (e) {\n  llmClusters = [];\n}\n\n// Merge LLM content with original cluster data\nconst finalClusters = prevData.clusters.map(cluster => {\n  const llmCluster = llmClusters.find(c => \n    c.cluster_name === cluster.cluster_name ||\n    c.cluster_name?.toLowerCase().includes(cluster.core_keyword.toLowerCase())\n  );\n  \n  if (llmCluster && llmCluster.content_pieces?.length > 0) {\n    return {\n      cluster_name: cluster.cluster_name,\n      core_keyword: cluster.core_keyword,\n      cluster_goal: cluster.cluster_goal,\n      keywords: cluster.keywords,\n      content_pieces: llmCluster.content_pieces.map(piece => ({\n        ...piece,\n        recommended_word_count: piece.recommended_word_count || getDefaultWordCount(piece.type)\n      }))\n    };\n  }\n  \n  // Fallback to template if LLM didn't generate for this cluster\n  return generateTemplateContent(cluster, config);\n});\n\nfunction getDefaultWordCount(type) {\n  const counts = { pillar: 2800, supporting: 1200, commercial: 1700 };\n  return counts[type] || 1200;\n}\n\nfunction generateTemplateContent(cluster, config) {\n  // Use template-based generation as fallback\n  return {\n    cluster_name: cluster.cluster_name,\n    core_keyword: cluster.core_keyword,\n    cluster_goal: cluster.cluster_goal,\n    keywords: cluster.keywords,\n    content_pieces: generateTemplatePieces(cluster, config)\n  };\n}\n\nfunction generateTemplatePieces(cluster, config) {\n  const pieces = [];\n  const lang = config.language;\n  \n  // Pillar Page\n  pieces.push(createPillarPiece(cluster, lang));\n  \n  // Supporting Articles\n  cluster.supporting_keywords.forEach((kw, idx) => {\n    pieces.push(createSupportingPiece(kw, cluster, idx, lang));\n  });\n  \n  // Commercial Piece\n  if (cluster.commercial_keyword) {\n    pieces.push(createCommercialPiece(cluster, lang));\n  }\n  \n  return pieces;\n}\n\nfunction createPillarPiece(cluster, lang) {\n  const kw = cluster.pillar_keyword.keyword;\n  const isDE = lang === 'de';\n  \n  return {\n    type: 'pillar',\n    slug: slugify(kw),\n    title: isDE ? `${capitalize(kw)}: Der ultimative Leitfaden` : `${capitalize(kw)}: The Ultimate Guide`,\n    primary_keyword: kw,\n    secondary_keywords: cluster.keywords.slice(1, 6),\n    intent: 'informational',\n    funnel_stage: 'TOFU',\n    recommended_word_count: 2800,\n    outline: isDE ? [\n      { h: 'H1', t: `${capitalize(kw)}: Der ultimative Leitfaden` },\n      { h: 'H2', t: `Was ist ${kw}?` },\n      { h: 'H2', t: `Warum ist ${kw} wichtig?` },\n      { h: 'H2', t: `Die wichtigsten Vorteile` },\n      { h: 'H3', t: 'Vorteil 1' },\n      { h: 'H3', t: 'Vorteil 2' },\n      { h: 'H3', t: 'Vorteil 3' },\n      { h: 'H2', t: `${capitalize(kw)} in der Praxis: Anwendungsfälle` },\n      { h: 'H2', t: 'Schritt-für-Schritt Anleitung' },\n      { h: 'H2', t: 'Häufige Fehler und wie Sie sie vermeiden' },\n      { h: 'H2', t: 'Die besten Tools und Ressourcen' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Fazit' }\n    ] : [\n      { h: 'H1', t: `${capitalize(kw)}: The Ultimate Guide` },\n      { h: 'H2', t: `What is ${kw}?` },\n      { h: 'H2', t: `Why ${kw} matters` },\n      { h: 'H2', t: 'Key benefits' },\n      { h: 'H2', t: 'Use cases and applications' },\n      { h: 'H2', t: 'Step-by-step guide' },\n      { h: 'H2', t: 'Common mistakes to avoid' },\n      { h: 'H2', t: 'Best tools and resources' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Conclusion' }\n    ],\n    faq: generateFAQ(kw, lang)\n  };\n}\n\nfunction createSupportingPiece(kwData, cluster, idx, lang) {\n  const kw = kwData.keyword;\n  const isDE = lang === 'de';\n  \n  return {\n    type: 'supporting',\n    slug: slugify(kw),\n    title: isDE ? `${capitalize(kw)}: Was Sie wissen müssen` : `${capitalize(kw)}: What You Need to Know`,\n    primary_keyword: kw,\n    secondary_keywords: [cluster.core_keyword, ...cluster.keywords.slice(0, 3)].filter(k => k !== kw),\n    intent: kwData.intent_guess || 'informational',\n    funnel_stage: idx < 2 ? 'TOFU' : 'MOFU',\n    recommended_word_count: 1200,\n    outline: isDE ? [\n      { h: 'H1', t: capitalize(kw) },\n      { h: 'H2', t: 'Das Wichtigste in Kürze' },\n      { h: 'H2', t: 'Detaillierte Erklärung' },\n      { h: 'H2', t: 'Praktische Beispiele' },\n      { h: 'H2', t: 'Best Practices und Tipps' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Nächste Schritte' }\n    ] : [\n      { h: 'H1', t: capitalize(kw) },\n      { h: 'H2', t: 'Key takeaways' },\n      { h: 'H2', t: 'Detailed explanation' },\n      { h: 'H2', t: 'Practical examples' },\n      { h: 'H2', t: 'Best practices and tips' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Next steps' }\n    ],\n    faq: generateFAQ(kw, lang).slice(0, 3)\n  };\n}\n\nfunction createCommercialPiece(cluster, lang) {\n  const kw = cluster.commercial_keyword?.keyword || `beste ${cluster.core_keyword}`;\n  const isDE = lang === 'de';\n  \n  return {\n    type: 'commercial',\n    slug: slugify(kw),\n    title: isDE ? `${capitalize(kw)} im Vergleich` : `${capitalize(kw)} Compared`,\n    primary_keyword: kw,\n    secondary_keywords: [cluster.core_keyword, `${cluster.core_keyword} test`, `${cluster.core_keyword} vergleich`],\n    intent: 'commercial',\n    funnel_stage: 'BOFU',\n    recommended_word_count: 1700,\n    outline: isDE ? [\n      { h: 'H1', t: `${capitalize(kw)}: Vergleich & Empfehlungen` },\n      { h: 'H2', t: 'Unsere Top-Empfehlung' },\n      { h: 'H2', t: 'Vergleichstabelle' },\n      { h: 'H2', t: 'Auswahlkriterien' },\n      { h: 'H2', t: 'Detaillierte Bewertungen' },\n      { h: 'H3', t: 'Option 1' },\n      { h: 'H3', t: 'Option 2' },\n      { h: 'H3', t: 'Option 3' },\n      { h: 'H2', t: 'Alternativen' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Fazit' }\n    ] : [\n      { h: 'H1', t: `${capitalize(kw)}: Comparison & Recommendations` },\n      { h: 'H2', t: 'Our top pick' },\n      { h: 'H2', t: 'Comparison table' },\n      { h: 'H2', t: 'Selection criteria' },\n      { h: 'H2', t: 'Detailed reviews' },\n      { h: 'H2', t: 'Alternatives' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Conclusion' }\n    ],\n    faq: generateFAQ(kw, lang).slice(0, 4)\n  };\n}\n\nfunction generateFAQ(kw, lang) {\n  const isDE = lang === 'de';\n  return isDE ? [\n    `Was ist ${kw}?`,\n    `Wie funktioniert ${kw}?`,\n    `Was kostet ${kw}?`,\n    `Für wen ist ${kw} geeignet?`,\n    `Welche Alternativen gibt es zu ${kw}?`\n  ] : [\n    `What is ${kw}?`,\n    `How does ${kw} work?`,\n    `How much does ${kw} cost?`,\n    `Who is ${kw} for?`,\n    `What are alternatives to ${kw}?`\n  ];\n}\n\nfunction slugify(str) {\n  return str.toLowerCase()\n    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-|-$/g, '');\n}\n\nfunction capitalize(str) {\n  return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');\n}\n\nreturn {\n  keywords: prevData.keywords,\n  config,\n  clusters: finalClusters,\n  content_source: 'llm'\n};"
+      },
+      "id": "parse-llm-content",
+      "name": "18b Parse LLM Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5500, 200],
+      "notes": "Parses LLM content response and merges with cluster data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 18c TEMPLATE-BASED CONTENT GENERATION\n// Generates content using pre-defined templates\n// ========================================\n\nconst input = $input.first().json;\nconst clusters = input.clusters;\nconst config = input.config;\nconst lang = config.language;\nconst isDE = lang === 'de';\n\n// Helper functions\nfunction slugify(str) {\n  return str.toLowerCase()\n    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-|-$/g, '');\n}\n\nfunction capitalize(str) {\n  return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');\n}\n\nfunction generateFAQ(kw) {\n  return isDE ? [\n    `Was ist ${kw}?`,\n    `Wie funktioniert ${kw}?`,\n    `Was kostet ${kw}?`,\n    `Für wen ist ${kw} geeignet?`,\n    `Welche Alternativen gibt es zu ${kw}?`,\n    `Wie lange dauert es, ${kw} zu lernen?`,\n    `Was sind die Vorteile von ${kw}?`,\n    `Welche Fehler sollte man bei ${kw} vermeiden?`\n  ] : [\n    `What is ${kw}?`,\n    `How does ${kw} work?`,\n    `How much does ${kw} cost?`,\n    `Who is ${kw} for?`,\n    `What are alternatives to ${kw}?`,\n    `How long does it take to learn ${kw}?`,\n    `What are the benefits of ${kw}?`,\n    `What mistakes should you avoid with ${kw}?`\n  ];\n}\n\n// Process each cluster\nconst processedClusters = clusters.map(cluster => {\n  const pieces = [];\n  \n  // 1. PILLAR PAGE\n  const pillarKw = cluster.pillar_keyword.keyword;\n  pieces.push({\n    type: 'pillar',\n    slug: slugify(pillarKw),\n    title: isDE \n      ? `${capitalize(pillarKw)}: Der vollständige Leitfaden [${new Date().getFullYear()}]`\n      : `${capitalize(pillarKw)}: The Complete Guide [${new Date().getFullYear()}]`,\n    primary_keyword: pillarKw,\n    secondary_keywords: cluster.keywords.filter(k => k !== pillarKw).slice(0, 8),\n    intent: 'informational',\n    funnel_stage: 'TOFU',\n    recommended_word_count: 2800,\n    outline: isDE ? [\n      { h: 'H1', t: `${capitalize(pillarKw)}: Alles was Sie wissen müssen` },\n      { h: 'H2', t: 'Auf einen Blick: Das Wichtigste zusammengefasst' },\n      { h: 'H2', t: `Was ist ${pillarKw}? Definition und Grundlagen` },\n      { h: 'H3', t: 'Definition' },\n      { h: 'H3', t: 'Geschichte und Entwicklung' },\n      { h: 'H2', t: `Warum ${pillarKw} wichtig ist` },\n      { h: 'H3', t: 'Aktuelle Bedeutung' },\n      { h: 'H3', t: 'Zukunftsperspektiven' },\n      { h: 'H2', t: 'Die wichtigsten Vorteile im Überblick' },\n      { h: 'H3', t: 'Vorteil 1: Effizienzsteigerung' },\n      { h: 'H3', t: 'Vorteil 2: Kosteneinsparung' },\n      { h: 'H3', t: 'Vorteil 3: Qualitätsverbesserung' },\n      { h: 'H2', t: 'Praktische Anwendungsfälle' },\n      { h: 'H3', t: 'Anwendungsfall 1' },\n      { h: 'H3', t: 'Anwendungsfall 2' },\n      { h: 'H3', t: 'Anwendungsfall 3' },\n      { h: 'H2', t: 'Schritt-für-Schritt Anleitung' },\n      { h: 'H3', t: 'Schritt 1: Vorbereitung' },\n      { h: 'H3', t: 'Schritt 2: Umsetzung' },\n      { h: 'H3', t: 'Schritt 3: Optimierung' },\n      { h: 'H2', t: 'Häufige Fehler und wie Sie sie vermeiden' },\n      { h: 'H3', t: 'Fehler 1' },\n      { h: 'H3', t: 'Fehler 2' },\n      { h: 'H3', t: 'Fehler 3' },\n      { h: 'H2', t: 'Die besten Tools und Ressourcen' },\n      { h: 'H2', t: 'Expertenempfehlungen und Best Practices' },\n      { h: 'H2', t: 'Häufig gestellte Fragen (FAQ)' },\n      { h: 'H2', t: 'Fazit und nächste Schritte' }\n    ] : [\n      { h: 'H1', t: `${capitalize(pillarKw)}: Everything You Need to Know` },\n      { h: 'H2', t: 'Quick Summary: Key Points' },\n      { h: 'H2', t: `What is ${pillarKw}? Definition and Basics` },\n      { h: 'H2', t: `Why ${pillarKw} matters` },\n      { h: 'H2', t: 'Key Benefits Overview' },\n      { h: 'H2', t: 'Practical Use Cases' },\n      { h: 'H2', t: 'Step-by-Step Guide' },\n      { h: 'H2', t: 'Common Mistakes to Avoid' },\n      { h: 'H2', t: 'Best Tools and Resources' },\n      { h: 'H2', t: 'Expert Tips and Best Practices' },\n      { h: 'H2', t: 'Frequently Asked Questions (FAQ)' },\n      { h: 'H2', t: 'Conclusion and Next Steps' }\n    ],\n    faq: generateFAQ(pillarKw).slice(0, 8)\n  });\n  \n  // 2. SUPPORTING ARTICLES\n  cluster.supporting_keywords.forEach((kwData, idx) => {\n    const kw = kwData.keyword;\n    const intent = kwData.intent_guess || 'informational';\n    \n    pieces.push({\n      type: 'supporting',\n      slug: slugify(kw),\n      title: isDE\n        ? generateGermanTitle(kw, intent)\n        : generateEnglishTitle(kw, intent),\n      primary_keyword: kw,\n      secondary_keywords: [cluster.core_keyword, pillarKw, ...cluster.keywords.slice(0, 3)].filter(k => k !== kw).slice(0, 5),\n      intent: intent,\n      funnel_stage: intent === 'informational' ? 'TOFU' : 'MOFU',\n      recommended_word_count: 1200,\n      outline: isDE ? [\n        { h: 'H1', t: capitalize(kw) },\n        { h: 'H2', t: 'Das Wichtigste in Kürze' },\n        { h: 'H2', t: 'Detaillierte Erklärung' },\n        { h: 'H3', t: 'Kernkonzepte' },\n        { h: 'H3', t: 'Wichtige Details' },\n        { h: 'H2', t: 'Praktische Beispiele' },\n        { h: 'H3', t: 'Beispiel 1' },\n        { h: 'H3', t: 'Beispiel 2' },\n        { h: 'H2', t: 'Best Practices und Tipps' },\n        { h: 'H2', t: 'Häufige Fragen' },\n        { h: 'H2', t: 'Weiterführende Ressourcen' }\n      ] : [\n        { h: 'H1', t: capitalize(kw) },\n        { h: 'H2', t: 'Key Takeaways' },\n        { h: 'H2', t: 'Detailed Explanation' },\n        { h: 'H2', t: 'Practical Examples' },\n        { h: 'H2', t: 'Best Practices and Tips' },\n        { h: 'H2', t: 'Common Questions' },\n        { h: 'H2', t: 'Additional Resources' }\n      ],\n      faq: generateFAQ(kw).slice(0, 5)\n    });\n  });\n  \n  // 3. COMMERCIAL PIECE (if enabled)\n  if (cluster.commercial_keyword) {\n    const commKw = cluster.commercial_keyword.keyword;\n    \n    pieces.push({\n      type: 'commercial',\n      slug: slugify(commKw),\n      title: isDE\n        ? `${capitalize(commKw)}: Vergleich, Test & Empfehlungen [${new Date().getFullYear()}]`\n        : `${capitalize(commKw)}: Comparison, Review & Recommendations [${new Date().getFullYear()}]`,\n      primary_keyword: commKw,\n      secondary_keywords: [\n        cluster.core_keyword,\n        `${cluster.core_keyword} test`,\n        `${cluster.core_keyword} vergleich`,\n        `${cluster.core_keyword} erfahrungen`,\n        `${cluster.core_keyword} empfehlung`\n      ].slice(0, 5),\n      intent: 'commercial',\n      funnel_stage: 'BOFU',\n      recommended_word_count: 1700,\n      outline: isDE ? [\n        { h: 'H1', t: `${capitalize(commKw)}: Der große Vergleich` },\n        { h: 'H2', t: 'Kurzfazit: Unsere Top-Empfehlung' },\n        { h: 'H2', t: 'Vergleichstabelle im Überblick' },\n        { h: 'H2', t: 'Unsere Bewertungskriterien' },\n        { h: 'H3', t: 'Kriterium 1: Funktionsumfang' },\n        { h: 'H3', t: 'Kriterium 2: Preis-Leistung' },\n        { h: 'H3', t: 'Kriterium 3: Benutzerfreundlichkeit' },\n        { h: 'H2', t: 'Detaillierte Einzelbewertungen' },\n        { h: 'H3', t: 'Option 1: [Name]' },\n        { h: 'H3', t: 'Option 2: [Name]' },\n        { h: 'H3', t: 'Option 3: [Name]' },\n        { h: 'H2', t: 'Für wen eignet sich welche Option?' },\n        { h: 'H2', t: 'Alternativen und Sonderfälle' },\n        { h: 'H2', t: 'Häufig gestellte Fragen' },\n        { h: 'H2', t: 'Fazit: So treffen Sie die richtige Wahl' }\n      ] : [\n        { h: 'H1', t: `${capitalize(commKw)}: The Ultimate Comparison` },\n        { h: 'H2', t: 'Quick Verdict: Our Top Pick' },\n        { h: 'H2', t: 'Comparison Table Overview' },\n        { h: 'H2', t: 'Our Evaluation Criteria' },\n        { h: 'H2', t: 'Detailed Individual Reviews' },\n        { h: 'H2', t: 'Who Should Choose Which Option?' },\n        { h: 'H2', t: 'Alternatives and Special Cases' },\n        { h: 'H2', t: 'Frequently Asked Questions' },\n        { h: 'H2', t: 'Conclusion: Making the Right Choice' }\n      ],\n      faq: [\n        isDE ? `Welche ${cluster.core_keyword} ist die beste?` : `Which ${cluster.core_keyword} is the best?`,\n        isDE ? `Was kostet ${cluster.core_keyword}?` : `How much does ${cluster.core_keyword} cost?`,\n        isDE ? `Worauf sollte man bei ${cluster.core_keyword} achten?` : `What should you look for in ${cluster.core_keyword}?`,\n        isDE ? `Gibt es kostenlose Alternativen?` : `Are there free alternatives?`,\n        isDE ? `Wie wählt man die richtige ${cluster.core_keyword}?` : `How do you choose the right ${cluster.core_keyword}?`\n      ]\n    });\n  }\n  \n  return {\n    cluster_name: cluster.cluster_name,\n    core_keyword: cluster.core_keyword,\n    cluster_goal: cluster.cluster_goal,\n    keywords: cluster.keywords,\n    content_pieces: pieces\n  };\n});\n\nfunction generateGermanTitle(kw, intent) {\n  const templates = {\n    informational: [\n      `${capitalize(kw)}: Was Sie wissen müssen`,\n      `${capitalize(kw)} erklärt: Ein Überblick`,\n      `${capitalize(kw)}: Definition, Beispiele & Tipps`\n    ],\n    commercial: [\n      `${capitalize(kw)}: Vergleich & Empfehlungen`,\n      `Die besten ${kw} im Test`\n    ],\n    transactional: [\n      `${capitalize(kw)}: Anbieter im Vergleich`,\n      `${capitalize(kw)} finden: So geht's`\n    ]\n  };\n  const options = templates[intent] || templates.informational;\n  return options[Math.floor(Math.random() * options.length)];\n}\n\nfunction generateEnglishTitle(kw, intent) {\n  const templates = {\n    informational: [\n      `${capitalize(kw)}: What You Need to Know`,\n      `${capitalize(kw)} Explained: An Overview`,\n      `${capitalize(kw)}: Definition, Examples & Tips`\n    ],\n    commercial: [\n      `${capitalize(kw)}: Comparison & Recommendations`,\n      `Best ${kw} Reviewed`\n    ],\n    transactional: [\n      `${capitalize(kw)}: Providers Compared`,\n      `Finding ${capitalize(kw)}: A Guide`\n    ]\n  };\n  const options = templates[intent] || templates.informational;\n  return options[Math.floor(Math.random() * options.length)];\n}\n\nreturn {\n  keywords: input.keywords,\n  config,\n  clusters: processedClusters,\n  content_source: 'template'\n};"
+      },
+      "id": "template-content",
+      "name": "18c Template Content Generation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5280, 400],
+      "notes": "Generates content using pre-defined templates without LLM"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-after-content",
+      "name": "19 Merge After Content",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [5720, 300],
+      "notes": "Combines LLM and template content generation paths"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 20 ASSEMBLE FINAL RESPONSE\n// Creates the complete output JSON structure\n// ========================================\n\nconst input = $input.first().json;\nconst config = input.config;\nconst keywords = input.keywords;\nconst clusters = input.clusters;\n\n// Build final response structure\nconst response = {\n  meta: {\n    request_id: config.request_id,\n    topic: config.topic,\n    language: config.language,\n    location: config.location,\n    generated_at: config.generated_at,\n    processing_completed_at: new Date().toISOString(),\n    assumptions: config.assumptions,\n    data_sources: {\n      keywords: 'dataforseo',\n      seed_generation: input.seed_source || config.seed_source || 'heuristic',\n      clustering: input.cluster_source || 'heuristic',\n      content: input.content_source || 'template'\n    }\n  },\n  topic_definition: {\n    normalized_topic: config.normalized_topic,\n    target_audience: config.target_audience,\n    industry: config.industry,\n    business_goal: config.business_goal,\n    primary_intent: config.primary_intent,\n    seed_keywords: config.seed_keywords\n  },\n  keywords: keywords.map(kw => ({\n    keyword: kw.keyword,\n    volume: kw.volume,\n    cpc: kw.cpc,\n    difficulty: kw.difficulty || kw.competition * 100,\n    intent_guess: kw.intent_guess,\n    parent_topic_guess: kw.parent_topic_guess,\n    relevance_score: kw.relevance_score,\n    source: kw.source\n  })),\n  clusters: clusters.map(cluster => ({\n    cluster_name: cluster.cluster_name,\n    core_keyword: cluster.core_keyword,\n    cluster_goal: cluster.cluster_goal,\n    keywords: cluster.keywords,\n    content_pieces: cluster.content_pieces.map(piece => ({\n      type: piece.type,\n      slug: piece.slug,\n      title: piece.title,\n      primary_keyword: piece.primary_keyword,\n      secondary_keywords: piece.secondary_keywords,\n      intent: piece.intent,\n      funnel_stage: piece.funnel_stage,\n      recommended_word_count: piece.recommended_word_count,\n      outline: piece.outline,\n      faq: piece.faq\n    }))\n  })),\n  summary: {\n    total_keywords: keywords.length,\n    total_clusters: clusters.length,\n    total_content_pieces: clusters.reduce((sum, c) => sum + c.content_pieces.length, 0),\n    content_breakdown: {\n      pillar_pages: clusters.length,\n      supporting_articles: clusters.reduce((sum, c) => \n        sum + c.content_pieces.filter(p => p.type === 'supporting').length, 0),\n      commercial_pieces: clusters.reduce((sum, c) => \n        sum + c.content_pieces.filter(p => p.type === 'commercial').length, 0)\n    },\n    estimated_total_words: clusters.reduce((sum, c) => \n      sum + c.content_pieces.reduce((pSum, p) => pSum + p.recommended_word_count, 0), 0)\n  }\n};\n\n// Add warnings if data is incomplete\nif (keywords.length < 10) {\n  response.meta.warnings = response.meta.warnings || [];\n  response.meta.warnings.push('Limited keyword data returned from DataForSEO');\n}\n\nif (clusters.length < config.max_clusters) {\n  response.meta.warnings = response.meta.warnings || [];\n  response.meta.warnings.push(`Only ${clusters.length} clusters created (requested: ${config.max_clusters})`);\n}\n\nreturn response;"
+      },
+      "id": "assemble-response",
+      "name": "20 Assemble Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5940, 300],
+      "notes": "Creates the complete JSON output structure"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Request-ID",
+                "value": "={{ $json.meta.request_id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "success-response",
+      "name": "21 Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [6160, 300],
+      "notes": "Returns the complete SEO content planning data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// ERROR HANDLER: API Failures\n// Handles DataForSEO and other API errors\n// ========================================\n\nconst error = $input.first();\nconst config = $('04 Normalize Defaults').first()?.json || {};\n\nreturn {\n  success: false,\n  error: 'API request failed',\n  error_type: 'api_error',\n  details: {\n    message: error.message || 'Unknown error',\n    request_id: config.request_id,\n    topic: config.topic\n  },\n  fallback_available: true,\n  retry_after_seconds: 60\n};"
+      },
+      "id": "error-handler-api",
+      "name": "Error Handler (API)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 600],
+      "notes": "Handles API errors from DataForSEO calls"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "error-response-api",
+      "name": "Error Response (API)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3520, 600],
+      "notes": "Returns 500 error for API failures"
+    }
+  ],
+  "connections": {
+    "01 Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Validate Input": {
+      "main": [
+        [
+          {
+            "node": "03 IF Valid Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 IF Valid Input": {
+      "main": [
+        [
+          {
+            "node": "04 Normalize Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03a Error Response (Validation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Normalize Defaults": {
+      "main": [
+        [
+          {
+            "node": "05 IF Needs Seed Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 IF Needs Seed Generation": {
+      "main": [
+        [
+          {
+            "node": "05a IF LLM Available (Seeds)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05e Pass Through (Has Seeds)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05a IF LLM Available (Seeds)": {
+      "main": [
+        [
+          {
+            "node": "05b LLM Generate Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05d Heuristic Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05b LLM Generate Seeds": {
+      "main": [
+        [
+          {
+            "node": "05c Parse LLM Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05c Parse LLM Seeds": {
+      "main": [
+        [
+          {
+            "node": "06 Merge After Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05d Heuristic Seeds": {
+      "main": [
+        [
+          {
+            "node": "06 Merge After Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05e Pass Through (Has Seeds)": {
+      "main": [
+        [
+          {
+            "node": "06 Merge After Seeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Merge After Seeds": {
+      "main": [
+        [
+          {
+            "node": "07 Prepare DataForSEO Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Prepare DataForSEO Batches": {
+      "main": [
+        [
+          {
+            "node": "08 Split Into Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Split Into Batches": {
+      "main": [
+        [
+          {
+            "node": "09 DataForSEO Search Volume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 DataForSEO Search Volume": {
+      "main": [
+        [
+          {
+            "node": "10 Wait (Rate Limit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Wait (Rate Limit)": {
+      "main": [
+        [
+          {
+            "node": "11 DataForSEO Related Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 DataForSEO Related Keywords": {
+      "main": [
+        [
+          {
+            "node": "12 Aggregate Keyword Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Aggregate Keyword Data": {
+      "main": [
+        [
+          {
+            "node": "08 Split Into Batches",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "13 Collect All Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Collect All Batches": {
+      "main": [
+        [
+          {
+            "node": "14 Clean and Score Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Clean and Score Keywords": {
+      "main": [
+        [
+          {
+            "node": "15 IF LLM for Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 IF LLM for Clustering": {
+      "main": [
+        [
+          {
+            "node": "15a LLM Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15c Heuristic Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15a LLM Clustering": {
+      "main": [
+        [
+          {
+            "node": "15b Parse LLM Clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15b Parse LLM Clusters": {
+      "main": [
+        [
+          {
+            "node": "16 Merge After Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15c Heuristic Clustering": {
+      "main": [
+        [
+          {
+            "node": "16 Merge After Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Merge After Clustering": {
+      "main": [
+        [
+          {
+            "node": "16a IF Needs Heuristic Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16a IF Needs Heuristic Fallback": {
+      "main": [
+        [
+          {
+            "node": "15c Heuristic Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "17 Select Content Pieces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 Select Content Pieces": {
+      "main": [
+        [
+          {
+            "node": "18 IF LLM for Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 IF LLM for Content": {
+      "main": [
+        [
+          {
+            "node": "18a LLM Content Generation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "18c Template Content Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18a LLM Content Generation": {
+      "main": [
+        [
+          {
+            "node": "18b Parse LLM Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18b Parse LLM Content": {
+      "main": [
+        [
+          {
+            "node": "19 Merge After Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18c Template Content Generation": {
+      "main": [
+        [
+          {
+            "node": "19 Merge After Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 Merge After Content": {
+      "main": [
+        [
+          {
+            "node": "20 Assemble Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 Assemble Final Response": {
+      "main": [
+        [
+          {
+            "node": "21 Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler (API)": {
+      "main": [
+        [
+          {
+            "node": "Error Response (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "SEO",
+      "id": "seo-tag"
+    },
+    {
+      "name": "Content",
+      "id": "content-tag"
+    },
+    {
+      "name": "DataForSEO",
+      "id": "dataforseo-tag"
+    },
+    {
+      "name": "Keyword Research",
+      "id": "keyword-research-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}
