@@ -1,0 +1,356 @@
+{
+  "name": "SEO Content Planner - Form Based",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "SEO Content Planner",
+        "formDescription": "Erstelle eine vollständige SEO Content-Strategie für dein Thema. Du erhältst Keyword-Daten, Content-Strukturen und fertige Outlines.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Thema oder Hauptkeyword",
+              "fieldType": "text",
+              "placeholder": "z.B. Projektmanagement Software",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Sprache",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "de" },
+                  { "option": "en" },
+                  { "option": "fr" },
+                  { "option": "es" },
+                  { "option": "it" }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Land",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "DE" },
+                  { "option": "AT" },
+                  { "option": "CH" },
+                  { "option": "US" },
+                  { "option": "UK" }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "respondWith": "text",
+            "formSubmittedText": "Danke! Deine SEO Content-Strategie wird erstellt. Die Ergebnisse erscheinen in wenigen Sekunden in Google Sheets."
+          }
+        }
+      },
+      "id": "form-trigger",
+      "name": "01 Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 300],
+      "webhookId": "seo-content-planner-form",
+      "notes": "Formular für SEO Content Planung - sammelt Thema, Sprache und Land"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 02 MAP LOCATION CODES\n// Maps country codes to DataForSEO location codes\n// ========================================\n\nconst input = $input.first().json;\n\n// DataForSEO Location Codes\nconst locationCodes = {\n  'DE': 2276,  // Germany\n  'AT': 2040,  // Austria\n  'CH': 2756,  // Switzerland\n  'US': 2840,  // United States\n  'UK': 2826,  // United Kingdom\n  'FR': 2250,  // France\n  'ES': 2724,  // Spain\n  'IT': 2380   // Italy\n};\n\n// Extract field values\nconst thema = input['Thema oder Hauptkeyword'] || input.thema;\nconst sprache = input['Sprache'] || input.sprache || 'de';\nconst land = input['Land'] || input.land || 'DE';\n\nconst locationCode = locationCodes[land.toUpperCase()] || 2276;\n\nreturn {\n  thema: thema.trim(),\n  sprache: sprache.toLowerCase(),\n  land: land.toUpperCase(),\n  location_code: locationCode,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "map-location",
+      "name": "02 Map Location Codes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "notes": "Maps country codes (DE, AT, etc.) to DataForSEO location codes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\n  \"keywords\": [\"{{ $json.thema }}\"],\n  \"language_code\": \"{{ $json.sprache }}\",\n  \"location_code\": {{ $json.location_code }}\n}]",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "dataforseo-keywords",
+      "name": "03 DataForSEO Keywords API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 200],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "dataforseo-credentials",
+          "name": "DataForSEO Basic Auth"
+        }
+      },
+      "notes": "Fetches keyword data including search volume, competition, and CPC from Google Ads data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/serp/google/organic/live/regular",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\n  \"keyword\": \"{{ $('02 Map Location Codes').item.json.thema }}\",\n  \"language_code\": \"{{ $('02 Map Location Codes').item.json.sprache }}\",\n  \"location_code\": {{ $('02 Map Location Codes').item.json.location_code }},\n  \"depth\": 10\n}]",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "dataforseo-serp",
+      "name": "04 DataForSEO SERP API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "dataforseo-credentials",
+          "name": "DataForSEO Basic Auth"
+        }
+      },
+      "notes": "Fetches top 10 organic SERP results for competitor analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 05 MERGE API RESPONSES\n// Combines keyword and SERP data for OpenAI analysis\n// ========================================\n\nconst config = $('02 Map Location Codes').first().json;\nconst keywordsResponse = $('03 DataForSEO Keywords API').first().json;\nconst serpResponse = $('04 DataForSEO SERP API').first().json;\n\n// Extract keywords data\nlet keywords = [];\ntry {\n  const keywordTasks = keywordsResponse.tasks || [];\n  if (keywordTasks.length > 0 && keywordTasks[0].result) {\n    keywords = keywordTasks[0].result.flatMap(r => r.keyword_data || []).map(kw => ({\n      keyword: kw.keyword,\n      search_volume: kw.search_volume || 0,\n      competition: kw.competition || 'UNKNOWN',\n      cpc: kw.cpc || 0\n    })).filter(kw => kw.search_volume > 0).sort((a, b) => b.search_volume - a.search_volume).slice(0, 50);\n  }\n} catch (e) {\n  keywords = [{ keyword: config.thema, search_volume: 'N/A', competition: 'N/A', cpc: 'N/A' }];\n}\n\n// Extract SERP data\nlet serpResults = [];\ntry {\n  const serpTasks = serpResponse.tasks || [];\n  if (serpTasks.length > 0 && serpTasks[0].result) {\n    const items = serpTasks[0].result[0]?.items || [];\n    serpResults = items.filter(item => item.type === 'organic').slice(0, 10).map((item, idx) => ({\n      position: idx + 1,\n      title: item.title || '',\n      description: item.description || '',\n      url: item.url || ''\n    }));\n  }\n} catch (e) {\n  serpResults = [];\n}\n\nreturn {\n  config,\n  keywords,\n  serp_results: serpResults,\n  keywords_json: JSON.stringify(keywords, null, 2),\n  serp_json: JSON.stringify(serpResults, null, 2)\n};"
+      },
+      "id": "merge-responses",
+      "name": "05 Merge API Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "notes": "Combines and formats keyword and SERP data for OpenAI analysis"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Du bist ein erfahrener SEO Content Strategist. Deine Aufgabe ist es, basierend auf Keyword-Daten und SERP-Analyse eine vollständige Content-Strategie zu erstellen.\n\nAntworte IMMER im folgenden JSON-Format ohne zusätzliche Erklärungen oder Markdown-Formatierung:"
+            },
+            {
+              "role": "user",
+              "content": "=Analysiere die folgenden Daten für das Thema \"{{ $json.config.thema }}\" im Markt {{ $json.config.land }} (Sprache: {{ $json.config.sprache }}).\n\n## Keyword-Daten:\n{{ $json.keywords_json }}\n\n## SERP Top 10 Ergebnisse:\n{{ $json.serp_json }}\n\n---\n\nErstelle eine vollständige Content-Strategie mit folgendem Output (als JSON):\n\n{\n  \"search_intent\": {\n    \"primary_intent\": \"informational | navigational | transactional | commercial\",\n    \"intent_beschreibung\": \"Kurze Erklärung, was Nutzer mit dieser Suche erreichen wollen\"\n  },\n  \n  \"keyword_cluster\": [\n    {\n      \"cluster_name\": \"Name des Clusters\",\n      \"keywords\": [\n        {\"keyword\": \"keyword 1\", \"suchvolumen\": 1000},\n        {\"keyword\": \"keyword 2\", \"suchvolumen\": 500}\n      ],\n      \"total_suchvolumen\": 1500\n    }\n  ],\n  \n  \"content_pieces_empfehlung\": {\n    \"anzahl\": 4,\n    \"begruendung\": \"Warum diese Anzahl sinnvoll ist\",\n    \"struktur\": \"1x Pillar Content, 3x Cluster Artikel\"\n  },\n  \n  \"content_outlines\": [\n    {\n      \"content_piece_nr\": 1,\n      \"typ\": \"Pillar Content\",\n      \"h1\": \"Vorgeschlagene H1 Überschrift\",\n      \"ziel_keywords\": [\"keyword1\", \"keyword2\"],\n      \"sections\": [\n        {\n          \"h2\": \"Erste H2 Überschrift\",\n          \"unterthemen\": [\"Konkretes Unterthema 1\", \"Konkretes Unterthema 2\"],\n          \"empfohlenes_format\": \"text | bullets | tabelle | nummerierte_liste | faq\",\n          \"format_begruendung\": \"Warum dieses Format hier sinnvoll ist\"\n        }\n      ]\n    }\n  ],\n  \n  \"externe_link_vorschlaege\": [\n    {\n      \"url\": \"https://example.com/artikel\",\n      \"titel\": \"Titel der Seite\",\n      \"warum_verlinken\": \"Autoritative Quelle für Statistiken\"\n    }\n  ]\n}\n\nWichtige Regeln:\n1. Erstelle für JEDES empfohlene Content Piece eine vollständige Outline\n2. Jede Outline sollte 4-8 H2-Abschnitte haben\n3. Format-Empfehlungen basierend auf dem Content-Typ (Vergleiche -> Tabelle, Schritte -> Nummerierte Liste, etc.)\n4. Externe Links nur von den Top 10 SERP-Ergebnissen vorschlagen, die als Quellen sinnvoll wären\n5. Keyword Cluster logisch gruppieren (nicht einfach alphabetisch)"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 4096,
+          "response_format": {
+            "type": "json_object"
+          }
+        }
+      },
+      "id": "openai-analysis",
+      "name": "06 OpenAI Analyse",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1000, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      },
+      "notes": "Analyzes keyword and SERP data to create comprehensive content strategy"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 07 PARSE AND FORMAT FOR SHEETS\n// Parses OpenAI JSON response and formats for Google Sheets\n// ========================================\n\nconst config = $('05 Merge API Responses').first().json.config;\nconst openaiResponse = $input.first().json;\n\n// Parse the OpenAI response\nlet strategy;\ntry {\n  // Handle different response formats\n  if (typeof openaiResponse.message === 'string') {\n    strategy = JSON.parse(openaiResponse.message);\n  } else if (openaiResponse.message?.content) {\n    strategy = JSON.parse(openaiResponse.message.content);\n  } else if (openaiResponse.text) {\n    strategy = JSON.parse(openaiResponse.text);\n  } else if (typeof openaiResponse === 'object' && openaiResponse.search_intent) {\n    strategy = openaiResponse;\n  } else {\n    // Try to find JSON in the response\n    const jsonStr = JSON.stringify(openaiResponse);\n    const match = jsonStr.match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      strategy = JSON.parse(match[0]);\n    } else {\n      throw new Error('Could not parse OpenAI response');\n    }\n  }\n} catch (e) {\n  // Fallback structure\n  strategy = {\n    search_intent: { primary_intent: 'unknown', intent_beschreibung: 'Parsing failed' },\n    keyword_cluster: [],\n    content_pieces_empfehlung: { anzahl: 0, begruendung: 'Error', struktur: 'N/A' },\n    content_outlines: [],\n    externe_link_vorschlaege: []\n  };\n}\n\n// Format Keyword Clusters for column I\nconst formatKeywordClusters = (clusters) => {\n  if (!clusters || clusters.length === 0) return 'Keine Cluster';\n  return clusters.map(c => {\n    const kwList = (c.keywords || []).map(k => `- ${k.keyword} (${k.suchvolumen})`).join('\\n');\n    return `### ${c.cluster_name} (Gesamt: ${c.total_suchvolumen})\\n${kwList}`;\n  }).join('\\n\\n');\n};\n\n// Format Content Outline for columns K, M, O, Q\nconst formatOutline = (outline) => {\n  if (!outline || !outline.sections) return '';\n  return outline.sections.map(s => {\n    const unterList = (s.unterthemen || []).map(u => `- ${u}`).join('\\n');\n    return `## ${s.h2}\\nFormat: ${s.empfohlenes_format}\\n${unterList}`;\n  }).join('\\n\\n');\n};\n\n// Format External Links for column R\nconst formatExternalLinks = (links) => {\n  if (!links || links.length === 0) return 'Keine Vorschläge';\n  return links.map(l => `- ${l.titel}\\n  URL: ${l.url}\\n  Grund: ${l.warum_verlinken}`).join('\\n\\n');\n};\n\n// Get outlines (up to 4)\nconst outlines = strategy.content_outlines || [];\nconst getOutline = (idx) => outlines[idx] || null;\n\n// Build row data for Google Sheets\nreturn {\n  timestamp: config.timestamp,\n  thema: config.thema,\n  sprache: config.sprache,\n  land: config.land,\n  search_intent: strategy.search_intent?.primary_intent || 'N/A',\n  intent_beschreibung: strategy.search_intent?.intent_beschreibung || 'N/A',\n  anzahl_content_pieces: strategy.content_pieces_empfehlung?.anzahl || 0,\n  content_struktur: strategy.content_pieces_empfehlung?.struktur || 'N/A',\n  keyword_cluster: formatKeywordClusters(strategy.keyword_cluster),\n  content_piece_1_h1: getOutline(0)?.h1 || '',\n  content_piece_1_outline: formatOutline(getOutline(0)),\n  content_piece_2_h1: getOutline(1)?.h1 || '',\n  content_piece_2_outline: formatOutline(getOutline(1)),\n  content_piece_3_h1: getOutline(2)?.h1 || '',\n  content_piece_3_outline: formatOutline(getOutline(2)),\n  content_piece_4_h1: getOutline(3)?.h1 || '',\n  content_piece_4_outline: formatOutline(getOutline(3)),\n  externe_links: formatExternalLinks(strategy.externe_link_vorschlaege)\n};"
+      },
+      "id": "format-for-sheets",
+      "name": "07 Format for Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "notes": "Parses OpenAI JSON response and formats data for Google Sheets columns"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.SEO_CONTENT_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SEO Content Planner - Master",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "A": "={{ $json.timestamp }}",
+            "B": "={{ $json.thema }}",
+            "C": "={{ $json.sprache }}",
+            "D": "={{ $json.land }}",
+            "E": "={{ $json.search_intent }}",
+            "F": "={{ $json.intent_beschreibung }}",
+            "G": "={{ $json.anzahl_content_pieces }}",
+            "H": "={{ $json.content_struktur }}",
+            "I": "={{ $json.keyword_cluster }}",
+            "J": "={{ $json.content_piece_1_h1 }}",
+            "K": "={{ $json.content_piece_1_outline }}",
+            "L": "={{ $json.content_piece_2_h1 }}",
+            "M": "={{ $json.content_piece_2_outline }}",
+            "N": "={{ $json.content_piece_3_h1 }}",
+            "O": "={{ $json.content_piece_3_outline }}",
+            "P": "={{ $json.content_piece_4_h1 }}",
+            "Q": "={{ $json.content_piece_4_outline }}",
+            "R": "={{ $json.externe_links }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "google-sheets-output",
+      "name": "08 Google Sheets Output",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1500, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Appends the complete SEO content strategy to the master Google Sheet"
+    }
+  ],
+  "connections": {
+    "01 Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 Map Location Codes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Map Location Codes": {
+      "main": [
+        [
+          {
+            "node": "03 DataForSEO Keywords API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "04 DataForSEO SERP API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 DataForSEO Keywords API": {
+      "main": [
+        [
+          {
+            "node": "05 Merge API Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 DataForSEO SERP API": {
+      "main": [
+        [
+          {
+            "node": "05 Merge API Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Merge API Responses": {
+      "main": [
+        [
+          {
+            "node": "06 OpenAI Analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 OpenAI Analyse": {
+      "main": [
+        [
+          {
+            "node": "07 Format for Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Format for Sheets": {
+      "main": [
+        [
+          {
+            "node": "08 Google Sheets Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "seo-content-form-workflow-v1"
+  },
+  "tags": [
+    {
+      "name": "SEO",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Content Marketing",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Form Trigger",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pinData": {}
+}
