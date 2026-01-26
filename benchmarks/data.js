@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769100007862,
+  "lastUpdate": 1769426808989,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "e7dd04b4710a652992d9ecbd7d69b182c23cebcc",
-          "message": "feat: add n8n_deploy_template tool for one-click template deployment (v2.27.0) (#453)\n\n* feat: add n8n_deploy_template tool for one-click template deployment (v2.27.0)\n\nAdd new MCP tool that deploys n8n.io workflow templates directly to user's\nn8n instance in a single operation.\n\nFeatures:\n- Fetch template from local database\n- Extract and report required credentials\n- Optionally strip credentials (default: true)\n- Optionally auto-upgrade node typeVersions (default: true)\n- Optionally validate before deployment (default: true)\n- Return workflow ID, URL, and setup guidance\n\nParameters:\n- templateId (required): Template ID from n8n.io\n- name (optional): Custom workflow name\n- autoUpgradeVersions (default: true)\n- validate (default: true)\n- stripCredentials (default: true)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: address code review findings for n8n_deploy_template\n\n- Fix health check tool count (12 → 13) to include new tool\n- Add templateId validation (must be positive integer)\n- Use deep copy of workflow to prevent template mutation\n- Expand unit tests with negative/zero/decimal validation cases\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* docs: update README with n8n_deploy_template tool\n\n- Update management tools count from 12 to 13\n- Add n8n_deploy_template to the tools list\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: prevent workflow validator from mutating node types\n\nThe validator was incorrectly mutating node types from full form\n(n8n-nodes-base.*) to short form (nodes-base.*) during validation.\nThis caused deployed workflows to show \"?\" icons in n8n UI because\nthe API requires full form node types.\n\nAlso updated SplitInBatches detection to check both node type forms\nsince workflows may contain either format.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* test: update tool counts in handlers-n8n-manager test\n\nUpdate expected managementTools count from 12 to 13 and\ntotalAvailable from 19 to 20 to account for the new\nn8n_deploy_template tool.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: pin MCP SDK and Zod versions to prevent Zod v4 resolution\n\nFixes #440, #444, #446, #447, #450\n\nRoot cause: package.json declared `\"@modelcontextprotocol/sdk\": \"^1.20.1\"`\nwhich allowed npm to resolve to SDK 1.23.0. That version accepts\n`\"zod\": \"^3.25 || ^4.0\"`, causing npm to deduplicate to Zod v4.\nSDK 1.23.0's `isZ4Schema()` function crashes when called with undefined,\nwhich happens for plain JSON Schema objects.\n\nChanges:\n- Pin SDK to exact version 1.20.1 (removes ^ prefix)\n- Pin Zod to exact version 3.24.1 (removes ^ prefix)\n- Add CI workflow to verify fresh installs get compatible versions\n\nThe new CI workflow:\n- Packs and installs package fresh (without lockfile)\n- Verifies SDK is exactly 1.20.1\n- Verifies Zod is NOT v4 (blocks 4.x.x)\n- Runs weekly to catch upstream dependency changes\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* chore: improve dependency-check workflow based on code review\n\n- Add workflow_dispatch for manual triggering/debugging\n- Add explicit \"not found\" handling for version detection failures\n- Use regex pattern for Zod v4 check to catch pre-release versions\n- Add Zod error pattern detection in functionality test\n- Capture stderr output for comprehensive error checking\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-29T00:48:26+01:00",
-          "tree_id": "402722de3b63bd4c7f6488f3bdd5049535dfd2b6",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/e7dd04b4710a652992d9ecbd7d69b182c23cebcc"
-        },
-        "date": 1764373822081,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/be10ff1f577c8f0c8471374b12e62d471ecabef8"
         },
         "date": 1769100007327,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "20a391842dc9b398b31d76bf803ef80419ca85a5",
+          "message": "Merge pull request #14 from markmocasa-boop/claude/n8n-seo-content-workflow-HcOuY\n\nfeat: add comprehensive SEO Content Planning workflow",
+          "timestamp": "2026-01-26T12:24:57+01:00",
+          "tree_id": "3ce1f39b1aaa7de17ed8bb1867f5fd2e3d5bca72",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/20a391842dc9b398b31d76bf803ef80419ca85a5"
+        },
+        "date": 1769426808600,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
