@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769426808989,
+  "lastUpdate": 1769453324922,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "7d9b45688718cdb186c2018d85f0acd19fb48148",
-          "message": "fix: pin MCP SDK version in Docker build files (v2.27.1) (#456)\n\n* fix: pin MCP SDK version in Docker build files (#454)\n\nThe Docker image 2.27.0 was missing the Zod fix from #450 because:\n- package.runtime.json had @modelcontextprotocol/sdk@^1.13.2\n- Dockerfile builder had @modelcontextprotocol/sdk@^1.12.1\n\nBoth now use the pinned version 1.20.1 (no caret) to match package.json.\nAlso pinned zod@3.24.1 in Dockerfile for consistency.\n\nFixes #454\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* chore: bump version to 2.27.1 and update CHANGELOG\n\n- Version bump from 2.27.0 to 2.27.1\n- Added CHANGELOG entry for #454 fix (Docker SDK version)\n- Added missing CHANGELOG entry for 2.27.0 (n8n_deploy_template)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-11-29T10:13:16+01:00",
-          "tree_id": "e744e19e2463d673547bb5c40cc7f9a46dc364ad",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/7d9b45688718cdb186c2018d85f0acd19fb48148"
-        },
-        "date": 1764407709248,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/20a391842dc9b398b31d76bf803ef80419ca85a5"
         },
         "date": 1769426808600,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7884f0cad01ce70e63285c1f6a6b31f7129123fd",
+          "message": "Merge pull request #15 from markmocasa-boop/claude/n8n-seo-content-workflow-Te5CK\n\nfeat: add Form-based SEO Content Planning workflow",
+          "timestamp": "2026-01-26T19:47:00+01:00",
+          "tree_id": "cee3daba277cce83c71f0e1f85bfdf9b73b282d3",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7884f0cad01ce70e63285c1f6a6b31f7129123fd"
+        },
+        "date": 1769453324504,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
