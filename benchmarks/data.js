@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769494489594,
+  "lastUpdate": 1769513694420,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3188d209b78ad8267fb0afb70bf3050174116230",
-          "message": "fix: AI connection type propagation and get_node improvements (v2.28.1) (#461)\n\n* fix: AI connection type propagation and get_node improvements (v2.28.1)\n\nBug fixes:\n- Issue #458: addConnection now preserves AI connection types (ai_tool, ai_memory, ai_languageModel) instead of defaulting to 'main'\n- Fixed false positive \"AI Agent has no tools connected\" validation warning\n\nEnhancements:\n- Added expectedFormat field to resourceLocator properties in get_node output\n- Added versionNotice field to make typeVersion more prominent\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* test: add missing test coverage for PR #461 improvements\n\n- Added test for AI Agent validation positive case (tools properly connected)\n- Added 3 tests for expectedFormat on resourceLocator properties\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-12-01T18:54:15+01:00",
-          "tree_id": "22bdf426543cce8d7ff7a2cacc9e70eb68994bed",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/3188d209b78ad8267fb0afb70bf3050174116230"
-        },
-        "date": 1764611764753,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4ce0e0c8e0812af0603f58b2e3d67e7b9c51baa2"
         },
         "date": 1769494488319,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "781886783c05e51c67923af90f3283856d035817",
+          "message": "Merge pull request #17 from markmocasa-boop/claude/n8n-backlink-outreach-XyhQu\n\nrefactor: use native Apify and Anthropic nodes instead of HTTP Request",
+          "timestamp": "2026-01-27T12:33:02+01:00",
+          "tree_id": "d32be36070b996a78c90513e03b1774891faa2b3",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/781886783c05e51c67923af90f3283856d035817"
+        },
+        "date": 1769513693761,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
