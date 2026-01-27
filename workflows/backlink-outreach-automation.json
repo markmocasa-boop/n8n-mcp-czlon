@@ -1,0 +1,969 @@
+{
+  "name": "Backlink Outreach Automatisierung",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Backlink Outreach Automatisierung",
+        "formDescription": "Automatisierter Backlink-Outreach: Scrape passende Unternehmen, reichere Daten an, generiere personalisierte Content-Vorschläge und versende Outreach-E-Mails.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Branche",
+              "fieldType": "text",
+              "placeholder": "z.B. Zahnarzt, Restaurant, Steuerberater",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Region",
+              "fieldType": "text",
+              "placeholder": "z.B. München, Berlin Mitte, Hamburg",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Anzahl Unternehmen",
+              "fieldType": "number",
+              "placeholder": "10",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Eigene Website URL",
+              "fieldType": "text",
+              "placeholder": "https://ihre-website.de",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "E-Mail Absender",
+              "fieldType": "email",
+              "placeholder": "ihre-email@gmail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tonalität",
+              "fieldType": "dropdown",
+              "dropdownOptions": {
+                "values": [
+                  { "option": "Formell" },
+                  { "option": "Locker" }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "respondWith": "text",
+            "formSubmittedText": "Danke! Der Backlink-Outreach-Workflow wurde gestartet. Die Ergebnisse erscheinen in Google Sheets."
+          }
+        }
+      },
+      "id": "form-trigger",
+      "name": "01 Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 300],
+      "webhookId": "backlink-outreach-form",
+      "notes": "Formular für Backlink-Outreach - sammelt Branche, Region, Anzahl, eigene Website, Absender-E-Mail und Tonalität"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 02 PREPARE FORM DATA\n// Extracts and normalizes form input data\n// ========================================\n\nconst input = $input.first().json;\n\nconst branche = input['Branche'] || input.branche;\nconst region = input['Region'] || input.region;\nconst anzahlUnternehmen = parseInt(input['Anzahl Unternehmen'] || input.anzahl_unternehmen) || 10;\nconst eigeneWebsiteUrl = input['Eigene Website URL'] || input.eigene_website_url;\nconst emailAbsender = input['E-Mail Absender'] || input.email_absender;\nconst tonalitaet = input['Tonalität'] || input.tonalitaet || 'Formell';\n\nreturn {\n  branche: branche.trim(),\n  region: region.trim(),\n  anzahl_unternehmen: anzahlUnternehmen,\n  eigene_website_url: eigeneWebsiteUrl.trim(),\n  email_absender: emailAbsender.trim(),\n  tonalitaet: tonalitaet,\n  search_query: `${branche.trim()} ${region.trim()}`,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-form-data",
+      "name": "02 Prepare Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "notes": "Extrahiert und normalisiert die Formulardaten für nachfolgende Nodes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"searchStringsArray\": [\"{{ $json.search_query }}\"],\n  \"maxCrawledPlacesPerSearch\": {{ $json.anzahl_unternehmen }},\n  \"language\": \"de\",\n  \"exportPlaceUrls\": false,\n  \"includeHistogram\": false,\n  \"includeOpeningHours\": false,\n  \"includePeopleAlsoSearch\": false,\n  \"additionalInfo\": false,\n  \"maxImages\": 0,\n  \"maxReviews\": 0,\n  \"scrapeDirectories\": false,\n  \"scrapeResponseFromOwnerText\": false\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 300000
+        }
+      },
+      "id": "apify-google-maps",
+      "name": "03 Apify Google Maps Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "apify-credentials",
+          "name": "Apify API Token"
+        }
+      },
+      "notes": "Scraped Unternehmen von Google Maps basierend auf Branche und Region"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem"
+      },
+      "id": "split-items-apify",
+      "name": "04 Split Into Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [750, 300],
+      "notes": "Teilt die Apify-Ergebnisse in einzelne Items für die Verarbeitung"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "website-exists",
+              "leftValue": "={{ $json.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-website",
+      "name": "05 Filter - Nur mit Website",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "notes": "Filtert Unternehmen ohne Website heraus - kein Backlink ohne Website möglich"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 06 NORMALIZE APIFY DATA\n// Normalizes and extracts relevant fields from Apify response\n// ========================================\n\nconst item = $input.first().json;\nconst formData = $('02 Prepare Form Data').first().json;\n\nreturn {\n  // Company data from Apify\n  firmenname: item.title || item.name || 'Unbekannt',\n  adresse: item.address || item.street || '',\n  website: item.website || '',\n  telefon: item.phone || item.phoneUnformatted || '',\n  bewertung: item.totalScore || item.rating || 0,\n  anzahl_bewertungen: item.reviewsCount || item.reviewCount || 0,\n  kategorie: item.categoryName || item.category || '',\n  place_id: item.placeId || '',\n  \n  // Pass through form data\n  branche: formData.branche,\n  region: formData.region,\n  eigene_website_url: formData.eigene_website_url,\n  email_absender: formData.email_absender,\n  tonalitaet: formData.tonalitaet,\n  timestamp: formData.timestamp\n};"
+      },
+      "id": "normalize-apify",
+      "name": "06 Normalize Apify Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "notes": "Normalisiert Apify-Daten und fügt Formular-Daten hinzu"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.firmenname }} {{ $json.website }} Kontakt E-Mail Inhaber Geschäftsführer Ansprechpartner LinkedIn Xing\",\n  \"search_depth\": \"advanced\",\n  \"include_answer\": true,\n  \"include_raw_content\": false,\n  \"max_results\": 5\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "tavily-enrichment",
+      "name": "07 Tavily Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tavily-credentials",
+          "name": "Tavily API Key"
+        }
+      },
+      "notes": "Sucht Kontaktperson, E-Mail, LinkedIn-Profil und Firmengröße"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-sonar-large-128k-online\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Du recherchierst Brancheninformationen für SEO-Outreach. Antworte immer auf Deutsch im JSON-Format.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Recherchiere für eine Outreach-E-Mail an ein Unternehmen in der Branche '{{ $('06 Normalize Apify Data').item.json.branche }}':\\n\\n1. Finde 2-3 aktuelle, relevante Statistiken zur Branche '{{ $('06 Normalize Apify Data').item.json.branche }}' in Deutschland (mit Quellenangabe wenn möglich)\\n2. Was sind aktuelle Trends oder Neuigkeiten in dieser Branche?\\n3. Analysiere kurz die Website {{ $('06 Normalize Apify Data').item.json.website }}: Was macht das Unternehmen? Gibt es einen Blog oder Content-Bereich?\\n\\nAntworte auf Deutsch im JSON-Format:\\n{\\n  \\\"statistiken\\\": [\\\"Statistik 1...\\\", \\\"Statistik 2...\\\"],\\n  \\\"trends\\\": \\\"...\\\",\\n  \\\"website_analyse\\\": \\\"...\\\"\\n}\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 1500\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 90000
+        }
+      },
+      "id": "perplexity-enrichment",
+      "name": "08 Perplexity Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "perplexity-credentials",
+          "name": "Perplexity API Key"
+        }
+      },
+      "notes": "Recherchiert Branchenstatistiken, Trends und analysiert die Ziel-Website"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 09 MERGE ENRICHMENT DATA\n// Combines Tavily and Perplexity enrichment results\n// ========================================\n\nconst companyData = $('06 Normalize Apify Data').first().json;\nconst tavilyResponse = $('07 Tavily Enrichment').first().json;\nconst perplexityResponse = $('08 Perplexity Enrichment').first().json;\n\n// Extract contact info from Tavily answer\nlet kontaktperson = '';\nlet email = '';\nlet linkedin = '';\nlet mitarbeiter = '';\n\ntry {\n  const tavilyAnswer = tavilyResponse.answer || '';\n  \n  // Try to extract email from answer or results\n  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/gi;\n  const emailMatches = tavilyAnswer.match(emailRegex) || [];\n  \n  // Also check in search results\n  const results = tavilyResponse.results || [];\n  for (const result of results) {\n    const content = (result.content || '') + (result.raw_content || '');\n    const moreEmails = content.match(emailRegex) || [];\n    emailMatches.push(...moreEmails);\n  }\n  \n  // Filter out common non-business emails and take first valid one\n  const validEmails = emailMatches.filter(e => \n    !e.includes('example') && \n    !e.includes('test') &&\n    !e.includes('noreply') &&\n    !e.includes('newsletter')\n  );\n  email = validEmails[0] || '';\n  \n  // Try to extract LinkedIn URL\n  const linkedinRegex = /https?:\\/\\/(www\\.)?linkedin\\.com\\/in\\/[a-zA-Z0-9-]+/gi;\n  const linkedinMatches = tavilyAnswer.match(linkedinRegex) || [];\n  for (const result of results) {\n    const content = (result.content || '') + (result.url || '');\n    const moreLinkedin = content.match(linkedinRegex) || [];\n    linkedinMatches.push(...moreLinkedin);\n  }\n  linkedin = linkedinMatches[0] || '';\n  \n  // Try to extract contact person name (look for common patterns)\n  const namePatterns = [\n    /(?:Inhaber|Geschäftsführer|CEO|Gründer|Ansprechpartner)[:\\s]+([A-ZÄÖÜ][a-zäöüß]+\\s+[A-ZÄÖÜ][a-zäöüß]+)/gi,\n    /(?:Dr\\.|Prof\\.)\\s*([A-ZÄÖÜ][a-zäöüß]+\\s+[A-ZÄÖÜ][a-zäöüß]+)/gi\n  ];\n  \n  for (const pattern of namePatterns) {\n    const match = tavilyAnswer.match(pattern);\n    if (match && match[1]) {\n      kontaktperson = match[1].trim();\n      break;\n    }\n  }\n  \n  // Try to extract employee count\n  const mitarbeiterRegex = /(\\d+[-–]\\d+|\\d+\\+?)\\s*(?:Mitarbeiter|Angestellte|Beschäftigte)/gi;\n  const mitarbeiterMatch = tavilyAnswer.match(mitarbeiterRegex);\n  if (mitarbeiterMatch) {\n    mitarbeiter = mitarbeiterMatch[0].replace(/\\s*(?:Mitarbeiter|Angestellte|Beschäftigte)/gi, '').trim();\n  }\n} catch (e) {\n  // Continue with empty values if parsing fails\n}\n\n// Extract Perplexity data\nlet statistiken = [];\nlet trends = '';\nlet websiteAnalyse = '';\n\ntry {\n  const perplexityContent = perplexityResponse.choices?.[0]?.message?.content || '';\n  \n  // Try to parse as JSON first\n  try {\n    const jsonMatch = perplexityContent.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      statistiken = parsed.statistiken || [];\n      trends = parsed.trends || '';\n      websiteAnalyse = parsed.website_analyse || '';\n    }\n  } catch (jsonError) {\n    // If JSON parsing fails, extract text content\n    statistiken = [];\n    trends = perplexityContent.substring(0, 500);\n    websiteAnalyse = '';\n  }\n} catch (e) {\n  // Continue with empty values if parsing fails\n}\n\nreturn {\n  // Original company data\n  ...companyData,\n  \n  // Tavily enrichment\n  kontaktperson: kontaktperson,\n  email: email,\n  linkedin: linkedin,\n  mitarbeiter: mitarbeiter,\n  \n  // Perplexity enrichment\n  statistiken: statistiken,\n  statistiken_text: statistiken.join(' | '),\n  trends: trends,\n  website_analyse: websiteAnalyse,\n  \n  // For Claude prompts\n  statistiken_json: JSON.stringify(statistiken),\n  has_email: email !== ''\n};"
+      },
+      "id": "merge-enrichment",
+      "name": "09 Merge Enrichment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1750, 300],
+      "notes": "Kombiniert Tavily- und Perplexity-Daten, extrahiert E-Mails und Kontaktinformationen"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "email-exists",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-email",
+      "name": "10 Filter - Nur mit E-Mail",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "notes": "Filtert Unternehmen ohne gefundene E-Mail-Adresse heraus"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.BACKLINK_OUTREACH_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Backlink-Outreach",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "A": "={{ $json.firmenname }}",
+            "B": "={{ $json.adresse }}",
+            "C": "={{ $json.website }}",
+            "D": "={{ $json.telefon }}",
+            "E": "={{ $json.bewertung }}",
+            "F": "={{ $json.anzahl_bewertungen }}",
+            "G": "={{ $json.kategorie }}",
+            "H": "={{ $json.kontaktperson }}",
+            "I": "={{ $json.email }}",
+            "J": "={{ $json.linkedin }}",
+            "K": "={{ $json.mitarbeiter }}",
+            "L": "={{ $json.statistiken_text }}",
+            "M": "={{ $json.trends }}",
+            "N": "={{ $json.website_analyse }}",
+            "O": "",
+            "P": "",
+            "Q": "",
+            "R": "",
+            "S": "",
+            "T": "Ausstehend",
+            "U": "",
+            "V": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "google-sheets-initial",
+      "name": "11 Google Sheet - Initial Save",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2250, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Speichert die angereicherten Unternehmensdaten initial in Google Sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 12 GET ROW NUMBER\n// Extracts the row number from the Google Sheets response for later updates\n// ========================================\n\nconst sheetsResponse = $input.first().json;\nconst previousData = $('09 Merge Enrichment Data').first().json;\n\n// The row number should be in the updates response\n// Google Sheets API returns the updated range like 'Sheet!A2:V2'\nlet rowNumber = 2; // Default to row 2 (after header)\n\ntry {\n  const updatedRange = sheetsResponse.updates?.updatedRange || sheetsResponse.updatedRange || '';\n  const rowMatch = updatedRange.match(/(\\d+)/);\n  if (rowMatch) {\n    rowNumber = parseInt(rowMatch[1]);\n  } else {\n    // Try to get from spreadsheetId response\n    const dataRange = sheetsResponse.updates?.updatedData?.range || '';\n    const dataRowMatch = dataRange.match(/(\\d+)/);\n    if (dataRowMatch) {\n      rowNumber = parseInt(dataRowMatch[1]);\n    }\n  }\n} catch (e) {\n  // Keep default row number\n}\n\nreturn {\n  ...previousData,\n  sheet_row_number: rowNumber\n};"
+      },
+      "id": "get-row-number",
+      "name": "12 Get Row Number",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2500, 300],
+      "notes": "Extrahiert die Zeilennummer für spätere Updates"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Du bist ein SEO-Content-Experte. Deine Aufgabe ist es, Gastbeitrag-Ideen zu entwickeln, die für beide Seiten wertvoll sind: Der Gastgeber bekommt hochwertigen Content, der Autor bekommt einen Backlink.\\n\\nErstelle Vorschläge, die:\\n- Zur Branche und zum Unternehmen passen\\n- Konkrete Statistiken oder Daten enthalten (wenn verfügbar)\\n- Praktische Tipps oder aktuelle News bieten\\n- Einen klaren Mehrwert für die Leser der Ziel-Website haben\\n\\n---\\n\\nErstelle 3 Gastbeitrag-Vorschläge für folgendes Unternehmen:\\n\\n**Unternehmen:** {{ $json.firmenname }}\\n**Branche:** {{ $json.branche }}\\n**Website:** {{ $json.website }}\\n**Website-Analyse:** {{ $json.website_analyse }}\\n\\n**Verfügbare Branchenstatistiken:**\\n{{ $json.statistiken_json }}\\n\\n**Aktuelle Branchentrends:**\\n{{ $json.trends }}\\n\\nFür jeden Vorschlag liefere:\\n1. Titel des Gastbeitrags\\n2. Kurzbeschreibung (2-3 Sätze, was der Artikel behandelt)\\n3. Welche Statistik/welchen Trend er aufgreift\\n4. Warum er für die Zielgruppe des Unternehmens relevant ist\\n\\nAntworte auf Deutsch im JSON-Format:\\n{\\n  \\\"vorschlag_1\\\": {\\n    \\\"titel\\\": \\\"...\\\",\\n    \\\"beschreibung\\\": \\\"...\\\",\\n    \\\"statistik_trend\\\": \\\"...\\\",\\n    \\\"relevanz\\\": \\\"...\\\"\\n  },\\n  \\\"vorschlag_2\\\": { ... },\\n  \\\"vorschlag_3\\\": { ... }\\n}\"\n    }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "claude-content-proposals",
+      "name": "13 Claude - Content-Vorschläge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2750, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API Key"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Generiert 3 personalisierte Gastbeitrag-Vorschläge basierend auf Unternehmensdaten"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 14 PARSE CONTENT PROPOSALS\n// Parses Claude's content proposal response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('12 Get Row Number').first().json;\n\nlet vorschlag1 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag2 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag3 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\n\ntry {\n  // Extract content from Claude response\n  const content = claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    vorschlag1 = parsed.vorschlag_1 || vorschlag1;\n    vorschlag2 = parsed.vorschlag_2 || vorschlag2;\n    vorschlag3 = parsed.vorschlag_3 || vorschlag3;\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n}\n\n// Format proposals as text for the sheet\nconst formatProposal = (v) => {\n  if (!v.titel) return '';\n  return `**${v.titel}**\\n${v.beschreibung}\\n\\nStatistik/Trend: ${v.statistik_trend}\\nRelevanz: ${v.relevanz}`;\n};\n\nreturn {\n  ...previousData,\n  \n  // Structured proposals for email generation\n  vorschlag_1: vorschlag1,\n  vorschlag_2: vorschlag2,\n  vorschlag_3: vorschlag3,\n  \n  // Formatted proposals for Google Sheets\n  content_vorschlag_1: formatProposal(vorschlag1),\n  content_vorschlag_2: formatProposal(vorschlag2),\n  content_vorschlag_3: formatProposal(vorschlag3),\n  \n  // JSON for email prompt\n  vorschlaege_json: JSON.stringify({ vorschlag_1: vorschlag1, vorschlag_2: vorschlag2, vorschlag_3: vorschlag3 }, null, 2)\n};"
+      },
+      "id": "parse-content-proposals",
+      "name": "14 Parse Content Proposals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3000, 300],
+      "notes": "Parst die Claude-Antwort und formatiert die Content-Vorschläge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"{{ $json.tonalitaet === 'Formell' ? 'Du schreibst professionelle Outreach-E-Mails auf Deutsch. Dein Ton ist höflich, respektvoll und geschäftlich. Verwende \\\"Sie\\\" als Anrede. Vermeide übertriebene Verkaufssprache – sei authentisch und auf Augenhöhe.' : 'Du schreibst moderne, lockere Outreach-E-Mails auf Deutsch. Dein Ton ist freundlich und direkt, aber professionell. Verwende \\\"Du\\\" als Anrede. Sei authentisch, nicht schmierig oder zu verkäuferisch.' }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Schreibe eine Outreach-E-Mail für eine Backlink-/Gastbeitrag-Anfrage.\\n\\n**Empfänger:**\\n- Firma: {{ $json.firmenname }}\\n- Kontaktperson: {{ $json.kontaktperson || 'Nicht bekannt' }}\\n- Website: {{ $json.website }}\\n- Branche: {{ $json.branche }}\\n\\n**Absender:**\\n- Website: {{ $json.eigene_website_url }}\\n\\n**Die 3 Content-Vorschläge:**\\n{{ $json.vorschlaege_json }}\\n\\n**Tonalität:** {{ $json.tonalitaet }}\\n\\n**E-Mail-Struktur:**\\n1. Persönliche Ansprache mit Bezug auf deren Website/Unternehmen\\n2. Kurz vorstellen: Wer bin ich und was biete ich an\\n3. Mehrwert von gutem Content erklären: Warum profitiert deren Website von Gastbeiträgen (SEO, Vertrauen bei Besuchern, Expertise zeigen, mehr Traffic)\\n4. Die 3 Content-Vorschläge präsentieren (kurz und übersichtlich)\\n5. Call-to-Action: Interesse an einem der Themen? Gerne besprechen.\\n6. Freundlicher Abschluss\\n\\n**Ausgabe im JSON-Format:**\\n{\\n  \\\"betreff\\\": \\\"Personalisierter, neugierig machender Betreff\\\",\\n  \\\"email_text\\\": \\\"Der vollständige E-Mail-Text mit Absätzen\\\"\\n}\"\n    }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "claude-email-generation",
+      "name": "15 Claude - E-Mail generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3250, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API Key"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Generiert eine personalisierte Outreach-E-Mail basierend auf der gewählten Tonalität"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 16 PARSE EMAIL RESPONSE\n// Parses Claude's email generation response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('14 Parse Content Proposals').first().json;\n\nlet betreff = '';\nlet emailText = '';\n\ntry {\n  // Extract content from Claude response\n  const content = claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    betreff = parsed.betreff || '';\n    emailText = parsed.email_text || '';\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n  betreff = 'Gastbeitrag-Anfrage für Ihre Website';\n  emailText = 'Fehler beim Generieren der E-Mail. Bitte manuell erstellen.';\n}\n\nreturn {\n  ...previousData,\n  email_betreff: betreff,\n  email_text: emailText\n};"
+      },
+      "id": "parse-email-response",
+      "name": "16 Parse Email Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3500, 300],
+      "notes": "Parst die Claude-Antwort mit Betreff und E-Mail-Text"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.BACKLINK_OUTREACH_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Backlink-Outreach",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "O": "={{ $json.content_vorschlag_1 }}",
+            "P": "={{ $json.content_vorschlag_2 }}",
+            "Q": "={{ $json.content_vorschlag_3 }}",
+            "R": "={{ $json.email_betreff }}",
+            "S": "={{ $json.email_text }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        },
+        "dataMode": "autoMapInputData",
+        "matchingColumns": ["A"]
+      },
+      "id": "google-sheets-update-content",
+      "name": "17 Google Sheet - Update Content",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3750, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Aktualisiert das Sheet mit Content-Vorschlägen und generierter E-Mail"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "minutes"
+      },
+      "id": "wait-node",
+      "name": "18 Wait 5 Minuten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4000, 300],
+      "webhookId": "backlink-outreach-wait",
+      "notes": "Wartet 5 Minuten zwischen E-Mails um Gmail-Sperren zu vermeiden"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('16 Parse Email Response').item.json.email }}",
+        "subject": "={{ $('16 Parse Email Response').item.json.email_betreff }}",
+        "emailType": "text",
+        "message": "={{ $('16 Parse Email Response').item.json.email_text }}",
+        "options": {}
+      },
+      "id": "gmail-send",
+      "name": "19 Gmail - E-Mail versenden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4250, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Versendet die generierte Outreach-E-Mail via Gmail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-gmail-result",
+      "name": "20 Check Gmail Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4500, 300],
+      "notes": "Prüft ob der Gmail-Versand erfolgreich war"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.BACKLINK_OUTREACH_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Backlink-Outreach",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "T": "Versendet",
+            "U": "={{ new Date().toISOString() }}",
+            "V": ""
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        },
+        "dataMode": "autoMapInputData",
+        "matchingColumns": ["A"]
+      },
+      "id": "google-sheets-success",
+      "name": "21 Sheet - Erfolg markieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4750, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Markiert die Zeile als 'Versendet' mit Timestamp"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.BACKLINK_OUTREACH_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Backlink-Outreach",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "T": "Fehler",
+            "U": "",
+            "V": "={{ $json.error?.message || $json.message || 'Unbekannter Fehler' }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        },
+        "dataMode": "autoMapInputData",
+        "matchingColumns": ["A"]
+      },
+      "id": "google-sheets-error",
+      "name": "22 Sheet - Fehler markieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4750, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Markiert die Zeile als 'Fehler' mit Fehlermeldung"
+    },
+    {
+      "parameters": {},
+      "id": "no-op-success",
+      "name": "23 Loop Continue (Success)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [5000, 200],
+      "notes": "Platzhalter für Loop-Fortsetzung nach Erfolg"
+    },
+    {
+      "parameters": {},
+      "id": "no-op-error",
+      "name": "24 Loop Continue (Error)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [5000, 400],
+      "notes": "Platzhalter für Loop-Fortsetzung nach Fehler"
+    }
+  ],
+  "connections": {
+    "01 Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 Prepare Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Prepare Form Data": {
+      "main": [
+        [
+          {
+            "node": "03 Apify Google Maps Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Apify Google Maps Scraper": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Split Into Items": {
+      "main": [
+        [
+          {
+            "node": "05 Filter - Nur mit Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Filter - Nur mit Website": {
+      "main": [
+        [
+          {
+            "node": "06 Normalize Apify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Normalize Apify Data": {
+      "main": [
+        [
+          {
+            "node": "07 Tavily Enrichment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "08 Perplexity Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Tavily Enrichment": {
+      "main": [
+        [
+          {
+            "node": "09 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Perplexity Enrichment": {
+      "main": [
+        [
+          {
+            "node": "09 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 Merge Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "10 Filter - Nur mit E-Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Filter - Nur mit E-Mail": {
+      "main": [
+        [
+          {
+            "node": "11 Google Sheet - Initial Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Google Sheet - Initial Save": {
+      "main": [
+        [
+          {
+            "node": "12 Get Row Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Get Row Number": {
+      "main": [
+        [
+          {
+            "node": "13 Claude - Content-Vorschläge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Claude - Content-Vorschläge": {
+      "main": [
+        [
+          {
+            "node": "14 Parse Content Proposals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Parse Content Proposals": {
+      "main": [
+        [
+          {
+            "node": "15 Claude - E-Mail generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Claude - E-Mail generieren": {
+      "main": [
+        [
+          {
+            "node": "16 Parse Email Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Parse Email Response": {
+      "main": [
+        [
+          {
+            "node": "17 Google Sheet - Update Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 Google Sheet - Update Content": {
+      "main": [
+        [
+          {
+            "node": "18 Wait 5 Minuten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 Wait 5 Minuten": {
+      "main": [
+        [
+          {
+            "node": "19 Gmail - E-Mail versenden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 Gmail - E-Mail versenden": {
+      "main": [
+        [
+          {
+            "node": "20 Check Gmail Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 Sheet - Fehler markieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 Check Gmail Result": {
+      "main": [
+        [
+          {
+            "node": "21 Sheet - Erfolg markieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 Sheet - Fehler markieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 Sheet - Erfolg markieren": {
+      "main": [
+        [
+          {
+            "node": "23 Loop Continue (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 Sheet - Fehler markieren": {
+      "main": [
+        [
+          {
+            "node": "24 Loop Continue (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 Loop Continue (Success)": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 Loop Continue (Error)": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "backlink-outreach-automation-v1"
+  },
+  "tags": [
+    {
+      "name": "SEO",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Outreach",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Backlinks",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Form Trigger",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pinData": {}
+}
