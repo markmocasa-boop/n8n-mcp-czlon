@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Monorepo Notice (Important)
+
+This repository is a **monorepo**.
+
+All folders belong to the same system and must be considered **together** when reasoning, refactoring, or implementing features.
+
+High-level responsibilities:
+- **MCP core**: protocol, orchestration, n8n integration
+- **Skills** (`/skills`): reusable AI tools and capabilities
+- **GSD** (`/gsd`): agent commands, workflows, and automation helpers
+
+Never assume folders are independent projects.
+Never refactor or move code without considering cross-folder impact.
+
 ## Project Overview
 
 n8n-mcp is a comprehensive documentation and knowledge server that provides AI assistants with complete access to n8n node information through the Model Context Protocol (MCP). It serves as a bridge between n8n's workflow automation platform and AI models, enabling them to understand and work with n8n nodes effectively.
@@ -163,6 +177,34 @@ The MCP server exposes tools in several categories:
 4. **Workflow Tools**: Complete workflow validation
 5. **Management Tools**: Creating and updating workflows (requires API config)
 
+## Additional Repository Areas
+
+### Skills (`/skills`)
+Contains AI skills and tool implementations used by MCP and agents.
+
+Guidelines:
+- Treat skills as modular, reusable components
+- Avoid tight coupling to MCP internals
+- Prefer explicit input/output contracts
+- Document side effects clearly
+
+Changes to skills may impact MCP behavior and agent workflows.
+
+---
+
+### GSD (`/gsd`)
+Agent-oriented command and workflow system.
+
+Responsibilities:
+- CLI commands
+- Agent workflows
+- Automation utilities
+
+Guidelines:
+- Keep GSD reusable and MCP-agnostic where possible
+- Favor clarity over clever abstractions
+- Do not leak MCP internals into GSD unless explicitly required
+
 ## Memories and Notes for Development
 
 ### Development Workflow Reminders
@@ -235,3 +277,11 @@ NEVER proactively create documentation files (*.md) or README files. Only create
 - Use the best sub-agent for the task as per their descriptions
 - Do not use hyperbolic or dramatic language in comments and documentation
 - Add to every commit and PR: Concieved by Romuald Członkowski - and then link to www.aiadvisors.pl/en. Don't add it in conversations
+
+- ## Instruction Priority
+
+This file (`CLAUDE.md`) is the **single source of truth** for how Claude should work in this repository.
+
+If instructions appear elsewhere (README, docs, comments):
+- This file has priority
+- Ask for clarification if instructions conflict
