@@ -250,12 +250,67 @@
         },
         "options": {}
       },
-      "id": "filter-email",
-      "name": "10 Filter - Nur mit E-Mail",
-      "type": "n8n-nodes-base.filter",
+      "id": "check-email",
+      "name": "10 Check E-Mail vorhanden",
+      "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [2000, 300],
-      "notes": "Filtert Unternehmen ohne gefundene E-Mail-Adresse heraus"
+      "notes": "Prüft ob E-Mail gefunden wurde. True = weiter mit Outreach, False = speichern für manuelle Recherche"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.BACKLINK_OUTREACH_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Backlink-Outreach",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "A": "={{ $json.firmenname }}",
+            "B": "={{ $json.adresse }}",
+            "C": "={{ $json.website }}",
+            "D": "={{ $json.telefon }}",
+            "E": "={{ $json.bewertung }}",
+            "F": "={{ $json.anzahl_bewertungen }}",
+            "G": "={{ $json.kategorie }}",
+            "H": "={{ $json.kontaktperson }}",
+            "I": "",
+            "J": "={{ $json.linkedin }}",
+            "K": "={{ $json.mitarbeiter }}",
+            "L": "={{ $json.statistiken_text }}",
+            "M": "={{ $json.trends }}",
+            "N": "={{ $json.website_analyse }}",
+            "O": "",
+            "P": "",
+            "Q": "",
+            "R": "",
+            "S": "",
+            "T": "Manuelle Recherche",
+            "U": "",
+            "V": "Keine E-Mail-Adresse gefunden - bitte manuell recherchieren"
+          }
+        },
+        "options": {}
+      },
+      "id": "google-sheets-no-email",
+      "name": "10b Sheet - Ohne E-Mail speichern",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2250, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Speichert Unternehmen ohne E-Mail mit Status 'Manuelle Recherche' für spätere Bearbeitung"
     },
     {
       "parameters": {
@@ -719,18 +774,36 @@
       "main": [
         [
           {
-            "node": "10 Filter - Nur mit E-Mail",
+            "node": "10 Check E-Mail vorhanden",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "10 Filter - Nur mit E-Mail": {
+    "10 Check E-Mail vorhanden": {
       "main": [
         [
           {
             "node": "11 Google Sheet - Initial Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10b Sheet - Ohne E-Mail speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10b Sheet - Ohne E-Mail speichern": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
             "type": "main",
             "index": 0
           }
