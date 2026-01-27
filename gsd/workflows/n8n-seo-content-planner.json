@@ -1,0 +1,619 @@
+{
+  "name": "SEO Content Planner - Keyword Research & Clustering",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "seo-content-planner",
+        "responseMode": "responseNode",
+        "options": {
+          "responseContentType": "application/json"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "01 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "seo-content-planner-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 02 Validate Input - Prüft Pflichtfelder und Struktur\nconst input = $input.first().json.body || $input.first().json;\n\nconst errors = [];\n\nif (!input.topic || typeof input.topic !== 'string' || input.topic.trim().length < 2) {\n  errors.push('Pflichtfeld \"topic\" fehlt oder ist zu kurz (min. 2 Zeichen)');\n}\n\nif (input.language && !/^[a-z]{2}$/i.test(input.language)) {\n  errors.push('\"language\" muss ein 2-stelliger ISO-Code sein (z.B. \"de\")');\n}\n\nif (input.location && !/^[A-Z]{2}$/i.test(input.location)) {\n  errors.push('\"location\" muss ein 2-stelliger Ländercode sein (z.B. \"DE\")');\n}\n\nconst validGoals = ['traffic', 'leads', 'sales'];\nif (input.business_goal && !validGoals.includes(input.business_goal)) {\n  errors.push(`\"business_goal\" muss einer von ${validGoals.join(', ')} sein`);\n}\n\nif (input.max_clusters !== undefined) {\n  const mc = parseInt(input.max_clusters);\n  if (isNaN(mc) || mc < 1 || mc > 10) {\n    errors.push('\"max_clusters\" muss zwischen 1 und 10 liegen');\n  }\n}\n\nif (input.supporting_per_cluster !== undefined) {\n  const spc = parseInt(input.supporting_per_cluster);\n  if (isNaN(spc) || spc < 1 || spc > 10) {\n    errors.push('\"supporting_per_cluster\" muss zwischen 1 und 10 liegen');\n  }\n}\n\nif (input.seed_keywords) {\n  if (!Array.isArray(input.seed_keywords)) {\n    errors.push('\"seed_keywords\" muss ein Array sein');\n  } else if (input.seed_keywords.some(k => typeof k !== 'string')) {\n    errors.push('Alle \"seed_keywords\" müssen Strings sein');\n  }\n}\n\nif (!input.dataforseo || !input.dataforseo.login || !input.dataforseo.password) {\n  errors.push('\"dataforseo.login\" und \"dataforseo.password\" sind Pflichtfelder');\n}\n\nif (input.llm && input.llm.provider) {\n  const validProviders = ['openai', 'anthropic', 'none'];\n  if (!validProviders.includes(input.llm.provider)) {\n    errors.push(`\"llm.provider\" muss einer von ${validProviders.join(', ')} sein`);\n  }\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, errors: errors, input: input } }];\n}\n\nreturn [{ json: { valid: true, input: input } }];"
+      },
+      "id": "validate-input",
+      "name": "02 Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.valid }}", "value2": true }]
+        }
+      },
+      "id": "check-validation",
+      "name": "03 Check Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { error: true, message: 'Validierungsfehler', details: data.errors, received_input: data.input } }];"
+      },
+      "id": "validation-error",
+      "name": "03a Validation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 04 Normalize Defaults\nconst input = $input.first().json.input;\nconst crypto = require('crypto');\n\nconst normalized = {\n  topic: input.topic.trim(),\n  language: (input.language || 'de').toLowerCase(),\n  location: (input.location || 'DE').toUpperCase(),\n  industry: input.industry || null,\n  target_audience: input.target_audience || 'Allgemeine Zielgruppe',\n  business_goal: input.business_goal || 'traffic',\n  seed_keywords: input.seed_keywords || [],\n  max_clusters: parseInt(input.max_clusters) || 4,\n  supporting_per_cluster: parseInt(input.supporting_per_cluster) || 5,\n  include_commercial_piece: input.include_commercial_piece !== false,\n  dataforseo: { login: input.dataforseo.login, password: input.dataforseo.password },\n  llm: {\n    provider: input.llm?.provider || 'none',\n    api_key: input.llm?.api_key || null,\n    model: input.llm?.model || null\n  }\n};\n\nconst intentMap = { 'traffic': 'informational', 'leads': 'commercial', 'sales': 'transactional' };\nnormalized.primary_intent = intentMap[normalized.business_goal];\n\nconst toneMap = {\n  'traffic': 'Informativ, lehrreich, problemlösend',\n  'leads': 'Beratend, vergleichend, entscheidungshelfend',\n  'sales': 'Überzeugend, handlungsorientiert, produktfokussiert'\n};\nnormalized.tone_angle = toneMap[normalized.business_goal];\n\nconst idSource = `${normalized.topic}|${normalized.language}|${normalized.location}|${normalized.seed_keywords.sort().join(',')}`;\nnormalized.request_id = crypto.createHash('sha256').update(idSource).digest('hex').substring(0, 16);\n\nconst locationCodes = { 'DE': 2276, 'AT': 2040, 'CH': 2756, 'US': 2840, 'GB': 2826, 'FR': 2250, 'ES': 2724, 'IT': 2380, 'NL': 2528, 'PL': 2616 };\nnormalized.dataforseo_location_code = locationCodes[normalized.location] || 2276;\n\nconst langCodes = { 'de': 'de', 'en': 'en', 'fr': 'fr', 'es': 'es', 'it': 'it', 'nl': 'nl', 'pl': 'pl' };\nnormalized.dataforseo_language_code = langCodes[normalized.language] || 'de';\n\nnormalized.generated_at = new Date().toISOString();\n\nnormalized.assumptions = [];\nif (!input.seed_keywords || input.seed_keywords.length === 0) {\n  normalized.assumptions.push('Seed-Keywords wurden automatisch generiert');\n}\nif (!input.target_audience) {\n  normalized.assumptions.push('Zielgruppe wurde als \"Allgemeine Zielgruppe\" angenommen');\n}\nif (!input.llm || input.llm.provider === 'none') {\n  normalized.assumptions.push('Kein LLM konfiguriert - heuristische Methoden werden verwendet');\n}\n\nreturn [{ json: normalized }];"
+      },
+      "id": "normalize-defaults",
+      "name": "04 Normalize Defaults",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.seed_keywords.length > 0 }}", "value2": true }]
+        }
+      },
+      "id": "check-seeds-exist",
+      "name": "05 Seeds vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "outputKey": "openai", "conditions": { "conditions": [{ "leftValue": "={{ $json.llm.provider }}", "rightValue": "openai", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "anthropic", "conditions": { "conditions": [{ "leftValue": "={{ $json.llm.provider }}", "rightValue": "anthropic", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "none", "conditions": { "conditions": [{ "leftValue": "={{ $json.llm.provider }}", "rightValue": "none", "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      },
+      "id": "switch-provider-seeds",
+      "name": "06 Switch Provider (Seeds)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1100, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 06a Heuristische Seed-Generierung ohne LLM\nconst data = $input.first().json;\nconst topic = data.topic;\nconst language = data.language;\n\nconst prefixes_de = ['was ist', 'wie', 'warum', 'beste', 'top', 'anleitung', 'tipps'];\nconst suffixes_de = ['definition', 'beispiele', 'tools', 'software', 'anbieter', 'vergleich', 'kosten', 'vorteile'];\nconst prefixes_en = ['what is', 'how to', 'why', 'best', 'top', 'guide', 'tips'];\nconst suffixes_en = ['definition', 'examples', 'tools', 'software', 'comparison', 'cost', 'benefits'];\n\nconst prefixes = language === 'de' ? prefixes_de : prefixes_en;\nconst suffixes = language === 'de' ? suffixes_de : suffixes_en;\n\nconst seeds = new Set();\nseeds.add(topic.toLowerCase());\nprefixes.slice(0, 4).forEach(prefix => seeds.add(`${prefix} ${topic}`.toLowerCase()));\nsuffixes.slice(0, 4).forEach(suffix => seeds.add(`${topic} ${suffix}`.toLowerCase()));\n\nif (data.business_goal === 'leads') {\n  seeds.add(`${topic} anbieter`.toLowerCase());\n  seeds.add(`${topic} beratung`.toLowerCase());\n} else if (data.business_goal === 'sales') {\n  seeds.add(`${topic} kaufen`.toLowerCase());\n  seeds.add(`${topic} preise`.toLowerCase());\n}\n\nreturn [{ json: { ...data, seed_keywords: Array.from(seeds).slice(0, 10), seeds_generated_by: 'heuristic' } }];"
+      },
+      "id": "generate-seeds-heuristic",
+      "name": "06a Generate Seeds (Heuristic)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 700]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "={{ $json.llm.model || 'gpt-4o-mini' }}"
+        },
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein SEO-Experte. Generiere Seed-Keywords für Keyword-Research. Antworte NUR mit einem JSON-Array von Strings, keine Erklärung."
+            },
+            {
+              "role": "user",
+              "content": "=Generiere 8-10 relevante Seed-Keywords für das Thema \"{{ $json.topic }}\" im Kontext von {{ $json.industry || 'allgemein' }}. Zielgruppe: {{ $json.target_audience }}. Business Goal: {{ $json.business_goal }}. Sprache: {{ $json.language }}. Antworte NUR mit einem JSON-Array."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-seeds",
+      "name": "06b-OpenAI Seeds",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [1320, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-creds",
+          "name": "OpenAI API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "claude-3-haiku-20240307",
+        "prompt": "=Du bist ein SEO-Experte. Generiere 8-10 relevante Seed-Keywords für das Thema \"{{ $json.topic }}\" im Kontext von {{ $json.industry || 'allgemein' }}. Zielgruppe: {{ $json.target_audience }}. Business Goal: {{ $json.business_goal }}. Sprache: {{ $json.language }}. Antworte NUR mit einem JSON-Array von Strings, keine Erklärung.",
+        "options": {
+          "maxTokens": 500,
+          "temperature": 0.7
+        }
+      },
+      "id": "anthropic-seeds",
+      "name": "06b-Anthropic Seeds",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [1320, 500],
+      "credentials": {
+        "anthropicApi": {
+          "id": "anthropic-creds",
+          "name": "Anthropic API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OpenAI Seeds Response\nconst originalData = $('06 Switch Provider (Seeds)').first().json;\nconst llmResponse = $input.first().json;\n\nlet seeds = [];\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || llmResponse.content || '';\n  const jsonMatch = content.match(/\\[.*\\]/s);\n  if (jsonMatch) seeds = JSON.parse(jsonMatch[0]);\n} catch (e) { seeds = []; }\n\nif (!seeds || seeds.length === 0) {\n  const topic = originalData.topic;\n  const prefixes = ['was ist', 'wie', 'beste', 'top', 'anleitung'];\n  seeds = [topic.toLowerCase()];\n  prefixes.forEach(p => seeds.push(`${p} ${topic}`.toLowerCase()));\n}\n\nreturn [{ json: { ...originalData, seed_keywords: seeds.slice(0, 10), seeds_generated_by: 'openai' } }];"
+      },
+      "id": "parse-openai-seeds",
+      "name": "06c Parse OpenAI Seeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic Seeds Response\nconst originalData = $('06 Switch Provider (Seeds)').first().json;\nconst llmResponse = $input.first().json;\n\nlet seeds = [];\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || llmResponse.response?.text || '';\n  const jsonMatch = content.match(/\\[.*\\]/s);\n  if (jsonMatch) seeds = JSON.parse(jsonMatch[0]);\n} catch (e) { seeds = []; }\n\nif (!seeds || seeds.length === 0) {\n  const topic = originalData.topic;\n  const prefixes = ['was ist', 'wie', 'beste', 'top', 'anleitung'];\n  seeds = [topic.toLowerCase()];\n  prefixes.forEach(p => seeds.push(`${p} ${topic}`.toLowerCase()));\n}\n\nreturn [{ json: { ...originalData, seed_keywords: seeds.slice(0, 10), seeds_generated_by: 'anthropic' } }];"
+      },
+      "id": "parse-anthropic-seeds",
+      "name": "06c Parse Anthropic Seeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 500]
+    },
+    {
+      "parameters": {},
+      "id": "merge-seeds",
+      "name": "07 Merge Seeds",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1760, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bereite DATAFORSEO Batch-Anfragen vor\nconst data = $input.first().json;\nconst seeds = data.seed_keywords;\nconst batchSize = 10;\nconst batches = [];\n\nfor (let i = 0; i < seeds.length; i += batchSize) {\n  batches.push({\n    batch_index: Math.floor(i / batchSize),\n    keywords: seeds.slice(i, i + batchSize),\n    location_code: data.dataforseo_location_code,\n    language_code: data.dataforseo_language_code,\n    dataforseo_login: data.dataforseo.login,\n    dataforseo_password: data.dataforseo.password,\n    original_data: data\n  });\n}\n\nreturn batches.map(b => ({ json: b }));"
+      },
+      "id": "prepare-dataforseo-batches",
+      "name": "08 Prepare DataForSEO Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 400]
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "id": "split-batches",
+      "name": "09 Split Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2200, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{ keywords: $json.keywords, location_code: $json.location_code, language_code: $json.language_code }]) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "dataforseo-search-volume",
+      "name": "10 DataForSEO Search Volume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 400],
+      "credentials": { "httpBasicAuth": { "id": "dataforseo-creds", "name": "DataForSEO" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": { "unit": "seconds", "amount": 1 },
+      "id": "wait-rate-limit",
+      "name": "11 Wait (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{ keywords: $('09 Split Batches').first().json.keywords, location_code: $('09 Split Batches').first().json.location_code, language_code: $('09 Split Batches').first().json.language_code }]) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "dataforseo-related-keywords",
+      "name": "12 DataForSEO Related Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 400],
+      "credentials": { "httpBasicAuth": { "id": "dataforseo-creds", "name": "DataForSEO" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse DataForSEO Ergebnisse\nconst batchData = $('09 Split Batches').first().json;\nconst searchVolumeResponse = $('10 DataForSEO Search Volume').first().json;\nconst relatedResponse = $('12 DataForSEO Related Keywords').first().json;\n\nconst keywords = [];\nconst processedKeywords = new Set();\n\nfunction extractKeyword(item, source) {\n  if (!item || !item.keyword) return null;\n  const kw = item.keyword.toLowerCase().trim();\n  if (processedKeywords.has(kw)) return null;\n  processedKeywords.add(kw);\n  return {\n    keyword: kw,\n    volume: item.search_volume || 0,\n    cpc: item.cpc || 0,\n    competition: item.competition || 0,\n    competition_index: item.competition_index || 0,\n    difficulty: Math.round((item.competition_index || 0) * 100),\n    intent_guess: guessIntent(kw),\n    parent_topic_guess: guessParentTopic(kw, batchData.original_data.topic),\n    source: source\n  };\n}\n\nfunction guessIntent(keyword) {\n  const kw = keyword.toLowerCase();\n  if (/kaufen|preis|kosten|bestellen|shop|angebot|rabatt|günstig|billig|buy|price|order|cheap/.test(kw)) return 'transactional';\n  if (/beste|vergleich|test|review|bewertung|erfahrung|alternative|vs|comparison|best|top/.test(kw)) return 'commercial';\n  if (/was ist|wie|warum|definition|bedeutung|erklärung|anleitung|tutorial|guide|what|how|why/.test(kw)) return 'informational';\n  return 'informational';\n}\n\nfunction guessParentTopic(keyword, mainTopic) {\n  const kw = keyword.toLowerCase();\n  const topic = mainTopic.toLowerCase();\n  let parent = kw.replace(/^(was ist|wie|warum|beste|top|anleitung|tipps für)\\s+/i, '').replace(/\\s+(definition|beispiele|tools|software|anbieter|vergleich|kosten|vorteile|kaufen|preis)$/i, '');\n  if (kw.includes(topic)) return mainTopic;\n  return parent || mainTopic;\n}\n\ntry {\n  if (searchVolumeResponse.tasks && searchVolumeResponse.tasks[0]?.result) {\n    searchVolumeResponse.tasks[0].result.forEach(item => {\n      const kw = extractKeyword(item, 'dataforseo_search_volume');\n      if (kw) keywords.push(kw);\n    });\n  }\n} catch (e) {}\n\ntry {\n  if (relatedResponse.tasks && relatedResponse.tasks[0]?.result) {\n    relatedResponse.tasks[0].result.forEach(item => {\n      const kw = extractKeyword(item, 'dataforseo_related');\n      if (kw) keywords.push(kw);\n    });\n  }\n} catch (e) {}\n\nreturn [{ json: { batch_index: batchData.batch_index, keywords: keywords, original_data: batchData.original_data, api_success: keywords.length > 0 } }];"
+      },
+      "id": "parse-dataforseo-results",
+      "name": "13 Parse DataForSEO Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sammle alle Keywords\nconst allItems = $input.all();\nlet allKeywords = [];\nlet originalData = null;\nlet apiSuccess = false;\n\nallItems.forEach(item => {\n  if (item.json.keywords) allKeywords = allKeywords.concat(item.json.keywords);\n  if (item.json.original_data) originalData = item.json.original_data;\n  if (item.json.api_success) apiSuccess = true;\n});\n\nconst seen = new Set();\nconst uniqueKeywords = allKeywords.filter(kw => {\n  if (seen.has(kw.keyword)) return false;\n  seen.add(kw.keyword);\n  return true;\n});\n\nreturn [{ json: { keywords: uniqueKeywords, original_data: originalData, api_success: apiSuccess } }];"
+      },
+      "id": "collect-all-keywords",
+      "name": "14 Collect All Keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keyword Cleaning und Scoring\nconst data = $input.first().json;\nconst originalData = data.original_data;\nlet keywords = data.keywords || [];\n\nconst topic = originalData.topic.toLowerCase();\nconst minVolume = 10;\nconst minLength = 3;\nconst stopwords = new Set(['der', 'die', 'das', 'und', 'oder', 'ein', 'eine', 'the', 'a', 'an', 'and', 'or']);\n\nfunction isValidKeyword(kw) {\n  const keyword = kw.keyword;\n  if (keyword.length < minLength) return false;\n  const words = keyword.split(/\\s+/);\n  if (words.every(w => stopwords.has(w.toLowerCase()))) return false;\n  const topicWords = topic.split(/\\s+/);\n  const hasTopicRelation = topicWords.some(tw => keyword.includes(tw) || tw.includes(keyword.split(/\\s+/)[0]));\n  if (kw.volume < minVolume && !hasTopicRelation) return false;\n  return true;\n}\n\nfunction scoreKeyword(kw) {\n  let score = 0;\n  score += Math.log10(Math.max(kw.volume, 1)) * 10;\n  score += Math.min(kw.cpc * 2, 20);\n  score += (100 - kw.difficulty) * 0.3;\n  const topicWords = topic.split(/\\s+/);\n  if (topicWords.some(tw => kw.keyword.includes(tw))) score += 15;\n  const goalIntentMap = { 'traffic': 'informational', 'leads': 'commercial', 'sales': 'transactional' };\n  if (kw.intent_guess === goalIntentMap[originalData.business_goal]) score += 10;\n  return Math.round(score * 100) / 100;\n}\n\nkeywords = keywords.filter(isValidKeyword).map(kw => ({ ...kw, relevance_score: scoreKeyword(kw) })).sort((a, b) => b.relevance_score - a.relevance_score).slice(0, 100);\n\nconst dataIncomplete = keywords.length === 0;\nif (dataIncomplete) {\n  keywords = originalData.seed_keywords.map((kw, i) => ({\n    keyword: kw, volume: 0, cpc: 0, difficulty: 50, intent_guess: originalData.primary_intent,\n    parent_topic_guess: originalData.topic, source: 'seed_fallback', relevance_score: 100 - i\n  }));\n}\n\nreturn [{ json: { keywords: keywords, original_data: originalData, data_incomplete: dataIncomplete, keyword_count: keywords.length } }];"
+      },
+      "id": "keyword-cleaning",
+      "name": "15 Keyword Cleaning & Scoring",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "outputKey": "openai", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "openai", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "anthropic", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "anthropic", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "none", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "none", "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      },
+      "id": "switch-provider-clustering",
+      "name": "16 Switch Provider (Clustering)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [3740, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Heuristisches Clustering\nconst data = $input.first().json;\nconst keywords = data.keywords;\nconst originalData = data.original_data;\nconst maxClusters = originalData.max_clusters;\n\nfunction tokenize(text) {\n  return text.toLowerCase().replace(/[^a-zäöüß0-9\\s]/g, '').split(/\\s+/).filter(t => t.length > 2);\n}\n\nfunction getSharedTokens(kw1, kw2) {\n  const tokens1 = new Set(tokenize(kw1));\n  const tokens2 = tokenize(kw2);\n  return tokens2.filter(t => tokens1.has(t)).length;\n}\n\nconst parentTopicGroups = {};\nkeywords.forEach(kw => {\n  const parent = kw.parent_topic_guess || originalData.topic;\n  if (!parentTopicGroups[parent]) parentTopicGroups[parent] = [];\n  parentTopicGroups[parent].push(kw);\n});\n\nconst sortedGroups = Object.entries(parentTopicGroups)\n  .map(([name, kws]) => ({ name, keywords: kws, total_volume: kws.reduce((sum, k) => sum + k.volume, 0) }))\n  .sort((a, b) => b.total_volume - a.total_volume);\n\nlet clusters = [];\nconst minClusterSize = 3;\n\nsortedGroups.forEach(group => {\n  if (clusters.length < maxClusters && group.keywords.length >= minClusterSize) {\n    clusters.push(group);\n  } else if (clusters.length > 0) {\n    let bestMatch = 0, bestScore = 0;\n    clusters.forEach((c, i) => {\n      const score = getSharedTokens(group.name, c.name);\n      if (score > bestScore) { bestScore = score; bestMatch = i; }\n    });\n    clusters[bestMatch].keywords = clusters[bestMatch].keywords.concat(group.keywords);\n    clusters[bestMatch].total_volume += group.total_volume;\n  }\n});\n\nif (clusters.length < 2 && keywords.length >= 10) {\n  const intentGroups = {};\n  keywords.forEach(kw => {\n    const intent = kw.intent_guess || 'informational';\n    if (!intentGroups[intent]) intentGroups[intent] = [];\n    intentGroups[intent].push(kw);\n  });\n  clusters = Object.entries(intentGroups)\n    .map(([intent, kws]) => ({ name: `${originalData.topic} - ${intent}`, keywords: kws, total_volume: kws.reduce((sum, k) => sum + k.volume, 0) }))\n    .slice(0, maxClusters);\n}\n\nconst formattedClusters = clusters.map((cluster, index) => {\n  const sortedKws = cluster.keywords.sort((a, b) => b.relevance_score - a.relevance_score);\n  const coreKw = sortedKws.reduce((best, kw) => (kw.volume > best.volume) ? kw : best, sortedKws[0]);\n  const intentCounts = {};\n  sortedKws.forEach(kw => { intentCounts[kw.intent_guess] = (intentCounts[kw.intent_guess] || 0) + 1; });\n  const dominantIntent = Object.entries(intentCounts).sort((a, b) => b[1] - a[1])[0][0];\n  const goalMap = { 'informational': 'traffic', 'commercial': 'leads', 'transactional': 'sales' };\n  return {\n    cluster_id: index + 1, cluster_name: cluster.name, core_keyword: coreKw.keyword,\n    cluster_goal: goalMap[dominantIntent] || 'traffic', keywords: sortedKws.slice(0, 20).map(k => k.keyword),\n    keyword_details: sortedKws.slice(0, 20), total_volume: cluster.total_volume\n  };\n});\n\nreturn [{ json: { clusters: formattedClusters, original_data: originalData, all_keywords: keywords, data_incomplete: data.data_incomplete, clustering_method: 'heuristic' } }];"
+      },
+      "id": "cluster-heuristic",
+      "name": "16a Cluster (Heuristic)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3960, 700]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "={{ $json.original_data.llm.model || 'gpt-4o-mini' }}"
+        },
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein SEO-Experte für Keyword-Clustering. Antworte NUR mit validem JSON."
+            },
+            {
+              "role": "user",
+              "content": "=Analysiere diese Keywords und erstelle {{ $json.original_data.max_clusters }} semantische Cluster für Content-Hubs.\n\nHauptthema: {{ $json.original_data.topic }}\nBusiness Goal: {{ $json.original_data.business_goal }}\nZielgruppe: {{ $json.original_data.target_audience }}\n\nKeywords:\n{{ $json.keywords.slice(0, 50).map(k => k.keyword + ' (vol: ' + k.volume + ')').join('\\n') }}\n\nErstelle Cluster als JSON-Array:\n[{\"cluster_name\": \"Name\", \"core_keyword\": \"Haupt-Keyword\", \"cluster_goal\": \"traffic|leads|sales\", \"keywords\": [\"kw1\", \"kw2\"]}]"
+            }
+          ]
+        },
+        "options": { "temperature": 0.5 }
+      },
+      "id": "openai-clustering",
+      "name": "16b-OpenAI Clustering",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [3960, 200],
+      "credentials": { "openAiApi": { "id": "openai-creds", "name": "OpenAI API" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "claude-3-haiku-20240307",
+        "prompt": "=Du bist ein SEO-Experte für Keyword-Clustering. Analysiere diese Keywords und erstelle {{ $json.original_data.max_clusters }} semantische Cluster für Content-Hubs.\n\nHauptthema: {{ $json.original_data.topic }}\nBusiness Goal: {{ $json.original_data.business_goal }}\nZielgruppe: {{ $json.original_data.target_audience }}\n\nKeywords:\n{{ $json.keywords.slice(0, 50).map(k => k.keyword + ' (vol: ' + k.volume + ')').join('\\n') }}\n\nErstelle Cluster im JSON-Format (NUR JSON, keine Erklärung):\n[{\"cluster_name\": \"Name\", \"core_keyword\": \"Haupt-Keyword\", \"cluster_goal\": \"traffic|leads|sales\", \"keywords\": [\"kw1\", \"kw2\"]}]",
+        "options": { "maxTokens": 2000, "temperature": 0.5 }
+      },
+      "id": "anthropic-clustering",
+      "name": "16b-Anthropic Clustering",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [3960, 450],
+      "credentials": { "anthropicApi": { "id": "anthropic-creds", "name": "Anthropic API" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OpenAI Clustering Response\nconst previousData = $('16 Switch Provider (Clustering)').first().json;\nconst llmResponse = $input.first().json;\n\nlet clusters = [];\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || '';\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  if (jsonMatch) clusters = JSON.parse(jsonMatch[0]);\n} catch (e) { clusters = []; }\n\nif (!clusters || clusters.length === 0) {\n  const kws = previousData.keywords;\n  clusters = [{ cluster_name: previousData.original_data.topic, core_keyword: kws[0]?.keyword || previousData.original_data.topic, cluster_goal: previousData.original_data.business_goal, keywords: kws.slice(0, 20).map(k => k.keyword) }];\n}\n\nconst formattedClusters = clusters.map((cluster, index) => {\n  const keywordDetails = cluster.keywords.map(kw => {\n    const found = previousData.keywords.find(k => k.keyword === kw);\n    return found || { keyword: kw, volume: 0, cpc: 0, difficulty: 50, intent_guess: 'informational', parent_topic_guess: cluster.cluster_name, source: 'llm_cluster' };\n  });\n  return {\n    cluster_id: index + 1, cluster_name: cluster.cluster_name, core_keyword: cluster.core_keyword,\n    cluster_goal: cluster.cluster_goal || previousData.original_data.business_goal, keywords: cluster.keywords,\n    keyword_details: keywordDetails, total_volume: keywordDetails.reduce((sum, k) => sum + (k.volume || 0), 0)\n  };\n});\n\nreturn [{ json: { clusters: formattedClusters, original_data: previousData.original_data, all_keywords: previousData.keywords, data_incomplete: previousData.data_incomplete, clustering_method: 'openai' } }];"
+      },
+      "id": "parse-openai-clusters",
+      "name": "16c Parse OpenAI Clusters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic Clustering Response\nconst previousData = $('16 Switch Provider (Clustering)').first().json;\nconst llmResponse = $input.first().json;\n\nlet clusters = [];\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || llmResponse.response?.text || '';\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  if (jsonMatch) clusters = JSON.parse(jsonMatch[0]);\n} catch (e) { clusters = []; }\n\nif (!clusters || clusters.length === 0) {\n  const kws = previousData.keywords;\n  clusters = [{ cluster_name: previousData.original_data.topic, core_keyword: kws[0]?.keyword || previousData.original_data.topic, cluster_goal: previousData.original_data.business_goal, keywords: kws.slice(0, 20).map(k => k.keyword) }];\n}\n\nconst formattedClusters = clusters.map((cluster, index) => {\n  const keywordDetails = cluster.keywords.map(kw => {\n    const found = previousData.keywords.find(k => k.keyword === kw);\n    return found || { keyword: kw, volume: 0, cpc: 0, difficulty: 50, intent_guess: 'informational', parent_topic_guess: cluster.cluster_name, source: 'llm_cluster' };\n  });\n  return {\n    cluster_id: index + 1, cluster_name: cluster.cluster_name, core_keyword: cluster.core_keyword,\n    cluster_goal: cluster.cluster_goal || previousData.original_data.business_goal, keywords: cluster.keywords,\n    keyword_details: keywordDetails, total_volume: keywordDetails.reduce((sum, k) => sum + (k.volume || 0), 0)\n  };\n});\n\nreturn [{ json: { clusters: formattedClusters, original_data: previousData.original_data, all_keywords: previousData.keywords, data_incomplete: previousData.data_incomplete, clustering_method: 'anthropic' } }];"
+      },
+      "id": "parse-anthropic-clusters",
+      "name": "16c Parse Anthropic Clusters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 450]
+    },
+    {
+      "parameters": {},
+      "id": "merge-clusters",
+      "name": "17 Merge Clusters",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [4400, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Content Piece Generierung\nconst data = $input.first().json;\nconst clusters = data.clusters;\nconst originalData = data.original_data;\nconst supportingPerCluster = originalData.supporting_per_cluster;\nconst includeCommercial = originalData.include_commercial_piece;\nconst language = originalData.language;\n\nconst outlineTemplates = {\n  pillar: {\n    de: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'Einleitung: Das Problem und die Lösung' },\n      { h: 'H2', t: 'Was ist {keyword}? Definition und Grundlagen' },\n      { h: 'H2', t: 'Warum ist {keyword} wichtig? Die wichtigsten Vorteile' },\n      { h: 'H2', t: 'Anwendungsbereiche und Use Cases' },\n      { h: 'H3', t: 'Use Case 1: {use_case_1}' },\n      { h: 'H3', t: 'Use Case 2: {use_case_2}' },\n      { h: 'H2', t: '{keyword} Schritt für Schritt umsetzen' },\n      { h: 'H2', t: 'Häufige Fehler vermeiden + Profi-Tipps' },\n      { h: 'H2', t: 'Tools und Software für {keyword}' },\n      { h: 'H2', t: 'Häufig gestellte Fragen (FAQ)' },\n      { h: 'H2', t: 'Fazit und nächste Schritte' }\n    ],\n    en: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'Introduction: The Problem and Solution' },\n      { h: 'H2', t: 'What is {keyword}? Definition and Basics' },\n      { h: 'H2', t: 'Why {keyword} Matters: Key Benefits' },\n      { h: 'H2', t: 'Use Cases and Applications' },\n      { h: 'H3', t: 'Use Case 1: {use_case_1}' },\n      { h: 'H3', t: 'Use Case 2: {use_case_2}' },\n      { h: 'H2', t: 'Step-by-Step Implementation Guide' },\n      { h: 'H2', t: 'Common Mistakes and Pro Tips' },\n      { h: 'H2', t: 'Best Tools and Software' },\n      { h: 'H2', t: 'Frequently Asked Questions' },\n      { h: 'H2', t: 'Conclusion and Next Steps' }\n    ]\n  },\n  supporting: {\n    de: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'Das Problem: Warum {keyword} relevant ist' },\n      { h: 'H2', t: '{keyword}: Schritt-für-Schritt Anleitung' },\n      { h: 'H2', t: 'Praktische Beispiele' },\n      { h: 'H2', t: 'Best Practices und häufige Fehler' },\n      { h: 'H2', t: 'FAQ zu {keyword}' },\n      { h: 'H2', t: 'Fazit' }\n    ],\n    en: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'The Problem: Why {keyword} Matters' },\n      { h: 'H2', t: '{keyword}: Step-by-Step Guide' },\n      { h: 'H2', t: 'Practical Examples' },\n      { h: 'H2', t: 'Best Practices and Common Mistakes' },\n      { h: 'H2', t: 'FAQ about {keyword}' },\n      { h: 'H2', t: 'Conclusion' }\n    ]\n  },\n  commercial: {\n    de: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'Kurzfazit: Unsere Empfehlung' },\n      { h: 'H2', t: 'Vergleichstabelle: {keyword} im Überblick' },\n      { h: 'H2', t: 'Wichtige Auswahlkriterien' },\n      { h: 'H2', t: 'Top-Optionen im Detail' },\n      { h: 'H3', t: 'Option 1: {option_1}' },\n      { h: 'H3', t: 'Option 2: {option_2}' },\n      { h: 'H2', t: 'Alternativen und Sonderfälle' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Fazit: Die richtige Wahl treffen' }\n    ],\n    en: [\n      { h: 'H1', t: '{title}' },\n      { h: 'H2', t: 'Quick Summary: Our Recommendation' },\n      { h: 'H2', t: 'Comparison Table: {keyword} Overview' },\n      { h: 'H2', t: 'Key Selection Criteria' },\n      { h: 'H2', t: 'Top Options in Detail' },\n      { h: 'H3', t: 'Option 1: {option_1}' },\n      { h: 'H3', t: 'Option 2: {option_2}' },\n      { h: 'H2', t: 'Alternatives and Special Cases' },\n      { h: 'H2', t: 'FAQ' },\n      { h: 'H2', t: 'Conclusion: Making the Right Choice' }\n    ]\n  }\n};\n\nconst titleTemplates = {\n  pillar: { de: ['{keyword}: Der komplette Guide für {year}', '{keyword} verstehen und meistern: Alles was du wissen musst', 'Was ist {keyword}? Definition, Vorteile & Anleitung'], en: ['{keyword}: The Complete Guide for {year}', 'Understanding {keyword}: Everything You Need to Know', 'What is {keyword}? Definition, Benefits & Guide'] },\n  supporting: { de: ['{keyword}: Praktische Anleitung mit Beispielen', 'Wie du {keyword} erfolgreich umsetzt', '{keyword} einfach erklärt + Tipps'], en: ['{keyword}: Practical Guide with Examples', 'How to Successfully Implement {keyword}', '{keyword} Explained Simply + Tips'] },\n  commercial: { de: ['Beste {keyword}: Top-Anbieter im Vergleich {year}', '{keyword} Vergleich: Die besten Optionen', '{keyword} Test & Empfehlungen {year}'], en: ['Best {keyword}: Top Providers Compared {year}', '{keyword} Comparison: The Best Options', '{keyword} Review & Recommendations {year}'] }\n};\n\nconst faqTemplates = {\n  de: ['Was kostet {keyword}?', 'Wie lange dauert es, {keyword} zu lernen/implementieren?', 'Welche Voraussetzungen brauche ich für {keyword}?', 'Ist {keyword} für Anfänger geeignet?', 'Was sind die häufigsten Fehler bei {keyword}?', 'Welche Alternativen gibt es zu {keyword}?', 'Wie fange ich mit {keyword} an?', 'Lohnt sich {keyword} für kleine Unternehmen?'],\n  en: ['How much does {keyword} cost?', 'How long does it take to learn/implement {keyword}?', 'What prerequisites do I need for {keyword}?', 'Is {keyword} suitable for beginners?', 'What are the most common mistakes with {keyword}?', 'What alternatives are there to {keyword}?', 'How do I get started with {keyword}?', 'Is {keyword} worth it for small businesses?']\n};\n\nfunction capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }\nfunction slugify(str) { return str.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }\nfunction fillTemplate(template, vars) { let result = template; Object.entries(vars).forEach(([key, value]) => { result = result.replace(new RegExp(`\\\\{${key}\\\\}`, 'g'), value); }); return result; }\nfunction selectRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }\n\nconst currentYear = new Date().getFullYear();\nconst lang = language === 'de' ? 'de' : 'en';\n\nconst enrichedClusters = clusters.map(cluster => {\n  const contentPieces = [];\n  const pillarKeyword = cluster.core_keyword;\n  const pillarVars = { keyword: capitalize(pillarKeyword), year: currentYear, use_case_1: 'Unternehmen', use_case_2: 'Freelancer' };\n  const pillarTitle = fillTemplate(selectRandom(titleTemplates.pillar[lang]), pillarVars);\n  const pillarOutline = outlineTemplates.pillar[lang].map(item => ({ h: item.h, t: fillTemplate(item.t, { ...pillarVars, title: pillarTitle }) }));\n  const secondaryKeywords = cluster.keywords.filter(kw => kw !== pillarKeyword).slice(0, 8);\n  \n  contentPieces.push({ type: 'pillar', slug: slugify(pillarKeyword), title: pillarTitle, primary_keyword: pillarKeyword, secondary_keywords: secondaryKeywords, intent: 'informational', funnel_stage: 'TOFU', recommended_word_count: 2500, outline: pillarOutline, faq: faqTemplates[lang].slice(0, 5).map(q => fillTemplate(q, { keyword: pillarKeyword })) });\n  \n  const supportingKeywords = cluster.keyword_details.filter(kw => kw.keyword !== pillarKeyword).sort((a, b) => b.volume - a.volume).slice(0, supportingPerCluster);\n  supportingKeywords.forEach((kwData) => {\n    const kw = kwData.keyword;\n    const vars = { keyword: capitalize(kw), year: currentYear };\n    const title = fillTemplate(selectRandom(titleTemplates.supporting[lang]), vars);\n    const outline = outlineTemplates.supporting[lang].map(item => ({ h: item.h, t: fillTemplate(item.t, { ...vars, title: title }) }));\n    let intent = kwData.intent_guess || 'informational';\n    let funnelStage = 'TOFU';\n    if (intent === 'commercial') funnelStage = 'MOFU';\n    if (intent === 'transactional') funnelStage = 'BOFU';\n    contentPieces.push({ type: 'supporting', slug: slugify(kw), title: title, primary_keyword: kw, secondary_keywords: cluster.keywords.filter(k => k !== kw).slice(0, 5), intent: intent, funnel_stage: funnelStage, recommended_word_count: 1200, outline: outline, faq: faqTemplates[lang].slice(2, 6).map(q => fillTemplate(q, { keyword: kw })) });\n  });\n  \n  if (includeCommercial) {\n    const commercialKeyword = `beste ${pillarKeyword}`;\n    const vars = { keyword: capitalize(pillarKeyword), year: currentYear, option_1: 'Option A', option_2: 'Option B' };\n    const title = fillTemplate(selectRandom(titleTemplates.commercial[lang]), vars);\n    const outline = outlineTemplates.commercial[lang].map(item => ({ h: item.h, t: fillTemplate(item.t, { ...vars, title: title }) }));\n    contentPieces.push({ type: 'commercial', slug: slugify(`beste-${pillarKeyword}`), title: title, primary_keyword: commercialKeyword, secondary_keywords: [`${pillarKeyword} vergleich`, `${pillarKeyword} test`, `${pillarKeyword} anbieter`], intent: 'commercial', funnel_stage: 'MOFU', recommended_word_count: 1800, outline: outline, faq: [`Welcher ${pillarKeyword}-Anbieter ist der beste?`, `Was kostet ${pillarKeyword}?`, `Worauf sollte man bei ${pillarKeyword} achten?`, `Gibt es kostenlose ${pillarKeyword}-Alternativen?`] });\n  }\n  \n  return { ...cluster, content_pieces: contentPieces };\n});\n\nreturn [{ json: { clusters: enrichedClusters, original_data: originalData, all_keywords: data.all_keywords, data_incomplete: data.data_incomplete, clustering_method: data.clustering_method } }];"
+      },
+      "id": "generate-content-pieces",
+      "name": "18 Generate Content Pieces",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4620, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "outputKey": "openai", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "openai", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "anthropic", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "anthropic", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "outputKey": "none", "conditions": { "conditions": [{ "leftValue": "={{ $json.original_data.llm.provider }}", "rightValue": "none", "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      },
+      "id": "switch-provider-outlines",
+      "name": "19 Switch Provider (Outlines)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [4840, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Skip LLM Outline Enhancement\nreturn $input.all();"
+      },
+      "id": "skip-llm-outlines",
+      "name": "19a Skip LLM Outlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5060, 700]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "={{ $json.original_data.llm.model || 'gpt-4o-mini' }}"
+        },
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein SEO-Content-Stratege. Antworte NUR mit validem JSON."
+            },
+            {
+              "role": "user",
+              "content": "=Verbessere diese Content-Outlines für maximale SEO-Wirkung.\n\nThema: {{ $json.original_data.topic }}\nZielgruppe: {{ $json.original_data.target_audience }}\n\nAktuelle Outlines:\n{{ JSON.stringify($json.clusters[0]?.content_pieces?.slice(0, 3).map(p => ({ type: p.type, title: p.title, outline: p.outline })), null, 2) }}\n\nVerbessere die Outlines und füge spezifischere H2/H3 Überschriften hinzu. Antworte NUR mit JSON-Array im gleichen Format."
+            }
+          ]
+        },
+        "options": { "temperature": 0.7 }
+      },
+      "id": "openai-outlines",
+      "name": "19b-OpenAI Outlines",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [5060, 200],
+      "credentials": { "openAiApi": { "id": "openai-creds", "name": "OpenAI API" } },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "claude-3-haiku-20240307",
+        "prompt": "=Du bist ein SEO-Content-Stratege. Verbessere diese Content-Outlines für maximale SEO-Wirkung.\n\nThema: {{ $json.original_data.topic }}\nZielgruppe: {{ $json.original_data.target_audience }}\n\nAktuelle Outlines:\n{{ JSON.stringify($json.clusters[0]?.content_pieces?.slice(0, 3).map(p => ({ type: p.type, title: p.title, outline: p.outline })), null, 2) }}\n\nVerbessere die Outlines und füge spezifischere H2/H3 Überschriften hinzu. Antworte NUR mit JSON-Array im gleichen Format.",
+        "options": { "maxTokens": 3000, "temperature": 0.7 }
+      },
+      "id": "anthropic-outlines",
+      "name": "19b-Anthropic Outlines",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [5060, 450],
+      "credentials": { "anthropicApi": { "id": "anthropic-creds", "name": "Anthropic API" } },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OpenAI Enhanced Outlines\nconst previousData = $('19 Switch Provider (Outlines)').first().json;\nconst llmResponse = $input.first().json;\n\nif (!llmResponse || llmResponse.error) return [{ json: previousData }];\n\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || '';\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  if (jsonMatch) {\n    const enhancedOutlines = JSON.parse(jsonMatch[0]);\n    const clusters = previousData.clusters.map(cluster => {\n      const pieces = cluster.content_pieces.map(piece => {\n        const enhanced = enhancedOutlines.find(e => e.title === piece.title);\n        if (enhanced && enhanced.outline) return { ...piece, outline: enhanced.outline };\n        return piece;\n      });\n      return { ...cluster, content_pieces: pieces };\n    });\n    return [{ json: { ...previousData, clusters: clusters, outlines_enhanced: true } }];\n  }\n} catch (e) {}\n\nreturn [{ json: previousData }];"
+      },
+      "id": "parse-openai-outlines",
+      "name": "19c Parse OpenAI Outlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5280, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic Enhanced Outlines\nconst previousData = $('19 Switch Provider (Outlines)').first().json;\nconst llmResponse = $input.first().json;\n\nif (!llmResponse || llmResponse.error) return [{ json: previousData }];\n\ntry {\n  const content = llmResponse.message?.content || llmResponse.text || llmResponse.response?.text || '';\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  if (jsonMatch) {\n    const enhancedOutlines = JSON.parse(jsonMatch[0]);\n    const clusters = previousData.clusters.map(cluster => {\n      const pieces = cluster.content_pieces.map(piece => {\n        const enhanced = enhancedOutlines.find(e => e.title === piece.title);\n        if (enhanced && enhanced.outline) return { ...piece, outline: enhanced.outline };\n        return piece;\n      });\n      return { ...cluster, content_pieces: pieces };\n    });\n    return [{ json: { ...previousData, clusters: clusters, outlines_enhanced: true } }];\n  }\n} catch (e) {}\n\nreturn [{ json: previousData }];"
+      },
+      "id": "parse-anthropic-outlines",
+      "name": "19c Parse Anthropic Outlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5280, 450]
+    },
+    {
+      "parameters": {},
+      "id": "merge-outlines",
+      "name": "20 Merge Outlines",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [5500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final JSON Assembly\nconst data = $input.first().json;\nconst originalData = data.original_data;\n\nconst assumptions = [...(originalData.assumptions || [])];\nif (data.data_incomplete) assumptions.push('DATAFORSEO-Daten unvollständig - Fallback-Daten verwendet');\nif (data.clustering_method === 'heuristic') assumptions.push('Clustering wurde heuristisch durchgeführt (kein LLM)');\nif (!data.outlines_enhanced) assumptions.push('Outlines wurden template-basiert generiert (kein LLM-Enhancement)');\n\nconst formattedKeywords = data.all_keywords.map(kw => ({\n  keyword: kw.keyword, volume: kw.volume, cpc: kw.cpc, difficulty: kw.difficulty,\n  intent_guess: kw.intent_guess, parent_topic_guess: kw.parent_topic_guess, source: kw.source\n}));\n\nconst formattedClusters = data.clusters.map(cluster => ({\n  cluster_name: cluster.cluster_name, core_keyword: cluster.core_keyword, cluster_goal: cluster.cluster_goal,\n  keywords: cluster.keywords,\n  content_pieces: cluster.content_pieces.map(piece => ({\n    type: piece.type, slug: piece.slug, title: piece.title, primary_keyword: piece.primary_keyword,\n    secondary_keywords: piece.secondary_keywords, intent: piece.intent, funnel_stage: piece.funnel_stage,\n    recommended_word_count: piece.recommended_word_count, outline: piece.outline, faq: piece.faq\n  }))\n}));\n\nconst stats = {\n  total_keywords: formattedKeywords.length,\n  total_clusters: formattedClusters.length,\n  total_content_pieces: formattedClusters.reduce((sum, c) => sum + c.content_pieces.length, 0),\n  pillar_pages: formattedClusters.reduce((sum, c) => sum + c.content_pieces.filter(p => p.type === 'pillar').length, 0),\n  supporting_articles: formattedClusters.reduce((sum, c) => sum + c.content_pieces.filter(p => p.type === 'supporting').length, 0),\n  commercial_pieces: formattedClusters.reduce((sum, c) => sum + c.content_pieces.filter(p => p.type === 'commercial').length, 0),\n  estimated_total_words: formattedClusters.reduce((sum, c) => sum + c.content_pieces.reduce((s, p) => s + p.recommended_word_count, 0), 0)\n};\n\nconst response = {\n  success: true,\n  meta: {\n    topic: originalData.topic, language: originalData.language, location: originalData.location,\n    generated_at: originalData.generated_at, request_id: originalData.request_id,\n    assumptions: assumptions, statistics: stats,\n    data_quality: { dataforseo_success: !data.data_incomplete, clustering_method: data.clustering_method, outlines_enhanced: data.outlines_enhanced || false }\n  },\n  topic_definition: {\n    normalized_topic: originalData.topic, target_audience: originalData.target_audience,\n    business_goal: originalData.business_goal, primary_intent: originalData.primary_intent,\n    tone_angle: originalData.tone_angle, seed_keywords: originalData.seed_keywords\n  },\n  keywords: formattedKeywords,\n  clusters: formattedClusters\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "final-json-assembly",
+      "name": "21 Final JSON Assembly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5720, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "respond-success",
+      "name": "22 Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [5940, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 400, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "respond-error",
+      "name": "22a Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const error = $input.first().json;\nreturn [{ json: { success: false, error: { message: 'Ein unerwarteter Fehler ist aufgetreten', details: error.message || error.error || 'Unbekannter Fehler', node: error.node || 'unknown', timestamp: new Date().toISOString() }, meta: { suggestion: 'Bitte überprüfen Sie die Eingabeparameter und versuchen Sie es erneut.' } } }];"
+      },
+      "id": "global-error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5940, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 500, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "respond-global-error",
+      "name": "22b Respond Global Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [6160, 600]
+    }
+  ],
+  "connections": {
+    "01 Webhook Trigger": { "main": [[{ "node": "02 Validate Input", "type": "main", "index": 0 }]] },
+    "02 Validate Input": { "main": [[{ "node": "03 Check Validation", "type": "main", "index": 0 }]] },
+    "03 Check Validation": { "main": [[{ "node": "04 Normalize Defaults", "type": "main", "index": 0 }], [{ "node": "03a Validation Error", "type": "main", "index": 0 }]] },
+    "03a Validation Error": { "main": [[{ "node": "22a Respond Error", "type": "main", "index": 0 }]] },
+    "04 Normalize Defaults": { "main": [[{ "node": "05 Seeds vorhanden?", "type": "main", "index": 0 }]] },
+    "05 Seeds vorhanden?": { "main": [[{ "node": "08 Prepare DataForSEO Batches", "type": "main", "index": 0 }], [{ "node": "06 Switch Provider (Seeds)", "type": "main", "index": 0 }]] },
+    "06 Switch Provider (Seeds)": { "main": [[{ "node": "06b-OpenAI Seeds", "type": "main", "index": 0 }], [{ "node": "06b-Anthropic Seeds", "type": "main", "index": 0 }], [{ "node": "06a Generate Seeds (Heuristic)", "type": "main", "index": 0 }]] },
+    "06a Generate Seeds (Heuristic)": { "main": [[{ "node": "07 Merge Seeds", "type": "main", "index": 0 }]] },
+    "06b-OpenAI Seeds": { "main": [[{ "node": "06c Parse OpenAI Seeds", "type": "main", "index": 0 }]] },
+    "06b-Anthropic Seeds": { "main": [[{ "node": "06c Parse Anthropic Seeds", "type": "main", "index": 0 }]] },
+    "06c Parse OpenAI Seeds": { "main": [[{ "node": "07 Merge Seeds", "type": "main", "index": 0 }]] },
+    "06c Parse Anthropic Seeds": { "main": [[{ "node": "07 Merge Seeds", "type": "main", "index": 0 }]] },
+    "07 Merge Seeds": { "main": [[{ "node": "08 Prepare DataForSEO Batches", "type": "main", "index": 0 }]] },
+    "08 Prepare DataForSEO Batches": { "main": [[{ "node": "09 Split Batches", "type": "main", "index": 0 }]] },
+    "09 Split Batches": { "main": [[{ "node": "10 DataForSEO Search Volume", "type": "main", "index": 0 }], [{ "node": "14 Collect All Keywords", "type": "main", "index": 0 }]] },
+    "10 DataForSEO Search Volume": { "main": [[{ "node": "11 Wait (Rate Limit)", "type": "main", "index": 0 }]] },
+    "11 Wait (Rate Limit)": { "main": [[{ "node": "12 DataForSEO Related Keywords", "type": "main", "index": 0 }]] },
+    "12 DataForSEO Related Keywords": { "main": [[{ "node": "13 Parse DataForSEO Results", "type": "main", "index": 0 }]] },
+    "13 Parse DataForSEO Results": { "main": [[{ "node": "09 Split Batches", "type": "main", "index": 0 }]] },
+    "14 Collect All Keywords": { "main": [[{ "node": "15 Keyword Cleaning & Scoring", "type": "main", "index": 0 }]] },
+    "15 Keyword Cleaning & Scoring": { "main": [[{ "node": "16 Switch Provider (Clustering)", "type": "main", "index": 0 }]] },
+    "16 Switch Provider (Clustering)": { "main": [[{ "node": "16b-OpenAI Clustering", "type": "main", "index": 0 }], [{ "node": "16b-Anthropic Clustering", "type": "main", "index": 0 }], [{ "node": "16a Cluster (Heuristic)", "type": "main", "index": 0 }]] },
+    "16a Cluster (Heuristic)": { "main": [[{ "node": "17 Merge Clusters", "type": "main", "index": 0 }]] },
+    "16b-OpenAI Clustering": { "main": [[{ "node": "16c Parse OpenAI Clusters", "type": "main", "index": 0 }]] },
+    "16b-Anthropic Clustering": { "main": [[{ "node": "16c Parse Anthropic Clusters", "type": "main", "index": 0 }]] },
+    "16c Parse OpenAI Clusters": { "main": [[{ "node": "17 Merge Clusters", "type": "main", "index": 0 }]] },
+    "16c Parse Anthropic Clusters": { "main": [[{ "node": "17 Merge Clusters", "type": "main", "index": 0 }]] },
+    "17 Merge Clusters": { "main": [[{ "node": "18 Generate Content Pieces", "type": "main", "index": 0 }]] },
+    "18 Generate Content Pieces": { "main": [[{ "node": "19 Switch Provider (Outlines)", "type": "main", "index": 0 }]] },
+    "19 Switch Provider (Outlines)": { "main": [[{ "node": "19b-OpenAI Outlines", "type": "main", "index": 0 }], [{ "node": "19b-Anthropic Outlines", "type": "main", "index": 0 }], [{ "node": "19a Skip LLM Outlines", "type": "main", "index": 0 }]] },
+    "19a Skip LLM Outlines": { "main": [[{ "node": "20 Merge Outlines", "type": "main", "index": 0 }]] },
+    "19b-OpenAI Outlines": { "main": [[{ "node": "19c Parse OpenAI Outlines", "type": "main", "index": 0 }]] },
+    "19b-Anthropic Outlines": { "main": [[{ "node": "19c Parse Anthropic Outlines", "type": "main", "index": 0 }]] },
+    "19c Parse OpenAI Outlines": { "main": [[{ "node": "20 Merge Outlines", "type": "main", "index": 0 }]] },
+    "19c Parse Anthropic Outlines": { "main": [[{ "node": "20 Merge Outlines", "type": "main", "index": 0 }]] },
+    "20 Merge Outlines": { "main": [[{ "node": "21 Final JSON Assembly", "type": "main", "index": 0 }]] },
+    "21 Final JSON Assembly": { "main": [[{ "node": "22 Respond Success", "type": "main", "index": 0 }]] },
+    "Error Handler": { "main": [[{ "node": "22b Respond Global Error", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner" },
+  "staticData": null,
+  "tags": [{ "id": "1", "name": "SEO" }, { "id": "2", "name": "Content Planning" }, { "id": "3", "name": "Keyword Research" }],
+  "triggerCount": 1,
+  "versionId": "2"
+}
