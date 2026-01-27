@@ -78,34 +78,29 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"searchStringsArray\": [\"{{ $json.search_query }}\"],\n  \"maxCrawledPlacesPerSearch\": {{ $json.anzahl_unternehmen }},\n  \"language\": \"de\",\n  \"exportPlaceUrls\": false,\n  \"includeHistogram\": false,\n  \"includeOpeningHours\": false,\n  \"includePeopleAlsoSearch\": false,\n  \"additionalInfo\": false,\n  \"maxImages\": 0,\n  \"maxReviews\": 0,\n  \"scrapeDirectories\": false,\n  \"scrapeResponseFromOwnerText\": false\n}",
+        "actorId": "compass~crawler-google-places",
+        "run": {
+          "waitForFinish": true,
+          "timeoutSecs": 300
+        },
+        "input": "={\n  \"searchStringsArray\": [\"{{ $json.search_query }}\"],\n  \"maxCrawledPlacesPerSearch\": {{ $json.anzahl_unternehmen }},\n  \"language\": \"de\",\n  \"exportPlaceUrls\": false,\n  \"includeHistogram\": false,\n  \"includeOpeningHours\": false,\n  \"includePeopleAlsoSearch\": false,\n  \"additionalInfo\": false,\n  \"maxImages\": 0,\n  \"maxReviews\": 0,\n  \"scrapeDirectories\": false,\n  \"scrapeResponseFromOwnerText\": false\n}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 300000
+          "build": "latest",
+          "memoryMbytes": 4096
         }
       },
       "id": "apify-google-maps",
       "name": "03 Apify Google Maps Scraper",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.apify",
+      "typeVersion": 1,
       "position": [500, 300],
       "credentials": {
-        "httpHeaderAuth": {
+        "apifyApi": {
           "id": "apify-credentials",
-          "name": "Apify API Token"
+          "name": "Apify API"
         }
       },
-      "notes": "Scraped Unternehmen von Google Maps basierend auf Branche und Region"
+      "notes": "Scraped Unternehmen von Google Maps basierend auf Branche und Region (Native Apify Node)"
     },
     {
       "parameters": {
@@ -188,7 +183,7 @@
           "name": "Tavily API Key"
         }
       },
-      "notes": "Sucht Kontaktperson, E-Mail, LinkedIn-Profil und Firmengröße"
+      "notes": "Sucht Kontaktperson, E-Mail, LinkedIn-Profil und Firmengröße (kein nativer Node verfügbar)"
     },
     {
       "parameters": {
@@ -219,7 +214,7 @@
           "name": "Perplexity API Key"
         }
       },
-      "notes": "Recherchiert Branchenstatistiken, Trends und analysiert die Ziel-Website"
+      "notes": "Recherchiert Branchenstatistiken, Trends und analysiert die Ziel-Website (kein nativer Node verfügbar)"
     },
     {
       "parameters": {
@@ -330,52 +325,42 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4"
+        },
+        "messages": {
+          "values": [
             {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "content-type",
-              "value": "application/json"
+              "role": "user",
+              "content": "=Du bist ein SEO-Content-Experte. Deine Aufgabe ist es, Gastbeitrag-Ideen zu entwickeln, die für beide Seiten wertvoll sind: Der Gastgeber bekommt hochwertigen Content, der Autor bekommt einen Backlink.\n\nErstelle Vorschläge, die:\n- Zur Branche und zum Unternehmen passen\n- Konkrete Statistiken oder Daten enthalten (wenn verfügbar)\n- Praktische Tipps oder aktuelle News bieten\n- Einen klaren Mehrwert für die Leser der Ziel-Website haben\n\n---\n\nErstelle 3 Gastbeitrag-Vorschläge für folgendes Unternehmen:\n\n**Unternehmen:** {{ $json.firmenname }}\n**Branche:** {{ $json.branche }}\n**Website:** {{ $json.website }}\n**Website-Analyse:** {{ $json.website_analyse }}\n\n**Verfügbare Branchenstatistiken:**\n{{ $json.statistiken_json }}\n\n**Aktuelle Branchentrends:**\n{{ $json.trends }}\n\nFür jeden Vorschlag liefere:\n1. Titel des Gastbeitrags\n2. Kurzbeschreibung (2-3 Sätze, was der Artikel behandelt)\n3. Welche Statistik/welchen Trend er aufgreift\n4. Warum er für die Zielgruppe des Unternehmens relevant ist\n\nAntworte auf Deutsch im JSON-Format:\n{\n  \"vorschlag_1\": {\n    \"titel\": \"...\",\n    \"beschreibung\": \"...\",\n    \"statistik_trend\": \"...\",\n    \"relevanz\": \"...\"\n  },\n  \"vorschlag_2\": { ... },\n  \"vorschlag_3\": { ... }\n}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Du bist ein SEO-Content-Experte. Deine Aufgabe ist es, Gastbeitrag-Ideen zu entwickeln, die für beide Seiten wertvoll sind: Der Gastgeber bekommt hochwertigen Content, der Autor bekommt einen Backlink.\\n\\nErstelle Vorschläge, die:\\n- Zur Branche und zum Unternehmen passen\\n- Konkrete Statistiken oder Daten enthalten (wenn verfügbar)\\n- Praktische Tipps oder aktuelle News bieten\\n- Einen klaren Mehrwert für die Leser der Ziel-Website haben\\n\\n---\\n\\nErstelle 3 Gastbeitrag-Vorschläge für folgendes Unternehmen:\\n\\n**Unternehmen:** {{ $json.firmenname }}\\n**Branche:** {{ $json.branche }}\\n**Website:** {{ $json.website }}\\n**Website-Analyse:** {{ $json.website_analyse }}\\n\\n**Verfügbare Branchenstatistiken:**\\n{{ $json.statistiken_json }}\\n\\n**Aktuelle Branchentrends:**\\n{{ $json.trends }}\\n\\nFür jeden Vorschlag liefere:\\n1. Titel des Gastbeitrags\\n2. Kurzbeschreibung (2-3 Sätze, was der Artikel behandelt)\\n3. Welche Statistik/welchen Trend er aufgreift\\n4. Warum er für die Zielgruppe des Unternehmens relevant ist\\n\\nAntworte auf Deutsch im JSON-Format:\\n{\\n  \\\"vorschlag_1\\\": {\\n    \\\"titel\\\": \\\"...\\\",\\n    \\\"beschreibung\\\": \\\"...\\\",\\n    \\\"statistik_trend\\\": \\\"...\\\",\\n    \\\"relevanz\\\": \\\"...\\\"\\n  },\\n  \\\"vorschlag_2\\\": { ... },\\n  \\\"vorschlag_3\\\": { ... }\\n}\"\n    }\n  ]\n}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 120000
+          "maxTokens": 2048,
+          "temperature": 0.7
         }
       },
       "id": "claude-content-proposals",
       "name": "13 Claude - Content-Vorschläge",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
       "position": [2750, 300],
       "credentials": {
-        "httpHeaderAuth": {
+        "anthropicApi": {
           "id": "anthropic-credentials",
-          "name": "Anthropic API Key"
+          "name": "Anthropic API"
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "Generiert 3 personalisierte Gastbeitrag-Vorschläge basierend auf Unternehmensdaten"
+      "notes": "Generiert 3 personalisierte Gastbeitrag-Vorschläge (Native Anthropic Node)"
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// 14 PARSE CONTENT PROPOSALS\n// Parses Claude's content proposal response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('12 Get Row Number').first().json;\n\nlet vorschlag1 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag2 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag3 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\n\ntry {\n  // Extract content from Claude response\n  const content = claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    vorschlag1 = parsed.vorschlag_1 || vorschlag1;\n    vorschlag2 = parsed.vorschlag_2 || vorschlag2;\n    vorschlag3 = parsed.vorschlag_3 || vorschlag3;\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n}\n\n// Format proposals as text for the sheet\nconst formatProposal = (v) => {\n  if (!v.titel) return '';\n  return `**${v.titel}**\\n${v.beschreibung}\\n\\nStatistik/Trend: ${v.statistik_trend}\\nRelevanz: ${v.relevanz}`;\n};\n\nreturn {\n  ...previousData,\n  \n  // Structured proposals for email generation\n  vorschlag_1: vorschlag1,\n  vorschlag_2: vorschlag2,\n  vorschlag_3: vorschlag3,\n  \n  // Formatted proposals for Google Sheets\n  content_vorschlag_1: formatProposal(vorschlag1),\n  content_vorschlag_2: formatProposal(vorschlag2),\n  content_vorschlag_3: formatProposal(vorschlag3),\n  \n  // JSON for email prompt\n  vorschlaege_json: JSON.stringify({ vorschlag_1: vorschlag1, vorschlag_2: vorschlag2, vorschlag_3: vorschlag3 }, null, 2)\n};"
+        "jsCode": "// ========================================\n// 14 PARSE CONTENT PROPOSALS\n// Parses Claude's content proposal response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('12 Get Row Number').first().json;\n\nlet vorschlag1 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag2 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\nlet vorschlag3 = { titel: '', beschreibung: '', statistik_trend: '', relevanz: '' };\n\ntry {\n  // Extract content from Claude response (native node returns text directly)\n  const content = claudeResponse.text || claudeResponse.message || claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    vorschlag1 = parsed.vorschlag_1 || vorschlag1;\n    vorschlag2 = parsed.vorschlag_2 || vorschlag2;\n    vorschlag3 = parsed.vorschlag_3 || vorschlag3;\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n}\n\n// Format proposals as text for the sheet\nconst formatProposal = (v) => {\n  if (!v.titel) return '';\n  return `**${v.titel}**\\n${v.beschreibung}\\n\\nStatistik/Trend: ${v.statistik_trend}\\nRelevanz: ${v.relevanz}`;\n};\n\nreturn {\n  ...previousData,\n  \n  // Structured proposals for email generation\n  vorschlag_1: vorschlag1,\n  vorschlag_2: vorschlag2,\n  vorschlag_3: vorschlag3,\n  \n  // Formatted proposals for Google Sheets\n  content_vorschlag_1: formatProposal(vorschlag1),\n  content_vorschlag_2: formatProposal(vorschlag2),\n  content_vorschlag_3: formatProposal(vorschlag3),\n  \n  // JSON for email prompt\n  vorschlaege_json: JSON.stringify({ vorschlag_1: vorschlag1, vorschlag_2: vorschlag2, vorschlag_3: vorschlag3 }, null, 2)\n};"
       },
       "id": "parse-content-proposals",
       "name": "14 Parse Content Proposals",
@@ -386,52 +371,42 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4"
+        },
+        "messages": {
+          "values": [
             {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "content-type",
-              "value": "application/json"
+              "role": "user",
+              "content": "=Schreibe eine Outreach-E-Mail für eine Backlink-/Gastbeitrag-Anfrage.\n\n**Empfänger:**\n- Firma: {{ $json.firmenname }}\n- Kontaktperson: {{ $json.kontaktperson || 'Nicht bekannt' }}\n- Website: {{ $json.website }}\n- Branche: {{ $json.branche }}\n\n**Absender:**\n- Website: {{ $json.eigene_website_url }}\n\n**Die 3 Content-Vorschläge:**\n{{ $json.vorschlaege_json }}\n\n**Tonalität:** {{ $json.tonalitaet }}\n{{ $json.tonalitaet === 'Formell' ? 'Schreibe professionell und höflich. Verwende \"Sie\" als Anrede. Vermeide übertriebene Verkaufssprache – sei authentisch und auf Augenhöhe.' : 'Schreibe modern und locker, aber professionell. Verwende \"Du\" als Anrede. Sei authentisch, nicht schmierig oder zu verkäuferisch.' }}\n\n**E-Mail-Struktur:**\n1. Persönliche Ansprache mit Bezug auf deren Website/Unternehmen\n2. Kurz vorstellen: Wer bin ich und was biete ich an\n3. Mehrwert von gutem Content erklären: Warum profitiert deren Website von Gastbeiträgen (SEO, Vertrauen bei Besuchern, Expertise zeigen, mehr Traffic)\n4. Die 3 Content-Vorschläge präsentieren (kurz und übersichtlich)\n5. Call-to-Action: Interesse an einem der Themen? Gerne besprechen.\n6. Freundlicher Abschluss\n\n**Ausgabe im JSON-Format:**\n{\n  \"betreff\": \"Personalisierter, neugierig machender Betreff\",\n  \"email_text\": \"Der vollständige E-Mail-Text mit Absätzen\"\n}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"{{ $json.tonalitaet === 'Formell' ? 'Du schreibst professionelle Outreach-E-Mails auf Deutsch. Dein Ton ist höflich, respektvoll und geschäftlich. Verwende \\\"Sie\\\" als Anrede. Vermeide übertriebene Verkaufssprache – sei authentisch und auf Augenhöhe.' : 'Du schreibst moderne, lockere Outreach-E-Mails auf Deutsch. Dein Ton ist freundlich und direkt, aber professionell. Verwende \\\"Du\\\" als Anrede. Sei authentisch, nicht schmierig oder zu verkäuferisch.' }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Schreibe eine Outreach-E-Mail für eine Backlink-/Gastbeitrag-Anfrage.\\n\\n**Empfänger:**\\n- Firma: {{ $json.firmenname }}\\n- Kontaktperson: {{ $json.kontaktperson || 'Nicht bekannt' }}\\n- Website: {{ $json.website }}\\n- Branche: {{ $json.branche }}\\n\\n**Absender:**\\n- Website: {{ $json.eigene_website_url }}\\n\\n**Die 3 Content-Vorschläge:**\\n{{ $json.vorschlaege_json }}\\n\\n**Tonalität:** {{ $json.tonalitaet }}\\n\\n**E-Mail-Struktur:**\\n1. Persönliche Ansprache mit Bezug auf deren Website/Unternehmen\\n2. Kurz vorstellen: Wer bin ich und was biete ich an\\n3. Mehrwert von gutem Content erklären: Warum profitiert deren Website von Gastbeiträgen (SEO, Vertrauen bei Besuchern, Expertise zeigen, mehr Traffic)\\n4. Die 3 Content-Vorschläge präsentieren (kurz und übersichtlich)\\n5. Call-to-Action: Interesse an einem der Themen? Gerne besprechen.\\n6. Freundlicher Abschluss\\n\\n**Ausgabe im JSON-Format:**\\n{\\n  \\\"betreff\\\": \\\"Personalisierter, neugierig machender Betreff\\\",\\n  \\\"email_text\\\": \\\"Der vollständige E-Mail-Text mit Absätzen\\\"\\n}\"\n    }\n  ]\n}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 120000
+          "maxTokens": 2048,
+          "temperature": 0.7
         }
       },
       "id": "claude-email-generation",
       "name": "15 Claude - E-Mail generieren",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
       "position": [3250, 300],
       "credentials": {
-        "httpHeaderAuth": {
+        "anthropicApi": {
           "id": "anthropic-credentials",
-          "name": "Anthropic API Key"
+          "name": "Anthropic API"
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "Generiert eine personalisierte Outreach-E-Mail basierend auf der gewählten Tonalität"
+      "notes": "Generiert personalisierte Outreach-E-Mail (Native Anthropic Node)"
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// 16 PARSE EMAIL RESPONSE\n// Parses Claude's email generation response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('14 Parse Content Proposals').first().json;\n\nlet betreff = '';\nlet emailText = '';\n\ntry {\n  // Extract content from Claude response\n  const content = claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    betreff = parsed.betreff || '';\n    emailText = parsed.email_text || '';\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n  betreff = 'Gastbeitrag-Anfrage für Ihre Website';\n  emailText = 'Fehler beim Generieren der E-Mail. Bitte manuell erstellen.';\n}\n\nreturn {\n  ...previousData,\n  email_betreff: betreff,\n  email_text: emailText\n};"
+        "jsCode": "// ========================================\n// 16 PARSE EMAIL RESPONSE\n// Parses Claude's email generation response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('14 Parse Content Proposals').first().json;\n\nlet betreff = '';\nlet emailText = '';\n\ntry {\n  // Extract content from Claude response (native node returns text directly)\n  const content = claudeResponse.text || claudeResponse.message || claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    betreff = parsed.betreff || '';\n    emailText = parsed.email_text || '';\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n  betreff = 'Gastbeitrag-Anfrage für Ihre Website';\n  emailText = 'Fehler beim Generieren der E-Mail. Bitte manuell erstellen.';\n}\n\nreturn {\n  ...previousData,\n  email_betreff: betreff,\n  email_text: emailText\n};"
       },
       "id": "parse-email-response",
       "name": "16 Parse Email Response",
@@ -938,7 +913,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": ""
   },
-  "versionId": "1.0.0",
+  "versionId": "1.1.0",
   "meta": {
     "templateCredsSetupCompleted": false,
     "instanceId": "backlink-outreach-automation-v1"
