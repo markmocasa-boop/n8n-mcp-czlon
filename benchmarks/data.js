@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769584641436,
+  "lastUpdate": 1769584792255,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "90407f845d61028d83c4c084e9a5f6b466a5558c",
-          "message": "fix: version-aware settings filtering for n8n API compatibility (#467)\n\nFixes #464, #465, #466\n\n- Add n8n version detection via /rest/settings endpoint\n- Filter workflow settings based on n8n version support:\n  - All versions: 7 core properties\n  - n8n 1.37.0+: adds executionOrder\n  - n8n 1.119.0+: adds callerPolicy, callerIds, timeSavedPerExecution, availableInMCP\n- Add read-only field filtering (activeVersionId, activeVersion)\n- Version cache with 5-minute TTL for server upgrades\n- Race condition protection with promise-based locking\n- Type validation for version string responses\n\nThanks to @thesved for this contribution!\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-12-05T12:15:48+01:00",
-          "tree_id": "08daaed46e0df4dfbae917c9b8942cfcdf13b8fb",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/90407f845d61028d83c4c084e9a5f6b466a5558c"
-        },
-        "date": 1764933475477,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1501,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/1f812d2a64abaa0c2f3ffb6a86a9ffc1b25a0ce0"
         },
         "date": 1769584641135,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc581b9c84a58c9377212e3b4ec84878460c926c",
+          "message": "Add files via upload",
+          "timestamp": "2026-01-28T08:17:56+01:00",
+          "tree_id": "1b0896724b7b951a9f7622011d5503d2af52cac0",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fc581b9c84a58c9377212e3b4ec84878460c926c"
+        },
+        "date": 1769584791836,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
