@@ -1,0 +1,956 @@
+{
+  "name": "Social Media Content Automation",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Scheduled Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weekday-code",
+      "name": "Wochentag ermitteln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst dayOfWeek = now.getDay(); // 0 = Sonntag, 1 = Montag, ...\n\nconst dayMapping = {\n  1: { post_type: 'authority_builder', image_type: 'karikatur', weekday: 'Montag' },\n  2: { post_type: 'client_win', image_type: 'karikatur', weekday: 'Dienstag' },\n  3: { post_type: 'controversy', image_type: 'karikatur', weekday: 'Mittwoch' },\n  4: { post_type: 'mistake', image_type: 'ugc', weekday: 'Donnerstag' },\n  5: { post_type: 'audit', image_type: 'karikatur', weekday: 'Freitag' },\n  6: { post_type: 'how_to', image_type: 'ugc', weekday: 'Samstag' }\n};\n\nconst todayConfig = dayMapping[dayOfWeek];\n\nif (!todayConfig) {\n  throw new Error('Sonntag - kein Post geplant');\n}\n\nreturn [{\n  json: {\n    ...todayConfig,\n    date: now.toISOString().split('T')[0],\n    timestamp: now.toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "load-business-info",
+      "name": "Google Sheets - Business Info",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Business_Info"
+        },
+        "options": {
+          "range": "A2:H2"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "load-content",
+      "name": "Google Sheets - Content laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Post_Content"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "filter-select-content",
+      "name": "Content filtern & auswählen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "jsCode": "const postType = $('Wochentag ermitteln').item.json.post_type;\nconst allContent = $('Google Sheets - Content laden').all();\n\n// Filter: passender post_type UND status = \"ready\"\nconst readyContent = allContent.filter(item => \n  item.json.post_type === postType && \n  item.json.status === 'ready'\n);\n\nif (readyContent.length === 0) {\n  throw new Error(`Kein Content mit status \"ready\" für post_type \"${postType}\" gefunden!`);\n}\n\n// Zufällige Auswahl\nconst randomIndex = Math.floor(Math.random() * readyContent.length);\nconst selectedContent = readyContent[randomIndex];\n\nreturn [selectedContent];"
+      }
+    },
+    {
+      "id": "load-prompts",
+      "name": "Google Sheets - Prompts laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Prompts"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "filter-select-prompt",
+      "name": "Prompt filtern & auswählen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "parameters": {
+        "jsCode": "const postType = $('Wochentag ermitteln').item.json.post_type;\nconst allPrompts = $('Google Sheets - Prompts laden').all();\n\n// Filter: passender post_type\nconst matchingPrompts = allPrompts.filter(item => \n  item.json.post_type === postType\n);\n\nif (matchingPrompts.length === 0) {\n  throw new Error(`Keine Prompts für post_type \"${postType}\" gefunden!`);\n}\n\n// Zufällige Auswahl\nconst randomIndex = Math.floor(Math.random() * matchingPrompts.length);\nconst selectedPrompt = matchingPrompts[randomIndex];\n\nreturn [selectedPrompt];"
+      }
+    },
+    {
+      "id": "prepare-claude-prompt",
+      "name": "Claude Prompt vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300],
+      "parameters": {
+        "jsCode": "const businessInfo = $('Google Sheets - Business Info').item.json;\nconst weekdayInfo = $('Wochentag ermitteln').item.json;\nconst contentData = $('Content filtern & auswählen').item.json;\nconst promptData = $('Prompt filtern & auswählen').item.json;\n\nconst systemPrompt = `Du bist ein erfahrener Social Media Content Writer für den deutschen Markt. \n\nDeine Aufgabe:\n- Schreibe Posts auf Deutsch\n- Halte dich exakt an das angegebene Format und die Wortanzahl\n- Verwende den angegebenen Tone of Voice\n- Mache den Content spezifisch und konkret, nicht generisch\n- Nutze kurze Sätze und Absätze für bessere Lesbarkeit\n- Verwende Emojis sparsam und nur wenn sie passen\n- Formatiere für LinkedIn (Zeilenumbrüche für Lesbarkeit)\n\nAntworte NUR mit dem fertigen Post-Text. Keine Erklärungen, keine Einleitung.`;\n\nconst userMessage = `### Business Kontext:\n- Firma: ${businessInfo.business_name}\n- Branche: ${businessInfo.industry}\n- Zielgruppe (ICP): ${businessInfo.icp_name}\n- Pain Points der Zielgruppe: ${businessInfo.icp_pain_points}\n- Gewünschte Ergebnisse: ${businessInfo.icp_desired_outcomes}\n- Tone of Voice: ${businessInfo.tone_of_voice}\n- Standard CTA: ${businessInfo.cta_default}\n\n### Post-Typ: ${weekdayInfo.post_type}\n\n### Content-Daten für diesen Post:\n${JSON.stringify(contentData, null, 2)}\n\n### Prompt/Anweisungen:\n${promptData.prompt_text}\n\n---\n\nSchreibe jetzt den Post auf Deutsch. Nutze die Content-Daten um den Prompt zu füllen.`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userMessage,\n    businessInfo,\n    weekdayInfo,\n    contentData,\n    promptData\n  }\n}];"
+      }
+    },
+    {
+      "id": "claude-generate-text",
+      "name": "Claude - Post Text generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 1024,\n  \"system\": $json.systemPrompt,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": $json.userMessage\n    }\n  ]\n} }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "id": "extract-claude-response",
+      "name": "Claude Antwort extrahieren",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1980, 300],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "generated-text",
+              "name": "generated_text",
+              "value": "={{ $json.content[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "business-info",
+              "name": "businessInfo",
+              "value": "={{ $('Claude Prompt vorbereiten').item.json.businessInfo }}",
+              "type": "object"
+            },
+            {
+              "id": "weekday-info",
+              "name": "weekdayInfo",
+              "value": "={{ $('Claude Prompt vorbereiten').item.json.weekdayInfo }}",
+              "type": "object"
+            },
+            {
+              "id": "content-data",
+              "name": "contentData",
+              "value": "={{ $('Claude Prompt vorbereiten').item.json.contentData }}",
+              "type": "object"
+            },
+            {
+              "id": "prompt-data",
+              "name": "promptData",
+              "value": "={{ $('Claude Prompt vorbereiten').item.json.promptData }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-image-type",
+      "name": "Switch - UGC oder Karikatur",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [2200, 300],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.weekdayInfo.image_type }}",
+                    "rightValue": "ugc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "UGC Path"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.weekdayInfo.image_type }}",
+                    "rightValue": "karikatur",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Karikatur Path"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "google-drive-list",
+      "name": "Google Drive - Bilder listen",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2420, 160],
+      "parameters": {
+        "operation": "list",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": ""
+        },
+        "filter": {
+          "folderId": "",
+          "driveId": "",
+          "options": {
+            "queryString": "mimeType contains 'image/'"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "select-random-image",
+      "name": "Zufälliges Bild auswählen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 160],
+      "parameters": {
+        "jsCode": "const files = $('Google Drive - Bilder listen').all();\nconst previousData = $('Claude Antwort extrahieren').item.json;\n\nif (files.length === 0) {\n  throw new Error('Keine Bilder im Google Drive Ordner gefunden!');\n}\n\n// Zufällige Auswahl\nconst randomIndex = Math.floor(Math.random() * files.length);\nconst selectedFile = files[randomIndex];\n\nreturn [{\n  json: {\n    ...previousData,\n    selectedImageId: selectedFile.json.id,\n    selectedImageName: selectedFile.json.name\n  }\n}];"
+      }
+    },
+    {
+      "id": "google-drive-download",
+      "name": "Google Drive - Bild herunterladen",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2860, 160],
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.selectedImageId }}"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "prepare-ugc-gemini",
+      "name": "UGC Gemini Prompt vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 160],
+      "parameters": {
+        "jsCode": "const previousData = $('Zufälliges Bild auswählen').item.json;\nconst binaryData = $input.item.binary;\n\nconst imagePrompt = `Erstelle ein fotorealistisches Bild im UGC-Stil (User Generated Content) für einen Social Media Post.\n\nDas Bild soll die folgende Person zeigen (siehe Referenzbild) in diesem Kontext:\n${previousData.contentData.image_context}\n\nAnforderungen:\n- Fotorealistisch, wie ein echtes Smartphone-Foto\n- Natürliche Beleuchtung\n- Die Person aus dem Referenzbild soll erkennbar sein (gleiches Gesicht, Haare, etc.)\n- Authentischer UGC-Look (nicht zu perfekt, nicht zu gestellt)\n- Passend für LinkedIn/Instagram\n- Quadratisches Format (1:1)\n\nPost-Kontext für das Bild:\n${previousData.generated_text}`;\n\nreturn [{\n  json: {\n    ...previousData,\n    imagePrompt,\n    imageType: 'ugc'\n  },\n  binary: binaryData\n}];"
+      }
+    },
+    {
+      "id": "gemini-ugc-image",
+      "name": "Gemini - UGC Bild generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={{ $credentials.googleGeminiApi.apiKey }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"contents\": [{\n    \"parts\": [\n      {\n        \"text\": $json.imagePrompt\n      },\n      {\n        \"inline_data\": {\n          \"mime_type\": \"image/jpeg\",\n          \"data\": $binary.data.toString('base64')\n        }\n      }\n    ]\n  }],\n  \"generationConfig\": {\n    \"responseModalities\": [\"image\", \"text\"],\n    \"responseMimeType\": \"image/png\"\n  }\n} }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "id": "prepare-karikatur-gemini",
+      "name": "Karikatur Gemini Prompt vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 440],
+      "parameters": {
+        "jsCode": "const previousData = $('Claude Antwort extrahieren').item.json;\n\nconst imagePrompt = `Erstelle eine karikaturistische Illustration für einen Social Media Post.\n\nDas Bild soll folgendes Thema visualisieren:\n${previousData.contentData.image_context}\n\nAnforderungen:\n- Karikatur-Stil mit übertriebenen Proportionen\n- Farbenfroh und auffällig\n- Humorvoll aber professionell\n- Kein Text im Bild\n- Passend für LinkedIn/Instagram\n- Quadratisches Format (1:1)\n\nPost-Kontext für das Bild:\n${previousData.generated_text}`;\n\nreturn [{\n  json: {\n    ...previousData,\n    imagePrompt,\n    imageType: 'karikatur'\n  }\n}];"
+      }
+    },
+    {
+      "id": "gemini-karikatur-image",
+      "name": "Gemini - Karikatur Bild generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, 440],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={{ $credentials.googleGeminiApi.apiKey }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": $json.imagePrompt\n    }]\n  }],\n  \"generationConfig\": {\n    \"responseModalities\": [\"image\", \"text\"],\n    \"responseMimeType\": \"image/png\"\n  }\n} }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "id": "extract-ugc-image",
+      "name": "UGC Bild extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 160],
+      "parameters": {
+        "jsCode": "const previousData = $('UGC Gemini Prompt vorbereiten').item.json;\nconst geminiResponse = $input.item.json;\n\nlet imageBase64 = '';\nif (geminiResponse.candidates && geminiResponse.candidates[0] && \n    geminiResponse.candidates[0].content && geminiResponse.candidates[0].content.parts) {\n  const parts = geminiResponse.candidates[0].content.parts;\n  for (const part of parts) {\n    if (part.inlineData && part.inlineData.data) {\n      imageBase64 = part.inlineData.data;\n      break;\n    }\n  }\n}\n\nreturn [{\n  json: {\n    ...previousData,\n    generatedImageBase64: imageBase64\n  }\n}];"
+      }
+    },
+    {
+      "id": "extract-karikatur-image",
+      "name": "Karikatur Bild extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 440],
+      "parameters": {
+        "jsCode": "const previousData = $('Karikatur Gemini Prompt vorbereiten').item.json;\nconst geminiResponse = $input.item.json;\n\nlet imageBase64 = '';\nif (geminiResponse.candidates && geminiResponse.candidates[0] && \n    geminiResponse.candidates[0].content && geminiResponse.candidates[0].content.parts) {\n  const parts = geminiResponse.candidates[0].content.parts;\n  for (const part of parts) {\n    if (part.inlineData && part.inlineData.data) {\n      imageBase64 = part.inlineData.data;\n      break;\n    }\n  }\n}\n\nreturn [{\n  json: {\n    ...previousData,\n    generatedImageBase64: imageBase64\n  }\n}];"
+      }
+    },
+    {
+      "id": "merge-paths",
+      "name": "Merge - Pfade zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [3740, 300],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranchMode": "waitForAll",
+        "output": "singleItem"
+      }
+    },
+    {
+      "id": "blotato-publish",
+      "name": "Blotato - Post veröffentlichen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3960, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"content\": $json.generated_text,\n  \"media\": [\n    {\n      \"type\": \"image\",\n      \"data\": $json.generatedImageBase64\n    }\n  ],\n  \"platforms\": [\"linkedin\", \"instagram\", \"facebook\", \"twitter\"],\n  \"publish_at\": \"now\"\n} }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Blotato API Key"
+        }
+      }
+    },
+    {
+      "id": "prepare-log-data",
+      "name": "Log-Daten vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 300],
+      "parameters": {
+        "jsCode": "const mergeData = $('Merge - Pfade zusammenführen').item.json;\nconst blotatoResponse = $input.item.json;\n\n// Extrahiere URLs aus Blotato-Antwort (Struktur muss ggf. angepasst werden)\nconst linkedinUrl = blotatoResponse.results?.linkedin?.url || '';\nconst instagramUrl = blotatoResponse.results?.instagram?.url || '';\nconst facebookUrl = blotatoResponse.results?.facebook?.url || '';\nconst xUrl = blotatoResponse.results?.twitter?.url || '';\n\nreturn [{\n  json: {\n    date: mergeData.weekdayInfo.date,\n    weekday: mergeData.weekdayInfo.weekday,\n    post_type: mergeData.weekdayInfo.post_type,\n    content_id: mergeData.contentData.id,\n    prompt_id: mergeData.promptData.prompt_id,\n    image_type: mergeData.weekdayInfo.image_type,\n    platforms: 'linkedin, instagram, facebook, x',\n    status: 'success',\n    error_message: '',\n    generated_text: mergeData.generated_text,\n    linkedin_url: linkedinUrl,\n    instagram_url: instagramUrl,\n    facebook_url: facebookUrl,\n    x_url: xUrl,\n    contentData: mergeData.contentData\n  }\n}];"
+      }
+    },
+    {
+      "id": "update-post-log",
+      "name": "Google Sheets - Post_Log aktualisieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4400, 300],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Post_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "weekday": "={{ $json.weekday }}",
+            "post_type": "={{ $json.post_type }}",
+            "content_id": "={{ $json.content_id }}",
+            "prompt_id": "={{ $json.prompt_id }}",
+            "image_type": "={{ $json.image_type }}",
+            "platforms": "={{ $json.platforms }}",
+            "status": "={{ $json.status }}",
+            "error_message": "={{ $json.error_message }}",
+            "generated_text": "={{ $json.generated_text }}",
+            "linkedin_url": "={{ $json.linkedin_url }}",
+            "instagram_url": "={{ $json.instagram_url }}",
+            "facebook_url": "={{ $json.facebook_url }}",
+            "x_url": "={{ $json.x_url }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "update-content-status",
+      "name": "Google Sheets - Content Status aktualisieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4620, 300],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Post_Content"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "posted"
+          }
+        },
+        "matchingColumn": "id",
+        "matchingValue": "={{ $json.content_id }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 600]
+    },
+    {
+      "id": "prepare-error-data",
+      "name": "Error-Daten vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 600],
+      "parameters": {
+        "jsCode": "const error = $input.item.json;\nconst now = new Date();\n\n// Versuche Daten aus vorherigen Nodes zu extrahieren (falls verfügbar)\nlet weekdayInfo = {};\nlet contentData = {};\nlet promptData = {};\n\ntry {\n  weekdayInfo = $('Wochentag ermitteln')?.item?.json || {};\n} catch (e) {}\n\ntry {\n  contentData = $('Content filtern & auswählen')?.item?.json || {};\n} catch (e) {}\n\ntry {\n  promptData = $('Prompt filtern & auswählen')?.item?.json || {};\n} catch (e) {}\n\nreturn [{\n  json: {\n    date: now.toISOString().split('T')[0],\n    weekday: weekdayInfo.weekday || 'unknown',\n    post_type: weekdayInfo.post_type || 'unknown',\n    content_id: contentData.id || 'unknown',\n    prompt_id: promptData.prompt_id || 'unknown',\n    image_type: weekdayInfo.image_type || 'unknown',\n    platforms: '',\n    status: 'error',\n    error_message: error.message || JSON.stringify(error),\n    generated_text: '',\n    linkedin_url: '',\n    instagram_url: '',\n    facebook_url: '',\n    x_url: ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "error-log-to-sheets",
+      "name": "Google Sheets - Error Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 600],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Post_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "weekday": "={{ $json.weekday }}",
+            "post_type": "={{ $json.post_type }}",
+            "content_id": "={{ $json.content_id }}",
+            "prompt_id": "={{ $json.prompt_id }}",
+            "image_type": "={{ $json.image_type }}",
+            "platforms": "={{ $json.platforms }}",
+            "status": "={{ $json.status }}",
+            "error_message": "={{ $json.error_message }}",
+            "generated_text": "={{ $json.generated_text }}",
+            "linkedin_url": "={{ $json.linkedin_url }}",
+            "instagram_url": "={{ $json.instagram_url }}",
+            "facebook_url": "={{ $json.facebook_url }}",
+            "x_url": "={{ $json.x_url }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Scheduled Trigger": {
+      "main": [
+        [
+          {
+            "node": "Wochentag ermitteln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wochentag ermitteln": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Business Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Business Info": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Content laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Content laden": {
+      "main": [
+        [
+          {
+            "node": "Content filtern & auswählen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content filtern & auswählen": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Prompts laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Prompts laden": {
+      "main": [
+        [
+          {
+            "node": "Prompt filtern & auswählen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt filtern & auswählen": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Prompt vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Claude - Post Text generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Post Text generieren": {
+      "main": [
+        [
+          {
+            "node": "Claude Antwort extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Antwort extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Switch - UGC oder Karikatur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - UGC oder Karikatur": {
+      "main": [
+        [
+          {
+            "node": "Google Drive - Bilder listen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Karikatur Gemini Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive - Bilder listen": {
+      "main": [
+        [
+          {
+            "node": "Zufälliges Bild auswählen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zufälliges Bild auswählen": {
+      "main": [
+        [
+          {
+            "node": "Google Drive - Bild herunterladen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive - Bild herunterladen": {
+      "main": [
+        [
+          {
+            "node": "UGC Gemini Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UGC Gemini Prompt vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Gemini - UGC Bild generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - UGC Bild generieren": {
+      "main": [
+        [
+          {
+            "node": "UGC Bild extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UGC Bild extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Merge - Pfade zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Karikatur Gemini Prompt vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Gemini - Karikatur Bild generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Karikatur Bild generieren": {
+      "main": [
+        [
+          {
+            "node": "Karikatur Bild extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Karikatur Bild extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Merge - Pfade zusammenführen",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge - Pfade zusammenführen": {
+      "main": [
+        [
+          {
+            "node": "Blotato - Post veröffentlichen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blotato - Post veröffentlichen": {
+      "main": [
+        [
+          {
+            "node": "Log-Daten vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log-Daten vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Post_Log aktualisieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Post_Log aktualisieren": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Content Status aktualisieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error-Daten vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error-Daten vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Error Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "social-media"
+    },
+    {
+      "name": "automation"
+    },
+    {
+      "name": "content-generation"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
