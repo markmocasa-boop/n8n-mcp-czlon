@@ -1,0 +1,1936 @@
+{
+  "name": "Tool - Backlink Outreach Automatisierung",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Backlink Outreach Automatisierung",
+        "formDescription": "Automatisierter Backlink-Outreach: Scrape passende Unternehmen, reichere Daten an, generiere personalisierte Content-Vorschläge und versende Outreach-E-Mails.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Branche",
+              "placeholder": "z.B. Zahnarzt, Restaurant, Steuerberater",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Region",
+              "placeholder": "z.B. München, Berlin Mitte, Hamburg",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Anzahl Unternehmen",
+              "fieldType": "number",
+              "placeholder": "10",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Eigene Website URL",
+              "placeholder": "https://ihre-website.de",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "E-Mail Absender",
+              "fieldType": "email",
+              "placeholder": "ihre-email@gmail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tonalität",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "informell"
+                  },
+                  {
+                    "option": "formell"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31ba0d1a-d136-4e7e-b90d-6fd3c8a2d2bb",
+      "name": "01 Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -1504,
+        112
+      ],
+      "webhookId": "02bf1b80-262a-4fc0-a5ed-2585c419f7f7",
+      "notes": "Formular für Backlink-Outreach - sammelt Branche, Region, Anzahl, eigene Website, Absender-E-Mail und Tonalität"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 02 PREPARE FORM DATA\n// Extracts and normalizes form input data\n// ========================================\n\nconst input = $input.first().json;\n\nconst branche = input['Branche'] || input.branche;\nconst region = input['Region'] || input.region;\nconst anzahlUnternehmen = parseInt(input['Anzahl Unternehmen'] || input.anzahl_unternehmen) || 10;\nconst eigeneWebsiteUrl = input['Eigene Website URL'] || input.eigene_website_url;\nconst emailAbsender = input['E-Mail Absender'] || input.email_absender;\nconst tonalitaet = input['Tonalität'] || input.tonalitaet || 'Formell';\n\nreturn {\n  branche: branche.trim(),\n  region: region.trim(),\n  anzahl_unternehmen: anzahlUnternehmen,\n  eigene_website_url: eigeneWebsiteUrl.trim(),\n  email_absender: emailAbsender.trim(),\n  tonalitaet: tonalitaet,\n  search_query: `${branche.trim()} ${region.trim()}`,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "eb88cd87-38fe-4391-b7ec-66ced1e5e10a",
+      "name": "02 Prepare Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        112
+      ],
+      "notes": "Extrahiert und normalisiert die Formulardaten für nachfolgende Nodes"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2f472f1e-5661-45e6-9463-2f9e8abb17e5",
+      "name": "04 Split Into Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -784,
+        112
+      ],
+      "notes": "Teilt die Apify-Ergebnisse in einzelne Items für die Verarbeitung"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "website-exists",
+              "leftValue": "={{ $json.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3198047b-1127-4843-abe8-051ba1a126c0",
+      "name": "05 Filter - Nur mit Website",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        112
+      ],
+      "notes": "Filtert Unternehmen ohne Website heraus - kein Backlink ohne Website möglich"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 06 NORMALIZE APIFY DATA\n// Normalizes and extracts relevant fields from Apify response\n// ========================================\n\nconst item = $input.first().json;\nconst formData = $('02 Prepare Form Data').first().json;\n\nreturn {\n  // Company data from Apify\n  firmenname: item.title || item.name || 'Unbekannt',\n  adresse: item.address || item.street || '',\n  website: item.website || '',\n  telefon: item.phone || item.phoneUnformatted || '',\n  bewertung: item.totalScore || item.rating || 0,\n  anzahl_bewertungen: item.reviewsCount || item.reviewCount || 0,\n  kategorie: item.categoryName || item.category || '',\n  place_id: item.placeId || '',\n  \n  // Pass through form data\n  branche: formData.branche,\n  region: formData.region,\n  eigene_website_url: formData.eigene_website_url,\n  email_absender: formData.email_absender,\n  tonalitaet: formData.tonalitaet,\n  timestamp: formData.timestamp\n};"
+      },
+      "id": "82534c3c-8381-45bf-bfeb-065454d40529",
+      "name": "06 Normalize Apify Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        112
+      ],
+      "notes": "Normalisiert Apify-Daten und fügt Formular-Daten hinzu"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * 09 Merge Enrichment Data (Code node, JavaScript)\n * Mode: Run Once for All Items\n *\n * Fix:\n * - Übernimmt Kontaktfelder, wenn sie schon als Top-Level Felder in Inputs existieren\n * - Parst zusätzlich JSON aus Textquellen (output[0].content[0].text / content[0].text / choices...)\n * - Überschreibt NIE mit leer\n */\n\nconst companyData = $('06 Normalize Apify Data').first().json;\nconst allInputs = $input.all();\n\nfunction toStr(v) {\n  return (v ?? '').toString().trim();\n}\nfunction setIfNonEmpty(current, next) {\n  const n = toStr(next);\n  return n ? n : current;\n}\nfunction tryParseEmbeddedJson(text) {\n  if (!text) return null;\n  const s = text.toString();\n  const match = s.match(/\\{[\\s\\S]*\\}/);\n  if (!match) return null;\n  try {\n    return JSON.parse(match[0]);\n  } catch {\n    return null;\n  }\n}\nfunction getCandidateTexts(json) {\n  return [\n    json?.output?.[0]?.content?.[0]?.text,  // <- deine häufigste Struktur\n    json?.content?.[0]?.text,\n    json?.text,\n    json?.message,\n    json?.choices?.[0]?.message?.content,\n    json?.output_text,\n  ]\n    .filter((v) => v !== undefined && v !== null)\n    .map((v) => v.toString());\n}\n\n// Defaults aus companyData (falls dort schon was drin ist)\nlet kontaktperson = toStr(companyData.kontaktperson);\nlet email = toStr(companyData.email);\nlet linkedin = toStr(companyData.linkedin);\nlet telefon = toStr(companyData.telefon);\nlet mitarbeiter = toStr(companyData.mitarbeiter);\n\nlet statistiken = Array.isArray(companyData.statistiken) ? companyData.statistiken : [];\nlet trends = toStr(companyData.trends);\nlet websiteAnalyse = toStr(companyData.website_analyse ?? companyData.websiteAnalyse);\n\n// 1) ZUERST: Top-Level-Felder aus allen Inputs übernehmen (so wie in deinem Input links)\nfor (const item of allInputs) {\n  const j = item.json;\n\n  email = setIfNonEmpty(email, j.email);\n  kontaktperson = setIfNonEmpty(kontaktperson, j.kontaktperson);\n  linkedin = setIfNonEmpty(linkedin, j.linkedin);\n  telefon = setIfNonEmpty(telefon, j.telefon);\n  mitarbeiter = setIfNonEmpty(mitarbeiter, j.mitarbeiter);\n\n  // Statistiken ggf. direkt vorhanden\n  if (Array.isArray(j.statistiken) && j.statistiken.length) {\n    statistiken = j.statistiken;\n  }\n  trends = setIfNonEmpty(trends, j.trends);\n  websiteAnalyse = setIfNonEmpty(websiteAnalyse, j.website_analyse ?? j.websiteAnalyse);\n}\n\n// 2) DANACH: optional JSON aus Text/LLM-Antworten extrahieren (falls es noch “bessere” Werte gibt)\nfor (const item of allInputs) {\n  const j = item.json;\n\n  for (const txt of getCandidateTexts(j)) {\n    const parsed = tryParseEmbeddedJson(txt);\n    if (!parsed || typeof parsed !== 'object') continue;\n\n    // Kontakt\n    email = setIfNonEmpty(email, parsed.email);\n    kontaktperson = setIfNonEmpty(kontaktperson, parsed.kontaktperson);\n    linkedin = setIfNonEmpty(linkedin, parsed.linkedin);\n    telefon = setIfNonEmpty(telefon, parsed.telefon);\n    mitarbeiter = setIfNonEmpty(mitarbeiter, parsed.mitarbeiter);\n\n    // Statistik\n    if (Array.isArray(parsed.statistiken) && parsed.statistiken.length) {\n      statistiken = parsed.statistiken;\n    }\n    trends = setIfNonEmpty(trends, parsed.trends);\n    websiteAnalyse = setIfNonEmpty(websiteAnalyse, parsed.website_analyse);\n  }\n}\n\n// 3) Output als Item-Array (wichtig im Code Node)\nreturn [\n  {\n    json: {\n      ...companyData,\n      kontaktperson,\n      email,\n      linkedin,\n      telefon,\n      mitarbeiter,\n      statistiken,\n      statistiken_text: Array.isArray(statistiken) ? statistiken.join(' | ') : '',\n      trends,\n      website_analyse: websiteAnalyse,\n      statistiken_json: JSON.stringify(statistiken ?? []),\n      has_email: Boolean(email),\n    },\n  },\n];\n\n\n\n"
+      },
+      "id": "bb2f63b1-9c75-4ad8-9998-4d36d70ede9c",
+      "name": "09 Merge Enrichment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        112
+      ],
+      "notes": "Kombiniert Tavily- und Perplexity-Daten, extrahiert E-Mails und Kontaktinformationen"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY",
+          "mode": "list",
+          "cachedResultName": "Backlink Kontakt Outreach",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Firmenname": "={{ $json.firmenname }}",
+            "Adresse": "={{ $json.adresse }}",
+            "Website": "={{ $json.website }}",
+            "Bewertung": "={{ $json.bewertung }}",
+            "Anzahl Bewertungen": "={{ $json.anzahl_bewertungen }}",
+            "Kategorie": "={{ $json.kategorie }}",
+            "Telefon": "={{ $json.telefon }}",
+            "E-Mail": "={{ $json.email }}",
+            "Kontaktperson": "={{ $json.kontaktperson }}",
+            "LinkedIn": "={{ $json.linkedin }}",
+            "Mitarbeiter": "={{ $json.mitarbeiter }}",
+            "Branchentrends": "={{ $json.trends }}",
+            "Branchenstatistiken": "={{ $json.statistiken_text }}",
+            "Website-Analyse": "={{ $json.website_analyse }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Firmenname",
+              "displayName": "Firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Adresse",
+              "displayName": "Adresse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telefon",
+              "displayName": "Telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Bewertung",
+              "displayName": "Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Anzahl Bewertungen",
+              "displayName": "Anzahl Bewertungen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kontaktperson",
+              "displayName": "Kontaktperson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail",
+              "displayName": "E-Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mitarbeiter",
+              "displayName": "Mitarbeiter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchenstatistiken",
+              "displayName": "Branchenstatistiken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchentrends",
+              "displayName": "Branchentrends",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website-Analyse",
+              "displayName": "Website-Analyse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 1",
+              "displayName": "Content-Vorschlag 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 2",
+              "displayName": "Content-Vorschlag 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 3",
+              "displayName": "Content-Vorschlag 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Betreff",
+              "displayName": "E-Mail-Betreff",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Text",
+              "displayName": "E-Mail-Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Versendet am",
+              "displayName": "Versendet am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fehlergrund",
+              "displayName": "Fehlergrund",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c388e249-4111-4eab-a162-d5544b17c873",
+      "name": "11 Google Sheet - Initial Save",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1520,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Speichert die angereicherten Unternehmensdaten initial in Google Sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 12 GET ROW NUMBER\n// Extracts the row number from the Google Sheets response for later updates\n// ========================================\n\nconst sheetsResponse = $input.first().json;\nconst previousData = $('09 Merge Enrichment Data').first().json;\n\n// The row number should be in the updates response\n// Google Sheets API returns the updated range like 'Sheet!A2:V2'\nlet rowNumber = 2; // Default to row 2 (after header)\n\ntry {\n  const updatedRange = sheetsResponse.updates?.updatedRange || sheetsResponse.updatedRange || '';\n  const rowMatch = updatedRange.match(/(\\d+)/);\n  if (rowMatch) {\n    rowNumber = parseInt(rowMatch[1]);\n  } else {\n    // Try to get from spreadsheetId response\n    const dataRange = sheetsResponse.updates?.updatedData?.range || '';\n    const dataRowMatch = dataRange.match(/(\\d+)/);\n    if (dataRowMatch) {\n      rowNumber = parseInt(dataRowMatch[1]);\n    }\n  }\n} catch (e) {\n  // Keep default row number\n}\n\nreturn {\n  ...previousData,\n  sheet_row_number: rowNumber\n};"
+      },
+      "id": "613077a8-1e06-4a62-bc8d-28dd291796b9",
+      "name": "12 Get Row Number",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        464
+      ],
+      "notes": "Extrahiert die Zeilennummer für spätere Updates"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 14 PARSE CONTENT PROPOSALS (Tag-based, robust)\n// Mode: Run Once for All Items\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('12 Get Row Number').first().json;\n\nfunction pickText(r) {\n  return (\n    r?.content?.[0]?.text ??\n    r?.output?.[0]?.content?.[0]?.text ??\n    r?.text ??\n    r?.message ??\n    r?.choices?.[0]?.message?.content ??\n    ''\n  ).toString();\n}\n\n// Tag-Extractor: zieht alles nach \"TAG:\" bis zum nächsten \"X_Y:\" oder Ende\nfunction getTag(text, tag) {\n  const re = new RegExp(`${tag}:\\\\s*([\\\\s\\\\S]*?)(?=\\\\n[A-Z0-9_]+:|$)`, 'i');\n  const m = text.match(re);\n  return (m?.[1] ?? '').trim();\n}\n\nfunction makeProposal(prefix, text) {\n  return {\n    titel: getTag(text, `${prefix}_TITEL`),\n    beschreibung: getTag(text, `${prefix}_BESCHREIBUNG`),\n    statistik_trend: getTag(text, `${prefix}_STATISTIK_TREND`),\n    relevanz: getTag(text, `${prefix}_RELEVANZ`),\n  };\n}\n\nfunction formatProposal(v) {\n  if (!v?.titel) return '';\n  return `**${v.titel}**\\n${v.beschreibung}\\n\\nStatistik/Trend: ${v.statistik_trend}\\nRelevanz: ${v.relevanz}`;\n}\n\nconst text = pickText(claudeResponse);\n\nconst v1 = makeProposal('V1', text);\nconst v2 = makeProposal('V2', text);\nconst v3 = makeProposal('V3', text);\n\n// n8n Code Node: als Item-Array zurückgeben :contentReference[oaicite:1]{index=1}\nreturn [\n  {\n    json: {\n      ...previousData,\n\n      vorschlag_1: v1,\n      vorschlag_2: v2,\n      vorschlag_3: v3,\n\n      content_vorschlag_1: formatProposal(v1),\n      content_vorschlag_2: formatProposal(v2),\n      content_vorschlag_3: formatProposal(v3),\n\n      vorschlaege_json: JSON.stringify({ vorschlag_1: v1, vorschlag_2: v2, vorschlag_3: v3 }, null, 2),\n    },\n  },\n];\n\n\n\n"
+      },
+      "id": "b6365b13-8bbd-4568-90f7-8ea725e0bda0",
+      "name": "14 Parse Content Proposals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        464
+      ],
+      "notes": "Parst die Claude-Antwort und formatiert die Content-Vorschläge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 16 PARSE EMAIL RESPONSE\n// Parses Claude's email generation response\n// ========================================\n\nconst claudeResponse = $input.first().json;\nconst previousData = $('14 Parse Content Proposals').first().json;\n\nlet betreff = '';\nlet emailText = '';\n\ntry {\n  // Extract content from Claude response (native node returns text directly)\n  const content = claudeResponse.text || claudeResponse.message || claudeResponse.content?.[0]?.text || '';\n  \n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    betreff = parsed.betreff || '';\n    emailText = parsed.email_text || '';\n  }\n} catch (e) {\n  // Keep empty values if parsing fails\n  betreff = 'Gastbeitrag-Anfrage für Ihre Website';\n  emailText = 'Fehler beim Generieren der E-Mail. Bitte manuell erstellen.';\n}\n\nreturn {\n  ...previousData,\n  email_betreff: betreff,\n  email_text: emailText\n};"
+      },
+      "id": "0646b441-d328-443c-8209-59e785618eb4",
+      "name": "16 Parse Email Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        464
+      ],
+      "notes": "Parst die Claude-Antwort mit Betreff und E-Mail-Text"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY",
+          "mode": "list",
+          "cachedResultName": "Backlink Kontakt Outreach",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Content-Vorschlag 1": "={{ $json.vorschlag_1.titel }}",
+            "Content-Vorschlag 2": "={{ $json.vorschlag_2.titel }}",
+            "Content-Vorschlag 3": "={{ $json.vorschlag_3.titel }}",
+            "E-Mail-Betreff": "={{ $json.email_betreff }}",
+            "E-Mail-Text": "={{ $json.email_text }}",
+            "Firmenname": "={{ $json.firmenname }}"
+          },
+          "matchingColumns": [
+            "Firmenname"
+          ],
+          "schema": [
+            {
+              "id": "Firmenname",
+              "displayName": "Firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adresse",
+              "displayName": "Adresse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telefon",
+              "displayName": "Telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Bewertung",
+              "displayName": "Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Anzahl Bewertungen",
+              "displayName": "Anzahl Bewertungen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kontaktperson",
+              "displayName": "Kontaktperson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail",
+              "displayName": "E-Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mitarbeiter",
+              "displayName": "Mitarbeiter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchenstatistiken",
+              "displayName": "Branchenstatistiken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchentrends",
+              "displayName": "Branchentrends",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website-Analyse",
+              "displayName": "Website-Analyse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 1",
+              "displayName": "Content-Vorschlag 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 2",
+              "displayName": "Content-Vorschlag 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 3",
+              "displayName": "Content-Vorschlag 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Betreff",
+              "displayName": "E-Mail-Betreff",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Text",
+              "displayName": "E-Mail-Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Versendet am",
+              "displayName": "Versendet am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fehlergrund",
+              "displayName": "Fehlergrund",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0b27801a-2cf8-425a-af09-5a82995a86ac",
+      "name": "17 Google Sheet - Update Content",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -32,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Aktualisiert das Sheet mit Content-Vorschlägen und generierter E-Mail"
+    },
+    {
+      "parameters": {
+        "unit": "minutes"
+      },
+      "id": "70db5b30-5d82-4b52-8746-1d7336715830",
+      "name": "18 Wait 5 Minuten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        464
+      ],
+      "webhookId": "backlink-outreach-wait",
+      "notes": "Wartet 5 Minuten zwischen E-Mails um Gmail-Sperren zu vermeiden"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('11 Google Sheet - Initial Save').item.json['E-Mail'] }}",
+        "subject": "={{ $('17 Google Sheet - Update Content').item.json['E-Mail-Betreff'] }}",
+        "emailType": "text",
+        "message": "={{ $('17 Google Sheet - Update Content').item.json['E-Mail-Text'] }}\n\nFalls Sie künftig keine Nachrichten dieser Art erhalten möchten, genügt eine kurze formlose Nachricht – ich melde mich dann nicht mehr.\n\nViele Grüße\n\nMark Niemann \n\nMO Casa GmbH\n\nPottenhauser Straße 20 – 32791 Lage\n\nBüro: +49 5232 69996 – 0\n\nGeschäftsführer: Mark Niemann und Thorsten Behrens\n\nwww.meinoffice.net       mark@mo-casa.com     \n\nAmtsgericht Lemgo\nHandelsregister-Nr.: HRB 10355\n\nUSt-IdNr.: DE 344279461\n\nSteuer-Nr.: 313/5774/1567",
+        "options": {}
+      },
+      "id": "f7fba040-85f7-4029-aa6f-1157d8708187",
+      "name": "19 Gmail - E-Mail versenden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        464
+      ],
+      "webhookId": "e09315ac-8877-40c5-beb1-dc5af2399a24",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Versendet die generierte Outreach-E-Mail via Gmail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ca94f842-fd01-48c2-97fd-963c779e451b",
+      "name": "20 Check Gmail Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        608,
+        448
+      ],
+      "notes": "Prüft ob der Gmail-Versand erfolgreich war"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY",
+          "mode": "list",
+          "cachedResultName": "Backlink Kontakt Outreach",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Firmenname": "={{ $('17 Google Sheet - Update Content').item.json.Firmenname }}",
+            "Status": "Ja",
+            "Versendet am": "=\"={{ $now.toFormat('yyyy-LL-dd') }}\""
+          },
+          "matchingColumns": [
+            "Firmenname"
+          ],
+          "schema": [
+            {
+              "id": "Firmenname",
+              "displayName": "Firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adresse",
+              "displayName": "Adresse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telefon",
+              "displayName": "Telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Bewertung",
+              "displayName": "Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Anzahl Bewertungen",
+              "displayName": "Anzahl Bewertungen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kontaktperson",
+              "displayName": "Kontaktperson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail",
+              "displayName": "E-Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mitarbeiter",
+              "displayName": "Mitarbeiter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchenstatistiken",
+              "displayName": "Branchenstatistiken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Branchentrends",
+              "displayName": "Branchentrends",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website-Analyse",
+              "displayName": "Website-Analyse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 1",
+              "displayName": "Content-Vorschlag 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 2",
+              "displayName": "Content-Vorschlag 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content-Vorschlag 3",
+              "displayName": "Content-Vorschlag 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Betreff",
+              "displayName": "E-Mail-Betreff",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-Mail-Text",
+              "displayName": "E-Mail-Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Versendet am",
+              "displayName": "Versendet am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fehlergrund",
+              "displayName": "Fehlergrund",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "63162cea-e658-482e-ae7b-255ce3ee4976",
+      "name": "21 Sheet - Erfolg markieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -272,
+        704
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Markiert die Zeile als 'Versendet' mit Timestamp"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY",
+          "mode": "list",
+          "cachedResultName": "Backlink Kontakt Outreach",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1J1_u4_6JUm3II9GKItYwDAmZRW740a_JG_fWoiiRfMY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Firmenname": "={{ $('17 Google Sheet - Update Content').item.json.Firmenname }}",
+            "Versendet am": "=\"={{ $now.toFormat('yyyy-LL-dd') }}\"",
+            "Status": "nein"
+          },
+          "matchingColumns": [
+            "Firmenname"
+          ],
+          "schema": [
+            {
+              "id": "Firmenname",
+              "displayName": "Firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adresse",
+              "displayName": "Adresse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telefon",
+              "displayName": "Telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bewertung",
+              "displayName": "Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Anzahl Bewertungen",
+              "displayName": "Anzahl Bewertungen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kontaktperson",
+              "displayName": "Kontaktperson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-Mail",
+              "displayName": "E-Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Mitarbeiter",
+              "displayName": "Mitarbeiter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Branchenstatistiken",
+              "displayName": "Branchenstatistiken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Branchentrends",
+              "displayName": "Branchentrends",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website-Analyse",
+              "displayName": "Website-Analyse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content-Vorschlag 1",
+              "displayName": "Content-Vorschlag 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content-Vorschlag 2",
+              "displayName": "Content-Vorschlag 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content-Vorschlag 3",
+              "displayName": "Content-Vorschlag 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-Mail-Betreff",
+              "displayName": "E-Mail-Betreff",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-Mail-Text",
+              "displayName": "E-Mail-Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Versendet am",
+              "displayName": "Versendet am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fehlergrund",
+              "displayName": "Fehlergrund",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "415a227e-f69a-4d29-b178-02989ab82863",
+      "name": "22 Sheet - Fehler markieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -272,
+        928
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Markiert die Zeile als 'Fehler' mit Fehlermeldung"
+    },
+    {
+      "parameters": {},
+      "id": "5472eb0a-9a22-4ef7-87de-2a2a3ff7c09b",
+      "name": "23 Loop Continue (Success)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        704
+      ],
+      "notes": "Platzhalter für Loop-Fortsetzung nach Erfolg"
+    },
+    {
+      "parameters": {},
+      "id": "f351cee3-5d9d-43fb-a855-821959ef8bf0",
+      "name": "24 Loop Continue (Error)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        928
+      ],
+      "notes": "Platzhalter für Loop-Fortsetzung nach Fehler"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "nwua9Gu5YrADL7ZDj",
+          "mode": "list",
+          "cachedResultName": "Google Maps Scraper (compass/crawler-google-places)",
+          "cachedResultUrl": "https://console.apify.com/actors/nwua9Gu5YrADL7ZDj/input"
+        },
+        "customBody": "={\n    \"city\": \"{{ $json.region }}\",\n    \"countryCode\": \"de\",\n    \"language\": \"de\",\n    \"locationQuery\": \"{{ $json.region }}\",\n    \"maxCrawledPlacesPerSearch\": {{ $json.anzahl_unternehmen }},\n    \"searchStringsArray\": [\n        \"{{ $json.branche }}\"\n    ],\n    \"skipClosedPlaces\": false,\n    \"website\": \"withWebsite\"\n} ",
+        "timeout": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        112
+      ],
+      "id": "6735c6a4-d524-4cb3-a728-3aec2af518bc",
+      "name": "Run an Actor and get dataset",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.firmenname }} {{ $json.website }} Kontakt E-Mail Inhaber Geschäftsführer Ansprechpartner LinkedIn Xing\n",
+        "options": {}
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -96
+      ],
+      "id": "60e197b2-e5d7-4f6c-aab8-3ca01e1cd345",
+      "name": "Search",
+      "credentials": {
+        "tavilyApi": {
+          "id": "a6ZN4T8aDN1bVzeY",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        112
+      ],
+      "id": "24c639dc-9b5b-4ff1-8bcc-0f9af1c6ab4b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": "sonar-pro",
+        "messages": {
+          "message": [
+            {
+              "content": "=Du recherchierst Brancheninformationen für SEO-Outreach. Antworte immer auf Deutsch im JSON-Format.\n    ",
+              "role": "system"
+            },
+            {
+              "content": "=Recherchiere für eine Outreach-E-Mail an ein Unternehmen in der Branche '{{ $('06 Normalize Apify Data').item.json.branche }}':\\n\\n1. Finde 2-3 aktuelle, relevante Statistiken zur Branche '{{ $('06 Normalize Apify Data').item.json.branche }}' in Deutschland (mit Quellenangabe wenn möglich)\\n2. Was sind aktuelle Trends oder Neuigkeiten in dieser Branche?\\n3. Analysiere kurz die Website {{ $('06 Normalize Apify Data').item.json.website }}: Was macht das Unternehmen? Gibt es einen Blog oder Content-Bereich?\\n\\nAntworte auf Deutsch im JSON-Format:\\n{\\n  \\\"statistiken\\\": [\\\"Statistik 1...\\\", \\\"Statistik 2...\\\"],\\n  \\\"trends\\\": \\\"...\\\",\\n  \\\"website_analyse\\\": \\\"...\\\"\\n}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ],
+      "id": "70970c00-6e65-4446-aa26-cd78636bd434",
+      "name": "Message a model",
+      "credentials": {
+        "perplexityApi": {
+          "id": "Vl42x7kgd1Uo3Tx0",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein SEO-Content-Experte. Deine Aufgabe ist es, Gastbeitrag-Ideen zu entwickeln, die für beide Seiten wertvoll sind: Der Gastgeber bekommt hochwertigen Content, der Autor bekommt einen Backlink.\n\nDu schreibst für MeinOffice.net, eine deutsche Brand, die in Deutschland ergonomische Schreibtische produziert. Schnelle Lieferzeit, top Qualität und immer persönlich ansprechbar.\n\nErstelle Vorschläge, die:\n- Zur Branche und zum Unternehmen passen\n- Konkrete Statistiken oder Daten enthalten (wenn verfügbar)\n- Praktische Tipps oder aktuelle News bieten\n- Einen klaren Mehrwert für die Leser der Ziel-Website haben\n\n---\n\nErstelle 3 Gastbeitrag-Vorschläge für folgendes Unternehmen:\n\n**Unternehmen:** {{ $json.firmenname }}\n**Branche:** {{ $json.branche }}\n**Website:** {{ $json.website }}\n**Website-Analyse:** {{ $json.website_analyse }}\n\n**Verfügbare Branchenstatistiken:**\n{{ $json.statistiken_json }}\n\n**Aktuelle Branchentrends:**\n{{ $json.trends }}\n\nFür jeden Vorschlag liefere:\n1. Titel des Gastbeitrags\n2. Kurzbeschreibung (2-3 Sätze, was der Artikel behandelt)\n3. Welche Statistik/welchen Trend er aufgreift\n4. Warum er für die Zielgruppe des Unternehmens relevant ist\n\nAntworte auf Deutsch im JSON-Format:\n{\n  \"vorschlag_1\": {\n    \"titel\": \"...\",\n    \"beschreibung\": \"...\",\n    \"statistik_trend\": \"...\",\n    \"relevanz\": \"...\"\n  },\n  \"vorschlag_2\": { ... },\n  \"vorschlag_3\": { ... }\n}\n\nGib die Antwort EXAKT in diesem Format aus (keine Codeblöcke, kein JSON, kein Markdown):\n\nV1_TITEL: ...\nV1_BESCHREIBUNG: ...\nV1_STATISTIK_TREND: ...\nV1_RELEVANZ: ...\n\nV2_TITEL: ...\nV2_BESCHREIBUNG: ...\nV2_STATISTIK_TREND: ...\nV2_RELEVANZ: ...\n\nV3_TITEL: ...\nV3_BESCHREIBUNG: ...\nV3_STATISTIK_TREND: ...\nV3_RELEVANZ: ...\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        464
+      ],
+      "id": "0f653128-1b28-428b-9ff1-d3665e770f95",
+      "name": "13 Claude - Content-Vorschläge",
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e2a4e038-c8ed-4d4d-bf68-723b7f119761",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        112
+      ],
+      "id": "55128cfb-a979-4413-a898-9e7175b81e29",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Du bist ein Datenextraktions-Assistent. Analysiere die Suchergebnisse und extrahiere Kontaktdaten.\n\nSUCHERGEBNISSE:\n{{ JSON.stringify($json.results, null, 2) }}\n\nAUFGABE:\nExtrahiere aus den Suchergebnissen:\n1. E-Mail-Adresse (bevorzuge info@, kontakt@, praxis@, office@, mail@)\n2. Kontaktperson (Name des Inhabers, Geschäftsführers oder Ansprechpartners)\n3. LinkedIn-Profil URL (persönliches Profil oder Firmenprofil)\n4. Telefonnummer\n\nAUSGABE-FORMAT:\nAntworte AUSSCHLIESSLICH mit einem einzeiligen JSON-Objekt. Keine Erklärungen, keine Zeilenumbrüche, kein Markdown, kein Text davor oder danach.\n\nExaktes Format:\n{\"email\":\"WERT\",\"kontaktperson\":\"WERT\",\"linkedin\":\"WERT\",\"telefon\":\"WERT\"}\n\nREGELN:\n- Jedes Feld das nicht gefunden wird = leerer String \"\"\n- Keine Zeilenumbrüche innerhalb des JSON\n- Keine Backticks oder Code-Blöcke\n- Keine Erklärungen oder zusätzlicher Text\n- Nur das reine JSON-Objekt\n\nBEISPIEL KORREKTER OUTPUT:\n{\"email\":\"info@beispiel.de\",\"kontaktperson\":\"Max Mustermann\",\"linkedin\":\"https://linkedin.com/in/max-mustermann\",\"telefon\":\"+49 30 12345678\"}\n\nBEISPIEL BEI FEHLENDEN DATEN:\n{\"email\":\"info@beispiel.de\",\"kontaktperson\":\"\",\"linkedin\":\"\",\"telefon\":\"\"}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        -176
+      ],
+      "id": "92725fe9-8801-44fa-b700-0d3cdca11bc4",
+      "name": "Extrahiere Email Adresse",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Schreibe eine Outreach-E-Mail für eine Backlink-/Gastbeitrag-Anfrage.\n\nDu schreibst für MeinOffice.net, eine deutsche Brand, die in Deutschland ergonomische Schreibtische produziert. Schnelle Lieferzeit, top Qualität und immer persönlich ansprechbar.\nAbsender ist Mark Niemann von MeinOffice.\nSchreibe KEINEN Email Fuß.\n\n**Empfänger:**\n- Firma: {{ $json.firmenname }}\n- Kontaktperson: {{ $json.kontaktperson || 'Nicht bekannt' }}\n- Website: {{ $json.website }}\n- Branche: {{ $json.branche }}\n\n**Absender:**\n- Website: {{ $json.eigene_website_url }}\n\n**Die 3 Content-Vorschläge:**\n{{ $json.vorschlaege_json }}\n\n**Tonalität:** {{ $json.tonalitaet }}\n{{ $json.tonalitaet === 'Formell' ? 'Schreibe professionell und höflich. Verwende \"Sie\" als Anrede. Vermeide übertriebene Verkaufssprache – sei authentisch und auf Augenhöhe.' : 'Schreibe modern und locker, aber professionell. Verwende \"Du\" als Anrede. Sei authentisch, nicht schmierig oder zu verkäuferisch.' }}\n\n**E-Mail-Struktur:**\n1. Persönliche Ansprache mit Bezug auf deren Website/Unternehmen\n2. Kurz vorstellen: Wer bin ich und was biete ich an\n3. Mehrwert von gutem Content erklären: Warum profitiert deren Website von Gastbeiträgen (SEO, Vertrauen bei Besuchern, Expertise zeigen, mehr Traffic)\n4. Die 3 Content-Vorschläge präsentieren (kurz und übersichtlich)\n5. Call-to-Action: Interesse an einem der Themen? Gerne besprechen.\n6. Freundlicher Abschluss\n\n**Ausgabe im JSON-Format:**\n{\n  \"betreff\": \"Personalisierter, neugierig machender Betreff\",\n  \"email_text\": \"Der vollständige E-Mail-Text mit Absätzen\"\n}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        464
+      ],
+      "id": "5df5b8e7-6469-4be4-80d1-42ce83954ede",
+      "name": "15 Claude - E-Mail generieren",
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * n8n Code node (JavaScript) – Run Once for All Items\n * Extrahiert: email, kontaktperson, linkedin, telefon + has_email\n */\n\nfunction extractFromText(raw) {\n  const text = (raw ?? '').toString().trim();\n\n  let email = '';\n  let kontaktperson = '';\n  let linkedin = '';\n  let telefon = '';\n\n  // 1) Wenn es wie JSON aussieht: JSON.parse versuchen\n  if (text.startsWith('{') && text.endsWith('}')) {\n    try {\n      const obj = JSON.parse(text);\n\n      email = (obj.email ?? '').toString().trim();\n      kontaktperson = (obj.kontaktperson ?? '').toString().trim();\n      linkedin = (obj.linkedin ?? '').toString().trim();\n      telefon = (obj.telefon ?? '').toString().trim();\n\n      return {\n        email,\n        kontaktperson,\n        linkedin,\n        telefon,\n        has_email: Boolean(email),\n      };\n    } catch (e) {\n      // Fallback auf Regex unten\n    }\n  }\n\n  // 2) Regex-Fallback für JSON-ähnliche Strings\n  const emailMatch = text.match(/\"email\"\\s*:\\s*\"([^\"]*)\"/i);\n  const kontaktMatch = text.match(/\"kontaktperson\"\\s*:\\s*\"([^\"]*)\"/i);\n  const linkedinMatch = text.match(/\"linkedin\"\\s*:\\s*\"([^\"]*)\"/i);\n  const telefonMatch = text.match(/\"telefon\"\\s*:\\s*\"([^\"]*)\"/i);\n\n  if (emailMatch) email = (emailMatch[1] ?? '').trim();\n  if (kontaktMatch) kontaktperson = (kontaktMatch[1] ?? '').trim();\n  if (linkedinMatch) linkedin = (linkedinMatch[1] ?? '').trim();\n  if (telefonMatch) telefon = (telefonMatch[1] ?? '').trim();\n\n  // 3) Bonus: Falls email im Freitext vorkommt (nicht als JSON-Feld)\n  if (!email) {\n    const freeEmail = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i);\n    if (freeEmail) email = freeEmail[0].trim();\n  }\n\n  return {\n    email,\n    kontaktperson,\n    linkedin,\n    telefon,\n    has_email: Boolean(email),\n  };\n}\n\nfunction pickTextFromItem(itemJson) {\n  // Dein Screenshot: output ist ein Array: output[0].content[0].text\n  // Wir machen es robust und unterstützen ein paar Varianten.\n  return (\n    itemJson?.output?.[0]?.content?.[0]?.text ??\n    itemJson?.output?.[0]?.text ??\n    itemJson?.output?.content?.[0]?.text ??     // falls output doch ein Objekt ist\n    itemJson?.content?.[0]?.text ??\n    itemJson?.text ??\n    ''\n  );\n}\n\nconst items = $input.all();\n\nconst out = items.map((item) => {\n  const rawText = pickTextFromItem(item.json);\n  const extracted = extractFromText(rawText);\n\n  return { json: extracted };\n});\n\nreturn out;\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        -176
+      ],
+      "id": "e73dd66e-75bc-4453-b316-50d6aaccf403",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 Prepare Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Split Into Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "05 Filter - Nur mit Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Filter - Nur mit Website": {
+      "main": [
+        [
+          {
+            "node": "06 Normalize Apify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Normalize Apify Data": {
+      "main": [
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 Merge Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Google Sheet - Initial Save": {
+      "main": [
+        [
+          {
+            "node": "12 Get Row Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Parse Email Response": {
+      "main": [
+        [
+          {
+            "node": "17 Google Sheet - Update Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 Google Sheet - Update Content": {
+      "main": [
+        [
+          {
+            "node": "18 Wait 5 Minuten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 Wait 5 Minuten": {
+      "main": [
+        [
+          {
+            "node": "19 Gmail - E-Mail versenden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 Gmail - E-Mail versenden": {
+      "main": [
+        [
+          {
+            "node": "20 Check Gmail Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 Sheet - Fehler markieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 Check Gmail Result": {
+      "main": [
+        [
+          {
+            "node": "21 Sheet - Erfolg markieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 Sheet - Fehler markieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 Sheet - Erfolg markieren": {
+      "main": [
+        [
+          {
+            "node": "23 Loop Continue (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 Sheet - Fehler markieren": {
+      "main": [
+        [
+          {
+            "node": "24 Loop Continue (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 Loop Continue (Success)": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 Loop Continue (Error)": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Prepare Form Data": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor and get dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run an Actor and get dataset": {
+      "main": [
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Extrahiere Email Adresse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "09 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "12 Get Row Number": {
+      "main": [
+        [
+          {
+            "node": "13 Claude - Content-Vorschläge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Claude - Content-Vorschläge": {
+      "main": [
+        [
+          {
+            "node": "14 Parse Content Proposals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "11 Google Sheet - Initial Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04 Split Into Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrahiere Email Adresse": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Parse Content Proposals": {
+      "main": [
+        [
+          {
+            "node": "15 Claude - E-Mail generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Claude - E-Mail generieren": {
+      "main": [
+        [
+          {
+            "node": "16 Parse Email Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7a1325ef-7d7b-4354-b356-7624bbe06224",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "kemsuugIjlfQaqcVDaBim",
+  "tags": []
+}
