@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769522169668,
+  "lastUpdate": 1769584641436,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c2dc7c9c51b08a975fa4a54737c79a9634bcbf36",
-          "message": "feat: configurable MAX_SESSIONS via N8N_MCP_MAX_SESSIONS env var (v2.28.4) (#469)\n\n* fix: n8n_test_workflow webhookId resolution and form handling (v2.28.2)\n\n## Bug Fixes\n\n- **webhookId Resolution**: Fixed trigger handlers using `node.id` instead of\n  `node.webhookId` for building webhook URLs. This caused 404 errors when\n  nodes had custom IDs.\n\n- **Chat Trigger URL**: Fixed chat triggers using wrong URL pattern. Now\n  correctly uses `/webhook/<webhookId>/chat` endpoint.\n\n- **Form Content-Type**: Fixed form triggers failing with \"Expected\n  multipart/form-data\" error by switching to proper multipart encoding.\n\n## Enhancements\n\n- **Form Field Types**: Added support for all n8n form field types (text,\n  textarea, email, number, password, date, dropdown, checkbox, file, hidden)\n\n- **Checkbox Arrays**: Automatically converts arrays to `field[]` format\n\n- **Helpful Warnings**: Reports missing required fields with names and labels\n\n- **Error Hints**: Provides complete field structure on failure\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: address code review issues for form trigger improvements\n\n- Add form-data as direct dependency (was only in devDependencies)\n- Add TypeScript interfaces (FormFieldValue, FormFieldOption) replacing any types\n- Add FORM_FIELD_TYPES constants for type-safe switch statements\n- Add isValidBase64() validation for file uploads with size limits\n- Add MAX_FILE_SIZE_BYTES (10MB) constant with validation\n- Update form-handler.test.ts for FormData instead of JSON\n- Update trigger-detector.test.ts for chat URL /chat suffix\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* feat: configurable MAX_SESSIONS via N8N_MCP_MAX_SESSIONS env var (v2.28.3) (#468)\n\nMake MAX_SESSIONS limit configurable for multi-tenant SaaS deployments.\n\n- Add N8N_MCP_MAX_SESSIONS environment variable (default: 100)\n- Include safety floor with Math.max(1, ...) to prevent invalid configs\n- Update documentation in LIBRARY_USAGE.md, SESSION_PERSISTENCE.md\n- Update CLAUDE.md and CHANGELOG.md\n\nFixes #468\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* fix: add QEMU setup for multi-arch Docker builds\n\nAdd docker/setup-qemu-action@v3 before Buildx setup to enable\nproper QEMU emulation for linux/arm64 builds on GitHub Actions.\n\nFixes CI Docker build failure with \"execve: No such file or directory\"\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>",
-          "timestamp": "2025-12-05T11:17:51+01:00",
-          "tree_id": "4011272f947cb2dd5c9b3728b81b807c9a03ae81",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/c2dc7c9c51b08a975fa4a54737c79a9634bcbf36"
-        },
-        "date": 1764929993006,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1530,6 +1499,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ac828f3c6fe8cea25d8d7c0b69c804c93799f0b5"
         },
         "date": 1769522168924,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1f812d2a64abaa0c2f3ffb6a86a9ffc1b25a0ce0",
+          "message": "Add files via upload",
+          "timestamp": "2026-01-28T08:15:27+01:00",
+          "tree_id": "de2ed90c59548e4479a29dc319cfb15c610d323e",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/1f812d2a64abaa0c2f3ffb6a86a9ffc1b25a0ce0"
+        },
+        "date": 1769584641135,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
