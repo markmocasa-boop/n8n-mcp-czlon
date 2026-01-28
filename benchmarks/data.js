@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769584792255,
+  "lastUpdate": 1769589483203,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "60479e0eb47a7c83e77f36e2667a73e2e3ec115a",
-          "message": "test: update tests for v2.28.5 behavior changes (v2.28.6) (#470)\n\n- Update n8n-version tests: 'v' prefix now supported in version strings\n- Update n8n-validation tests: empty settings now return minimal defaults\n  { executionOrder: 'v1' } instead of {} to avoid API rejection (Issue #431)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-12-05T13:38:06+01:00",
-          "tree_id": "399afed181c7f2e2552ec90c91b0418f9dcc6382",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/60479e0eb47a7c83e77f36e2667a73e2e3ec115a"
-        },
-        "date": 1764938407093,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1532,6 +1501,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fc581b9c84a58c9377212e3b4ec84878460c926c"
         },
         "date": 1769584791836,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5327851d57d1f97584541a4debe481e88d3ec804",
+          "message": "Merge pull request #19 from markmocasa-boop/claude/social-media-automation-bDfkm\n\nfeat: add social media content automation workflow",
+          "timestamp": "2026-01-28T09:36:15+01:00",
+          "tree_id": "efaaa95cba09fc8f96cc164fc31453d09e2eebe6",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/5327851d57d1f97584541a4debe481e88d3ec804"
+        },
+        "date": 1769589482496,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
