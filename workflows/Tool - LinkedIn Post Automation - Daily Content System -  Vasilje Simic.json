@@ -1,0 +1,654 @@
+{
+  "name": "Tool - LinkedIn Post Automation - Daily Content System -  Vasilje Simic",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "a026860f-079b-4ac3-92a2-ad379f3868fe",
+      "name": "Daily Schedule (Mon-Sat 9AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk",
+          "mode": "list",
+          "cachedResultName": "VS LinkedIn Content Plan ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "ContentPlan",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "9c972afc-e980-4f3a-8c5d-25c6f8a4eb64",
+      "name": "Read Content Plan",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -880,
+        -16
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get current day of week (1=Monday, 6=Saturday, 0=Sunday)\nconst today = new Date();\nconst dayOfWeek = today.getDay();\n\n// Sunday is day 0, but we skip Sundays via cron\n// Map: Mon=1->Type1, Tue=2->Type2, Wed=3->Type3, Thu=4->Type4, Fri=5->Type5, Sat=6->Type6\nconst postTypeMap = {\n  1: 'Authority Builder',\n  2: 'Client Win',\n  3: 'Controversy',\n  4: 'Mistake Post',\n  5: 'Audit/Critique',\n  6: 'Data Drop'\n};\n\n// Also include How-To as alternative for any day\nconst postType = postTypeMap[dayOfWeek] || 'How-To';\n\n// Get week number for cycle tracking\nconst startOfYear = new Date(today.getFullYear(), 0, 1);\nconst weekNumber = Math.ceil((((today - startOfYear) / 86400000) + startOfYear.getDay() + 1) / 7);\n\n// Find content row for this week's cycle (6 posts per cycle)\nconst cycleWeek = weekNumber % 52 || 52;\nconst dayIndex = dayOfWeek - 1; // 0-5 for Mon-Sat\n\nreturn {\n  dayOfWeek,\n  postType,\n  weekNumber,\n  cycleWeek,\n  dayIndex,\n  timestamp: today.toISOString()\n};"
+      },
+      "id": "0c6b5833-160b-4ded-8536-18cbe8f8d3a1",
+      "name": "Determine Post Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// All 40 prompts organized by post type\nconst prompts = {\n  'Authority Builder': [\n    {\n      id: 1,\n      template: `I help [ICP] achieve [outcome]. \n\nWrite a LinkedIn post using the \"Framework\" structure where I share a 3-5 step system for [solving specific problem]. \n\nMake it tactical and specific. Include:\n- A contrarian hook that challenges [common belief]\n- Each step should have a brief \"why it matters\" explanation\n- End with a specific result or metric\n\nKeep it under 200 words. Use short sentences. No fluff.`\n    },\n    {\n      id: 2,\n      template: `Create a \"Myth Buster\" post where I debunk [common advice in your industry].\n\nHook: \"[Popular quote or advice]\" is terrible advice for [ICP]. Here's why:\n\nThen provide 3-4 reasons why this advice fails, with what actually works instead.\n\nMake it slightly controversial but backed by logic. 200 words max.`\n    },\n    {\n      id: 3,\n      template: `I want to share my contrarian take on [topic in your industry].\n\nMost people believe [common belief]. I believe [your perspective].\n\nWrite a post that:\n- Opens with a bold statement\n- Explains why the common belief is flawed\n- Shares my alternative approach with 2-3 supporting points\n- Ends with a question to drive comments\n\nConfident tone. 150-200 words.`\n    },\n    {\n      id: 4,\n      template: `Turn this insight into a post: [your unique perspective or lesson learned]\n\nFormat it as:\n- Pattern interrupt hook\n- 2-3 tactical points explaining the insight\n- How others can apply this\n- Engagement question\n\nKeep it punchy. Under 200 words.`\n    },\n    {\n      id: 5,\n      template: `I help [ICP] with [problem]. \n\nWrite a post sharing \"The [Name] System\" for [achieving specific outcome].\n\nInclude:\n- 4-5 clear steps\n- One \"why this matters\" statement per step\n- A result metric at the end\n\nMake each step actionable. No generic advice. 200 words max.`\n    },\n    {\n      id: 6,\n      template: `Create a \"comparison post\" where I contrast [old way] vs [new way] of [achieving outcome].\n\nFormat:\n[Old Way]:\n- Characteristic 1\n- Characteristic 2\n- Result: [typical outcome]\n\n[New Way]:\n- Characteristic 1  \n- Characteristic 2\n- Result: [better outcome]\n\nHook should be: \"Most [audience] are still doing [old way]. Smart ones switched to [new way].\"\n\nEnd with: \"Which one are you using?\"\n\n150-200 words.`\n    }\n  ],\n  'Client Win': [\n    {\n      id: 7,\n      template: `Write a client transformation post.\n\nDetails:\n- Client: [name or \"a client in X industry\"]\n- Starting point: [their pain point]\n- Timeframe: [how long it took]\n- Result: [specific outcome with numbers]\n\nFormat:\n- Hook: [Client] went from [pain] to [result] in [time]\n- 3-4 bullet points showing what we did\n- End with the metrics\n\nMake it specific and credible. 150 words.`\n    },\n    {\n      id: 8,\n      template: `I want to share a \"before/after\" story about [client or personal experience].\n\nBefore: [struggling scenario]\nAfter: [success scenario]\n\nWrite a post that:\n- Opens with the transformation\n- Shares 2-3 things that changed\n- Ends with \"The difference? [one key thing]\"\n\nKeep it story-driven. 150-200 words.`\n    },\n    {\n      id: 9,\n      template: `Create a case study post using this structure:\n\n\"[Client/Company] had [specific problem].\n\nWe implemented [your solution/system].\n\nResults:\n→ [Metric 1]\n→ [Metric 2]\n→ [Metric 3]\n\nHere's what we did:\"\n\nThen share 3-4 tactical steps.\n\nEnd with: \"Want to see how this would work for you? [soft CTA]\"\n\n200 words max.`\n    },\n    {\n      id: 10,\n      template: `Write a post about a client win that highlights [specific aspect of your service].\n\nUse the \"timeline\" format:\n\n[X time] ago: [where they were]\nToday: [where they are now]\n\nHere's exactly what changed: [3-4 key changes]\n\nMake it feel authentic. Include a specific quote from the client if possible. 150-200 words.`\n    },\n    {\n      id: 11,\n      template: `I helped [client] achieve [result] by fixing [one key thing].\n\nTurn this into a post with:\n- A hook about the surprising thing that made all the difference\n- Context about what wasn't working\n- The simple change we made\n- The result\n\nEmphasize that big outcomes don't require complicated solutions. 150 words.`\n    },\n    {\n      id: 12,\n      template: `Write a \"results thread\" post where I break down exactly how we helped [client] get [result].\n\nFormat as:\n- Hook: transformation statement\n- \"The strategy wasn't complicated. Here's the breakdown:\"\n- 5 tactical steps\n- Final results section with 3 metrics\n- Soft CTA\n\nMake each step specific and actionable. 200 words max.`\n    }\n  ],\n  'Controversy': [\n    {\n      id: 13,\n      template: `Write a controversial take on [topic].\n\nHook: \"[Common belief] is dead. Here's what actually works in [current year]:\"\n\nThen share 3-4 reasons why the old way is broken and what the new approach should be.\n\nMake it bold but logical. End with a question that invites debate. 200 words max.`\n    },\n    {\n      id: 14,\n      template: `Create a \"pattern interrupt\" post.\n\nEveryone tells [ICP] to [common advice].\n\nThey're wrong.\n\nHere's why: [3-4 reasons]\n\nHere's what to do instead: [your alternative]\n\nConfident, slightly edgy tone. 150-200 words.`\n    },\n    {\n      id: 15,\n      template: `Write a post challenging [industry norm or popular strategy].\n\nUse this structure:\n- Bold opening: \"Unpopular opinion: [your take]\"\n- Why most people get this wrong (2-3 points)\n- What actually works (your approach)\n- End with: \"Disagree? Let me know why 👇\"\n\nMake it thought-provoking. 200 words.`\n    },\n    {\n      id: 16,\n      template: `I want to call out [common mistake in your industry].\n\nFormat:\n\"[X%] of [target audience] are [doing this wrong thing].\n\nIt's costing them [specific outcome].\n\nHere's what they should do instead:\"\n\nThen share 3 corrections with brief explanations.\n\nDirect, no-nonsense tone. 150 words.`\n    },\n    {\n      id: 17,\n      template: `Create a \"listicle with controversy\" post.\n\nTitle: \"[Number] unpopular truths about [topic]:\"\n\nFor each point:\n1. [Contrarian statement]\n(Why most people think the opposite and why they're wrong.)\n\nEnd with: \"Which one triggered you? 👇\"\n\nMake each point genuinely contrarian, not just \"hot takes.\" 200 words max.`\n    },\n    {\n      id: 18,\n      template: `Write a post about why [popular tactic/tool/strategy] doesn't work for [ICP].\n\nHook: \"Everyone's obsessed with [thing]. But for [audience], it's a waste of time.\"\n\nShare:\n- Why it seems appealing\n- Why it actually fails for your audience\n- What works better\n\nEnd with a polarizing question. 150-200 words.`\n    },\n    {\n      id: 19,\n      template: `I want to challenge the idea that [common belief].\n\nWrite a post that:\n- Opens with: \"The biggest lie in [industry]: [belief]\"\n- Explains why this belief is harmful\n- Shares what the truth actually is (with 2-3 supporting points)\n- Ends with: \"Change my mind 👇\"\n\nProvocative but professional. 200 words.`\n    }\n  ],\n  'Mistake Post': [\n    {\n      id: 20,\n      template: `Write a \"confession\" style post.\n\nHook: \"I wasted [time/money] on [thing] before I realized [key insight].\"\n\nShare:\n- What I was doing wrong\n- What I learned\n- How I do it now\n- The result\n\nEnd with: \"Don't make the same mistake.\"\n\nVulnerable but valuable. 150-200 words.`\n    },\n    {\n      id: 21,\n      template: `Create a \"mistake breakdown\" post.\n\n\"I made every mistake possible with [topic].\n\nHere's what I learned (so you don't have to):\"\n\n❌ Mistake 1: [what I did wrong]\n✅ What actually works: [solution]\n\n[Repeat for 3-4 mistakes]\n\nThe bottom line: [key takeaway]\n\nEnd with: \"Which mistake have you made?\"\n\n200 words max.`\n    },\n    {\n      id: 22,\n      template: `I want to share the [number] biggest mistakes [ICP] make with [specific topic].\n\nFor each mistake:\n- What they're doing wrong\n- Why it's hurting them\n- What to do instead\n\nKeep it tactical and specific. End with a question. 200 words.`\n    },\n    {\n      id: 23,\n      template: `Write a personal story post about [mistake you made].\n\nUse this structure:\n- Hook: One sentence about the mistake\n- Context: What led to it\n- The moment of realization\n- The lesson\n- How to avoid it\n\nMake it relatable. 150-200 words.`\n    },\n    {\n      id: 24,\n      template: `Create a post about the #1 mistake [ICP] make when trying to [achieve goal].\n\nFormat:\n\"The biggest mistake I see [audience] make: [mistake]\n\nHere's why it's killing their [desired outcome]:\n\n[2-3 explanations]\n\nHere's what to do instead: [solution]\"\n\nDirect and helpful. 150 words.`\n    },\n    {\n      id: 25,\n      template: `I want to write about [common mistake] that seems smart but is actually sabotaging [audience].\n\nHook: \"This seems like good advice: [the mistake]\n\nIt's not. Here's why it's backfiring:\"\n\nShare 3 reasons why this \"good advice\" causes problems and what actually works.\n\n150-200 words.`\n    },\n    {\n      id: 26,\n      template: `Write a \"timeline of mistakes\" post.\n\nFormat:\n\"My journey with [topic] in 3 mistakes:\n\nMistake 1 ([timeframe]): [what I did wrong + lesson]\nMistake 2 ([timeframe]): [what I did wrong + lesson]  \nMistake 3 ([timeframe]): [what I did wrong + lesson]\n\nToday: [where I am now because of these lessons]\"\n\nPersonal, reflective tone. 200 words max.`\n    }\n  ],\n  'Audit/Critique': [\n    {\n      id: 27,\n      template: `Write an \"audit post.\"\n\n\"I just reviewed [X number] of [target audience's] [profiles/strategies/websites].\n\n[Y%] are making the same [number] mistakes.\n\nHere's what's costing you [desired outcome]:\"\n\nList 3-4 specific mistakes with brief explanations of why they matter.\n\nEnd with: \"Want me to audit yours? [soft CTA]\"\n\n200 words max.`\n    },\n    {\n      id: 28,\n      template: `Create a post where I analyze [common thing in your industry].\n\nHook: \"I spent [timeframe] analyzing [X number] of [thing].\n\n[Y number] patterns kept showing up.\"\n\nShare 3-4 patterns with:\n- What you noticed\n- Why it matters\n- What to do about it\n\nData-driven tone. 200 words.`\n    },\n    {\n      id: 29,\n      template: `Write a \"call-out\" post about [common problem you see].\n\n\"I see this mistake everywhere:\n\n[Specific thing people are doing wrong]\n\nIt's costing [audience] [specific outcome].\n\nHere's what to do instead:\"\n\nShare 2-3 corrections with tactical advice.\n\nEnd with offer to help. 150 words.`\n    },\n    {\n      id: 30,\n      template: `I want to share observations from [X number] of [sales calls/audits/consultations].\n\nFormat:\n\"After [doing X] with [Y number] [target audience], here's what I've learned:\n\n1. [Observation + insight]\n2. [Observation + insight]\n3. [Observation + insight]\n\nThe pattern? [Key takeaway]\"\n\nProfessional, insights-driven. 200 words max.`\n    },\n    {\n      id: 31,\n      template: `Create a post critiquing [common practice in your industry].\n\nHook: \"[X%] of [audience] are [doing this thing].\n\nIt's the wrong approach.\"\n\nExplain:\n- Why they're doing it\n- Why it doesn't work\n- What works better\n\nEnd with: \"Which approach are you using?\"\n\n150-200 words.`\n    },\n    {\n      id: 32,\n      template: `Write a post about the [number] red flags you see in [target audience's] [profiles/strategies/content].\n\nFor each red flag:\n- What it is\n- Why it's a problem\n- Quick fix\n\nEnd with offer to help them fix it. 200 words.`\n    },\n    {\n      id: 33,\n      template: `I analyzed [specific aspect of your industry/platform].\n\nTurn this into a post:\n\"[Shocking finding] about [topic].\n\nBut here's what nobody tells you: [counterintuitive insight]\n\nAfter analyzing [X number] of [thing], here's what actually matters:\n\n[3-4 tactical points]\"\n\nData + insight format. 200 words max.`\n    }\n  ],\n  'Data Drop': [\n    {\n      id: 34,\n      template: `I have this data/statistic: [your data]\n\nTurn it into a compelling post.\n\nHook: \"[Shocking stat] about [topic].\"\n\nThen:\n- Why this matters for [ICP]\n- What it means for their strategy\n- One action they should take\n\nKeep it concise. 150 words.`\n    },\n    {\n      id: 35,\n      template: `Write a post sharing [research/analysis] I did.\n\nFormat:\n\"I analyzed [X number] of [thing] in [timeframe].\n\nHere's what I found:\n\n→ [Finding 1]\n→ [Finding 2]\n→ [Finding 3]\n\nThe takeaway: [key lesson for your ICP]\"\n\nCredible, data-driven tone. 150-200 words.`\n    },\n    {\n      id: 36,\n      template: `Create a \"numbers hook\" post.\n\n\"I tracked [specific metric] across [X number] [companies/campaigns/posts].\n\n[Y number] patterns emerged:\"\n\nShare 3-4 patterns with brief explanations.\n\nEnd with: \"Which pattern surprised you most?\"\n\n200 words max.`\n    },\n    {\n      id: 37,\n      template: `I want to share a surprising statistic that challenges [common belief].\n\nHook: \"[Stat] prove that [common belief] is wrong.\"\n\nThen explain:\n- Why people believe the wrong thing\n- What the data actually shows  \n- What to do with this information\n\nInsight-focused. 150 words.`\n    },\n    {\n      id: 38,\n      template: `Write a post about [trend you've noticed] backed by data.\n\nFormat:\n\"[Trend] is happening right now.\n\nThe data: [2-3 statistics or observations]\n\nWhat this means for [ICP]: [implications]\n\nWhat to do: [tactical advice]\"\n\nForward-looking, strategic. 200 words.`\n    },\n    {\n      id: 39,\n      template: `Create a post comparing [two things] with data.\n\n\"[Thing A] vs [Thing B]: The numbers don't lie.\n\n[Thing A]: [stat/outcome]\n[Thing B]: [stat/outcome]\n\nThe difference: [key insight]\n\nWe tested this with [X] clients. [Thing B] wins every time.\"\n\nComparative, data-driven. 150 words.`\n    },\n    {\n      id: 40,\n      template: `I discovered [surprising insight] from [analyzing/testing something].\n\nTurn this into a post:\n\nHook: \"[Counterintuitive statement about your finding]\"\n\nShare:\n- What you tested/analyzed\n- What you expected to find\n- What you actually found\n- Why this matters\n\nEnd with how others can apply this. 200 words max.`\n    }\n  ],\n  'How-To': [\n    {\n      id: 41,\n      template: `Write a How-To post for [TARGET GROUP] about achieving [DREAM OUTCOME].\n\nFormat:\n\"This is the exact [system/process] we use to [achieve result]:\"\n\nInclude:\n- 4-6 clear tactical steps\n- Brief explanation for each step\n- Specific metrics or results\n\nKeep it concise.\nSoft CTA: \"Buchen Sie eine kostenfreie Analyse\"\n\n200 words max.`\n    }\n  ]\n};\n\n// Get post type from previous node\nconst postType = $input.first().json.postType;\nconst contentData = $('Read Content Plan').all();\n\n// Find today's content row from Google Sheet\nconst dayIndex = $input.first().json.dayIndex;\nconst todayContent = contentData[dayIndex] || contentData[0];\n\n// Get available prompts for this post type\nconst availablePrompts = prompts[postType] || prompts['How-To'];\n\n// Randomly select a prompt\nconst randomIndex = Math.floor(Math.random() * availablePrompts.length);\nconst selectedPrompt = availablePrompts[randomIndex];\n\nreturn {\n  postType,\n  promptId: selectedPrompt.id,\n  promptTemplate: selectedPrompt.template,\n  contentData: todayContent.json,\n  totalPromptsAvailable: availablePrompts.length,\n  randomIndex\n};"
+      },
+      "id": "e4b5e931-f41c-4b0e-b89a-bee8b2c35918",
+      "name": "Select Random Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fill prompt template with content from Google Sheet\nconst data = $input.first().json;\nconst contentData = data.contentData;\n\nlet filledPrompt = data.promptTemplate;\n\n// Replace placeholders with actual content\nconst replacements = {\n  \"[ICP]\": contentData.ICP || contentData.TargetGroup || \"Unternehmer und Führungskräfte\",\n  \"[target audience]\": contentData.ICP || contentData.TargetGroup || \"Unternehmer und Führungskräfte\",\n  \"[audience]\": contentData.ICP || contentData.TargetGroup || \"Unternehmer und Führungskräfte\",\n  \"[TARGET GROUP]\": contentData.ICP || contentData.TargetGroup || \"Unternehmer und Führungskräfte\",\n  \"[outcome]\": contentData.Outcome || contentData.Result || \"bessere Ergebnisse\",\n  \"[result]\": contentData.Outcome || contentData.Result || \"messbare Erfolge\",\n  \"[DREAM OUTCOME]\": contentData.Outcome || contentData.Result || \"nachhaltigen Geschäftserfolg\",\n  \"[problem]\": contentData.Problem || contentData.Topic || \"Geschäftswachstum\",\n  \"[topic]\": contentData.Problem || contentData.Topic || \"Business-Strategie\",\n  \"[solving specific problem]\": contentData.Problem || contentData.Topic || \"Geschäftsprozesse optimieren\",\n  \"[specific problem]\": contentData.Problem || contentData.Topic || \"ineffiziente Prozesse\",\n  \"[specific topic]\": contentData.Problem || contentData.Topic || \"Digitalisierung\",\n  \"[achieving specific outcome]\": contentData.Outcome || \"Umsatzsteigerung erzielen\",\n  \"[achieve goal]\": contentData.Outcome || \"ihre Ziele erreichen\",\n  \"[achieve result]\": contentData.Outcome || \"messbare Ergebnisse\",\n  \"[achieving outcome]\": contentData.Outcome || \"Erfolg erzielen\",\n  \"[common belief]\": contentData.CommonBelief || \"dass mehr Arbeit zu mehr Erfolg führt\",\n  \"[common advice]\": contentData.CommonAdvice || \"jeden Tag 8 Stunden zu arbeiten\",\n  \"[common advice in your industry]\": contentData.CommonAdvice || \"auf Masse statt Klasse zu setzen\",\n  \"[industry norm or popular strategy]\": contentData.IndustryNorm || \"der traditionelle Ansatz\",\n  \"[popular tactic/tool/strategy]\": contentData.PopularTactic || \"Cold Calling\",\n  \"[common mistake]\": contentData.CommonMistake || \"alles selbst zu machen\",\n  \"[common mistake in your industry]\": contentData.CommonMistake || \"Qualität für Quantität zu opfern\",\n  \"[common practice in your industry]\": contentData.CommonPractice || \"reaktives Arbeiten\",\n  \"[common problem you see]\": contentData.CommonProblem || \"mangelnde Strategie\",\n  \"[your perspective]\": contentData.Perspective || \"smarter arbeiten statt härter\",\n  \"[your alternative]\": contentData.Alternative || \"ein systematischer Ansatz\",\n  \"[your approach]\": contentData.Approach || \"die bewährte Methode\",\n  \"[your unique perspective or lesson learned]\": contentData.UniqueInsight || \"Fokus schlägt Vielfalt\",\n  \"[Name]\": contentData.SystemName || \"FOCUS\",\n  \"[old way]\": contentData.OldWay || \"manuelles Arbeiten\",\n  \"[new way]\": contentData.NewWay || \"automatisierte Prozesse\",\n  \"[client]\": contentData.ClientName || \"ein mittelständisches Unternehmen\",\n  \"[Client]\": contentData.ClientName || \"Ein Kunde\",\n  \"[Client/Company]\": contentData.ClientName || \"Ein Technologie-Unternehmen\",\n  \"[their pain point]\": contentData.PainPoint || \"stagnierendes Wachstum\",\n  \"[pain point]\": contentData.PainPoint || \"fehlende Leads\",\n  \"[pain]\": contentData.PainPoint || \"Stagnation\",\n  \"[how long it took]\": contentData.Timeframe || \"90 Tagen\",\n  \"[time]\": contentData.Timeframe || \"3 Monaten\",\n  \"[timeframe]\": contentData.Timeframe || \"60 Tagen\",\n  \"[X time]\": contentData.PastTimeframe || \"6 Monate\",\n  \"[specific outcome with numbers]\": contentData.SpecificResult || \"47% mehr Umsatz\",\n  \"[Metric 1]\": contentData.Metric1 || \"35% mehr Leads\",\n  \"[Metric 2]\": contentData.Metric2 || \"50% schnellere Prozesse\",\n  \"[Metric 3]\": contentData.Metric3 || \"20% Kostenreduktion\",\n  \"[your solution/system]\": contentData.Solution || \"unser bewährtes System\",\n  \"[specific aspect of your service]\": contentData.ServiceAspect || \"Prozessoptimierung\",\n  \"[one key thing]\": contentData.KeyThing || \"der richtige Fokus\",\n  \"[struggling scenario]\": contentData.BeforeScenario || \"überarbeitet und frustriert\",\n  \"[success scenario]\": contentData.AfterScenario || \"fokussiert und erfolgreich\",\n  \"[thing]\": contentData.ThingAnalyzed || \"LinkedIn-Profile\",\n  \"[X number]\": contentData.NumberAnalyzed || \"147\",\n  \"[Y number]\": contentData.NumberPatterns || \"5\",\n  \"[Y%]\": contentData.PercentageMistakes || \"73%\",\n  \"[number]\": contentData.NumberMistakes || \"3\",\n  \"[your data]\": contentData.DataPoint || \"78% der Führungskräfte unterschätzen den ROI von Automatisierung\",\n  \"[Shocking stat]\": contentData.ShockingStat || \"Nur 12% der Strategien werden tatsächlich umgesetzt\",\n  \"[research/analysis]\": contentData.Research || \"eine Analyse von 200 Unternehmen\",\n  \"[specific metric]\": contentData.SpecificMetric || \"Conversion-Rate\",\n  \"[companies/campaigns/posts]\": contentData.AnalyzedType || \"Unternehmensstrategien\",\n  \"[Stat]\": contentData.StatData || \"Die Daten\",\n  \"[trend you\\u0027ve noticed]\": contentData.Trend || \"KI-Integration in Kernprozessen\",\n  \"[Thing A]\": contentData.ThingA || \"Traditionelles Marketing\",\n  \"[Thing B]\": contentData.ThingB || \"Datengetriebenes Marketing\",\n  \"[surprising insight]\": contentData.SurprisingInsight || \"Weniger ist oft mehr\",\n  \"[analyzing/testing something]\": contentData.WhatAnalyzed || \"dem Test von 50 Strategien\",\n  \"[Counterintuitive statement about your finding]\": contentData.CounterintuitiveStatement || \"Die einfachste Lösung war die effektivste\",\n  \"[profiles/strategies/websites]\": contentData.WhatReviewed || \"LinkedIn-Strategien\",\n  \"[profiles/strategies/content]\": contentData.WhatReviewed || \"Content-Strategien\",\n  \"[desired outcome]\": contentData.DesiredOutcome || \"Wachstum\",\n  \"[specific outcome]\": contentData.SpecificOutcome || \"mehr Kunden\",\n  \"[sales calls/audits/consultations]\": contentData.CallsType || \"Strategie-Gesprächen\",\n  \"[time/money]\": contentData.WastedResource || \"6 Monate\",\n  \"[key insight]\": contentData.KeyInsight || \"dass Systeme wichtiger sind als Taktiken\",\n  \"[mistake you made]\": contentData.PersonalMistake || \"jeden Trend mitzumachen\",\n  \"[industry]\": contentData.Industry || \"Business-Beratung\",\n  \"[current year]\": new Date().getFullYear().toString(),\n  \"[Popular quote or advice]\": contentData.PopularQuote || \"Hustle harder\"\n};\n\n// Apply all replacements\nfor (const [placeholder, value] of Object.entries(replacements)) {\n  filledPrompt = filledPrompt.split(placeholder).join(value);\n}\n\n// Create image generation prompt\nconst imagePrompt = \"Create a provocative, caricature-style illustration for a LinkedIn post about: \" + (contentData.Topic || contentData.Problem || data.postType) + \". Style requirements: Bold, exaggerated caricature style. Provocative and attention-grabbing. Business/professional context. Vibrant colors with high contrast. Satirical elements. Clean composition suitable for LinkedIn. No text in the image. 1200x627 pixels. The image should visually represent: \" + (contentData.ImageConcept || \"the contrast between old and new ways of doing business\");\n\nreturn {\n  postType: data.postType,\n  promptId: data.promptId,\n  filledPrompt,\n  imagePrompt,\n  contentData,\n  cta: \"Buchen Sie eine kostenfreie Analyse\"\n};\n"
+      },
+      "id": "10a1d7d5-4491-4248-b1e0-b468826c8474",
+      "name": "Fill Prompt Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine results from Merge node\nconst items = $input.all();\n\nlet postText = \"\";\nlet imageUrl = \"\";\nlet originalData = null;\nlet binaryData = null;\n\nfor (const item of items) {\n  const json = item.json;\n  \n  // Check for Gemini response\n  if (json.candidates?.[0]?.content?.parts?.[0]?.text) {\n    postText = json.candidates[0].content.parts[0].text;\n  }\n  if (json.content?.parts?.[0]?.text) {\n    postText = json.content.parts[0].text;\n  }\n  if (json.text && !postText) {\n    postText = json.text;\n  }\n  \n  // Check for image URL\n  if (json.data?.[0]?.url) {\n    imageUrl = json.data[0].url;\n  }\n  if (json.url && json.url.startsWith(\"http\")) {\n    imageUrl = json.url;\n  }\n  \n  // Preserve binary data from image generation\n  if (item.binary?.data) {\n    binaryData = item.binary;\n  }\n  \n  // Check for original data\n  if (json.postType && json.filledPrompt) {\n    originalData = json;\n  }\n  if (json.contentData) {\n    originalData = json;\n  }\n}\n\n// Clean up the post text\npostText = (postText || \"\").trim();\n\nif (postText && !postText.includes(\"kostenfreie Analyse\")) {\n  postText += \"\\n\\n🔗 Buchen Sie eine kostenfreie Analyse\";\n}\n\n// Return with binary passthrough\nconst result = {\n  json: {\n    postType: originalData?.postType || \"Data Drop\",\n    postText,\n    imageUrl,\n    promptId: originalData?.promptId || 0,\n    generatedAt: new Date().toISOString(),\n    hasImage: !!(imageUrl || binaryData),\n    contentData: originalData?.contentData || {}\n  }\n};\n\n// Pass binary data through if exists\nif (binaryData) {\n  result.binary = binaryData;\n}\n\nreturn result;\n\n\n"
+      },
+      "id": "d7f264b0-dcdf-43ab-be62-c86a0a16295f",
+      "name": "Combine Text & Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-content",
+              "leftValue": "={{ $json.postText.length > 50 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f68d1d9b-fd0c-4f87-b1f7-7f869ca5c9a4",
+      "name": "Content Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9868b73e-b40f-4026-91b7-5759850f454f",
+              "name": "postSubmissionId",
+              "value": "={{ $json.postSubmissionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89fce6d1-e393-46b8-806d-00e5994a8f34",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk",
+          "mode": "list",
+          "cachedResultName": "VS LinkedIn Content Plan ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "PostLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "PostId"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PostType",
+              "displayName": "PostType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PostId",
+              "displayName": "PostId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "postSubmissionId",
+              "displayName": "postSubmissionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a4a450e1-770b-4b61-82ee-26b5aa04c0dc",
+      "name": "Log to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1712,
+        -112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "6d937dff-3030-4978-85b6-9af346c866d2",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk",
+          "mode": "list",
+          "cachedResultName": "VS LinkedIn Content Plan ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fi07rlJsaU4YgwZan6xaEHhZmjXu8pUq-a7qrtJtiLk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ErrorLog",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6ba7bb81-c48c-412e-b4da-a8b6b7152f7a",
+      "name": "Log Error to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1264,
+        80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($json.filledPrompt + \"\\n\\nIMPORTANT: Write the post in German. Keep it professional but engaging. End with: Buchen Sie eine kostenfreie Analyse\") }}\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.8,\n    \"topK\": 40,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 1024\n  }\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        -112
+      ],
+      "id": "8526cb32-c30a-4d05-b346-16838f43b7b1",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gGQQyjOkRgSzyK0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-image-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+        },
+        "prompt": "={\n  \"model\": \"gemini-3.0-nano\",\n  \"prompt\": {{ JSON.stringify($json.imagePrompt) }},\n  \"n\": 1,\n  \"size\": \"1024x1024\",\n  \"style\": \"vivid\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        96
+      ],
+      "id": "9449f011-f13c-4d18-bd7a-3ff051e5f877",
+      "name": "Generate an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gGQQyjOkRgSzyK0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        368,
+        -16
+      ],
+      "id": "b28b1e2c-c79a-4941-ad0c-f4c18460e9f9",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/dzmxm0jen/image/upload\n",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "upload_preset",
+              "value": "n8n_upload"
+            },
+            {
+              "name": "folder",
+              "value": "linkedin-posts"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        960,
+        -112
+      ],
+      "id": "6c3922bd-ea8d-4a28-8b7f-2f21cf386f8a",
+      "name": "upload cloudinary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://backend.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"accountId\": \"11831\",\n    \"content\": {\n      \"text\": {{ JSON.stringify($('Content Valid?').item.json.postText) }},\n      \"mediaUrls\": [\n        \"{{ $json.secure_url }}\"\n      ],\n      \"platform\": \"linkedin\"\n    },\n    \"target\": {\n      \"targetType\": \"linkedin\"\n    }\n  }\n}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        -112
+      ],
+      "id": "a574ac04-dcda-46a8-9ec3-a1fba7e6b2a6",
+      "name": "post via blotato",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "huFRTIQcfhSBtrVc",
+          "name": "Blotato"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Schedule (Mon-Sat 9AM)": {
+      "main": [
+        [
+          {
+            "node": "Read Content Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Content Plan": {
+      "main": [
+        [
+          {
+            "node": "Determine Post Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine Post Type": {
+      "main": [
+        [
+          {
+            "node": "Select Random Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Random Prompt": {
+      "main": [
+        [
+          {
+            "node": "Fill Prompt Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill Prompt Template": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Text & Image": {
+      "main": [
+        [
+          {
+            "node": "Content Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Valid?": {
+      "main": [
+        [
+          {
+            "node": "upload cloudinary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Combine Text & Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload cloudinary": {
+      "main": [
+        [
+          {
+            "node": "post via blotato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post via blotato": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "25c185e1-9e39-44b0-9cf0-e6a864c4c86c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "fa68S2r37Ihvqhsk",
+  "tags": []
+}
