@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1769681190520,
+  "lastUpdate": 1769688555314,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "560e0c5b86d5e44a1537b7c3299cdc5aff3f645e",
-          "message": "fix: pass context parameter to handleGetWorkflow in handleValidateWorkflow (#474) (#475)\n\nFixed n8n_validate_workflow tool failing in multi-tenant mode with error:\n\"n8n API not configured. Please set N8N_API_URL and N8N_API_KEY environment variables.\"\n\nRoot cause: handleValidateWorkflow called handleGetWorkflow without the context parameter.\n\nCloses #474\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude <noreply@anthropic.com>",
-          "timestamp": "2025-12-07T23:49:21+01:00",
-          "tree_id": "07ce244e8e060e3c75a1207dcd2602aafb70d65b",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/560e0c5b86d5e44a1537b7c3299cdc5aff3f645e"
-        },
-        "date": 1765147873707,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1532,6 +1501,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/504d9ad4c2b103b89fb8e84acb4962bc9a3d0ad5"
         },
         "date": 1769681190103,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cbfe6011a115559d06e60c2ec1981119b7cfbb06",
+          "message": "Merge pull request #21 from markmocasa-boop/claude/ai-coworker-n8n-workflow-c9hkA\n\nfix: resolve n8n Cloud import compatibility issues",
+          "timestamp": "2026-01-29T13:07:33+01:00",
+          "tree_id": "21fe89b543595786ed7c50d7ba61c0dd80ab868e",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/cbfe6011a115559d06e60c2ec1981119b7cfbb06"
+        },
+        "date": 1769688555012,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
