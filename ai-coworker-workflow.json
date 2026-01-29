@@ -1,0 +1,1703 @@
+{
+  "name": "AI Coworker - Slack Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "events": ["message"],
+        "options": {}
+      },
+      "id": "slack-trigger",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [0, 500],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "slack_user_id",
+              "value": "={{ $json.user }}"
+            },
+            {
+              "name": "slack_channel_id",
+              "value": "={{ $json.channel }}"
+            },
+            {
+              "name": "slack_ts",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "slack_thread_ts",
+              "value": "={{ $json.thread_ts || $json.ts }}"
+            },
+            {
+              "name": "user_message",
+              "value": "={{ $json.text }}"
+            }
+          ],
+          "boolean": [
+            {
+              "name": "has_files",
+              "value": "={{ $json.files && $json.files.length > 0 }}"
+            }
+          ],
+          "array": [
+            {
+              "name": "file_urls",
+              "value": "={{ $json.files ? $json.files.map(f => f.url_private) : [] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-variables",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT get_user_context('{{ $json.slack_user_id }}') as context;"
+      },
+      "id": "context-loader",
+      "name": "Context Loader",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [440, 500],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-credentials",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.context !== null }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-user-exists",
+      "name": "User existiert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "users",
+        "dataToSend": "autoMapInputData",
+        "options": {}
+      },
+      "id": "create-new-user",
+      "name": "Neuen User anlegen",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [880, 700],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-credentials",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $('Set Variables').item.json.slack_channel_id }}",
+        "text": "Willkommen! Ich bin dein AI Coworker.\n\nBevor wir loslegen, erzaehl mir kurz:\n1. Wie heisst du?\n2. In welcher Branche arbeitest du?\n3. Was ist deine Rolle?\n\nDu kannst mir das in einem Satz schreiben, z.B.:\n'Ich bin Max, SEO Manager bei einer E-Commerce Agentur.'",
+        "options": {
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "slack-welcome",
+      "name": "Willkommensnachricht",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1100, 700],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 1024,\n  \"system\": \"Du bist ein Intent-Classifier und Parameter-Extractor fuer einen AI Coworker.\\n\\nDeine Aufgabe:\\n1. Erkenne die Absicht (Intent) der User-Nachricht\\n2. Extrahiere relevante Parameter\\n3. Entscheide, ob das Output-Format geklaert werden muss\\n4. Antworte NUR mit validem JSON\\n\\nINTENTS:\\n- \\\"research\\\": Recherche, Analyse, Informationssuche, Trends, Wettbewerber\\n- \\\"email\\\": E-Mails lesen, schreiben, beantworten, zusammenfassen\\n- \\\"meeting\\\": Meeting-Vorbereitung, Personen-Research, Agenda erstellen\\n- \\\"data\\\": Daten analysieren, Tabellen auswerten, CSV/Sheets bearbeiten\\n- \\\"general\\\": Allgemeine Fragen, Smalltalk, Unklares\\n\\nSUB-INTENTS (Beispiele):\\n- research: \\\"seo_trends\\\", \\\"competitor_analysis\\\", \\\"market_research\\\", \\\"general_research\\\"\\n- email: \\\"read_inbox\\\", \\\"write_email\\\", \\\"reply_email\\\", \\\"summarize_emails\\\"\\n- meeting: \\\"person_research\\\", \\\"company_research\\\", \\\"agenda_creation\\\", \\\"prep_full\\\"\\n- data: \\\"analyze_sheet\\\", \\\"analyze_csv\\\", \\\"create_report\\\", \\\"find_trends\\\"\\n\\nPARAMETER-EXTRAKTION:\\n- Research: topic, depth (quick/standard/deep), focus_areas, time_range\\n- Email: action (read/write/reply), recipient, subject, context, tone\\n- Meeting: person_name, company_name, meeting_type, meeting_date\\n- Data: data_source (sheet_url, csv), analysis_type, specific_questions\\n\\nOUTPUT FORMAT DECISION:\\n- Wenn der User ein Format nennt (\\\"als PDF\\\", \\\"in Google Docs\\\") -> needs_format_confirmation: false\\n- Wenn unklar und die Ausgabe lang sein koennte -> needs_format_confirmation: true\\n- Bei kurzen Antworten (< 500 Zeichen erwartet) -> immer text, needs_format_confirmation: false\\n\\nRESPONSE LANGUAGE:\\nErkenne die Sprache der User-Nachricht. Standard ist Deutsch (\\\"de\\\").\\n\\nAntworte NUR mit dem JSON-Objekt, keine Erklaerungen. Bei Unsicherheit: confidence < 0.7 und intent: \\\"general\\\".\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"USER CONTEXT:\\n{{ JSON.stringify($json.context) }}\\n\\nUSER MESSAGE:\\n{{ $('Set Variables').item.json.user_message }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "ai-router-claude",
+      "name": "AI Router (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content[0].text;\n\nlet routerOutput;\ntry {\n  const jsonMatch = content.match(/```json\\n?([\\s\\S]*?)\\n?```/) || \n                    content.match(/\\{[\\s\\S]*\\}/);\n  routerOutput = JSON.parse(jsonMatch[1] || jsonMatch[0]);\n} catch (e) {\n  routerOutput = {\n    intent: \"general\",\n    sub_intent: \"conversation\",\n    confidence: 0.5,\n    parameters: {},\n    output_format: \"text\",\n    needs_format_confirmation: false,\n    response_language: \"de\"\n  };\n}\n\nreturn {\n  json: {\n    ...routerOutput,\n    original_message: $('Set Variables').first().json.user_message,\n    context: $('Context Loader').first().json.context,\n    slack_user_id: $('Set Variables').first().json.slack_user_id,\n    slack_channel_id: $('Set Variables').first().json.slack_channel_id,\n    slack_thread_ts: $('Set Variables').first().json.slack_thread_ts\n  }\n};"
+      },
+      "id": "parse-router-response",
+      "name": "Parse Router Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "research",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "research"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "meeting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "meeting"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "data",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "data"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "general",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "intent-switch",
+      "name": "Intent Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1320, 500]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-sonar-large-128k-online",
+        "messages": {
+          "values": [
+            {
+              "content": "=Recherchiere gruendlich zu: {{ $json.parameters.topic }}\n\nFokus: {{ $json.parameters.focus_areas ? $json.parameters.focus_areas.join(', ') : 'Allgemein' }}\n\nGib strukturierte, faktenbasierte Informationen mit Quellen."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "perplexity-search",
+      "name": "Perplexity Search",
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [1540, 100],
+      "credentials": {
+        "perplexityApi": {
+          "id": "perplexity-credentials",
+          "name": "Perplexity API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.parameters.topic }}",
+        "searchDepth": "={{ $json.parameters.depth === 'deep' ? 'advanced' : 'basic' }}",
+        "includeAnswer": true,
+        "maxResults": 5,
+        "options": {}
+      },
+      "id": "tavily-search",
+      "name": "Tavily Search",
+      "type": "n8n-nodes-base.tavily",
+      "typeVersion": 1,
+      "position": [1540, 300],
+      "credentials": {
+        "tavilyApi": {
+          "id": "tavily-credentials",
+          "name": "Tavily API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.parameters.topic.toLowerCase().includes('seo') || $json.parameters.topic.toLowerCase().includes('keyword') }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "seo-check",
+      "name": "SEO Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1760, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/keywords_data/google/search_volume/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\n  \"keywords\": {{ JSON.stringify($('Parse Router Response').item.json.parameters.topic.split(' ').slice(0, 5)) }},\n  \"language_code\": \"de\",\n  \"location_code\": 2276\n}]",
+        "options": {}
+      },
+      "id": "dataforseo-request",
+      "name": "DataForSEO Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 100],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "dataforseo-credentials",
+          "name": "DataForSEO API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": \"Du bist ein Research-Analyst fuer Marketing-Professionals.\\n\\nDeine Aufgabe:\\n1. Synthetisiere die Recherche-Ergebnisse aus verschiedenen Quellen\\n2. Strukturiere die Information klar und actionable\\n3. Fuege immer Quellenangaben hinzu\\n4. Passe dich an den User-Kontext an (Branche, Expertise-Level)\\n\\nFORMAT:\\n- Executive Summary (3-5 Saetze)\\n- Key Findings (Bullet Points)\\n- Detaillierte Analyse (wenn depth = detailed)\\n- Quellen\\n- Empfohlene naechste Schritte\\n\\nSPRACHE: {{ $('Parse Router Response').item.json.response_language === 'de' ? 'Deutsch' : 'Englisch' }}\\nTONALITAET: professionell aber nahbar\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"PERPLEXITY ERGEBNISSE:\\n{{ $('Perplexity Search').item.json.choices[0].message.content }}\\n\\nTAVILY ERGEBNISSE:\\n{{ JSON.stringify($('Tavily Search').item.json) }}\\n\\nORIGINAL-ANFRAGE:\\n{{ $('Parse Router Response').item.json.original_message }}\\n\\nErstelle einen umfassenden Research-Report.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "research-synthesizer",
+      "name": "Research Synthesizer (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.parameters.action }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.parameters.action }}",
+                    "rightValue": "write",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "write"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.parameters.action }}",
+                    "rightValue": "reply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "reply"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "email-action-switch",
+      "name": "Email Action Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1540, 500]
+    },
+    {
+      "parameters": {
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "gmail-read",
+      "name": "Gmail Lesen",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1760, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"Du analysierst E-Mails fuer einen Business-Professional.\\n\\nAufgabe:\\n1. Kategorisiere E-Mails nach Prioritaet (Hoch/Mittel/Niedrig)\\n2. Identifiziere Action Items\\n3. Fasse den Inhalt zusammen\\n4. Markiere dringende Antworten\\n\\nFormat:\\nE-MAIL UEBERSICHT\\n\\nHOHE PRIORITAET\\n- [Absender]: [Betreff] - [1 Satz Summary] - Action: [Was tun?]\\n\\nMITTLERE PRIORITAET\\n- ...\\n\\nNIEDRIGE PRIORITAET / INFO\\n- ...\\n\\nEMPFOHLENE ACTIONS\\n1. ...\\n2. ...\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Analysiere diese E-Mails:\\n\\n{{ JSON.stringify($json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "email-analyzer",
+      "name": "E-Mail Analyzer (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"Du schreibst professionelle E-Mails im Namen des Users.\\n\\nUSER KONTEXT:\\nName: {{ $('Parse Router Response').item.json.context.user ? $('Parse Router Response').item.json.context.user.name : 'User' }}\\nUnternehmen: {{ $('Parse Router Response').item.json.context.company ? $('Parse Router Response').item.json.context.company.company_name : '' }}\\nTonalitaet: professionell aber nahbar\\nFormalitaet: {{ $('Parse Router Response').item.json.context.user ? $('Parse Router Response').item.json.context.user.formality : 'du' }}\\n\\nAUFGABE:\\nSchreibe eine E-Mail basierend auf den Angaben des Users.\\n\\nREGELN:\\n- Halte dich an die angegebene Tonalitaet\\n- Verwende {{ $('Parse Router Response').item.json.context.user && $('Parse Router Response').item.json.context.user.formality === 'Sie' ? 'Sie' : 'Du' }}\\n- Strukturiere klar mit Absaetzen\\n- Fuege immer eine angemessene Grussformel hinzu\\n- Keine Emojis in formellen E-Mails\\n\\nOUTPUT FORMAT:\\n---\\nBETREFF: [Betreffzeile]\\n\\n[E-Mail Text]\\n---\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Schreibe eine E-Mail basierend auf diesen Angaben:\\n\\nEmpfaenger: {{ $json.parameters.recipient }}\\nThema: {{ $json.parameters.subject || $json.original_message }}\\nKontext: {{ $json.parameters.context || '' }}\\nTon: {{ $json.parameters.tone || 'professionell' }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "email-writer",
+      "name": "E-Mail Writer (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 600],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $('Parse Router Response').item.json.slack_channel_id }}",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*E-Mail Draft*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.content[0].text.replace(/\\n/g, '\\\\n') }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Senden\", \"emoji\": true },\n          \"style\": \"primary\",\n          \"action_id\": \"send_email\",\n          \"value\": \"send\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Bearbeiten\", \"emoji\": true },\n          \"action_id\": \"edit_email\",\n          \"value\": \"edit\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Verwerfen\", \"emoji\": true },\n          \"style\": \"danger\",\n          \"action_id\": \"discard_email\",\n          \"value\": \"discard\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "email-preview-slack",
+      "name": "E-Mail Preview (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1980, 600],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendarId": "primary",
+        "options": {
+          "singleEvents": true,
+          "timeMax": "={{ $now.plus(7, 'days').toISO() }}",
+          "timeMin": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "calendar-lookup",
+      "name": "Google Calendar Lookup",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [1540, 800],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "google-calendar-credentials",
+          "name": "Google Calendar OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all();\nconst params = $('Parse Router Response').first().json.parameters;\n\n// Find the meeting that matches the user's query\nlet targetMeeting = null;\n\nif (params.person_name || params.company_name) {\n  // Search by person or company name\n  targetMeeting = events.find(e => {\n    const summary = (e.json.summary || '').toLowerCase();\n    const description = (e.json.description || '').toLowerCase();\n    const attendees = e.json.attendees || [];\n    \n    if (params.person_name) {\n      const personLower = params.person_name.toLowerCase();\n      if (summary.includes(personLower) || description.includes(personLower)) {\n        return true;\n      }\n      if (attendees.some(a => (a.email || '').toLowerCase().includes(personLower) || \n                              (a.displayName || '').toLowerCase().includes(personLower))) {\n        return true;\n      }\n    }\n    \n    if (params.company_name) {\n      const companyLower = params.company_name.toLowerCase();\n      if (summary.includes(companyLower) || description.includes(companyLower)) {\n        return true;\n      }\n    }\n    \n    return false;\n  });\n} else {\n  // Get the next upcoming meeting\n  targetMeeting = events[0];\n}\n\nif (!targetMeeting) {\n  return {\n    json: {\n      error: true,\n      message: 'Kein passendes Meeting gefunden',\n      params: params\n    }\n  };\n}\n\n// Extract attendee information\nconst attendees = targetMeeting.json.attendees || [];\nconst externalAttendees = attendees.filter(a => !a.self);\n\nreturn {\n  json: {\n    meeting_found: true,\n    summary: targetMeeting.json.summary,\n    start: targetMeeting.json.start,\n    end: targetMeeting.json.end,\n    description: targetMeeting.json.description,\n    location: targetMeeting.json.location,\n    attendees: externalAttendees.map(a => ({\n      email: a.email,\n      name: a.displayName || a.email.split('@')[0]\n    })),\n    person_name: params.person_name || (externalAttendees[0] ? externalAttendees[0].displayName : null),\n    company_name: params.company_name || (externalAttendees[0] ? externalAttendees[0].email.split('@')[1].split('.')[0] : null)\n  }\n};"
+      },
+      "id": "meeting-extract",
+      "name": "Meeting Info extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 800]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-sonar-large-128k-online",
+        "messages": {
+          "values": [
+            {
+              "content": "=Finde die aktuellsten Nachrichten und Updates zu:\n- Person: {{ $json.person_name }}\n- Unternehmen: {{ $json.company_name }}\n\nFokus auf:\n- Letzte 30 Tage\n- Pressemitteilungen\n- Produktlaunches\n- Personalwechsel\n- Partnerschaften\n\nGib nur verifizierte, aktuelle Informationen."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "meeting-news-search",
+      "name": "Meeting News Search",
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [1980, 800],
+      "credentials": {
+        "perplexityApi": {
+          "id": "perplexity-credentials",
+          "name": "Perplexity API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": \"Du erstellst Meeting-Briefings fuer Business-Professionals.\\n\\nMEETING KONTEXT:\\nPerson: {{ $('Meeting Info extrahieren').item.json.person_name }}\\nUnternehmen: {{ $('Meeting Info extrahieren').item.json.company_name }}\\nMeeting-Titel: {{ $('Meeting Info extrahieren').item.json.summary }}\\nDatum: {{ $('Meeting Info extrahieren').item.json.start ? $('Meeting Info extrahieren').item.json.start.dateTime : 'Nicht spezifiziert' }}\\n\\nAUFGABE:\\nErstelle ein kompaktes, actionable Meeting-Briefing.\\n\\nFORMAT:\\n\\nMeeting Briefing: {{ $('Meeting Info extrahieren').item.json.person_name || $('Meeting Info extrahieren').item.json.summary }}\\n\\nUeber die Person\\n[2-3 relevante Bullet Points]\\n\\nUeber das Unternehmen\\n[Was machen sie, Groesse, relevante Infos fuer den User]\\n\\nAktuelle News\\n[Relevante Updates der letzten 30 Tage]\\n\\nFragen, die du stellen solltest\\n1. [Frage basierend auf aktuellen News]\\n2. [Frage zu deren Business]\\n3. [Frage die Rapport aufbaut]\\n4. [Frage zu potentieller Zusammenarbeit]\\n5. [Frage zu naechsten Schritten]\\n\\nTalking Points fuer dich\\n- [Relevante Punkte basierend auf User's Business]\\n\\nPotenzielle Einwaende & Antworten\\n- Einwand: [...]\\n  Antwort: [...]\\n\\nNotizen-Template\\n[Kopier-bereite Struktur fuer waehrend des Meetings]\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"NEWS UND RECHERCHE:\\n{{ $('Meeting News Search').item.json.choices[0].message.content }}\\n\\nMEETING DETAILS:\\n{{ JSON.stringify($('Meeting Info extrahieren').item.json) }}\\n\\nErstelle das Meeting-Briefing.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "meeting-briefing-generator",
+      "name": "Meeting Briefing Generator (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 800],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.parameters.data_source }}",
+                    "rightValue": "docs.google.com/spreadsheets",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "google_sheets"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.has_files }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "csv_file"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "data-source-switch",
+      "name": "Data Source Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1540, 1100]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.parameters.data_source.match(/\\/d\\/([a-zA-Z0-9-_]+)/)[1] }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.parameters.sheet_name || 'Sheet1' }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "google-sheets-read",
+      "name": "Google Sheets lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1760, 1000],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Set Variables').first().json.file_urls[0] }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.slackApi.accessToken }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "csv-download",
+      "name": "CSV Download",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 1200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "slack-header-credentials",
+          "name": "Slack Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.all().map(item => item.json);\nconst rows = Array.isArray(data) ? data : [data];\n\nconst schema = {};\nif (rows.length > 0) {\n  Object.keys(rows[0]).forEach(key => {\n    const sampleValues = rows.slice(0, 10).map(r => r[key]).filter(v => v !== null && v !== undefined);\n    schema[key] = {\n      type: typeof sampleValues[0],\n      sample: sampleValues.slice(0, 3),\n      non_null_count: sampleValues.length\n    };\n  });\n}\n\nconst preview = rows.slice(0, 100);\n\nreturn {\n  json: {\n    total_rows: rows.length,\n    columns: Object.keys(schema),\n    schema: schema,\n    preview: preview,\n    full_data: rows\n  }\n};"
+      },
+      "id": "data-preview",
+      "name": "Data Preview & Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 1100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": \"Du bist ein Daten-Analyst fuer Marketing & SEO Professionals.\\n\\nDATEN-SCHEMA:\\n{{ JSON.stringify($json.schema, null, 2) }}\\n\\nGESAMTZEILEN: {{ $json.total_rows }}\\n\\nAUFGABE:\\n1. Analysiere die Datenstruktur\\n2. Identifiziere Muster, Trends, Ausreisser\\n3. Beantworte die spezifische Frage des Users\\n4. Gib actionable Insights\\n\\nREGELN:\\n- Sei praezise mit Zahlen\\n- Nenne Prozentwerte wo sinnvoll\\n- Identifiziere Probleme in den Daten (fehlende Werte, Inkonsistenzen)\\n- Gib konkrete Handlungsempfehlungen\\n\\nWENN SEO-DATEN (Keywords, Rankings, Traffic):\\n- Identifiziere Top-Performer\\n- Finde Quick-Win Opportunities\\n- Analysiere Trends ueber Zeit\\n- Schlage Optimierungen vor\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"DATEN-PREVIEW (erste 100 Zeilen):\\n{{ JSON.stringify($json.preview.slice(0, 50), null, 2) }}\\n\\nUSER-FRAGE:\\n{{ $('Parse Router Response').item.json.original_message }}\\n\\nAnalysiere diese Daten und beantworte die Frage.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "data-analyzer",
+      "name": "Data Analyzer (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 1100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"system\": \"Du bist ein freundlicher AI Coworker fuer Marketing-Professionals.\\n\\nAntworte hilfreich auf allgemeine Fragen und Anliegen.\\nHalte dich kurz und praegnant.\\nWenn du nicht sicher bist, was der User will, frage nach.\\n\\nSPRACHE: {{ $json.response_language === 'de' ? 'Deutsch' : 'Englisch' }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.original_message }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "general-response",
+      "name": "General Response (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 1400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json;\nlet response = '';\n\n// Extract response based on source\nif (source.content && source.content[0]) {\n  response = source.content[0].text;\n} else if (source.choices && source.choices[0]) {\n  response = source.choices[0].message.content;\n} else if (source.output) {\n  response = source.output;\n} else {\n  response = JSON.stringify(source);\n}\n\n// Get routing info from earlier nodes\nconst routerData = $('Parse Router Response').first().json;\n\nreturn {\n  json: {\n    response: response,\n    intent: routerData.intent,\n    slack_channel_id: routerData.slack_channel_id,\n    slack_thread_ts: routerData.slack_thread_ts,\n    slack_user_id: routerData.slack_user_id,\n    original_message: routerData.original_message\n  }\n};"
+      },
+      "id": "output-formatter",
+      "name": "Output Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 500]
+    },
+    {
+      "parameters": {
+        "channel": "={{ $json.slack_channel_id }}",
+        "text": "={{ $json.response }}",
+        "options": {
+          "thread_ts": "={{ $json.slack_thread_ts }}",
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "slack-response",
+      "name": "Slack Response",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2640, 500],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $json.slack_channel_id }}",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Erkenntnis speichern\", \"emoji\": true },\n          \"action_id\": \"save_memory\",\n          \"value\": \"{{ JSON.stringify({ content: $json.response.substring(0, 500), source: $json.intent }).replace(/\"/g, '\\\\\"') }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "thread_ts": "={{ $json.slack_thread_ts }}"
+        }
+      },
+      "id": "memory-save-button",
+      "name": "Memory Save Button",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2860, 500],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "conversations",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "user_id",
+              "fieldValue": "={{ $('Context Loader').item.json.context.user ? $('Context Loader').item.json.context.user.id : null }}"
+            },
+            {
+              "fieldName": "slack_channel_id",
+              "fieldValue": "={{ $json.slack_channel_id }}"
+            },
+            {
+              "fieldName": "slack_thread_ts",
+              "fieldValue": "={{ $json.slack_thread_ts }}"
+            },
+            {
+              "fieldName": "user_message",
+              "fieldValue": "={{ $json.original_message }}"
+            },
+            {
+              "fieldName": "assistant_response",
+              "fieldValue": "={{ $json.response.substring(0, 10000) }}"
+            },
+            {
+              "fieldName": "intent",
+              "fieldValue": "={{ $json.intent }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-conversation",
+      "name": "Save Conversation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2860, 700],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-credentials",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "events": ["interactiveMessage"],
+        "options": {}
+      },
+      "id": "slack-interaction-trigger",
+      "name": "Slack Interaction Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [0, 1600],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.actions[0].action_id }}",
+                    "rightValue": "save_memory",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "save_memory"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.actions[0].action_id }}",
+                    "rightValue": "send_email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "send_email"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "interaction-switch",
+      "name": "Interaction Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [220, 1600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": \"{{ JSON.parse($json.actions[0].value).content }}\"\n}",
+        "options": {}
+      },
+      "id": "generate-embedding",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 1500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "memories",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "user_id",
+              "fieldValue": "={{ $('Slack Interaction Trigger').item.json.user.id }}"
+            },
+            {
+              "fieldName": "content",
+              "fieldValue": "={{ JSON.parse($('Slack Interaction Trigger').item.json.actions[0].value).content }}"
+            },
+            {
+              "fieldName": "summary",
+              "fieldValue": "={{ JSON.parse($('Slack Interaction Trigger').item.json.actions[0].value).content.substring(0, 200) }}"
+            },
+            {
+              "fieldName": "embedding",
+              "fieldValue": "={{ JSON.stringify($json.data[0].embedding) }}"
+            },
+            {
+              "fieldName": "memory_type",
+              "fieldValue": "insight"
+            },
+            {
+              "fieldName": "source",
+              "fieldValue": "={{ JSON.parse($('Slack Interaction Trigger').item.json.actions[0].value).source }}"
+            },
+            {
+              "fieldName": "importance",
+              "fieldValue": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-memory",
+      "name": "Save Memory",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [660, 1500],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-credentials",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $('Slack Interaction Trigger').item.json.channel.id }}",
+        "text": "Erkenntnis wurde gespeichert!",
+        "options": {
+          "thread_ts": "={{ $('Slack Interaction Trigger').item.json.message.ts }}"
+        }
+      },
+      "id": "memory-confirmation",
+      "name": "Memory Confirmation",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [880, 1500],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error ? $json.error.message : 'Ein unerwarteter Fehler ist aufgetreten' }}"
+      },
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 1900]
+    },
+    {
+      "parameters": {
+        "channel": "={{ $json.execution ? $json.execution.customData.slack_channel_id : $('Set Variables').item.json.slack_channel_id }}",
+        "text": "Es ist ein Fehler aufgetreten. Ich konnte deine Anfrage nicht vollstaendig bearbeiten.\n\nBitte versuche es erneut oder formuliere deine Anfrage anders.",
+        "options": {}
+      },
+      "id": "error-slack-message",
+      "name": "Error Slack Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [220, 1900],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Context Loader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Context Loader": {
+      "main": [
+        [
+          {
+            "node": "User existiert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User existiert?": {
+      "main": [
+        [
+          {
+            "node": "AI Router (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Neuen User anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neuen User anlegen": {
+      "main": [
+        [
+          {
+            "node": "Willkommensnachricht",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Router (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Parse Router Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Router Response": {
+      "main": [
+        [
+          {
+            "node": "Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tavily Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Calendar Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Data Source Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Response (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Response (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Search": {
+      "main": [
+        [
+          {
+            "node": "SEO Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Search": {
+      "main": [
+        [
+          {
+            "node": "SEO Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Check": {
+      "main": [
+        [
+          {
+            "node": "DataForSEO Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Research Synthesizer (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataForSEO Keywords": {
+      "main": [
+        [
+          {
+            "node": "Research Synthesizer (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Synthesizer (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Output Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Gmail Lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "E-Mail Writer (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Lesen": {
+      "main": [
+        [
+          {
+            "node": "E-Mail Analyzer (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail Analyzer (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Output Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail Writer (Claude)": {
+      "main": [
+        [
+          {
+            "node": "E-Mail Preview (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Lookup": {
+      "main": [
+        [
+          {
+            "node": "Meeting Info extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting Info extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Meeting News Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting News Search": {
+      "main": [
+        [
+          {
+            "node": "Meeting Briefing Generator (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting Briefing Generator (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Output Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Source Switch": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CSV Download",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Response (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets lesen": {
+      "main": [
+        [
+          {
+            "node": "Data Preview & Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSV Download": {
+      "main": [
+        [
+          {
+            "node": "Data Preview & Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Preview & Schema": {
+      "main": [
+        [
+          {
+            "node": "Data Analyzer (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Analyzer (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Output Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Response (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Output Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Formatter": {
+      "main": [
+        [
+          {
+            "node": "Slack Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Response": {
+      "main": [
+        [
+          {
+            "node": "Memory Save Button",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Interaction Trigger": {
+      "main": [
+        [
+          {
+            "node": "Interaction Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interaction Switch": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+        ],
+        [
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Save Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Memory": {
+      "main": [
+        [
+          {
+            "node": "Memory Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "ai-coworker"
+    },
+    {
+      "name": "slack-bot"
+    },
+    {
+      "name": "automation"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}
