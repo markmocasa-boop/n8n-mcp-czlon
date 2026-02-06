@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770365989939,
+  "lastUpdate": 1770366316218,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "6e85c68d6259eb78b256f5ac4559ba3e665e0886",
-          "message": "chore: bump version to 2.29.3 to trigger OIDC publish\n\nThe previous workflow re-run used cached old workflow code with\nNPM_TOKEN. This version bump triggers a fresh workflow run with\nthe new OIDC Trusted Publishing configuration.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-12T13:48:11+01:00",
-          "tree_id": "75e0a58025fd75c9285d68d7eca4cbc5f0ebb877",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/6e85c68d6259eb78b256f5ac4559ba3e665e0886"
-        },
-        "date": 1765543862564,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1534,6 +1505,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b1574e12037bf235840da3fca70d4cb85ae1ba0a"
         },
         "date": 1770365989623,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6ecd82f93f641492032f111201b94ac908d3afe3",
+          "message": "Delete workflows/MO - Social Media Content Automation - VaSi.json",
+          "timestamp": "2026-02-06T09:23:10+01:00",
+          "tree_id": "0438f8d47e0249e135d5138f914cbed24f69e15a",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6ecd82f93f641492032f111201b94ac908d3afe3"
+        },
+        "date": 1770366315737,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
