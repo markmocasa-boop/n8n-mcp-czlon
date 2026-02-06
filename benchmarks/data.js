@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770214689581,
+  "lastUpdate": 1770365989939,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "fa7d0b420ec6be9688f83d148c39ed9912ff8adc",
-          "message": "ci: switch NPM publishing to Trusted Publishing (OIDC)\n\nReplace static NPM_TOKEN with OIDC-based authentication for improved\nsecurity. This uses NPM's Trusted Publishing feature which:\n- Eliminates need for long-lived tokens\n- Provides provenance attestation\n- Is the recommended approach by npm\n\nRequires configuring Trusted Publishing in npm package settings:\n- Repository owner: czlonkowski\n- Repository name: n8n-mcp\n- Workflow filename: release.yml\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-12T13:24:25+01:00",
-          "tree_id": "68a2ec850bbdd41aa04ad5bba72ed38fcef81f81",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/fa7d0b420ec6be9688f83d148c39ed9912ff8adc"
-        },
-        "date": 1765542755830,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1532,6 +1503,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/be96b1855ffdf7fde5066ebb5c28a0fc7c17edcc"
         },
         "date": 1770214689250,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b1574e12037bf235840da3fca70d4cb85ae1ba0a",
+          "message": "Add files via upload",
+          "timestamp": "2026-02-06T09:17:41+01:00",
+          "tree_id": "8c18c27dca7caaeb77c470b77d174561ccf86512",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b1574e12037bf235840da3fca70d4cb85ae1ba0a"
+        },
+        "date": 1770365989623,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
