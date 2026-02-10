@@ -1,0 +1,1596 @@
+{
+  "name": "Auto-Lead-Closer – KI Lead-Qualifizierung & Follow-up",
+  "nodes": [
+    {
+      "id": "trigger_calendly",
+      "name": "Calendly Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 100],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calendly-lead",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "authentication": "headerAuth"
+      },
+      "webhookId": "calendly-lead"
+    },
+    {
+      "id": "trigger_gmail",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [200, 360],
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyX", "value": 2, "unit": "minutes" }]
+        },
+        "filters": {
+          "readStatus": "unread",
+          "labelIds": ["CATEGORY_PRIMARY"]
+        },
+        "simple": false
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "trigger_sheet",
+      "name": "Google Sheet Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [200, 620],
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyX", "value": 1, "unit": "minutes" }]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads Inbox"
+        },
+        "event": "rowAdded"
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "normalize_calendly",
+      "name": "Normalize Calendly",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 100],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            { "name": "source", "type": "string", "value": "calendly" },
+            { "name": "name", "type": "string", "value": "={{ $json.body.payload.name }}" },
+            { "name": "email", "type": "string", "value": "={{ $json.body.payload.email }}" },
+            { "name": "company", "type": "string", "value": "={{ $json.body.payload.questions_and_answers[0].answer }}" },
+            { "name": "message", "type": "string", "value": "={{ $json.body.payload.questions_and_answers[1].answer }}" },
+            { "name": "event_type", "type": "string", "value": "={{ $json.body.payload.event_type.name }}" },
+            { "name": "scheduled_time", "type": "string", "value": "={{ $json.body.payload.scheduled_event.start_time }}" },
+            { "name": "received_at", "type": "string", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "normalize_gmail",
+      "name": "Normalize Gmail",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 360],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            { "name": "source", "type": "string", "value": "email" },
+            { "name": "name", "type": "string", "value": "={{ $json.from.split('<')[0].trim() }}" },
+            { "name": "email", "type": "string", "value": "={{ ($json.from.match(/<(.+)>/) || [])[1] || $json.from }}" },
+            { "name": "company", "type": "string", "value": "" },
+            { "name": "message", "type": "string", "value": "={{ ($json.text || $json.snippet || '').substring(0, 2000) }}" },
+            { "name": "subject", "type": "string", "value": "={{ $json.subject }}" },
+            { "name": "event_type", "type": "string", "value": "" },
+            { "name": "scheduled_time", "type": "string", "value": "" },
+            { "name": "received_at", "type": "string", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "normalize_sheet",
+      "name": "Normalize Sheet",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 620],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            { "name": "source", "type": "string", "value": "manual_sheet" },
+            { "name": "name", "type": "string", "value": "={{ $json.Name }}" },
+            { "name": "email", "type": "string", "value": "={{ $json.Email }}" },
+            { "name": "company", "type": "string", "value": "={{ $json.Company }}" },
+            { "name": "message", "type": "string", "value": "={{ $json['Message / Anliegen'] }}" },
+            { "name": "event_type", "type": "string", "value": "" },
+            { "name": "scheduled_time", "type": "string", "value": "" },
+            { "name": "received_at", "type": "string", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge_leads",
+      "name": "Merge Leads",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [720, 360],
+      "parameters": {
+        "mode": "append"
+      }
+    },
+    {
+      "id": "check_duplicate",
+      "name": "Check Duplicate",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [940, 360],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "CRM"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "if_new_lead",
+      "name": "Is New Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1160, 360],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ]
+        },
+        "combineOperation": "OR"
+      }
+    },
+    {
+      "id": "config_vars",
+      "name": "Config Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1380, 300],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "sender_name", "type": "string", "value": "Dein Name" },
+            { "name": "sender_company", "type": "string", "value": "Dein Unternehmen" },
+            { "name": "crm_sheet_id", "type": "string", "value": "GOOGLE_SHEET_ID" },
+            { "name": "slack_channel", "type": "string", "value": "#leads" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gpt_scoring",
+      "name": "GPT-4o Lead Scoring",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, 300],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.3, max_tokens: 800, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein erfahrener Sales-Analyst. Deine Aufgabe ist es, eingehende Leads zu bewerten und zu kategorisieren.\\n\\nDu arbeitest für ein Unternehmen, das Dienstleistungen im Bereich Digital Marketing, Automation und/oder E-Commerce anbietet. Die Zielkunden sind Agenturen, Freelancer und E-Commerce Brands.\\n\\n## Deine Aufgabe:\\nAnalysiere den Lead anhand aller verfügbaren Informationen und erstelle eine Bewertung.\\n\\n## Bewertungskriterien:\\n\\n**Positiv (Score erhöhen):**\\n- Klares Kaufinteresse oder konkretes Problem genannt\\n- Unternehmen/Brand erkennbar (nicht nur Gmail-Adresse)\\n- Spezifische Anfrage (nicht nur \"Infos bitte\")\\n- Termin gebucht (Calendly) = starkes Signal\\n- Budget oder Zeitrahmen erwähnt\\n- Branche passt (Marketing, E-Com, Agentur)\\n- Professionelle E-Mail-Adresse\\n\\n**Negativ (Score senken):**\\n- Generische Anfrage ohne konkretes Anliegen\\n- Spam-Signale (Links, unrealistische Versprechen)\\n- Keine Firmenzuordnung möglich\\n- Offensichtlich nur Info-Sammler\\n- Branche passt nicht\\n\\n## Output Format (STRICT JSON):\\n\\nAntworte NUR mit diesem JSON-Format, keine weitere Erklärung:\\n\\n{ \"score\": <1-10>, \"category\": \"<Hot-Buyer|Warm-Prospect|Info-Seeker|Spam>\", \"reason\": \"<2-3 Sätze warum dieser Score>\", \"key_signals\": [\"<Signal 1>\", \"<Signal 2>\", \"<Signal 3>\"], \"suggested_angle\": \"<1 Satz: Bester Ansatz für die Antwort-Mail>\", \"language\": \"<de|en>\" }\\n\\n## Kategorie-Zuordnung:\\n- Score 8-10 → \"Hot-Buyer\"\\n- Score 6-7 → \"Warm-Prospect\"\\n- Score 3-5 → \"Info-Seeker\"\\n- Score 1-2 → \"Spam\"' }, { role: 'user', content: 'Bewerte diesen Lead:\\n\\n**Quelle:** ' + $json.source + '\\n**Name:** ' + $json.name + '\\n**Email:** ' + $json.email + '\\n**Unternehmen:** ' + $json.company + '\\n**Nachricht/Anliegen:** ' + $json.message + '\\n**Event-Typ:** ' + ($json.event_type || 'N/A') + '\\n**Gebuchter Termin:** ' + ($json.scheduled_time || 'Keiner') } ] }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "parse_score",
+      "name": "Parse Score",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1820, 300],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "score", "type": "number", "value": "={{ JSON.parse($json.choices[0].message.content).score }}" },
+            { "name": "category", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).category }}" },
+            { "name": "reason", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).reason }}" },
+            { "name": "key_signals", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).key_signals.join(', ') }}" },
+            { "name": "suggested_angle", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).suggested_angle }}" },
+            { "name": "language", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).language }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "generate_lead_id",
+      "name": "Generate Lead ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2040, 300],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "lead_id", "type": "string", "value": "={{ 'LC-' + $now.format('yyyyMMdd') + '-' + Math.random().toString(36).substring(2, 5).toUpperCase() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "route_by_category",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [2260, 300],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "Spam",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "Spam",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "Info-Seeker",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "Info-Seeker",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "Warm-Prospect",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "Warm-Prospect",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "Hot-Buyer",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "Hot-Buyer",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "crm_spam",
+      "name": "CRM Log Spam",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2540, 60],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "CRM"
+        },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Lead ID", "value": "={{ $json.lead_id }}" },
+            { "column": "Name", "value": "={{ $json.name }}" },
+            { "column": "Email", "value": "={{ $json.email }}" },
+            { "column": "Company", "value": "={{ $json.company }}" },
+            { "column": "Source", "value": "={{ $json.source }}" },
+            { "column": "Message", "value": "={{ $json.message }}" },
+            { "column": "Lead Score", "value": "={{ $json.score }}" },
+            { "column": "Kategorie", "value": "Spam" },
+            { "column": "KI Bewertung", "value": "={{ $json.reason }}" },
+            { "column": "Status", "value": "Spam" },
+            { "column": "Eingegangen am", "value": "={{ $json.received_at }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "crm_entry_info",
+      "name": "CRM Eintrag Info-Seeker",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2540, 200],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Lead ID", "value": "={{ $json.lead_id }}" },
+            { "column": "Name", "value": "={{ $json.name }}" },
+            { "column": "Email", "value": "={{ $json.email }}" },
+            { "column": "Company", "value": "={{ $json.company }}" },
+            { "column": "Source", "value": "={{ $json.source }}" },
+            { "column": "Message", "value": "={{ $json.message }}" },
+            { "column": "Lead Score", "value": "={{ $json.score }}" },
+            { "column": "Kategorie", "value": "Info-Seeker" },
+            { "column": "KI Bewertung", "value": "={{ $json.reason }}" },
+            { "column": "Status", "value": "New" },
+            { "column": "Eingegangen am", "value": "={{ $json.received_at }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "crm_entry_warm",
+      "name": "CRM Eintrag Warm-Prospect",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2540, 400],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Lead ID", "value": "={{ $json.lead_id }}" },
+            { "column": "Name", "value": "={{ $json.name }}" },
+            { "column": "Email", "value": "={{ $json.email }}" },
+            { "column": "Company", "value": "={{ $json.company }}" },
+            { "column": "Source", "value": "={{ $json.source }}" },
+            { "column": "Message", "value": "={{ $json.message }}" },
+            { "column": "Lead Score", "value": "={{ $json.score }}" },
+            { "column": "Kategorie", "value": "Warm-Prospect" },
+            { "column": "KI Bewertung", "value": "={{ $json.reason }}" },
+            { "column": "Status", "value": "New" },
+            { "column": "Eingegangen am", "value": "={{ $json.received_at }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "crm_entry_hot",
+      "name": "CRM Eintrag Hot-Buyer",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2540, 600],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Lead ID", "value": "={{ $json.lead_id }}" },
+            { "column": "Name", "value": "={{ $json.name }}" },
+            { "column": "Email", "value": "={{ $json.email }}" },
+            { "column": "Company", "value": "={{ $json.company }}" },
+            { "column": "Source", "value": "={{ $json.source }}" },
+            { "column": "Message", "value": "={{ $json.message }}" },
+            { "column": "Lead Score", "value": "={{ $json.score }}" },
+            { "column": "Kategorie", "value": "Hot-Buyer" },
+            { "column": "KI Bewertung", "value": "={{ $json.reason }}" },
+            { "column": "Status", "value": "New" },
+            { "column": "Eingegangen am", "value": "={{ $json.received_at }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "slack_hot_lead",
+      "name": "Slack Hot Lead Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2780, 600],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": { "__rl": true, "mode": "name", "value": "#leads" },
+        "text": "={{ '🔥 *NEUER HOT LEAD!* 🔥\\n\\n*Name:* ' + $json.name + '\\n*Unternehmen:* ' + $json.company + '\\n*Score:* ' + $json.score + '/10\\n*Quelle:* ' + $json.source + '\\n\\n*Anliegen:* ' + $json.message + '\\n\\n*KI-Bewertung:* ' + $json.reason + '\\n\\n*Empfohlener Ansatz:* ' + $json.suggested_angle + '\\n\\n✉️ Erstmail wird automatisch gesendet.\\n📅 Follow-up #1 geplant für: ' + $now.plus({days: 3}).toFormat('dd.MM.yyyy') }}",
+        "otherOptions": {}
+      },
+      "credentials": {
+        "slackApi": { "id": "", "name": "Slack API" }
+      }
+    },
+    {
+      "id": "wait_30s_info",
+      "name": "Wait 30s (Info)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2780, 200],
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "wait_30s_warm",
+      "name": "Wait 30s (Warm)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2780, 400],
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "wait_30s_hot",
+      "name": "Wait 30s (Hot)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3020, 600],
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "gpt_email_info",
+      "name": "GPT-4o Info-Mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3000, 200],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 600, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein erfahrener Sales-Texter. Schreibe personalisierte Erstantwort-E-Mails an potenzielle Kunden.\\n\\n## Regeln:\\n- Kurz und prägnant (max. 150 Wörter)\\n- Persönlich – beziehe dich auf das spezifische Anliegen des Leads\\n- Professionell aber menschlich – kein Corporate-Sprech\\n- Ein klarer CTA (Call-to-Action) am Ende\\n- Keine Floskeln wie \"Ich hoffe, diese E-Mail findet Sie wohlauf\"\\n- Antworte in der Sprache des Leads (deutsch oder englisch)\\n- Kein Markdown in der E-Mail, nur plain text mit Absätzen\\n\\n## Tonalität: Info-Seeker\\nHilfreich, Educational, soft CTA. Biete eine Ressource oder einen Tipp an.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"<E-Mail Betreff>\", \"body\": \"<E-Mail Text>\", \"cta_type\": \"<book_call|reply|link>\" }' }, { role: 'user', content: 'Schreibe eine Erstantwort-E-Mail für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Quelle:** ' + $json.source + '\\n**Kategorie:** Info-Seeker\\n**Score:** ' + $json.score + '\\n**Empfohlener Ansatz:** ' + $json.suggested_angle + '\\n**Sprache:** ' + $json.language + '\\n\\nSende-Name: ' + $json.sender_name + '\\nSende-Unternehmen: ' + $json.sender_company } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "gpt_email_warm",
+      "name": "GPT-4o Warm-Mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3000, 400],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 600, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein erfahrener Sales-Texter. Schreibe personalisierte Erstantwort-E-Mails an potenzielle Kunden.\\n\\n## Regeln:\\n- Kurz und prägnant (max. 150 Wörter)\\n- Persönlich – beziehe dich auf das spezifische Anliegen des Leads\\n- Professionell aber menschlich – kein Corporate-Sprech\\n- Ein klarer CTA (Call-to-Action) am Ende\\n- Keine Floskeln wie \"Ich hoffe, diese E-Mail findet Sie wohlauf\"\\n- Antworte in der Sprache des Leads (deutsch oder englisch)\\n- Kein Markdown in der E-Mail, nur plain text mit Absätzen\\n\\n## Tonalität: Warm-Prospect\\nInteressiert, fragend, Mehrwert bieten. Stelle eine relevante Frage.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"<E-Mail Betreff>\", \"body\": \"<E-Mail Text>\", \"cta_type\": \"<book_call|reply|link>\" }' }, { role: 'user', content: 'Schreibe eine Erstantwort-E-Mail für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Quelle:** ' + $json.source + '\\n**Kategorie:** Warm-Prospect\\n**Score:** ' + $json.score + '\\n**Empfohlener Ansatz:** ' + $json.suggested_angle + '\\n**Sprache:** ' + $json.language + '\\n\\nSende-Name: ' + $json.sender_name + '\\nSende-Unternehmen: ' + $json.sender_company } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "gpt_email_hot",
+      "name": "GPT-4o Hot-Mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3240, 600],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 600, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein erfahrener Sales-Texter. Schreibe personalisierte Erstantwort-E-Mails an potenzielle Kunden.\\n\\n## Regeln:\\n- Kurz und prägnant (max. 150 Wörter)\\n- Persönlich – beziehe dich auf das spezifische Anliegen des Leads\\n- Professionell aber menschlich – kein Corporate-Sprech\\n- Ein klarer CTA (Call-to-Action) am Ende\\n- Keine Floskeln wie \"Ich hoffe, diese E-Mail findet Sie wohlauf\"\\n- Antworte in der Sprache des Leads (deutsch oder englisch)\\n- Kein Markdown in der E-Mail, nur plain text mit Absätzen\\n\\n## Tonalität: Hot-Buyer\\nDirekt, konkret, Value-first. Zeige sofort, dass du helfen kannst.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"<E-Mail Betreff>\", \"body\": \"<E-Mail Text>\", \"cta_type\": \"<book_call|reply|link>\" }' }, { role: 'user', content: 'Schreibe eine Erstantwort-E-Mail für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Quelle:** ' + $json.source + '\\n**Kategorie:** Hot-Buyer\\n**Score:** ' + $json.score + '\\n**Empfohlener Ansatz:** ' + $json.suggested_angle + '\\n**Sprache:** ' + $json.language + '\\n\\nSende-Name: ' + $json.sender_name + '\\nSende-Unternehmen: ' + $json.sender_company } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "parse_email_info",
+      "name": "Parse Email (Info)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3220, 200],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "generated_subject", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).subject }}" },
+            { "name": "generated_body", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).body }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "parse_email_warm",
+      "name": "Parse Email (Warm)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3220, 400],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "generated_subject", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).subject }}" },
+            { "name": "generated_body", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).body }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "parse_email_hot",
+      "name": "Parse Email (Hot)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3460, 600],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "name": "generated_subject", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).subject }}" },
+            { "name": "generated_body", "type": "string", "value": "={{ JSON.parse($json.choices[0].message.content).body }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send_gmail_info",
+      "name": "Send Info-Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [3440, 200],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.generated_subject }}",
+        "message": "={{ $json.generated_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "send_gmail_warm",
+      "name": "Send Warm-Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [3440, 400],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.generated_subject }}",
+        "message": "={{ $json.generated_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "send_gmail_hot",
+      "name": "Send Hot-Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [3680, 600],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.generated_subject }}",
+        "message": "={{ $json.generated_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_contacted_info",
+      "name": "CRM Update Contacted (Info)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3660, 200],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Contacted" },
+            { "column": "Erste E-Mail gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Follow-up 1 geplant", "value": "={{ $now.plus({days: 7}).toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_contacted_warm",
+      "name": "CRM Update Contacted (Warm)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3660, 400],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Contacted" },
+            { "column": "Erste E-Mail gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Follow-up 1 geplant", "value": "={{ $now.plus({days: 3}).toISO() }}" },
+            { "column": "Follow-up 2 geplant", "value": "={{ $now.plus({days: 7}).toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_contacted_hot",
+      "name": "CRM Update Contacted (Hot)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3900, 600],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Contacted" },
+            { "column": "Erste E-Mail gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Follow-up 1 geplant", "value": "={{ $now.plus({days: 3}).toISO() }}" },
+            { "column": "Follow-up 2 geplant", "value": "={{ $now.plus({days: 7}).toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "wait_7d_info",
+      "name": "Wait 7 Tage (Info)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3880, 200],
+      "parameters": {
+        "amount": 7,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "wait_3d_warm",
+      "name": "Wait 3 Tage (Warm)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3880, 400],
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "wait_3d_hot",
+      "name": "Wait 3 Tage (Hot)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4120, 600],
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "check_reply_info",
+      "name": "Check Reply (Info)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4100, 200],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $json.email + ' subject:' + $json.generated_subject }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "check_reply_warm",
+      "name": "Check Reply (Warm)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4100, 400],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $json.email + ' subject:' + $json.generated_subject }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "check_reply_hot",
+      "name": "Check Reply (Hot)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4340, 600],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $json.email + ' subject:' + $json.generated_subject }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "if_no_reply_info",
+      "name": "No Reply? (Info)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4320, 200],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isEmpty" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "if_no_reply_warm",
+      "name": "No Reply? (Warm)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4320, 400],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isEmpty" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "if_no_reply_hot",
+      "name": "No Reply? (Hot)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4560, 600],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isEmpty" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gpt_fu1_info",
+      "name": "GPT-4o Follow-up (Info)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4540, 160],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein Sales-Texter. Schreibe ein freundliches Follow-up zu einer vorherigen E-Mail.\\n\\n## Regeln:\\n- Kurz (max. 100 Wörter)\\n- Beziehe dich auf die vorherige Mail – nicht komplett neu anfangen\\n- Biete einen neuen Mehrwert oder Blickwinkel\\n- Nicht bedürftig oder aufdringlich klingen\\n- Kein \"Nur mal nachfragen ob Sie meine Mail gesehen haben\"\\n- Antworte in der Sprache des Leads\\n- Plain text, kein Markdown\\n- Dies ist das LETZTE Follow-up. Mache es klar, dass du nicht weiter nachfassen wirst.\\n- Biete eine \"easy out\" – z.B. \"Falls es gerade nicht passt, kein Problem.\"\\n- Halte die Tür offen für die Zukunft.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"Re: <originaler Betreff>\", \"body\": \"<Follow-up Text>\" }' }, { role: 'user', content: 'Schreibe Follow-up für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Kategorie:** Info-Seeker\\n**Vorherige E-Mail Betreff:** ' + $json.generated_subject + '\\n**Vorherige E-Mail Body:** ' + $json.generated_body + '\\n**Tage seit letztem Kontakt:** 7' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "gpt_fu1_warm",
+      "name": "GPT-4o Follow-up 1 (Warm)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4540, 360],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein Sales-Texter. Schreibe ein freundliches Follow-up zu einer vorherigen E-Mail.\\n\\n## Regeln:\\n- Kurz (max. 100 Wörter)\\n- Beziehe dich auf die vorherige Mail – nicht komplett neu anfangen\\n- Biete einen neuen Mehrwert oder Blickwinkel\\n- Nicht bedürftig oder aufdringlich klingen\\n- Kein \"Nur mal nachfragen ob Sie meine Mail gesehen haben\"\\n- Antworte in der Sprache des Leads\\n- Plain text, kein Markdown\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"Re: <originaler Betreff>\", \"body\": \"<Follow-up Text>\" }' }, { role: 'user', content: 'Schreibe Follow-up #1 für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Kategorie:** Warm-Prospect\\n**Vorherige E-Mail Betreff:** ' + $json.generated_subject + '\\n**Vorherige E-Mail Body:** ' + $json.generated_body + '\\n**Tage seit letztem Kontakt:** 3' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "gpt_fu1_hot",
+      "name": "GPT-4o Follow-up 1 (Hot)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4780, 560],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein Sales-Texter. Schreibe ein freundliches Follow-up zu einer vorherigen E-Mail.\\n\\n## Regeln:\\n- Kurz (max. 100 Wörter)\\n- Beziehe dich auf die vorherige Mail – nicht komplett neu anfangen\\n- Biete einen neuen Mehrwert oder Blickwinkel\\n- Nicht bedürftig oder aufdringlich klingen\\n- Kein \"Nur mal nachfragen ob Sie meine Mail gesehen haben\"\\n- Antworte in der Sprache des Leads\\n- Plain text, kein Markdown\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"Re: <originaler Betreff>\", \"body\": \"<Follow-up Text>\" }' }, { role: 'user', content: 'Schreibe Follow-up #1 für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Kategorie:** Hot-Buyer\\n**Vorherige E-Mail Betreff:** ' + $json.generated_subject + '\\n**Vorherige E-Mail Body:** ' + $json.generated_body + '\\n**Tage seit letztem Kontakt:** 3' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "send_fu1_info",
+      "name": "Send Follow-up (Info)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4760, 160],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ JSON.parse($json.choices[0].message.content).subject }}",
+        "message": "={{ JSON.parse($json.choices[0].message.content).body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "send_fu1_warm",
+      "name": "Send Follow-up 1 (Warm)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4760, 360],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ JSON.parse($json.choices[0].message.content).subject }}",
+        "message": "={{ JSON.parse($json.choices[0].message.content).body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "send_fu1_hot",
+      "name": "Send Follow-up 1 (Hot)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [5000, 560],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ JSON.parse($json.choices[0].message.content).subject }}",
+        "message": "={{ JSON.parse($json.choices[0].message.content).body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_fu1_info",
+      "name": "CRM Update FU1 (Info)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4980, 160],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Follow-up 1" },
+            { "column": "Follow-up 1 gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_fu1_warm",
+      "name": "CRM Update FU1 (Warm)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4980, 360],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Follow-up 1" },
+            { "column": "Follow-up 1 gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_fu1_hot",
+      "name": "CRM Update FU1 (Hot)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [5220, 560],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Follow-up 1" },
+            { "column": "Follow-up 1 gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "wait_4d_warm",
+      "name": "Wait 4 Tage (Warm FU2)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [5200, 360],
+      "parameters": {
+        "amount": 4,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "wait_4d_hot",
+      "name": "Wait 4 Tage (Hot FU2)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [5440, 560],
+      "parameters": {
+        "amount": 4,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "check_reply2_warm",
+      "name": "Check Reply 2 (Warm)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [5420, 360],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $json.email + ' subject:' + $json.generated_subject }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "check_reply2_hot",
+      "name": "Check Reply 2 (Hot)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [5660, 560],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $json.email + ' subject:' + $json.generated_subject }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "if_no_reply2_warm",
+      "name": "No Reply 2? (Warm)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [5640, 360],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isEmpty" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "if_no_reply2_hot",
+      "name": "No Reply 2? (Hot)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [5880, 560],
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isEmpty" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gpt_fu2_warm",
+      "name": "GPT-4o Follow-up 2 (Warm)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5860, 320],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein Sales-Texter. Schreibe ein freundliches Follow-up zu einer vorherigen E-Mail.\\n\\n## Regeln:\\n- Kurz (max. 100 Wörter)\\n- Beziehe dich auf die vorherige Mail – nicht komplett neu anfangen\\n- Biete einen neuen Mehrwert oder Blickwinkel\\n- Nicht bedürftig oder aufdringlich klingen\\n- Antworte in der Sprache des Leads\\n- Plain text, kein Markdown\\n- Dies ist das LETZTE Follow-up. Mache es klar, dass du nicht weiter nachfassen wirst.\\n- Biete eine \"easy out\" – z.B. \"Falls es gerade nicht passt, kein Problem.\"\\n- Halte die Tür offen für die Zukunft.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"Re: <originaler Betreff>\", \"body\": \"<Follow-up Text>\" }' }, { role: 'user', content: 'Schreibe Follow-up #2 (LETZTES) für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Kategorie:** Warm-Prospect\\n**Vorherige E-Mail Betreff:** ' + $json.generated_subject + '\\n**Tage seit letztem Kontakt:** 4' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "gpt_fu2_hot",
+      "name": "GPT-4o Follow-up 2 (Hot)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6100, 520],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', temperature: 0.5, max_tokens: 500, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Du bist ein Sales-Texter. Schreibe ein freundliches Follow-up zu einer vorherigen E-Mail.\\n\\n## Regeln:\\n- Kurz (max. 100 Wörter)\\n- Beziehe dich auf die vorherige Mail – nicht komplett neu anfangen\\n- Biete einen neuen Mehrwert oder Blickwinkel\\n- Nicht bedürftig oder aufdringlich klingen\\n- Antworte in der Sprache des Leads\\n- Plain text, kein Markdown\\n- Dies ist das LETZTE Follow-up. Mache es klar, dass du nicht weiter nachfassen wirst.\\n- Biete eine \"easy out\" – z.B. \"Falls es gerade nicht passt, kein Problem.\"\\n- Halte die Tür offen für die Zukunft.\\n\\n## Output Format (STRICT JSON):\\n{ \"subject\": \"Re: <originaler Betreff>\", \"body\": \"<Follow-up Text>\" }' }, { role: 'user', content: 'Schreibe Follow-up #2 (LETZTES) für diesen Lead:\\n\\n**Name:** ' + $json.name + '\\n**Unternehmen:** ' + $json.company + '\\n**Anliegen:** ' + $json.message + '\\n**Kategorie:** Hot-Buyer\\n**Vorherige E-Mail Betreff:** ' + $json.generated_subject + '\\n**Tage seit letztem Kontakt:** 4' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "OpenAI API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000
+    },
+    {
+      "id": "send_fu2_warm",
+      "name": "Send Follow-up 2 (Warm)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [6080, 320],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ JSON.parse($json.choices[0].message.content).subject }}",
+        "message": "={{ JSON.parse($json.choices[0].message.content).body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "send_fu2_hot",
+      "name": "Send Follow-up 2 (Hot)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [6320, 520],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ JSON.parse($json.choices[0].message.content).subject }}",
+        "message": "={{ JSON.parse($json.choices[0].message.content).body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_fu2_warm",
+      "name": "CRM Update FU2 (Warm)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [6300, 320],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Follow-up 2" },
+            { "column": "Follow-up 2 gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "id": "update_crm_fu2_hot",
+      "name": "CRM Update FU2 (Hot)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [6540, 520],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "CRM" },
+        "columns": {
+          "mappingMode": "manual",
+          "values": [
+            { "column": "Status", "value": "Follow-up 2" },
+            { "column": "Follow-up 2 gesendet", "value": "={{ $now.toISO() }}" },
+            { "column": "Letzte Aktivität", "value": "={{ $now.toISO() }}" }
+          ]
+        },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Lead ID", "lookupValue": "={{ $json.lead_id }}" }]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" }
+      }
+    }
+  ],
+  "connections": {
+    "Calendly Webhook": {
+      "main": [[{ "node": "Normalize Calendly", "type": "main", "index": 0 }]]
+    },
+    "Gmail Trigger": {
+      "main": [[{ "node": "Normalize Gmail", "type": "main", "index": 0 }]]
+    },
+    "Google Sheet Trigger": {
+      "main": [[{ "node": "Normalize Sheet", "type": "main", "index": 0 }]]
+    },
+    "Normalize Calendly": {
+      "main": [[{ "node": "Merge Leads", "type": "main", "index": 0 }]]
+    },
+    "Normalize Gmail": {
+      "main": [[{ "node": "Merge Leads", "type": "main", "index": 0 }]]
+    },
+    "Normalize Sheet": {
+      "main": [[{ "node": "Merge Leads", "type": "main", "index": 0 }]]
+    },
+    "Merge Leads": {
+      "main": [[{ "node": "Check Duplicate", "type": "main", "index": 0 }]]
+    },
+    "Check Duplicate": {
+      "main": [[{ "node": "Is New Lead?", "type": "main", "index": 0 }]]
+    },
+    "Is New Lead?": {
+      "main": [
+        [{ "node": "Config Variables", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Config Variables": {
+      "main": [[{ "node": "GPT-4o Lead Scoring", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Lead Scoring": {
+      "main": [[{ "node": "Parse Score", "type": "main", "index": 0 }]]
+    },
+    "Parse Score": {
+      "main": [[{ "node": "Generate Lead ID", "type": "main", "index": 0 }]]
+    },
+    "Generate Lead ID": {
+      "main": [[{ "node": "Route by Category", "type": "main", "index": 0 }]]
+    },
+    "Route by Category": {
+      "main": [
+        [{ "node": "CRM Log Spam", "type": "main", "index": 0 }],
+        [{ "node": "CRM Eintrag Info-Seeker", "type": "main", "index": 0 }],
+        [{ "node": "CRM Eintrag Warm-Prospect", "type": "main", "index": 0 }],
+        [{ "node": "CRM Eintrag Hot-Buyer", "type": "main", "index": 0 }]
+      ]
+    },
+    "CRM Eintrag Info-Seeker": {
+      "main": [[{ "node": "Wait 30s (Info)", "type": "main", "index": 0 }]]
+    },
+    "CRM Eintrag Warm-Prospect": {
+      "main": [[{ "node": "Wait 30s (Warm)", "type": "main", "index": 0 }]]
+    },
+    "CRM Eintrag Hot-Buyer": {
+      "main": [
+        [
+          { "node": "Slack Hot Lead Alert", "type": "main", "index": 0 },
+          { "node": "Wait 30s (Hot)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Slack Hot Lead Alert": {
+      "main": [[]]
+    },
+    "Wait 30s (Info)": {
+      "main": [[{ "node": "GPT-4o Info-Mail", "type": "main", "index": 0 }]]
+    },
+    "Wait 30s (Warm)": {
+      "main": [[{ "node": "GPT-4o Warm-Mail", "type": "main", "index": 0 }]]
+    },
+    "Wait 30s (Hot)": {
+      "main": [[{ "node": "GPT-4o Hot-Mail", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Info-Mail": {
+      "main": [[{ "node": "Parse Email (Info)", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Warm-Mail": {
+      "main": [[{ "node": "Parse Email (Warm)", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Hot-Mail": {
+      "main": [[{ "node": "Parse Email (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Parse Email (Info)": {
+      "main": [[{ "node": "Send Info-Mail", "type": "main", "index": 0 }]]
+    },
+    "Parse Email (Warm)": {
+      "main": [[{ "node": "Send Warm-Mail", "type": "main", "index": 0 }]]
+    },
+    "Parse Email (Hot)": {
+      "main": [[{ "node": "Send Hot-Mail", "type": "main", "index": 0 }]]
+    },
+    "Send Info-Mail": {
+      "main": [[{ "node": "CRM Update Contacted (Info)", "type": "main", "index": 0 }]]
+    },
+    "Send Warm-Mail": {
+      "main": [[{ "node": "CRM Update Contacted (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Send Hot-Mail": {
+      "main": [[{ "node": "CRM Update Contacted (Hot)", "type": "main", "index": 0 }]]
+    },
+    "CRM Update Contacted (Info)": {
+      "main": [[{ "node": "Wait 7 Tage (Info)", "type": "main", "index": 0 }]]
+    },
+    "CRM Update Contacted (Warm)": {
+      "main": [[{ "node": "Wait 3 Tage (Warm)", "type": "main", "index": 0 }]]
+    },
+    "CRM Update Contacted (Hot)": {
+      "main": [[{ "node": "Wait 3 Tage (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Wait 7 Tage (Info)": {
+      "main": [[{ "node": "Check Reply (Info)", "type": "main", "index": 0 }]]
+    },
+    "Wait 3 Tage (Warm)": {
+      "main": [[{ "node": "Check Reply (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Wait 3 Tage (Hot)": {
+      "main": [[{ "node": "Check Reply (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Check Reply (Info)": {
+      "main": [[{ "node": "No Reply? (Info)", "type": "main", "index": 0 }]]
+    },
+    "Check Reply (Warm)": {
+      "main": [[{ "node": "No Reply? (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Check Reply (Hot)": {
+      "main": [[{ "node": "No Reply? (Hot)", "type": "main", "index": 0 }]]
+    },
+    "No Reply? (Info)": {
+      "main": [
+        [{ "node": "GPT-4o Follow-up (Info)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "No Reply? (Warm)": {
+      "main": [
+        [{ "node": "GPT-4o Follow-up 1 (Warm)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "No Reply? (Hot)": {
+      "main": [
+        [{ "node": "GPT-4o Follow-up 1 (Hot)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "GPT-4o Follow-up (Info)": {
+      "main": [[{ "node": "Send Follow-up (Info)", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Follow-up 1 (Warm)": {
+      "main": [[{ "node": "Send Follow-up 1 (Warm)", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Follow-up 1 (Hot)": {
+      "main": [[{ "node": "Send Follow-up 1 (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Send Follow-up (Info)": {
+      "main": [[{ "node": "CRM Update FU1 (Info)", "type": "main", "index": 0 }]]
+    },
+    "Send Follow-up 1 (Warm)": {
+      "main": [[{ "node": "CRM Update FU1 (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Send Follow-up 1 (Hot)": {
+      "main": [[{ "node": "CRM Update FU1 (Hot)", "type": "main", "index": 0 }]]
+    },
+    "CRM Update FU1 (Warm)": {
+      "main": [[{ "node": "Wait 4 Tage (Warm FU2)", "type": "main", "index": 0 }]]
+    },
+    "CRM Update FU1 (Hot)": {
+      "main": [[{ "node": "Wait 4 Tage (Hot FU2)", "type": "main", "index": 0 }]]
+    },
+    "Wait 4 Tage (Warm FU2)": {
+      "main": [[{ "node": "Check Reply 2 (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Wait 4 Tage (Hot FU2)": {
+      "main": [[{ "node": "Check Reply 2 (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Check Reply 2 (Warm)": {
+      "main": [[{ "node": "No Reply 2? (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Check Reply 2 (Hot)": {
+      "main": [[{ "node": "No Reply 2? (Hot)", "type": "main", "index": 0 }]]
+    },
+    "No Reply 2? (Warm)": {
+      "main": [
+        [{ "node": "GPT-4o Follow-up 2 (Warm)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "No Reply 2? (Hot)": {
+      "main": [
+        [{ "node": "GPT-4o Follow-up 2 (Hot)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "GPT-4o Follow-up 2 (Warm)": {
+      "main": [[{ "node": "Send Follow-up 2 (Warm)", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Follow-up 2 (Hot)": {
+      "main": [[{ "node": "Send Follow-up 2 (Hot)", "type": "main", "index": 0 }]]
+    },
+    "Send Follow-up 2 (Warm)": {
+      "main": [[{ "node": "CRM Update FU2 (Warm)", "type": "main", "index": 0 }]]
+    },
+    "Send Follow-up 2 (Hot)": {
+      "main": [[{ "node": "CRM Update FU2 (Hot)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "lead-management" },
+    { "name": "ai-automation" },
+    { "name": "crm" }
+  ]
+}
