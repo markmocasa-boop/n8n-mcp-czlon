@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770704154783,
+  "lastUpdate": 1770723337097,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "551445bcd5b8bd16fb273a3a129142e50401ed99",
-          "message": "fix: revert to Node 20 and use granular NPM token\n\nNPM classic tokens were revoked on Dec 9, 2025. OIDC trusted publishing\nrequires npm >= 11.5.1 which caused lockfile sync issues with npm ci.\n\nReverted to Node 20 with granular access token approach:\n- Removed OIDC permissions block\n- Removed npm upgrade step\n- Restored NODE_AUTH_TOKEN usage\n- Removed --provenance flag\n\nUser created new granular token with \"Bypass 2FA\" enabled.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-12T16:22:04+01:00",
-          "tree_id": "ca956e8b4150654d91afa6662138a60406f46e99",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/551445bcd5b8bd16fb273a3a129142e50401ed99"
-        },
-        "date": 1765553025512,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1538,6 +1509,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3cb37c7988c0d6acb2c19b45047849ffbc775df6"
         },
         "date": 1770704154137,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab978411efe67d3331b8485eb7d3f784abca219a",
+          "message": "Merge pull request #23 from markmocasa-boop/claude/offer-comprehensibility-checker-WoJ2o\n\nAdd Angebots-Verständlichkeits-Checker workflow",
+          "timestamp": "2026-02-10T12:33:39+01:00",
+          "tree_id": "cf0e72dd6097d3b09bc77e638045af7723689537",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ab978411efe67d3331b8485eb7d3f784abca219a"
+        },
+        "date": 1770723336651,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
