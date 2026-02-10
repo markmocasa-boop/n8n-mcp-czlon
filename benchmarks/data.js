@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770366316218,
+  "lastUpdate": 1770704154783,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "c6f3733fbd6de37b1514f5800cb8d43bded30eee",
-          "message": "fix: upgrade npm for OIDC trusted publishing support\n\nOIDC trusted publishing requires npm >= 11.5.1, but Node.js 20/22\nships with npm 10.x. Added explicit npm upgrade step before publish.\n\nAlso upgraded to Node.js 22 for better npm compatibility.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-12T14:17:23+01:00",
-          "tree_id": "9ba01f9525d17511d27acffe82237b3ec98b5e23",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/c6f3733fbd6de37b1514f5800cb8d43bded30eee"
-        },
-        "date": 1765545538067,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1536,6 +1507,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6ecd82f93f641492032f111201b94ac908d3afe3"
         },
         "date": 1770366315737,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3cb37c7988c0d6acb2c19b45047849ffbc775df6",
+          "message": "Merge pull request #22 from markmocasa-boop/claude/ai-lead-qualifier-Idqjj\n\nAdd Auto-Lead-Closer KI Lead-Qualifier workflow",
+          "timestamp": "2026-02-10T07:13:47+01:00",
+          "tree_id": "2d3202cadf3f9b0c9acfdf65ea9577d0e54dc240",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3cb37c7988c0d6acb2c19b45047849ffbc775df6"
+        },
+        "date": 1770704154137,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
