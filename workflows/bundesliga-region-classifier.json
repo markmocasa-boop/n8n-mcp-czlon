@@ -1,0 +1,199 @@
+{
+  "name": "Bundesliga Region Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bundesliga-regions",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "bundesliga-region-classifier"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openligadb.de/getbltable/bl1/2025",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "fetch-standings",
+      "name": "Bundesliga Tabelle laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 300],
+      "notes": "Fetches current Bundesliga standings from OpenLigaDB (free, no auth required)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the Bundesliga standings into a structured list for the AI classifier\nconst standings = $input.all().map(item => item.json);\n\nconst formatted = standings.map((team, idx) => ({\n  position: idx + 1,\n  verein: team.teamName || team.shortName || 'Unbekannt',\n  punkte: team.points ?? 0,\n  tore: `${team.goals ?? 0}:${team.opponentGoals ?? 0}`,\n  diff: (team.goalDiff != null) ? team.goalDiff : ((team.goals ?? 0) - (team.opponentGoals ?? 0))\n}));\n\nreturn [{ json: { tabelle: formatted } }];"
+      },
+      "id": "format-standings",
+      "name": "Tabelle formatieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300],
+      "notes": "Formats raw API data into a clean standings list for classification"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Du erhältst die aktuelle Bundesliga-Tabelle als strukturierte Liste:\n{{ JSON.stringify($json.tabelle, null, 2) }}\n\nOrdne jeden Verein genau EINER geografischen Region zu und gib das Ergebnis als Markdown aus.",
+        "hasOutputParser": false,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Du bist ein Datenanalyst für deutschen Fußball.\n\nDeine Aufgabe: Ordne jeden Verein genau EINER geografischen Region zu und gib das Ergebnis als Markdown aus.\n\n## REGIONSZUORDNUNG (nach Bundesland des Vereinssitzes)\n\n**Nord:** Schleswig-Holstein, Hamburg, Bremen, Niedersachsen, Mecklenburg-Vorpommern\n**West:** Nordrhein-Westfalen, Rheinland-Pfalz, Saarland, Hessen\n**Süd:** Bayern, Baden-Württemberg\n**Ost:** Berlin, Brandenburg, Sachsen, Sachsen-Anhalt, Thüringen\n\nBekannte Zuordnungen (nutze dein Wissen über die Vereinsstandorte):\n- FC Bayern München → Süd (Bayern)\n- Borussia Dortmund → West (NRW)\n- RB Leipzig → Ost (Sachsen)\n- Bayer Leverkusen → West (NRW)\n- VfB Stuttgart → Süd (Baden-Württemberg)\n- Eintracht Frankfurt → West (Hessen)\n- VfL Wolfsburg → Nord (Niedersachsen)\n- SC Freiburg → Süd (Baden-Württemberg)\n- TSG Hoffenheim → Süd (Baden-Württemberg)\n- 1. FC Union Berlin → Ost (Berlin)\n- Werder Bremen → Nord (Bremen)\n- 1. FSV Mainz 05 → West (Rheinland-Pfalz)\n- FC Augsburg → Süd (Bayern)\n- Borussia Mönchengladbach → West (NRW)\n- VfL Bochum → West (NRW)\n- 1. FC Heidenheim → Süd (Baden-Württemberg)\n- FC St. Pauli → Nord (Hamburg)\n- Holstein Kiel → Nord (Schleswig-Holstein)\n- SV Darmstadt 98 → West (Hessen)\n- 1. FC Köln → West (NRW)\n\nFalls ein Verein nicht in dieser Liste steht, leite die Region aus dem bekannten Vereinssitz ab. Wenn unsicher, wähle die plausibelste Region und füge \"(unsicher)\" hinter dem Vereinsnamen hinzu.\n\n## OUTPUT-FORMAT\n\nGib ausschließlich folgendes Markdown aus – keine Einleitung, keine Erklärung, kein Zusatztext:\n\n## ⬆️ Nord\n\n| Pos | Verein | Punkte | Tore | Diff |\n|-----|--------|--------|------|------|\n| ... | ...    | ...    | ...  | ...  |\n\n## ⬅️ West\n\n| Pos | Verein | Punkte | Tore | Diff |\n|-----|--------|--------|------|------|\n| ... | ...    | ...    | ...  | ...  |\n\n## ⬇️ Süd\n\n| Pos | Verein | Punkte | Tore | Diff |\n|-----|--------|--------|------|------|\n| ... | ...    | ...    | ...  | ...  |\n\n## ➡️ Ost\n\n| Pos | Verein | Punkte | Tore | Diff |\n|-----|--------|--------|------|------|\n| ... | ...    | ...    | ...  | ...  |\n\n## REGELN\n- Behalte innerhalb jeder Region die Original-Tabellenposition bei\n- Falls eine Region keine Vereine hat, schreibe \"Keine Vereine in dieser Region\"\n- Gib NUR Markdown aus, nichts anderes"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [780, 300],
+      "id": "classify-regions",
+      "name": "Regionen klassifizieren",
+      "notes": "Uses AI to classify each Bundesliga team into geographic regions (Nord, West, Süd, Ost)"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [780, 520],
+      "id": "openai-model",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.text }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/markdown; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Markdown Antwort",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1040, 300],
+      "notes": "Returns the classified Markdown table as webhook response"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Bundesliga Tabelle laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bundesliga Tabelle laden": {
+      "main": [
+        [
+          {
+            "node": "Tabelle formatieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tabelle formatieren": {
+      "main": [
+        [
+          {
+            "node": "Regionen klassifizieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Regionen klassifizieren",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Regionen klassifizieren": {
+      "main": [
+        [
+          {
+            "node": "Markdown Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "bundesliga-region-classifier-v1"
+  },
+  "tags": [
+    {
+      "name": "Bundesliga",
+      "createdAt": "2026-02-10T00:00:00.000Z",
+      "updatedAt": "2026-02-10T00:00:00.000Z"
+    },
+    {
+      "name": "Sport",
+      "createdAt": "2026-02-10T00:00:00.000Z",
+      "updatedAt": "2026-02-10T00:00:00.000Z"
+    },
+    {
+      "name": "AI Classification",
+      "createdAt": "2026-02-10T00:00:00.000Z",
+      "updatedAt": "2026-02-10T00:00:00.000Z"
+    }
+  ],
+  "pinData": {}
+}
