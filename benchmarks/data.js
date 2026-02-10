@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770725822804,
+  "lastUpdate": 1770733628184,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "562f4b0c4ecb98d3e9c8993ea4a911f64a5d7c40",
-          "message": "feat: add _cnd conditional operator support and n8n 2.0+ executeWorkflowTrigger fix (#495)\n\n* feat: add _cnd conditional operator support and n8n 2.0+ executeWorkflowTrigger fix\n\nAdded:\n- Support for all 12 _cnd operators in displayOptions validation (eq, not, gte, lte, gt, lt, between, startsWith, endsWith, includes, regex, exists)\n- Version-based visibility checking with @version in config\n- 42 new unit tests for _cnd operators\n\nFixed:\n- n8n 2.0+ breaking change: executeWorkflowTrigger now recognized as activatable trigger\n- Removed outdated validation blocking Execute Workflow Trigger workflows\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* fix: harden _cnd operators and add edge case tests\n\n- Add try/catch for invalid regex patterns in regex operator\n- Add structure validation for between operator (from/to fields)\n- Add 5 new edge case tests for invalid inputs\n- Bump version to 2.30.1\n- Resolve merge conflict with main (n8n 2.0 update)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* fix: update workflow activation tests for n8n 2.0+ executeWorkflowTrigger\n\n- Update test to expect SUCCESS for executeWorkflowTrigger-only workflows\n- Remove outdated assertion about \"executeWorkflowTrigger cannot activate\"\n- executeWorkflowTrigger is now a valid activatable trigger in n8n 2.0+\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* test: skip flaky versionId test pending n8n 2.0 investigation\n\nThe versionId behavior appears to have changed in n8n 2.0 - simple\nname updates may no longer trigger versionId changes. This needs\ninvestigation but is unrelated to the _cnd operator PR.\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-17T18:37:55+01:00",
-          "tree_id": "77fb60c370c021171dab06a01f19e0d523c926ba",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/562f4b0c4ecb98d3e9c8993ea4a911f64a5d7c40"
-        },
-        "date": 1765993195530,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1540,6 +1509,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8b1a7638e151b4047d4128a50c5a115aba64b2b7"
         },
         "date": 1770725822518,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9090a0446cb0f6c975d1baa192e6668e60a05395",
+          "message": "Merge pull request #25 from markmocasa-boop/claude/classify-bundesliga-regions-yoQpI\n\nAdd Bundesliga Region Classifier workflow",
+          "timestamp": "2026-02-10T15:25:13+01:00",
+          "tree_id": "59ea793a3f355ba966886f3015e8b5e14ea28fd3",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9090a0446cb0f6c975d1baa192e6668e60a05395"
+        },
+        "date": 1770733627870,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
