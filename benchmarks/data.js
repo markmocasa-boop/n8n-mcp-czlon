@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770733628184,
+  "lastUpdate": 1770734390870,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "fa216e4d1375dfec7e2de424ee0c05a3869db65c",
-          "message": "fix: restore templates database with 2,768 workflow templates (v2.30.2) (#502)\n\n- Restored templates from git history (commit 03a4b07)\n- Updated nodes schema with tool variant columns\n- Database now contains 803 nodes and 2,768 templates\n- Compatible with n8n 2.0.2\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-21T14:11:57+01:00",
-          "tree_id": "acd674c606d60c4aff7260b253fb1d2d0c55d08a",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/fa216e4d1375dfec7e2de424ee0c05a3869db65c"
-        },
-        "date": 1766322833175,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1540,6 +1509,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9090a0446cb0f6c975d1baa192e6668e60a05395"
         },
         "date": 1770733627870,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ae4d06500d68b0d01605570d62055bc1cc5d8e2",
+          "message": "Merge pull request #26 from markmocasa-boop/claude/google-business-audit-workflow-vbGWF\n\nFix: Remove $env references for n8n Cloud compatibility",
+          "timestamp": "2026-02-10T15:37:51+01:00",
+          "tree_id": "a9203d8f966c74e7dc86ac0184281bce6d40acd4",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4ae4d06500d68b0d01605570d62055bc1cc5d8e2"
+        },
+        "date": 1770734390533,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
