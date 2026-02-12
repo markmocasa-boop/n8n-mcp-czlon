@@ -1,0 +1,1350 @@
+{
+  "name": "BETA - 🔥 Auto-Lead-Closer (AI Qualification + Follow-up)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "1bf08b3e-7a60-4150-b20a-d17662a10fcb",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        6768,
+        3344
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Mark@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "092be74e-a6e6-4256-a71c-af5db255ddc1",
+              "name": "=name",
+              "value": "={{ ($json.text || $json.snippet || '').match(/(?:Viele Grüße|Grüße|MfG|Best regards)\\s*\\n?\\s*(.+?)(?:\\n|$)/i)?.[1]?.trim() || (($json.from || '').split('<')[0] || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "c167c6d0-033c-4c2d-804a-a3312186bd60",
+              "name": "=email",
+              "value": "={{ ($json.text || $json.snippet || '').match(/(?:E-?Mail|Email)[:\\s]+([^\\s\\n]+@[^\\s\\n]+)/i)?.[1]?.trim() || (($json.from || '').match(/<(.+?)>/)?.[1] || $json.from || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "00fa9935-8c5e-4f56-91dc-bf3e232c8903",
+              "name": "company",
+              "value": "={{ ($json.text || $json.snippet || '').match(/(?:Firma|Company|Unternehmen)[:\\s]+(.+?)(?:\\n|$)/i)?.[1]?.trim() || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ee63edd7-e937-40fb-8dfc-ac8f4ae68fef",
+              "name": "=message",
+              "value": "={{ ($json.text || $json.snippet || '').substring(0, 2000) }}",
+              "type": "string"
+            },
+            {
+              "id": "06fcfc95-5e95-4ca6-8246-143dadca599f",
+              "name": "=subject",
+              "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ba1873b5-3c08-486b-8021-2a111a62f4fc",
+              "name": "=event_type",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5417fca4-a9ab-40be-bcea-7d483bcf66a2",
+              "name": "=received_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "20a321cb-50b3-4710-b0a5-94069e2d5b26",
+      "name": "Normalize Gmail",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7056,
+        3344
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc",
+          "mode": "list",
+          "cachedResultName": "AutoLeadCloser",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2058731471,
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit#gid=2058731471"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "379018e2-7ba2-42b9-bb74-08c20401ab42",
+      "name": "Check Duplicate",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        7328,
+        3344
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "duplicate-found",
+              "leftValue": "={{ $json.is_duplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "db410cec-99b6-44b3-9893-74c52ede9544",
+      "name": "Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7824,
+        3344
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc",
+          "mode": "list",
+          "cachedResultName": "AutoLeadCloser",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2058731471,
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit#gid=2058731471"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Email": "={{ $json.email }}",
+            "Lead ID": "={{ $json.lead_id || '' }}",
+            "Name": "={{ $json.name || '' }}",
+            "Company": "={{ $json.company || '' }}",
+            "Source": "={{ $json.source || '' }}",
+            "Message": "={{ $json.message || '' }}",
+            "Lead Score": "={{ $json.score || '' }}",
+            "Kategorie": "={{ $json.category || '' }}",
+            "KI Bewertung": "={{ $json.reason || '' }}",
+            "Status": "={{ $json.status || 'Updated' }}",
+            "Eingegangen am": "={{ $json.received_at || '' }}",
+            "Letzte Aktivität": "={{ $now.toISO() }}",
+            "Erste E-Mail gesendet": "={{ $json.first_email_sent_at || '' }}",
+            "Follow-up 1 geplant": "={{ $json.follow_up_1_planned || '' }}",
+            "Follow-up 2 geplant": "={{ $json.follow_up_2_planned || '' }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "KI Bewertung",
+              "displayName": "KI Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Eingegangen am",
+              "displayName": "Eingegangen am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Letzte Aktivität",
+              "displayName": "Letzte Aktivität",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Erste E-Mail gesendet",
+              "displayName": "Erste E-Mail gesendet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up 1 geplant",
+              "displayName": "Follow-up 1 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up 2 geplant",
+              "displayName": "Follow-up 2 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1692bc5b-0b95-408d-86be-16f61fdec4d5",
+      "name": "Update Existing Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8176,
+        3280
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "71e84c7c-7bbb-4bd7-ac0d-84d2d0322fd5",
+              "name": "=lead_id",
+              "value": "={{ 'LD-' + $now.format('yyyyMMdd') + '-' + Math.random().toString(36).substring(2, 8).toUpperCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "608f57e2-a643-41c0-b20f-fb748454b1ae",
+      "name": "Generate Lead ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7008,
+        3712
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc",
+          "mode": "list",
+          "cachedResultName": "AutoLeadCloser",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2058731471,
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit#gid=2058731471"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $json.lead_id }}",
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Company": "={{ $json.company }}",
+            "Source": "={{ $json.source }}",
+            "Message": "={{ $json.message }}",
+            "Lead Score": "={{ $json.score }}",
+            "Kategorie": "={{ $json.category }}",
+            "KI Bewertung": "={{ $json.reason }}",
+            "Status": "New",
+            "Eingegangen am": "={{ $json.received_at }}",
+            "Letzte Aktivität": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "KI Bewertung",
+              "displayName": "KI Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Eingegangen am",
+              "displayName": "Eingegangen am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Letzte Aktivität",
+              "displayName": "Letzte Aktivität",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Erste E-Mail gesendet",
+              "displayName": "Erste E-Mail gesendet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up 1 geplant",
+              "displayName": "Follow-up 1 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up 2 geplant",
+              "displayName": "Follow-up 2 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6498a280-ee9d-4f53-a613-5bd954604bce",
+      "name": "Create CRM Entry",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        7216,
+        3712
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Kategorie }}",
+                    "rightValue": "Spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "29cce156-feb0-4df7-bbc9-278060f3badf"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spam"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Kategorie }}",
+                    "rightValue": "Info-Seeker",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6c5e0671-0490-4ebd-9e17-62f6e993c901"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "info"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Kategorie }}",
+                    "rightValue": "Warm-Prospect",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0d806ab4-8819-46f1-a800-7bdab08d5423"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "warm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Kategorie }}",
+                    "rightValue": "Hot-Buyer",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "02849a41-00b3-4a21-8cf0-20f7894eb76f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "hot"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d45cefe5-486a-4b6d-b85c-0115aa5fcf61",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        7504,
+        3680
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "36d6d8dc-0f6f-4651-89cb-8a4dfd956bab",
+      "name": "Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7904,
+        3728
+      ],
+      "webhookId": "285b648f-3b77-4ecb-9f0c-364b2be6fd66"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.email_body }}",
+        "options": {}
+      },
+      "id": "6d11fb3b-15e3-40ff-bb7c-7a70ccc098f9",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        7392,
+        4016
+      ],
+      "webhookId": "auto-lead-closer-send-mail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Mark@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc",
+          "mode": "list",
+          "cachedResultName": "AutoLeadCloser",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2058731471,
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11yOnwpJOCp8WXgc-eKLau1by1Rsu5SiH9GaHPAz7mvc/edit#gid=2058731471"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('Generate Lead ID').item.json.lead_id }}",
+            "Name": "={{ $('Generate Lead ID').item.json.name }}",
+            "Email": "={{ $('Generate Lead ID').item.json.email }}",
+            "Company": "={{ $('Generate Lead ID').item.json.company }}",
+            "Message": "={{ $('Generate Lead ID').item.json.message }}",
+            "Lead Score": "={{ $('Generate Lead ID').item.json.score }}",
+            "Kategorie": "={{ $('Generate Lead ID').item.json.category }}",
+            "KI Bewertung": "={{ $('Generate Lead ID').item.json.reason }}",
+            "Eingegangen am": "={{ $('Generate Lead ID').item.json.received_at }}"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kategorie",
+              "displayName": "Kategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "KI Bewertung",
+              "displayName": "KI Bewertung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Eingegangen am",
+              "displayName": "Eingegangen am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Letzte Aktivität",
+              "displayName": "Letzte Aktivität",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Erste E-Mail gesendet",
+              "displayName": "Erste E-Mail gesendet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up 1 geplant",
+              "displayName": "Follow-up 1 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up 2 geplant",
+              "displayName": "Follow-up 2 geplant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c6c7d926-65bd-49d5-af74-836bbb7654ee",
+      "name": "Update CRM - Email Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        7984,
+        4016
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Du bist ein erfahrener Sales-Analyst. Bewerte Leads für höhenverstellbare Schreibtische und Büromöbel. Output STRICT JSON mit Feldern: score (1-10), category (Hot-Buyer|Warm-Prospect|Info-Seeker|Spam), reason, key_signals (array), suggested_angle, language (de|en). Kategorie muss strikt zu Score passen: 8-10 Hot-Buyer, 6-7 Warm-Prospect, 3-5 Info-Seeker, 1-2 Spam."
+            },
+            {
+              "content": "=Bewerte diesen Lead:\\\nQuelle: {{$json.source}}\\\\nName: {{$json.name}}\\\\nEmail: {{$json.email}}\\\\nUnternehmen: {{$json.company}}\\\\nNachricht/Anliegen: {{$json.message}}\\\\nEvent-Typ: {{$json.event_type}}\\\\nGebuchter Termin: {{$json.scheduled_time}}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        8080,
+        3488
+      ],
+      "id": "cd8081b5-e549-4158-9525-0f391ee406b6",
+      "name": "GPT 4.1 Scoring",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Schreibe eine Erstantwort-E-Mail für diesen Lead:\\\nName:{{ $json.Name }} \\\\Unternehmen: {{ $json.Company }}\\\\nAnliegen: {{ $json.Message }}\\\\nKategorie:{{ $json.Kategorie }} \\\\nScore:{{ $json['Lead Score'] }} \\\\nEmpfohlener Ansatz: {{ $json['KI Bewertung'] }}\\\\nSprache: Deutsch \\\\nSende-Name: Mark Niemann\\\\nSende-Unternehmen: Mo Casa GmbH"
+            }
+          ]
+        },
+        "options": {
+          "system": "=Du bist ein erfahrener Sales-Texter. Schreibe personalisierte Erstantwort-E-Mails (max. 150 Wörter, plain text, klare CTA). Tonalität nach Kategorie: Hot-Buyer direkt und value-first, Warm-Prospect interessiert und fragend, Info-Seeker educational mit soft CTA. Antworte STRICT JSON: {subject, body, cta_type}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        6784,
+        4016
+      ],
+      "id": "a675591a-6a74-49b1-bea7-9ab23ce7e5c7",
+      "name": "Sonnet 4.5 Text Gen",
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse GPT response\nconst raw = $input.first().json.output[0].content[0].text;\nconst clean = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(clean);\n\n// Get original lead data from Restore Lead Data node\nlet leadData = {};\ntry {\n  leadData = $('Restore Lead Data').first().json;\n} catch (e) {\n  // Fallback: try getting from Duplicate? node\n  try { leadData = $('Duplicate?').first().json; } catch (e2) {}\n}\n\nreturn [{\n  json: {\n    ...leadData,\n    score: parsed.score,\n    category: parsed.category,\n    reason: parsed.reason,\n    key_signals: (parsed.key_signals || []).join(', '),\n    suggested_angle: parsed.suggested_angle,\n    language: parsed.language\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6800,
+        3712
+      ],
+      "id": "d0097761-5104-4092-830f-2004e07eb895",
+      "name": "Parse Score"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Restore original lead data that was overwritten by Google Sheets lookup.\n// Only ONE normalize node ran per execution - try-catch finds which one.\n\nconst normalizeNodes = ['Normalize Calendly', 'Normalize Gmail', 'Normalize Sheet'];\nlet originalData = {};\n\nfor (const nodeName of normalizeNodes) {\n  try {\n    const items = $(nodeName).all();\n    if (items.length > 0) {\n      originalData = { ...items[0].json };\n      break;\n    }\n  } catch (e) {\n    // This node didn't run in this execution - skip\n  }\n}\n\n// Check if Google Sheets found a duplicate\n// When a match is found, $input contains CRM fields like Email, Name, etc.\n// When no match, $input is an empty object (from alwaysOutputData)\nconst checkResult = $input.first().json;\nconst isDuplicate = !!(checkResult.Email && checkResult.Email.trim() !== '');\n\nreturn [{\n  json: {\n    ...originalData,\n    is_duplicate: isDuplicate,\n    existing_row_number: checkResult.row_number || null\n  }\n}];"
+      },
+      "id": "a014e8b6-a399-490e-952c-b061c04227e4",
+      "name": "Restore Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7584,
+        3344
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse subject + body from Sonnet output\nconst raw = $input.first().json.content[0].text;\nconst clean = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet subject, body;\n\ntry {\n  const parsed = JSON.parse(clean);\n  subject = parsed.subject;\n  body = parsed.body;\n} catch (e) {\n  // Fallback: split by first line break\n  const lines = raw.trim().split('\\n');\n  subject = lines[0].replace(/^subject:\\s*/i, '').trim();\n  body = lines.slice(1).join('\\n').replace(/^body:\\s*/i, '').trim();\n}\n\n// Pass through all previous data + parsed email fields\nconst prevData = $('Wait 30s').first().json;\n\nreturn [{\n  json: {\n    ...prevData,\n    email_subject: subject,\n    email_body: body\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7152,
+        4016
+      ],
+      "id": "02d8f6eb-419a-4024-bfbc-f1f900e32d13",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        7664,
+        4016
+      ],
+      "id": "ad248354-ba75-4142-a084-75dac83ba79e",
+      "name": "Mark a message as read",
+      "webhookId": "6780a328-efbd-4742-96e0-af3e5ab33e6e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Mark@mo-casa.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Gmail": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Restore Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT 4.1 Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Lead ID": {
+      "main": [
+        [
+          {
+            "node": "Create CRM Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create CRM Entry": {
+      "main": [
+        [
+          {
+            "node": "Route by Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Sonnet 4.5 Text Gen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail": {
+      "main": [
+        [
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT 4.1 Scoring": {
+      "main": [
+        [
+          {
+            "node": "Parse Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sonnet 4.5 Text Gen": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Score": {
+      "main": [
+        [
+          {
+            "node": "Generate Lead ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update CRM - Email Sent": {
+      "main": [
+        []
+      ]
+    },
+    "Mark a message as read": {
+      "main": [
+        [
+          {
+            "node": "Update CRM - Email Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "da185107-8e78-4866-9736-1d3fe9a1090c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "AOJ6UBiC5lr5pvmxkcQq0",
+  "tags": []
+}
