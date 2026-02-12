@@ -1,37 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770734390870,
+  "lastUpdate": 1770908204487,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "committer": {
-            "email": "romualdczlonkowski@MacBook-Pro-Romuald.local",
-            "name": "Romuald Członkowski"
-          },
-          "distinct": true,
-          "id": "a40f6a5077001fbfbdc7529663a4ebcba608f5e6",
-          "message": "test: make templates database validation critical instead of optional\n\nPreviously, the CI test only warned when templates were missing but\nalways passed. This allowed the templates database to be lost without\nfailing CI. Now the test will fail if templates are empty or below\nthe expected count of 2500.\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-21T15:33:25+01:00",
-          "tree_id": "8c445e411ac900ad406f2a5d351e94109f9201ff",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/a40f6a5077001fbfbdc7529663a4ebcba608f5e6"
-        },
-        "date": 1766327718567,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1540,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4ae4d06500d68b0d01605570d62055bc1cc5d8e2"
         },
         "date": 1770734390533,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90ff92e4cbf06d2fcb2d3a75046782705a4f71cb",
+          "message": "Add files via upload",
+          "timestamp": "2026-02-12T15:54:48+01:00",
+          "tree_id": "f833ff27931796592eeeb54ba86118d9db45817c",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/90ff92e4cbf06d2fcb2d3a75046782705a4f71cb"
+        },
+        "date": 1770908203826,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
