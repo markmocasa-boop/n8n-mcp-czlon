@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770908204487,
+  "lastUpdate": 1770952947713,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "d60182eeb8581320278e5f2205cc0378d49ff071",
-          "message": "feat: add error mode for execution debugging with AI suggestions (#505)\n\n* feat: add error mode for execution debugging with AI suggestions\n\nAdd a new `mode='error'` option to n8n_executions action=get that's optimized\nfor AI agents debugging workflow failures. This mode provides intelligent\nerror extraction with 80-99% token savings compared to `mode='full'`.\n\nKey features:\n- Error Analysis: Extracts error message, type, node name, and parameters\n- Upstream Context: Samples input data from upstream node (configurable limit)\n- Execution Path: Shows node execution sequence from trigger to error\n- AI Suggestions: Pattern-based fix suggestions for common errors\n- Workflow Fetch: Optionally fetches workflow for accurate upstream detection\n\nNew parameters for mode='error':\n- errorItemsLimit (default: 2) - Sample items from upstream node\n- includeStackTrace (default: false) - Full vs truncated stack trace\n- includeExecutionPath (default: true) - Include node execution path\n- fetchWorkflow (default: true) - Fetch workflow for upstream detection\n\nToken efficiency:\n- 11 items: ~11KB full vs ~3KB error (73% savings)\n- 1001 items: ~354KB full vs ~3KB error (99% savings)\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* fix: add security hardening to error-execution-processor\n\n- Add prototype pollution protection (block __proto__, constructor, prototype)\n- Expand sensitive data patterns (20+ patterns including JWT, OAuth, certificates)\n- Create recursive sanitizeData function for deep object sanitization\n- Apply sanitization to both nodeParameters and upstream sampleItems\n- Add comprehensive unit tests (42 tests, 96% coverage)\n\nSecurity improvements address code review findings:\n- Critical: Prototype pollution protection\n- Warning: Expanded sensitive data filtering\n- Warning: Nested data sanitization\n\nConcieved by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-23T17:14:30+01:00",
-          "tree_id": "04eb9d595ef0bc90b182b7a947f0683df1827646",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/d60182eeb8581320278e5f2205cc0378d49ff071"
-        },
-        "date": 1766506580808,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/90ff92e4cbf06d2fcb2d3a75046782705a4f71cb"
         },
         "date": 1770908203826,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0611b0a8dec902d9aed93c24be05569f174d20e9",
+          "message": "Add files via upload",
+          "timestamp": "2026-02-13T04:20:35+01:00",
+          "tree_id": "d4b69910a5952bf9635d26724476863ea41fd0a5",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/0611b0a8dec902d9aed93c24be05569f174d20e9"
+        },
+        "date": 1770952947447,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
