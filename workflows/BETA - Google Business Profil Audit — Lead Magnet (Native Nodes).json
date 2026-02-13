@@ -1,0 +1,1636 @@
+{
+  "name": "BETA - Google Business Profil Audit — Lead Magnet (Native Nodes)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Formulardaten direkt vom Formular-Trigger holen\nconst form = $('📝 Formular-Trigger').first().json;\n\n// Apify-Ergebnis (native Node gibt Ergebnis direkt zurück)\nconst items = $input.all();\nconst profile = items[0]?.json || null;\n\nconst formData = {\n  firmenname: form['Firmenname'] || '',\n  stadt: form['Stadt / Ort'] || '',\n  branche: form['Branche'] || '',\n  reichweite: form['Reichweite'] || '',\n  ladenlokal: form['Ladenlokal'] || '',\n  email: form['E-Mail-Adresse'] || '',\n  name: form['Name (Ansprechpartner)'] || '',\n  config: {\n    apify_actor_id: 'compass~crawler-google-places',\n    gemini_model: 'gemini-2.5-pro',\n    email_absender_name: 'Dein GBP Check',\n    cta_link: 'https://calendly.com/dein-link',\n    cta_text: 'Kostenloses Beratungsgespräch vereinbaren',\n    logo_url: '',\n    firmen_name: 'Deine Agentur',\n    firmen_website: 'https://example.com',\n    impressum_link: 'https://example.com/impressum',\n    datenschutz_link: 'https://example.com/datenschutz',\n    google_sheet_id: 'DEINE_SHEET_ID'\n  }\n};\n\nif (!profile || !profile.title) {\n  return [{\n    json: {\n      profilGefunden: false,\n      formData: formData,\n      gbpDaten: null\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    profilGefunden: true,\n    formData: formData,\n    gbpDaten: {\n      title: profile.title || '',\n      address: profile.address || '',\n      phone: profile.phone || '',\n      website: profile.website || '',\n      categoryName: profile.categoryName || '',\n      categories: profile.categories || [],\n      description: profile.description || '',\n      totalScore: profile.totalScore || 0,\n      reviewsCount: profile.reviewsCount || 0,\n      reviews: (profile.reviews || []).slice(0, 20),\n      imageUrls: profile.imageUrls || [],\n      imageCount: (profile.imageUrls || []).length,\n      openingHours: profile.openingHours || [],\n      additionalInfo: profile.additionalInfo || {},\n      questionsAndAnswers: profile.questionsAndAnswers || [],\n      url: profile.url || '',\n      placeId: profile.placeId || '',\n      posts: profile.posts || []\n    }\n  }\n}];\n"
+      },
+      "id": "c24fd3ae-8008-4757-a45a-3fa0316dbed0",
+      "name": "📝 Run-Daten extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2048,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-found",
+              "leftValue": "={{ $json.profilGefunden }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa5ed5da-166a-4bfc-a22e-7bada6b4768c",
+      "name": "✅ Profil gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2816,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.gbpDaten.website }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "79121681-ec82-42c2-8820-a71131310033",
+      "name": "🌐 Website scrapen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2496,
+        224
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst profil = $('Run-Daten extrahieren').first().json;\nconst gbp = profil.gbpDaten;\nif (!response || response.error || !gbp.website) {\n  return [{ json: { website_nap: { website_erreichbar: false, nap_konsistent_mit_gbp: null, abweichungen: ['Website nicht erreichbar oder nicht vorhanden'] } } }];\n}\nconst html = String(response.data || response.body || response);\nconst phoneRegex = /(\\+49|0049|0)\\s*[\\d\\s\\-\\/\\(\\)]{6,15}/g;\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\nconst plzRegex = /\\d{5}\\s+[A-ZÄÖÜa-zäöüß]+/g;\nconst phones = html.match(phoneRegex) || [];\nconst emails = html.match(emailRegex) || [];\nconst addresses = html.match(plzRegex) || [];\nconst abweichungen = [];\nif (gbp.phone && phones.length > 0) {\n  const norm = gbp.phone.replace(/[\\s\\-\\/\\(\\)]/g, '');\n  const found = phones.some(p => p.replace(/[\\s\\-\\/\\(\\)]/g, '').includes(norm.slice(-8)));\n  if (!found) abweichungen.push('Telefon: GBP \"' + gbp.phone + '\" nicht auf Website gefunden');\n}\nif (gbp.address && addresses.length === 0) {\n  abweichungen.push('Adresse auf Website nicht eindeutig erkennbar');\n}\nreturn [{ json: { website_nap: { website_erreichbar: true, gefundene_telefonnummern: phones.slice(0, 5), gefundene_emails: emails.slice(0, 5), gefundene_adressen: addresses.slice(0, 5), nap_konsistent_mit_gbp: abweichungen.length === 0, abweichungen: abweichungen } } }];"
+      },
+      "id": "f071c0c4-d7e5-472c-aa94-b046bd7df208",
+      "name": "📝 Website-NAP extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2256,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nif (!response || response.error) {\n  return [{ json: { nap_verzeichnisse: { geprueft: false, gefundene_eintraege: 0, details: [] } } }];\n}\nconst results = response.organic_results || response.organic || [];\nconst dirs = ['gelbeseiten', 'yelp', 'dasoertliche', '11880', 'golocal', 'branchenbuch', 'meinestadt', 'cylex', 'hotfrog', 'kennstdueinen'];\nconst details = [];\nfor (const r of results) {\n  const url = (r.link || r.url || '').toLowerCase();\n  const isDir = dirs.some(d => url.includes(d));\n  if (isDir) {\n    details.push({ quelle: dirs.find(d => url.includes(d)), url: r.link || r.url, snippet: (r.snippet || '').substring(0, 200) });\n  }\n}\nreturn [{ json: { nap_verzeichnisse: { geprueft: true, gefundene_eintraege: details.length, alle_suchergebnisse: results.length, details: details } } }];"
+      },
+      "id": "75d990f2-b7cb-4727-beec-af8fe0db4ce7",
+      "name": "📝 Such-NAP auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2256,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "3c1c35ff-8a70-4016-99d4-8d682fcc283d",
+      "name": "🔀 Daten zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1952,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nconst profil = $('📝 Profil-Daten prüfen').first().json;\nconst formData = profil.formData;\nconst gbp = profil.gbpDaten;\nconst websiteNap = merged.website_nap || { website_erreichbar: false, abweichungen: ['Nicht geprüft'] };\nconst napVerz = merged.nap_verzeichnisse || { geprueft: false, gefundene_eintraege: 0, details: [] };\n\nconst systemPrompt = 'Du bist ein erfahrener Local SEO Experte, spezialisiert auf Google Business Profile Optimierung im DACH-Raum. Du analysierst Google Business Profile anhand von 10 klar definierten Ranking-Faktoren und erstellst einen detaillierten, praxisnahen Audit-Report auf Deutsch.\\n\\nDein Report richtet sich an Geschäftsinhaber (KMUs) ohne SEO-Vorkenntnisse. Schreibe klar, verständlich und konkret — keine Fachbegriffe ohne Erklärung, kein Marketing-Sprech. Jede Empfehlung muss sofort umsetzbar sein.';\n\nconst userPrompt = `Analysiere das folgende Google Business Profil und erstelle einen vollständigen Audit-Report.\n\n## Eingaben des Nutzers\n- Firmenname: ${formData.firmenname}\n- Stadt: ${formData.stadt}\n- Branche: ${formData.branche}\n- Reichweite: ${formData.reichweite}\n- Geschäftstyp: ${formData.ladenlokal}\n\n## Google Business Profil Daten\n${JSON.stringify(gbp, null, 2)}\n\n## Website NAP-Check\n${JSON.stringify(websiteNap, null, 2)}\n\n## Verzeichnis NAP-Check\n${JSON.stringify(napVerz, null, 2)}\n\n---\n\n## Bewertungskriterien\n\nBewerte das Profil anhand dieser 10 Faktoren. Vergib für jeden Faktor 0-10 Punkte.\n\n### 1. Basisdaten (0-10 Punkte)\n- Name exakt wie im echten Leben (kein Keyword-Spam)?\n- Adresse korrekt und konsistent mit Website & Verzeichnissen?\n- Telefonnummer lokal & erreichbar?\n- Website verlinkt?\n- Öffnungszeiten gepflegt (inkl. Feiertage)?\n- WICHTIG: Bei Geschäftstyp \"Ohne Ladenlokal\" gelten andere Maßstäbe für die Adresse\n\n### 2. Kategorien (0-10 Punkte)\n- Hauptkategorie = Kerngeschäft der angegebenen Branche?\n- Sind sinnvolle Nebenkategorien vorhanden?\n- Passen die Kategorien zur angegebenen Branche \"${formData.branche}\"?\n\n### 3. Beschreibung (0-10 Punkte)\n- Sind relevante Keywords für \"${formData.branche}\" natürlich eingebaut?\n- Wird klar: Was macht das Unternehmen? Für wen? Wo?\n- Kein Marketing-Blabla?\n- Länge angemessen (mind. 250 Zeichen empfohlen)?\n\n### 4. Fotos & Videos (0-10 Punkte)\n- Logo und Titelbild vorhanden?\n- Außenansicht (besonders wichtig bei \"Mit Ladenlokal\")?\n- Innenraum / Team / Produkte?\n- Anzahl: mind. 10 Fotos empfohlen, 25+ ideal\n- Aktualität der Fotos?\n\n### 5. Bewertungen (0-10 Punkte)\n- Anzahl Bewertungen (Benchmark je nach Branche)\n- Durchschnittsbewertung (4.0+ gut, 4.5+ sehr gut)\n- Werden Bewertungen beantwortet (auch negative)?\n- Aktualität der Bewertungen (regelmäßig neue)?\n- Qualität der Bewertungen (ausführlich, mit Keywords)?\n\n### 6. Beiträge / Posts (0-10 Punkte)\n- Werden Posts veröffentlicht?\n- Frequenz (1x pro Woche empfohlen)?\n- Aktualität des letzten Posts?\n- Qualität und Relevanz der Inhalte?\n\n### 7. Leistungen / Produkte (0-10 Punkte)\n- Sind Services/Produkte eingetragen?\n- Mit Beschreibungen versehen?\n- Vollständig für die Branche \"${formData.branche}\"?\n\n### 8. Fragen & Antworten (0-10 Punkte)\n- Sind Q&A vorhanden?\n- Werden sie vom Inhaber kontrolliert/beantwortet?\n- Wichtige Fragen proaktiv gestellt und beantwortet?\n\n### 9. NAP-Konsistenz (0-10 Punkte)\n- Stimmen Name, Adresse, Telefon zwischen GBP, Website und Verzeichnissen überein?\n- Nutze die konkreten Daten aus dem Website- und Verzeichnis-Check\n- Jede Inkonsistenz benennen\n\n### 10. Relevanz & Bekanntheit (0-10 Punkte)\n- Gesamteindruck: Wie gut ist das Profil für \"${formData.branche}\" in \"${formData.stadt}\" mit Reichweite \"${formData.reichweite}\" aufgestellt?\n- Passt alles zusammen (Kategorien, Beschreibung, Leistungen, Bewertungen)?\n- Sind genug Signale da für die gewünschte Reichweite?\n\n---\n\n## Ausgabeformat (STRIKT einhalten)\n\nAntworte ausschließlich im folgenden JSON-Format. Kein Text vor oder nach dem JSON.\n\n{\n  \"gesamt_score\": 72,\n  \"gesamt_score_label\": \"Gut — aber mit klarem Optimierungspotenzial\",\n  \"zusammenfassung\": \"Kurze Zusammenfassung in 2-3 Sätzen.\",\n  \"faktoren\": [\n    {\n      \"nummer\": 1,\n      \"name\": \"Basisdaten\",\n      \"score\": 8,\n      \"max_score\": 10,\n      \"status\": \"gut\",\n      \"emoji\": \"✅\",\n      \"zusammenfassung\": \"Kurze Bewertung in 1-2 Sätzen.\",\n      \"details\": [\n        {\"check\": \"Firmenname korrekt\", \"status\": \"ok\", \"kommentar\": \"Beschreibung.\"}\n      ]\n    }\n  ],\n  \"prioritaeten\": [\n    {\n      \"rang\": 1,\n      \"titel\": \"Titel der Maßnahme\",\n      \"faktor\": \"Faktorname\",\n      \"aufwand\": \"niedrig\",\n      \"wirkung\": \"hoch\",\n      \"beschreibung\": \"Detaillierte Beschreibung.\",\n      \"sofort_tipp\": \"Konkreter Sofort-Tipp.\"\n    }\n  ],\n  \"score_labels\": {\n    \"0-30\": \"Kritisch — dringender Handlungsbedarf\",\n    \"31-50\": \"Schwach — viele Baustellen\",\n    \"51-70\": \"Ausbaufähig — gute Grundlage, aber Potenzial wird verschenkt\",\n    \"71-85\": \"Gut — mit gezielten Maßnahmen zum Top-Ranking\",\n    \"86-100\": \"Exzellent — dein Profil ist top aufgestellt\"\n  }\n}\n\nStatus-Werte für einzelne Checks: \"ok\", \"warnung\", \"fehlt\", \"kritisch\"\nAufwand-Werte: \"niedrig\", \"mittel\", \"hoch\"\nWirkung-Werte: \"niedrig\", \"mittel\", \"hoch\"\n\nErstelle den Report für ALLE 10 Faktoren mit je mindestens 3 Detail-Checks.\nErstelle genau 5 priorisierte Maßnahmen, sortiert nach Wirkung/Aufwand-Verhältnis.`;\n\nconst geminiRequestBody = {\n  contents: [{ parts: [{ text: systemPrompt + '\\n\\n' + userPrompt }] }],\n  generationConfig: {\n    temperature: 0.3,\n    maxOutputTokens: 8000,\n    responseMimeType: 'application/json'\n  }\n};\n\nreturn [{ json: { geminiRequestBody, formData, gbpDaten: gbp, websiteNap, napVerz } }];"
+      },
+      "id": "8a5da591-ab2d-4b20-859e-6f49fbb63651",
+      "name": "📋 Analyse vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1712,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "constconst response = $input.first().json;\nconst prev = $('📋 Analyse vorbereiten').first().json;\n\n// Native Gemini node gibt .text oder .output zurück\nlet text = response.text || response.output || response.content || '';\nif (!text && response.message?.content) text = response.message.content;\nif (!text) text = JSON.stringify(response);\n\n// JSON aus der Antwort extrahieren\ntext = text.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\nconst firstBrace = text.indexOf('{');\nconst lastBrace = text.lastIndexOf('}');\n\nif (firstBrace === -1 || lastBrace === -1) {\n  throw new Error('Gemini hat kein valides JSON zurückgegeben: ' + text.substring(0, 200));\n}\n\nconst jsonStr = text.substring(firstBrace, lastBrace + 1);\nlet analyse;\ntry {\n  analyse = JSON.parse(jsonStr);\n} catch (e) {\n  throw new Error('JSON-Parse-Fehler: ' + e.message);\n}\n\nreturn [{ json: { analyse, formData: prev.formData, gbpDaten: prev.gbpDaten } }];\n"
+      },
+      "id": "5f1128ce-6c88-42d6-8b55-044d03d8c037",
+      "name": "📝 Gemini-Antwort parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1664,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analyse, formData, gbpDaten } = $input.first().json;\nconst config = $('⚙️ Konfiguration').first().json.config;\nconst score = analyse.gesamt_score;\nconst scoreLabel = analyse.gesamt_score_label;\nconst scorePct = Math.min(100, Math.max(0, score));\nconst getColor = (s, max) => { const p = (s / max) * 100; if (p >= 70) return '#22c55e'; if (p >= 40) return '#f59e0b'; return '#ef4444'; };\nconst mainColor = getColor(score, 100);\nconst getIcon = (s) => { if (s >= 7) return '✅'; if (s >= 4) return '⚠️'; return '❌'; };\nconst getRangIcon = (r) => { if (r === 1) return '🥇'; if (r === 2) return '🥈'; if (r === 3) return '🥉'; return r + '.'; };\nconst getStatusColor = (st) => { if (st === 'ok') return '#22c55e'; if (st === 'warnung') return '#f59e0b'; if (st === 'fehlt' || st === 'kritisch') return '#ef4444'; return '#6b7280'; };\nconst getStatusIcon = (st) => { if (st === 'ok') return '✅'; if (st === 'warnung') return '⚠️'; if (st === 'fehlt') return '❌'; if (st === 'kritisch') return '🔴'; return '○'; };\n\nlet faktorenChecklist = '';\nfor (const f of analyse.faktoren) {\n  const icon = getIcon(f.score);\n  const color = getColor(f.score, f.max_score);\n  faktorenChecklist += `<tr><td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:15px;\">${icon} ${f.name}</td><td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:bold;color:${color};font-size:15px;\">${f.score}/${f.max_score}</td></tr>`;\n}\n\nlet faktorenDetails = '';\nfor (const f of analyse.faktoren) {\n  const color = getColor(f.score, f.max_score);\n  let checksHtml = '';\n  for (const d of (f.details || [])) {\n    const si = getStatusIcon(d.status);\n    const sc = getStatusColor(d.status);\n    checksHtml += `<tr><td style=\"padding:6px 0;font-size:14px;color:#374151;\">${si} ${d.check}</td></tr><tr><td style=\"padding:0 0 8px 28px;font-size:13px;color:#6b7280;\">${d.kommentar}</td></tr>`;\n  }\n  faktorenDetails += `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:20px;\"><tr><td style=\"padding:10px 15px;background-color:${color}15;border-left:4px solid ${color};border-radius:4px;\"><strong style=\"font-size:16px;color:#1f2937;\">${f.name} — ${f.score}/${f.max_score}</strong><br><span style=\"font-size:14px;color:#4b5563;\">${f.zusammenfassung}</span></td></tr><tr><td style=\"padding:10px 15px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">${checksHtml}</table></td></tr></table>`;\n}\n\nlet prioHtml = '';\nfor (const p of (analyse.prioritaeten || [])) {\n  const icon = getRangIcon(p.rang);\n  prioHtml += `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:15px;border:1px solid #e5e7eb;border-radius:8px;\"><tr><td style=\"padding:15px;\"><strong style=\"font-size:16px;color:#1f2937;\">${icon} #${p.rang}: ${p.titel}</strong><br><span style=\"font-size:13px;color:#6b7280;\">Aufwand: ${p.aufwand} | Wirkung: ${p.wirkung} | Faktor: ${p.faktor}</span><br><br><span style=\"font-size:14px;color:#374151;\">${p.beschreibung}</span><br><br><table cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"padding:8px 12px;background-color:#eff6ff;border-radius:6px;border-left:3px solid #2563eb;\"><span style=\"font-size:13px;color:#1e40af;\">💡 <strong>Sofort-Tipp:</strong> ${p.sofort_tipp}</span></td></tr></table></td></tr></table>`;\n}\n\nconst logoHtml = config.logo_url ? `<img src=\"${config.logo_url}\" alt=\"${config.firmen_name}\" style=\"max-height:50px;margin-bottom:15px;\">` : `<strong style=\"font-size:20px;color:#2563eb;\">${config.firmen_name}</strong>`;\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"></head><body style=\"margin:0;padding:0;background-color:#f9fafb;font-family:Arial,Helvetica,sans-serif;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f9fafb;\"><tr><td align=\"center\" style=\"padding:20px 10px;\"><table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);\"><tr><td style=\"padding:30px 30px 20px;text-align:center;border-bottom:1px solid #e5e7eb;\">${logoHtml}</td></tr><tr><td style=\"padding:25px 30px;\"><p style=\"font-size:16px;color:#1f2937;margin:0 0 15px;\">Hallo ${formData.name || 'dort'},</p><p style=\"font-size:15px;color:#4b5563;margin:0 0 25px;\">hier ist dein Google Business Profil Check für <strong>${formData.firmenname}</strong> in <strong>${formData.stadt}</strong>.</p><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f9fafb;border-radius:12px;border:2px solid ${mainColor};\"><tr><td style=\"padding:25px;text-align:center;\"><span style=\"font-size:48px;font-weight:bold;color:${mainColor};\">${score}</span><span style=\"font-size:24px;color:#6b7280;\"> / 100</span><br><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:15px 0;\"><tr><td style=\"background-color:#e5e7eb;border-radius:10px;height:20px;\"><div style=\"width:${scorePct}%;background-color:${mainColor};height:20px;border-radius:10px;\"></div></td></tr></table><span style=\"font-size:14px;color:#4b5563;font-style:italic;\">${scoreLabel}</span></td></tr></table></td></tr><tr><td style=\"padding:0 30px 20px;\"><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 10px;\">Zusammenfassung</h2><p style=\"font-size:15px;color:#4b5563;line-height:1.6;margin:0 0 25px;\">${analyse.zusammenfassung}</p><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 10px;\">Checkliste — Alle 10 Faktoren</h2><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:25px;\">${faktorenChecklist}</table><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 15px;\">Detail-Analyse</h2>${faktorenDetails}<h2 style=\"font-size:18px;color:#1f2937;margin:30px 0 15px;\">Top 5 Maßnahmen nach Priorität</h2>${prioHtml}</td></tr><tr><td style=\"padding:20px 30px;text-align:center;background-color:#eff6ff;border-top:1px solid #e5e7eb;\"><p style=\"font-size:16px;color:#1f2937;margin:0 0 15px;\">Du willst die Optimierung nicht selbst machen?<br>Wir helfen dir gerne!</p><a href=\"${config.cta_link}\" style=\"display:inline-block;padding:14px 28px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;\">${config.cta_text}</a></td></tr><tr><td style=\"padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;background-color:#f9fafb;\"><p style=\"font-size:12px;color:#9ca3af;margin:0;\">${config.firmen_name} | <a href=\"${config.firmen_website}\" style=\"color:#6b7280;\">${config.firmen_website}</a><br><a href=\"${config.impressum_link}\" style=\"color:#6b7280;\">Impressum</a> | <a href=\"${config.datenschutz_link}\" style=\"color:#6b7280;\">Datenschutz</a></p></td></tr></table></td></tr></table></body></html>`;\n\nconst subject = `Dein Google Business Profil Check: ${score}/100 Punkte`;\nreturn [{ json: { html, subject, email: formData.email, name: formData.name, firmenname: formData.firmenname, stadt: formData.stadt, analyse, formData, gbpDaten, config } }];"
+      },
+      "id": "1376a425-c567-46a5-b8c8-9a2d36cc3b6f",
+      "name": "📧 Report-E-Mail erstellen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "senderName": "={{ $json.config.email_absender_name }}"
+        }
+      },
+      "id": "710debd6-c1a2-4fac-93c2-eeeff5deb371",
+      "name": "📧 Report senden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1680,
+        640
+      ],
+      "webhookId": "0d3825e6-5c96-41fe-a143-02d2048746e4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI",
+          "mode": "list",
+          "cachedResultName": "GBP Analyse",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "031da748-9889-402f-bf80-c73a7b511c1f",
+      "name": "📋 Lead speichern",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1424,
+        640
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.formData.email }}",
+        "subject": "Google Business Profil Check — Kein Profil gefunden",
+        "message": "=<!DOCTYPE html><html><body style=\"margin:0;padding:0;background-color:#f9fafb;font-family:Arial,Helvetica,sans-serif;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:20px;\"><table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);\"><tr><td style=\"padding:30px;\"><h2 style=\"color:#1f2937;\">Hallo {{ $json.formData.name || 'dort' }},</h2><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\">wir konnten leider kein Google Business Profil für <strong>{{ $json.formData.firmenname }}</strong> in <strong>{{ $json.formData.stadt }}</strong> finden.</p><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\"><strong>Mögliche Gründe:</strong></p><ul style=\"font-size:14px;color:#4b5563;line-height:1.8;\"><li>Das Profil wurde noch nicht erstellt</li><li>Der Firmenname im Formular weicht vom Profil ab</li><li>Das Profil ist noch nicht verifiziert</li></ul><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\">Du kannst dein Google Business Profil kostenlos unter <a href=\"https://business.google.com\" style=\"color:#2563eb;\">business.google.com</a> erstellen und verwalten.</p><p style=\"font-size:15px;color:#4b5563;\">Gerne helfen wir dir dabei!</p><a href=\"{{ $('⚙️ Konfiguration').first().json.config.cta_link }}\" style=\"display:inline-block;margin-top:15px;padding:12px 24px;background-color:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;\">{{ $('⚙️ Konfiguration').first().json.config.cta_text }}</a></td></tr></table></td></tr></table></body></html>",
+        "options": {
+          "senderName": "={{ $('⚙️ Konfiguration').first().json.config.email_absender_name }}"
+        }
+      },
+      "id": "e8c29214-7dde-4a1c-98a7-6c30260d0d10",
+      "name": "❌ Kein Profil - E-Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2496,
+        640
+      ],
+      "webhookId": "1e8f6a45-6a4c-4fbb-b3fa-b94eb79f69ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI",
+          "mode": "list",
+          "cachedResultName": "GBP Analyse",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a19f5d5b-1c82-4088-8320-f8ff2e568ddc",
+      "name": "📋 Kein Profil - Lead speichern",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2496,
+        816
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Google Business Profil Audit — Lead Magnet\n\n**Ablauf:**\n1. Nutzer füllt Formular aus\n2. Apify scrapt das Google Business Profil\n3. Website + Google-Suche für NAP-Konsistenz\n4. Gemini 2.5 Pro analysiert alle Daten\n5. Professioneller HTML-Report per E-Mail\n6. Lead-Daten in Google Sheet\n\n**Fehlerbehandlung:** Kein Profil → Info-E-Mail | Scraping-Fehler → Fehler-E-Mail | Enrichment-Fehler → Graceful Degradation",
+        "height": 342,
+        "width": 440
+      },
+      "id": "19c3fa3c-4530-4b1e-ae6d-1730cf08ae03",
+      "name": "📋 Workflow-Übersicht",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3136,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Apify Google Maps Scraper\n\nPolling-Loop: Alle 15 Sek. Status prüfen (max. 20 Versuche = 5 Min.).\nActor: `compass/crawler-google-places`\nImmer nur das erste (relevanteste) Ergebnis.",
+        "height": 180,
+        "width": 500,
+        "color": 4
+      },
+      "id": "024cc989-ff58-4df3-8faa-0981a3eb96c1",
+      "name": "🔍 Scraping-Phase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2608,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Parallele Enrichment-Phase\n\nWebsite-NAP + Google-Suche laufen parallel.\nBeide mit `continueOnFail` — bei Fehler wird der jeweilige Check als \"nicht geprüft\" markiert.",
+        "height": 176,
+        "width": 500,
+        "color": 5
+      },
+      "id": "0bee11c9-4476-4cab-8fd8-30f64cbecef6",
+      "name": "🌐 Enrichment-Phase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2000,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Gemini 2.5 Pro Analyse\n\n10 Ranking-Faktoren mit je 0-10 Punkten.\nAusgabe als strukturiertes JSON.\nTemperature: 0.3 für konsistente Ergebnisse.",
+        "height": 176,
+        "width": 420,
+        "color": 6
+      },
+      "id": "b06227f2-c3f2-4ed5-a9e3-ded2d31fd71c",
+      "name": "🤖 Analyse-Phase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Report + Lead-Capture\n\nProfessionelle HTML-E-Mail mit Score, Checkliste, Details und CTA.\nLead-Daten parallel in Google Sheet.",
+        "height": 150,
+        "width": 400,
+        "color": 2
+      },
+      "id": "021e4537-9ac5-45e9-b373-a5fe9e1fd2a8",
+      "name": "📧 Output-Phase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "actorId": {
+          "__rl": true,
+          "value": "nwua9Gu5YrADL7ZDj",
+          "mode": "list",
+          "cachedResultName": "Google Maps Scraper (compass/crawler-google-places)",
+          "cachedResultUrl": "https://console.apify.com/actors/nwua9Gu5YrADL7ZDj/input"
+        },
+        "customBody": "{\n  \"searchStringsArray\": [\n    \"{{ $json.firmenname }} {{ $json.stadt }}\"\n  ],\n  \"locationQuery\": \"{{ $json.stadt }}, Deutschland\",\n  \"language\": \"de\",\n  \"countryCode\": \"de\",\n  \"maxCrawledPlacesPerSearch\": 1,\n  \"includeWebResults\": false,\n  \"scrapeReviews\": true,\n  \"maxReviews\": 20,\n  \"scrapeResponsesOfReviews\": true,\n  \"scrapeContacts\": true,\n  \"scrapeImages\": true,\n  \"maxImages\": 5,\n  \"scrapeQuestions\": true,\n  \"scrapePlaceDetailPage\": true,\n  \"skipClosedPlaces\": false\n}\n",
+        "timeout": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        -2416,
+        -80
+      ],
+      "id": "74c86a28-300d-4949-9892-2ee8f4072621",
+      "name": "GBP Scraping",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "q": "={{ $json.formData.firmenname }}{{ $json.formData.stadt }}",
+        "location": "de",
+        "additionalFields": {
+          "num": "10"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApi",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        464
+      ],
+      "id": "d27f3a53-5419-4c8d-b25c-0d770a874956",
+      "name": "Google search",
+      "credentials": {
+        "serpApi": {
+          "id": "vyhvrjicwn3wnvg8",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=={{ $json.geminiRequestBody.contents[0].parts[0].text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -1440,
+        -80
+      ],
+      "id": "ecf30704-8973-4c5a-a019-9f511c231180",
+      "name": "Gemini Analyse",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gGQQyjOkRgSzyK0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Google Business Profil Check — Kostenlos",
+        "formDescription": "Finde in 2 Minuten heraus, wie gut dein Google Business Profil für lokale Rankings aufgestellt ist. Du bekommst einen detaillierten Report mit Score und konkreten Verbesserungsvorschlägen per E-Mail.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Firmenname",
+              "placeholder": "z.B. Müller Sanitär GmbH",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Stadt / Ort",
+              "placeholder": "z.B. München",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Branche",
+              "placeholder": "z.B. Sanitär, Zahnarzt, Restaurant",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Reichweite",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Lokal"
+                  },
+                  {
+                    "option": "Regional"
+                  },
+                  {
+                    "option": "Bundesweit"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Ladenlokal",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Ja"
+                  },
+                  {
+                    "option": "Nein"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "E-Mail-Adresse",
+              "placeholder": "deine@email.de",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Name (Ansprechpartner)",
+              "placeholder": "Optional"
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "✅ Dein Report wird gerade erstellt und in ca. 2-3 Minuten an deine E-Mail-Adresse gesendet. Prüfe ggf. auch deinen Spam-Ordner."
+            }
+          }
+        }
+      },
+      "id": "0e013c53-af2d-44df-9895-3358434f6c53",
+      "name": "📝 Formular-Trigger1",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -4864,
+        1840
+      ],
+      "webhookId": "a487ba50-6a16-47bd-852f-2b7efa11fbe7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formulardaten direkt vom Formular-Trigger holen\nconst form = $('📝 Formular-Trigger1').first().json;\n\n// Apify-Ergebnis (native Node gibt Ergebnis direkt zurück)\nconst items = $input.all();\nconst profile = items[0]?.json || null;\n\nconst formData = {\n  firmenname: form['Firmenname'] || '',\n  stadt: form['Stadt / Ort'] || '',\n  branche: form['Branche'] || '',\n  reichweite: form['Reichweite'] || '',\n  ladenlokal: form['Ladenlokal'] || '',\n  email: form['E-Mail-Adresse'] || '',\n  name: form['Name (Ansprechpartner)'] || '',\n  config: {\n    apify_actor_id: 'compass~crawler-google-places',\n    gemini_model: 'gemini-2.5-pro',\n    email_absender_name: 'Dein GBP Check',\n    cta_link: 'https://calendly.com/dein-link',\n    cta_text: 'Kostenloses Beratungsgespräch vereinbaren',\n    logo_url: '',\n    firmen_name: 'Deine Agentur',\n    firmen_website: 'https://example.com',\n    impressum_link: 'https://example.com/impressum',\n    datenschutz_link: 'https://example.com/datenschutz',\n    google_sheet_id: 'DEINE_SHEET_ID'\n  }\n};\n\nif (!profile || !profile.title) {\n  return [{\n    json: {\n      profilGefunden: false,\n      formData: formData,\n      gbpDaten: null\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    profilGefunden: true,\n    formData: formData,\n    gbpDaten: {\n      title: profile.title || '',\n      address: profile.address || '',\n      phone: profile.phone || '',\n      website: profile.website || '',\n      categoryName: profile.categoryName || '',\n      categories: profile.categories || [],\n      description: profile.description || '',\n      totalScore: profile.totalScore || 0,\n      reviewsCount: profile.reviewsCount || 0,\n      reviews: (profile.reviews || []).slice(0, 20),\n      imageUrls: profile.imageUrls || [],\n      imageCount: (profile.imageUrls || []).length,\n      openingHours: profile.openingHours || [],\n      additionalInfo: profile.additionalInfo || {},\n      questionsAndAnswers: profile.questionsAndAnswers || [],\n      url: profile.url || '',\n      placeId: profile.placeId || '',\n      posts: profile.posts || []\n    }\n  }\n}];\n"
+      },
+      "id": "49dd3144-15b7-4449-899e-6ee9dd3fea90",
+      "name": "📝 Run-Daten extrahieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4080,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-found",
+              "leftValue": "={{ $json.profilGefunden }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b27ec80-4573-4335-a9e0-3c8a3b09df6d",
+      "name": "✅ Profil gefunden?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4848,
+        2432
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.gbpDaten.website }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "80106339-776b-4dd7-9f78-e7fb3895e97d",
+      "name": "🌐 Website scrapen1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4528,
+        2144
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst profil = $('📝 Run-Daten extrahieren1').first().json;\nconst gbp = profil.gbpDaten;\nif (!response || response.error || !gbp.website) {\n  return [{ json: { website_nap: { website_erreichbar: false, nap_konsistent_mit_gbp: null, abweichungen: ['Website nicht erreichbar oder nicht vorhanden'] } } }];\n}\nconst html = String(response.data || response.body || response);\nconst phoneRegex = /(\\+49|0049|0)\\s*[\\d\\s\\-\\/\\(\\)]{6,15}/g;\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\nconst plzRegex = /\\d{5}\\s+[A-ZÄÖÜa-zäöüß]+/g;\nconst phones = html.match(phoneRegex) || [];\nconst emails = html.match(emailRegex) || [];\nconst addresses = html.match(plzRegex) || [];\nconst abweichungen = [];\nif (gbp.phone && phones.length > 0) {\n  const norm = gbp.phone.replace(/[\\s\\-\\/\\(\\)]/g, '');\n  const found = phones.some(p => p.replace(/[\\s\\-\\/\\(\\)]/g, '').includes(norm.slice(-8)));\n  if (!found) abweichungen.push('Telefon: GBP \"' + gbp.phone + '\" nicht auf Website gefunden');\n}\nif (gbp.address && addresses.length === 0) {\n  abweichungen.push('Adresse auf Website nicht eindeutig erkennbar');\n}\nreturn [{ json: { website_nap: { website_erreichbar: true, gefundene_telefonnummern: phones.slice(0, 5), gefundene_emails: emails.slice(0, 5), gefundene_adressen: addresses.slice(0, 5), nap_konsistent_mit_gbp: abweichungen.length === 0, abweichungen: abweichungen } } }];"
+      },
+      "id": "49fbab59-feb0-4ff3-9d45-59b23fe27ab0",
+      "name": "📝 Website-NAP extrahieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4288,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nif (!response || response.error) {\n  return [{ json: { nap_verzeichnisse: { geprueft: false, gefundene_eintraege: 0, details: [] } } }];\n}\nconst results = response.organic_results || response.organic || [];\nconst dirs = ['gelbeseiten', 'yelp', 'dasoertliche', '11880', 'golocal', 'branchenbuch', 'meinestadt', 'cylex', 'hotfrog', 'kennstdueinen'];\nconst details = [];\nfor (const r of results) {\n  const url = (r.link || r.url || '').toLowerCase();\n  const isDir = dirs.some(d => url.includes(d));\n  if (isDir) {\n    details.push({ quelle: dirs.find(d => url.includes(d)), url: r.link || r.url, snippet: (r.snippet || '').substring(0, 200) });\n  }\n}\nreturn [{ json: { nap_verzeichnisse: { geprueft: true, gefundene_eintraege: details.length, alle_suchergebnisse: results.length, details: details } } }];"
+      },
+      "id": "bf8f59a8-0959-48a8-8e60-905b4dbedb5d",
+      "name": "📝 Such-NAP auswerten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4288,
+        2384
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "d3e30d99-2bc8-4aed-9cfd-cfccfbf3e9bf",
+      "name": "🔀 Daten zusammenführen1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -3984,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nconst profil = $('📝 Run-Daten extrahieren1').first().json;\nconst formData = profil.formData;\nconst gbp = profil.gbpDaten;\nconst websiteNap = merged.website_nap || { website_erreichbar: false, abweichungen: ['Nicht geprüft'] };\nconst napVerz = merged.nap_verzeichnisse || { geprueft: false, gefundene_eintraege: 0, details: [] };\n\nconst systemPrompt = 'Du bist ein erfahrener Local SEO Experte, spezialisiert auf Google Business Profile Optimierung im DACH-Raum. Du analysierst Google Business Profile anhand von 10 klar definierten Ranking-Faktoren und erstellst einen detaillierten, praxisnahen Audit-Report auf Deutsch.\\n\\nDein Report richtet sich an Geschäftsinhaber (KMUs) ohne SEO-Vorkenntnisse. Schreibe klar, verständlich und konkret — keine Fachbegriffe ohne Erklärung, kein Marketing-Sprech. Jede Empfehlung muss sofort umsetzbar sein.';\n\nconst userPrompt = `Analysiere das folgende Google Business Profil und erstelle einen vollständigen Audit-Report.\n\n## Eingaben des Nutzers\n- Firmenname: ${formData.firmenname}\n- Stadt: ${formData.stadt}\n- Branche: ${formData.branche}\n- Reichweite: ${formData.reichweite}\n- Geschäftstyp: ${formData.ladenlokal}\n\n## Google Business Profil Daten\n${JSON.stringify(gbp, null, 2)}\n\n## Website NAP-Check\n${JSON.stringify(websiteNap, null, 2)}\n\n## Verzeichnis NAP-Check\n${JSON.stringify(napVerz, null, 2)}\n\n---\n\n## Bewertungskriterien\n\nBewerte das Profil anhand dieser 10 Faktoren. Vergib für jeden Faktor 0-10 Punkte.\n\n### 1. Basisdaten (0-10 Punkte)\n- Name exakt wie im echten Leben (kein Keyword-Spam)?\n- Adresse korrekt und konsistent mit Website & Verzeichnissen?\n- Telefonnummer lokal & erreichbar?\n- Website verlinkt?\n- Öffnungszeiten gepflegt (inkl. Feiertage)?\n- WICHTIG: Bei Geschäftstyp \"Ohne Ladenlokal\" gelten andere Maßstäbe für die Adresse\n\n### 2. Kategorien (0-10 Punkte)\n- Hauptkategorie = Kerngeschäft der angegebenen Branche?\n- Sind sinnvolle Nebenkategorien vorhanden?\n- Passen die Kategorien zur angegebenen Branche \"${formData.branche}\"?\n\n### 3. Beschreibung (0-10 Punkte)\n- Sind relevante Keywords für \"${formData.branche}\" natürlich eingebaut?\n- Wird klar: Was macht das Unternehmen? Für wen? Wo?\n- Kein Marketing-Blabla?\n- Länge angemessen (mind. 250 Zeichen empfohlen)?\n\n### 4. Fotos & Videos (0-10 Punkte)\n- Logo und Titelbild vorhanden?\n- Außenansicht (besonders wichtig bei \"Mit Ladenlokal\")?\n- Innenraum / Team / Produkte?\n- Anzahl: mind. 10 Fotos empfohlen, 25+ ideal\n- Aktualität der Fotos?\n\n### 5. Bewertungen (0-10 Punkte)\n- Anzahl Bewertungen (Benchmark je nach Branche)\n- Durchschnittsbewertung (4.0+ gut, 4.5+ sehr gut)\n- Werden Bewertungen beantwortet (auch negative)?\n- Aktualität der Bewertungen (regelmäßig neue)?\n- Qualität der Bewertungen (ausführlich, mit Keywords)?\n\n### 6. Beiträge / Posts (0-10 Punkte)\n- Werden Posts veröffentlicht?\n- Frequenz (1x pro Woche empfohlen)?\n- Aktualität des letzten Posts?\n- Qualität und Relevanz der Inhalte?\n\n### 7. Leistungen / Produkte (0-10 Punkte)\n- Sind Services/Produkte eingetragen?\n- Mit Beschreibungen versehen?\n- Vollständig für die Branche \"${formData.branche}\"?\n\n### 8. Fragen & Antworten (0-10 Punkte)\n- Sind Q&A vorhanden?\n- Werden sie vom Inhaber kontrolliert/beantwortet?\n- Wichtige Fragen proaktiv gestellt und beantwortet?\n\n### 9. NAP-Konsistenz (0-10 Punkte)\n- Stimmen Name, Adresse, Telefon zwischen GBP, Website und Verzeichnissen überein?\n- Nutze die konkreten Daten aus dem Website- und Verzeichnis-Check\n- Jede Inkonsistenz benennen\n\n### 10. Relevanz & Bekanntheit (0-10 Punkte)\n- Gesamteindruck: Wie gut ist das Profil für \"${formData.branche}\" in \"${formData.stadt}\" mit Reichweite \"${formData.reichweite}\" aufgestellt?\n- Passt alles zusammen (Kategorien, Beschreibung, Leistungen, Bewertungen)?\n- Sind genug Signale da für die gewünschte Reichweite?\n\n---\n\n## Ausgabeformat (STRIKT einhalten)\n\nAntworte ausschließlich im folgenden JSON-Format. Kein Text vor oder nach dem JSON.\n\n{\n  \"gesamt_score\": 72,\n  \"gesamt_score_label\": \"Gut — aber mit klarem Optimierungspotenzial\",\n  \"zusammenfassung\": \"Kurze Zusammenfassung in 2-3 Sätzen.\",\n  \"faktoren\": [\n    {\n      \"nummer\": 1,\n      \"name\": \"Basisdaten\",\n      \"score\": 8,\n      \"max_score\": 10,\n      \"status\": \"gut\",\n      \"emoji\": \"✅\",\n      \"zusammenfassung\": \"Kurze Bewertung in 1-2 Sätzen.\",\n      \"details\": [\n        {\"check\": \"Firmenname korrekt\", \"status\": \"ok\", \"kommentar\": \"Beschreibung.\"}\n      ]\n    }\n  ],\n  \"prioritaeten\": [\n    {\n      \"rang\": 1,\n      \"titel\": \"Titel der Maßnahme\",\n      \"faktor\": \"Faktorname\",\n      \"aufwand\": \"niedrig\",\n      \"wirkung\": \"hoch\",\n      \"beschreibung\": \"Detaillierte Beschreibung.\",\n      \"sofort_tipp\": \"Konkreter Sofort-Tipp.\"\n    }\n  ],\n  \"score_labels\": {\n    \"0-30\": \"Kritisch — dringender Handlungsbedarf\",\n    \"31-50\": \"Schwach — viele Baustellen\",\n    \"51-70\": \"Ausbaufähig — gute Grundlage, aber Potenzial wird verschenkt\",\n    \"71-85\": \"Gut — mit gezielten Maßnahmen zum Top-Ranking\",\n    \"86-100\": \"Exzellent — dein Profil ist top aufgestellt\"\n  }\n}\n\nStatus-Werte für einzelne Checks: \"ok\", \"warnung\", \"fehlt\", \"kritisch\"\nAufwand-Werte: \"niedrig\", \"mittel\", \"hoch\"\nWirkung-Werte: \"niedrig\", \"mittel\", \"hoch\"\n\nErstelle den Report für ALLE 10 Faktoren mit je mindestens 3 Detail-Checks.\nErstelle genau 5 priorisierte Maßnahmen, sortiert nach Wirkung/Aufwand-Verhältnis.`;\n\nconst geminiRequestBody = {\n  contents: [{ parts: [{ text: systemPrompt + '\\n\\n' + userPrompt }] }],\n  generationConfig: {\n    temperature: 0.3,\n    maxOutputTokens: 8000,\n    responseMimeType: 'application/json'\n  }\n};\n\nreturn [{ json: { geminiRequestBody, formData, gbpDaten: gbp, websiteNap, napVerz } }];"
+      },
+      "id": "5dae5d8f-f6c8-469f-95c4-6f9e7be4bf78",
+      "name": "📋 Analyse vorbereiten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3744,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst prev = $('📋 Analyse vorbereiten1').first().json;\n\n// Native Gemini node gibt .text oder .output zurück\nlet text = response.content?.parts?.[0]?.text || response.text || response.output || '';\nif (!text && response.message?.content) text = response.message.content;\nif (!text) text = JSON.stringify(response);\n\n// JSON aus der Antwort extrahieren\ntext = text.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\nconst firstBrace = text.indexOf('{');\nconst lastBrace = text.lastIndexOf('}');\n\nif (firstBrace === -1 || lastBrace === -1) {\n  throw new Error('Gemini hat kein valides JSON zurückgegeben: ' + text.substring(0, 200));\n}\n\nconst jsonStr = text.substring(firstBrace, lastBrace + 1);\nlet analyse;\ntry {\n  analyse = JSON.parse(jsonStr);\n} catch (e) {\n  throw new Error('JSON-Parse-Fehler: ' + e.message);\n}\n\nreturn [{ json: { analyse, formData: prev.formData, gbpDaten: prev.gbpDaten } }];\n"
+      },
+      "id": "df52dd0f-72e8-406f-9793-9a8a1cfd406a",
+      "name": "📝 Gemini-Antwort parsen1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3696,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { analyse, formData, gbpDaten } = $input.first().json;\nconst config = formData.config;\nconst score = analyse.gesamt_score;\nconst scoreLabel = analyse.gesamt_score_label;\nconst scorePct = Math.min(100, Math.max(0, score));\nconst getColor = (s, max) => { const p = (s / max) * 100; if (p >= 70) return '#22c55e'; if (p >= 40) return '#f59e0b'; return '#ef4444'; };\nconst mainColor = getColor(score, 100);\nconst getIcon = (s) => { if (s >= 7) return '✅'; if (s >= 4) return '⚠️'; return '❌'; };\nconst getRangIcon = (r) => { if (r === 1) return '🥇'; if (r === 2) return '🥈'; if (r === 3) return '🥉'; return r + '.'; };\nconst getStatusColor = (st) => { if (st === 'ok') return '#22c55e'; if (st === 'warnung') return '#f59e0b'; if (st === 'fehlt' || st === 'kritisch') return '#ef4444'; return '#6b7280'; };\nconst getStatusIcon = (st) => { if (st === 'ok') return '✅'; if (st === 'warnung') return '⚠️'; if (st === 'fehlt') return '❌'; if (st === 'kritisch') return '🔴'; return '○'; };\n\nlet faktorenChecklist = '';\nfor (const f of analyse.faktoren) {\n  const icon = getIcon(f.score);\n  const color = getColor(f.score, f.max_score);\n  faktorenChecklist += `<tr><td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:15px;\">${icon} ${f.name}</td><td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:bold;color:${color};font-size:15px;\">${f.score}/${f.max_score}</td></tr>`;\n}\n\nlet faktorenDetails = '';\nfor (const f of analyse.faktoren) {\n  const color = getColor(f.score, f.max_score);\n  let checksHtml = '';\n  for (const d of (f.details || [])) {\n    const si = getStatusIcon(d.status);\n    const sc = getStatusColor(d.status);\n    checksHtml += `<tr><td style=\"padding:6px 0;font-size:14px;color:#374151;\">${si} ${d.check}</td></tr><tr><td style=\"padding:0 0 8px 28px;font-size:13px;color:#6b7280;\">${d.kommentar}</td></tr>`;\n  }\n  faktorenDetails += `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:20px;\"><tr><td style=\"padding:10px 15px;background-color:${color}15;border-left:4px solid ${color};border-radius:4px;\"><strong style=\"font-size:16px;color:#1f2937;\">${f.name} — ${f.score}/${f.max_score}</strong><br><span style=\"font-size:14px;color:#4b5563;\">${f.zusammenfassung}</span></td></tr><tr><td style=\"padding:10px 15px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">${checksHtml}</table></td></tr></table>`;\n}\n\nlet prioHtml = '';\nfor (const p of (analyse.prioritaeten || [])) {\n  const icon = getRangIcon(p.rang);\n  prioHtml += `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:15px;border:1px solid #e5e7eb;border-radius:8px;\"><tr><td style=\"padding:15px;\"><strong style=\"font-size:16px;color:#1f2937;\">${icon} #${p.rang}: ${p.titel}</strong><br><span style=\"font-size:13px;color:#6b7280;\">Aufwand: ${p.aufwand} | Wirkung: ${p.wirkung} | Faktor: ${p.faktor}</span><br><br><span style=\"font-size:14px;color:#374151;\">${p.beschreibung}</span><br><br><table cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"padding:8px 12px;background-color:#eff6ff;border-radius:6px;border-left:3px solid #2563eb;\"><span style=\"font-size:13px;color:#1e40af;\">💡 <strong>Sofort-Tipp:</strong> ${p.sofort_tipp}</span></td></tr></table></td></tr></table>`;\n}\n\nconst logoHtml = config.logo_url ? `<img src=\"${config.logo_url}\" alt=\"${config.firmen_name}\" style=\"max-height:50px;margin-bottom:15px;\">` : `<strong style=\"font-size:20px;color:#2563eb;\">${config.firmen_name}</strong>`;\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"></head><body style=\"margin:0;padding:0;background-color:#f9fafb;font-family:Arial,Helvetica,sans-serif;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f9fafb;\"><tr><td align=\"center\" style=\"padding:20px 10px;\"><table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);\"><tr><td style=\"padding:30px 30px 20px;text-align:center;border-bottom:1px solid #e5e7eb;\">${logoHtml}</td></tr><tr><td style=\"padding:25px 30px;\"><p style=\"font-size:16px;color:#1f2937;margin:0 0 15px;\">Hallo ${formData.name || 'dort'},</p><p style=\"font-size:15px;color:#4b5563;margin:0 0 25px;\">hier ist dein Google Business Profil Check für <strong>${formData.firmenname}</strong> in <strong>${formData.stadt}</strong>.</p><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f9fafb;border-radius:12px;border:2px solid ${mainColor};\"><tr><td style=\"padding:25px;text-align:center;\"><span style=\"font-size:48px;font-weight:bold;color:${mainColor};\">${score}</span><span style=\"font-size:24px;color:#6b7280;\"> / 100</span><br><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:15px 0;\"><tr><td style=\"background-color:#e5e7eb;border-radius:10px;height:20px;\"><div style=\"width:${scorePct}%;background-color:${mainColor};height:20px;border-radius:10px;\"></div></td></tr></table><span style=\"font-size:14px;color:#4b5563;font-style:italic;\">${scoreLabel}</span></td></tr></table></td></tr><tr><td style=\"padding:0 30px 20px;\"><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 10px;\">Zusammenfassung</h2><p style=\"font-size:15px;color:#4b5563;line-height:1.6;margin:0 0 25px;\">${analyse.zusammenfassung}</p><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 10px;\">Checkliste — Alle 10 Faktoren</h2><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:25px;\">${faktorenChecklist}</table><h2 style=\"font-size:18px;color:#1f2937;margin:20px 0 15px;\">Detail-Analyse</h2>${faktorenDetails}<h2 style=\"font-size:18px;color:#1f2937;margin:30px 0 15px;\">Top 5 Maßnahmen nach Priorität</h2>${prioHtml}</td></tr><tr><td style=\"padding:20px 30px;text-align:center;background-color:#eff6ff;border-top:1px solid #e5e7eb;\"><p style=\"font-size:16px;color:#1f2937;margin:0 0 15px;\">Du willst die Optimierung nicht selbst machen?<br>Wir helfen dir gerne!</p><a href=\"${config.cta_link}\" style=\"display:inline-block;padding:14px 28px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;\">${config.cta_text}</a></td></tr><tr><td style=\"padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;background-color:#f9fafb;\"><p style=\"font-size:12px;color:#9ca3af;margin:0;\">${config.firmen_name} | <a href=\"${config.firmen_website}\" style=\"color:#6b7280;\">${config.firmen_website}</a><br><a href=\"${config.impressum_link}\" style=\"color:#6b7280;\">Impressum</a> | <a href=\"${config.datenschutz_link}\" style=\"color:#6b7280;\">Datenschutz</a></p></td></tr></table></td></tr></table></body></html>`;\n\nconst subject = `Dein Google Business Profil Check: ${score}/100 Punkte`;\nreturn [{ json: { html, subject, email: formData.email, name: formData.name, firmenname: formData.firmenname, stadt: formData.stadt, analyse, formData, gbpDaten, config } }];"
+      },
+      "id": "4fff1e92-88e9-4835-8ee8-0d5bb41694af",
+      "name": "📧 Report-E-Mail erstellen1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3328,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "senderName": "={{ $json.config.email_absender_name }}"
+        }
+      },
+      "id": "66031302-151f-4eaa-96d0-ed22aac45b96",
+      "name": "📧 Report senden1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3712,
+        2560
+      ],
+      "webhookId": "0d3825e6-5c96-41fe-a143-02d2048746e4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI",
+          "mode": "list",
+          "cachedResultName": "GBP Analyse",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Firmenname": "={{ $json.firmenname }}",
+            "Stadt": "={{ $json.stadt }}",
+            "Name": "={{ $json.name }}",
+            "Ladenlokal": "={{ $('✅ Profil gefunden?1').item.json.formData.ladenlokal }}",
+            "Branche": "={{ $('✅ Profil gefunden?1').item.json.formData.branche }}",
+            "Reichweite": "={{ $('✅ Profil gefunden?1').item.json.formData.reichweite }}",
+            "E-Mail": "={{ $('✅ Profil gefunden?1').item.json.formData.email }}",
+            "Google Maps URL": "={{ $('Google search1').item.json.search_metadata.google_url }}",
+            "Gesamt-Score": "={{ $json.analyse.gesamt_score }}",
+            "Score-Label": "={{ $json.analyse.gesamt_score_label }}",
+            "Zeitstempel": "={{ $('📝 Formular-Trigger1').item.json.submittedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Zeitstempel",
+              "displayName": "Zeitstempel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-Mail",
+              "displayName": "E-Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Firmenname",
+              "displayName": "Firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stadt",
+              "displayName": "Stadt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Branche",
+              "displayName": "Branche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reichweite",
+              "displayName": "Reichweite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ladenlokal",
+              "displayName": "Ladenlokal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "GBP gefunden",
+              "displayName": "GBP gefunden",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Google Maps URL",
+              "displayName": "Google Maps URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Gesamt-Score",
+              "displayName": "Gesamt-Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score-Label",
+              "displayName": "Score-Label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hauptkategorie",
+              "displayName": "Hauptkategorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bewertungen (Anzahl)",
+              "displayName": "Bewertungen (Anzahl)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bewertungen (Schnitt)",
+              "displayName": "Bewertungen (Schnitt)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fotos (Anzahl)",
+              "displayName": "Fotos (Anzahl)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Top-Priorität",
+              "displayName": "Top-Priorität",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "html",
+              "displayName": "html",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "firmenname",
+              "displayName": "firmenname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "stadt",
+              "displayName": "stadt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "analyse",
+              "displayName": "analyse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "formData",
+              "displayName": "formData",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "gbpDaten",
+              "displayName": "gbpDaten",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "config",
+              "displayName": "config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "05de09e5-a675-4b28-acda-4cf9283c8664",
+      "name": "📋 Lead speichern1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3376,
+        2560
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.formData.email }}",
+        "subject": "Google Business Profil Check — Kein Profil gefunden",
+        "message": "=<!DOCTYPE html><html><body style=\"margin:0;padding:0;background-color:#f9fafb;font-family:Arial,Helvetica,sans-serif;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:20px;\"><table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);\"><tr><td style=\"padding:30px;\"><h2 style=\"color:#1f2937;\">Hallo {{ $json.formData.name || 'dort' }},</h2><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\">wir konnten leider kein Google Business Profil für <strong>{{ $json.formData.firmenname }}</strong> in <strong>{{ $json.formData.stadt }}</strong> finden.</p><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\"><strong>Mögliche Gründe:</strong></p><ul style=\"font-size:14px;color:#4b5563;line-height:1.8;\"><li>Das Profil wurde noch nicht erstellt</li><li>Der Firmenname im Formular weicht vom Profil ab</li><li>Das Profil ist noch nicht verifiziert</li></ul><p style=\"font-size:15px;color:#4b5563;line-height:1.6;\">Du kannst dein Google Business Profil kostenlos unter <a href=\"https://business.google.com\" style=\"color:#2563eb;\">business.google.com</a> erstellen und verwalten.</p><p style=\"font-size:15px;color:#4b5563;\">Gerne helfen wir dir dabei!</p><a href=\"{{ $json.formData.config.cta_link }}\" style=\"display:inline-block;margin-top:15px;padding:12px 24px;background-color:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;\">{{ $json.formData.config.cta_text }}</a></td></tr></table></td></tr></table></body></html>",
+        "options": {
+          "senderName": "={{ $json.formData.config.email_absender_name }}"
+        }
+      },
+      "id": "9603f3fb-a71f-4747-9146-64a5237d4d34",
+      "name": "❌ Kein Profil - E-Mail1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -4528,
+        2560
+      ],
+      "webhookId": "1e8f6a45-6a4c-4fbb-b3fa-b94eb79f69ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI",
+          "mode": "list",
+          "cachedResultName": "GBP Analyse",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1n9lxrrfyiSXA2zlyX3XSYyUQOwW6piFOucM4yIBVsbI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "56359c81-a4bb-4794-80b4-c015f3197b99",
+      "name": "📋 Kein Profil - Lead speichern1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -4528,
+        2736
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Google Business Profil Audit — Lead Magnet\n\n**Ablauf:**\n1. Nutzer füllt Formular aus\n2. Apify scrapt das Google Business Profil\n3. Website + Google-Suche für NAP-Konsistenz\n4. Gemini 2.5 Pro analysiert alle Daten\n5. Professioneller HTML-Report per E-Mail\n6. Lead-Daten in Google Sheet\n\n**Fehlerbehandlung:** Kein Profil → Info-E-Mail | Scraping-Fehler → Fehler-E-Mail | Enrichment-Fehler → Graceful Degradation",
+        "height": 342,
+        "width": 440
+      },
+      "id": "5510a7c2-6e93-418b-9df6-c072e2aa5462",
+      "name": "📋 Workflow-Übersicht2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5168,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Apify Google Maps Scraper\n\nPolling-Loop: Alle 15 Sek. Status prüfen (max. 20 Versuche = 5 Min.).\nActor: `compass/crawler-google-places`\nImmer nur das erste (relevanteste) Ergebnis.",
+        "height": 180,
+        "width": 500,
+        "color": 4
+      },
+      "id": "f9617ee0-940e-4a48-b6d5-421438b478c1",
+      "name": "🔍 Scraping-Phase1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4640,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Parallele Enrichment-Phase\n\nWebsite-NAP + Google-Suche laufen parallel.\nBeide mit `continueOnFail` — bei Fehler wird der jeweilige Check als \"nicht geprüft\" markiert.",
+        "height": 176,
+        "width": 500,
+        "color": 5
+      },
+      "id": "0563d820-e077-498a-bf03-1d771ff7de59",
+      "name": "🌐 Enrichment-Phase1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4032,
+        1456
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Gemini 2.5 Pro Analyse\n\n10 Ranking-Faktoren mit je 0-10 Punkten.\nAusgabe als strukturiertes JSON.\nTemperature: 0.3 für konsistente Ergebnisse.",
+        "height": 176,
+        "width": 420,
+        "color": 6
+      },
+      "id": "47f6d3a5-8777-40a2-b125-116d9ace1d21",
+      "name": "🤖 Analyse-Phase1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3424,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Report + Lead-Capture\n\nProfessionelle HTML-E-Mail mit Score, Checkliste, Details und CTA.\nLead-Daten parallel in Google Sheet.",
+        "height": 150,
+        "width": 400,
+        "color": 2
+      },
+      "id": "b2e8e6ba-12e6-4827-a40f-4f1043ba0163",
+      "name": "📧 Output-Phase1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "nwua9Gu5YrADL7ZDj",
+          "mode": "list",
+          "cachedResultName": "Google Maps Scraper (compass/crawler-google-places)",
+          "cachedResultUrl": "https://console.apify.com/actors/nwua9Gu5YrADL7ZDj/input"
+        },
+        "customBody": "={\n    \"includeWebResults\": false,\n    \"locationQuery\": \"{{ $json['Stadt / Ort'] }}\",\n    \"maxCrawledPlacesPerSearch\": 1,\n    \"maxImages\": 20,\n    \"maxQuestions\": 5,\n    \"maxReviews\": 10,\n    \"maximumLeadsEnrichmentRecords\": 10,\n    \"scrapeContacts\": true,\n    \"scrapeDirectories\": true,\n    \"scrapeImageAuthors\": true,\n    \"scrapePlaceDetailPage\": true,\n    \"scrapeReviewsPersonalData\": true,\n    \"scrapeTableReservationProvider\": true,\n    \"searchStringsArray\": [\n        \"{{ $json.Firmenname }}\"\n    ],\n    \"skipClosedPlaces\": false\n}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        -4448,
+        1840
+      ],
+      "id": "52c94041-860b-4b23-9c10-418d5afb5f2f",
+      "name": "GBP Scraping1",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "q": "={{ $json.formData.firmenname }} {{ $json.formData.stadt }}",
+        "location": "de",
+        "additionalFields": {
+          "num": "10"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApi",
+      "typeVersion": 1,
+      "position": [
+        -4528,
+        2384
+      ],
+      "id": "3f9e17e6-a807-4a1e-ab64-401ce1b3eb37",
+      "name": "Google search1",
+      "credentials": {
+        "serpApi": {
+          "id": "vyhvrjicwn3wnvg8",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=={{ $json.geminiRequestBody.contents[0].parts[0].text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -3344,
+        1840
+      ],
+      "id": "db88f380-748e-4b5d-9537-9f3dfb524208",
+      "name": "Gemini Analyse1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gGQQyjOkRgSzyK0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "📝 Formular-Trigger1": [
+      {
+        "json": {
+          "Firmenname": "Mon Amie Modetrends",
+          "Stadt / Ort": "Bad Holzhausen",
+          "Branche": "Einzelhandel",
+          "Reichweite": "Lokal",
+          "Ladenlokal": "Ja",
+          "E-Mail-Adresse": "mark@mo-casa.com",
+          "Name (Ansprechpartner)": "",
+          "submittedAt": "2026-02-13T03:46:04.813+01:00",
+          "formMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "📝 Run-Daten extrahieren": {
+      "main": [
+        [
+          {
+            "node": "✅ Profil gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Profil gefunden?": {
+      "main": [
+        [
+          {
+            "node": "🌐 Website scrapen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Kein Profil - E-Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Kein Profil - Lead speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Website scrapen": {
+      "main": [
+        [
+          {
+            "node": "📝 Website-NAP extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Website-NAP extrahieren": {
+      "main": [
+        [
+          {
+            "node": "🔀 Daten zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Such-NAP auswerten": {
+      "main": [
+        [
+          {
+            "node": "🔀 Daten zusammenführen",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Daten zusammenführen": {
+      "main": [
+        [
+          {
+            "node": "📋 Analyse vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Analyse vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Gemini Analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Gemini-Antwort parsen": {
+      "main": [
+        [
+          {
+            "node": "📧 Report-E-Mail erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Report-E-Mail erstellen": {
+      "main": [
+        [
+          {
+            "node": "📧 Report senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Lead speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GBP Scraping": {
+      "main": [
+        [
+          {
+            "node": "📝 Run-Daten extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search": {
+      "main": [
+        [
+          {
+            "node": "📝 Such-NAP auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Analyse": {
+      "main": [
+        [
+          {
+            "node": "📝 Gemini-Antwort parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Formular-Trigger1": {
+      "main": [
+        [
+          {
+            "node": "GBP Scraping1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Run-Daten extrahieren1": {
+      "main": [
+        [
+          {
+            "node": "✅ Profil gefunden?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Profil gefunden?1": {
+      "main": [
+        [
+          {
+            "node": "🌐 Website scrapen1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google search1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Kein Profil - E-Mail1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Kein Profil - Lead speichern1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Website scrapen1": {
+      "main": [
+        [
+          {
+            "node": "📝 Website-NAP extrahieren1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Website-NAP extrahieren1": {
+      "main": [
+        [
+          {
+            "node": "🔀 Daten zusammenführen1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Such-NAP auswerten1": {
+      "main": [
+        [
+          {
+            "node": "🔀 Daten zusammenführen1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Daten zusammenführen1": {
+      "main": [
+        [
+          {
+            "node": "📋 Analyse vorbereiten1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Analyse vorbereiten1": {
+      "main": [
+        [
+          {
+            "node": "Gemini Analyse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Gemini-Antwort parsen1": {
+      "main": [
+        [
+          {
+            "node": "📧 Report-E-Mail erstellen1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Report-E-Mail erstellen1": {
+      "main": [
+        [
+          {
+            "node": "📧 Report senden1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Lead speichern1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GBP Scraping1": {
+      "main": [
+        [
+          {
+            "node": "📝 Run-Daten extrahieren1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search1": {
+      "main": [
+        [
+          {
+            "node": "📝 Such-NAP auswerten1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Analyse1": {
+      "main": [
+        [
+          {
+            "node": "📝 Gemini-Antwort parsen1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7920df8f-faf7-4873-a630-2997d581e70b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "fxQTmhWldntIFJBWQu9pV",
+  "tags": [
+    {
+      "updatedAt": "2026-02-10T12:19:16.177Z",
+      "createdAt": "2026-02-10T12:19:16.177Z",
+      "id": "4csc20TNsrwyLDbw",
+      "name": "local-seo"
+    },
+    {
+      "updatedAt": "2026-02-10T12:19:16.200Z",
+      "createdAt": "2026-02-10T12:19:16.200Z",
+      "id": "au8Na1wB4Krn9Ij1",
+      "name": "audit"
+    },
+    {
+      "updatedAt": "2026-02-10T12:19:16.233Z",
+      "createdAt": "2026-02-10T12:19:16.233Z",
+      "id": "ia9dXvzSb4bStJfO",
+      "name": "google-business"
+    },
+    {
+      "updatedAt": "2026-02-10T12:19:16.143Z",
+      "createdAt": "2026-02-10T12:19:16.143Z",
+      "id": "uWF848geQLyjtECr",
+      "name": "lead-magnet"
+    }
+  ]
+}
