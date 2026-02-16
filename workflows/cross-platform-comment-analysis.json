@@ -1,0 +1,1024 @@
+{
+  "name": "Cross-Platform Comment Intelligence",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🔍 Cross-Platform Kommentar-Analyse",
+        "formDescription": "Finde die meistdiskutierten Inhalte zu deinem Thema auf YouTube, TikTok & Reddit",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Suchbegriff / Thema",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "z.B. Künstliche Intelligenz, Bitcoin, Fitness..."
+            },
+            {
+              "fieldLabel": "Zeitraum",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  { "option": "Letzte Woche" },
+                  { "option": "Letzter Monat" },
+                  { "option": "Letztes Jahr" },
+                  { "option": "Alle" }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "E-Mail für Report",
+              "fieldType": "email",
+              "requiredField": true,
+              "placeholder": "report@example.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "form-trigger",
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [0, 400],
+      "webhookId": "comment-analysis-form"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Zeitraum-Mapping: Dropdown-Wert in ISO-Datum umrechnen\nconst zeitraumMap = {\n  'Letzte Woche': 7,\n  'Letzter Monat': 30,\n  'Letztes Jahr': 365,\n  'Alle': 3650\n};\n\nconst suchbegriff = $input.first().json['Suchbegriff / Thema'];\nconst zeitraum = $input.first().json['Zeitraum'] || 'Letzter Monat';\nconst email = $input.first().json['E-Mail für Report'];\n\nconst tageZurueck = zeitraumMap[zeitraum] || 30;\nconst publishedAfter = new Date(Date.now() - tageZurueck * 24 * 60 * 60 * 1000).toISOString();\n\n// YouTube Zeitfilter\nconst ytTimeMap = {\n  'Letzte Woche': 'week',\n  'Letzter Monat': 'month',\n  'Letztes Jahr': 'year',\n  'Alle': 'all'\n};\n\n// Reddit Zeitfilter\nconst redditTimeMap = {\n  'Letzte Woche': 'week',\n  'Letzter Monat': 'month',\n  'Letztes Jahr': 'year',\n  'Alle': 'all'\n};\n\nreturn [{\n  json: {\n    suchbegriff,\n    zeitraum,\n    email,\n    publishedAfter,\n    ytTime: ytTimeMap[zeitraum] || 'month',\n    redditTime: redditTimeMap[zeitraum] || 'month',\n    tageZurueck\n  }\n}];"
+      },
+      "id": "prepare-params",
+      "name": "Parameter vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "part", "value": "snippet" },
+            { "name": "q", "value": "={{ $json.suchbegriff }}" },
+            { "name": "type", "value": "video" },
+            { "name": "order", "value": "relevance" },
+            { "name": "maxResults", "value": "50" },
+            { "name": "publishedAfter", "value": "={{ $json.publishedAfter }}" },
+            { "name": "key", "value": "={{ $credentials.youtubeApiKey }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "yt-search",
+      "name": "YouTube Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [550, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Video-IDs aus YouTube Search extrahieren\nconst items = $input.first().json.items || [];\nconst videoIds = items.map(item => item.id.videoId).filter(Boolean);\n\nreturn [{\n  json: {\n    videoIds: videoIds.join(','),\n    suchbegriff: $('Parameter vorbereiten').first().json.suchbegriff,\n    email: $('Parameter vorbereiten').first().json.email\n  }\n}];"
+      },
+      "id": "yt-extract-ids",
+      "name": "YouTube Video-IDs extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "part", "value": "statistics,snippet" },
+            { "name": "id", "value": "={{ $json.videoIds }}" },
+            { "name": "key", "value": "={{ $credentials.youtubeApiKey }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "yt-video-stats",
+      "name": "YouTube Video Statistics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alle Videos nach commentCount sortieren, Top 10 nehmen\nconst items = $input.first().json.items || [];\n\nconst videos = items.map(item => ({\n  videoId: item.id,\n  title: item.snippet.title,\n  channelTitle: item.snippet.channelTitle,\n  publishedAt: item.snippet.publishedAt,\n  viewCount: parseInt(item.statistics.viewCount || '0'),\n  likeCount: parseInt(item.statistics.likeCount || '0'),\n  commentCount: parseInt(item.statistics.commentCount || '0'),\n  url: `https://www.youtube.com/watch?v=${item.id}`\n}));\n\nvideos.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = videos.slice(0, 10);\n\nreturn top10.map(v => ({ json: v }));"
+      },
+      "id": "yt-sort-top10",
+      "name": "YouTube Sort & Top 10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 100]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "yt-loop",
+      "name": "YouTube Comment Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1550, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "part", "value": "snippet" },
+            { "name": "videoId", "value": "={{ $json.videoId }}" },
+            { "name": "maxResults", "value": "50" },
+            { "name": "order", "value": "relevance" },
+            { "name": "textFormat", "value": "plainText" },
+            { "name": "key", "value": "={{ $credentials.youtubeApiKey }}" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "yt-comments",
+      "name": "YouTube Comments laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1800, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alle YouTube-Kommentare aggregieren\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  const comments = item.json.items || [];\n  for (const c of comments) {\n    const snippet = c.snippet?.topLevelComment?.snippet;\n    if (snippet) {\n      allComments.push({\n        text: snippet.textDisplay || '',\n        author: snippet.authorDisplayName || 'unknown',\n        likes: snippet.likeCount || 0,\n        videoTitle: item.json._videoTitle || ''\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'YouTube',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+      },
+      "id": "yt-aggregate",
+      "name": "YouTube Kommentare aggregieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/apidojo~tiktok-scraper/runs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "token", "value": "={{ $credentials.apifyApiToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SEARCH', keywords: [$('Parameter vorbereiten').first().json.suchbegriff], maxItems: 50, sortType: 0, region: 'DE' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "tt-search",
+      "name": "TikTok Search (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [550, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apify Run starten und auf Ergebnis warten\n// Die vorherige Node hat den Run gestartet, jetzt müssen wir das Dataset abrufen\nconst runData = $input.first().json;\nconst runId = runData.data?.id;\n\nif (!runId) {\n  return [{ json: { platform: 'TikTok', error: 'Apify Run konnte nicht gestartet werden', videos: [] } }];\n}\n\n// Wir geben die Run-ID weiter zum Polling\nreturn [{ json: { runId, platform: 'TikTok' } }];"
+      },
+      "id": "tt-run-check",
+      "name": "TikTok Run ID prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $json.runId + '?token=' + $credentials.apifyApiToken }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "tt-wait-run",
+      "name": "TikTok Run Status prüfen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "tt-status-check",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "tt-if-done",
+      "name": "TikTok Run fertig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "tt-wait",
+      "name": "TikTok Warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1550, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $('TikTok Run ID prüfen').first().json.runId + '/dataset/items?token=' + $credentials.apifyApiToken }}",
+        "options": {}
+      },
+      "id": "tt-get-results",
+      "name": "TikTok Ergebnisse laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TikTok Videos nach Kommentaranzahl sortieren, Top 10\nconst items = $input.all();\n\nconst videos = items.map(item => ({\n  videoId: item.json.id || '',\n  description: item.json.text || item.json.desc || '',\n  author: item.json.authorMeta?.name || item.json.author?.uniqueId || '',\n  playCount: item.json.playCount || item.json.stats?.playCount || 0,\n  likeCount: item.json.diggCount || item.json.stats?.diggCount || 0,\n  commentCount: item.json.commentCount || item.json.stats?.commentCount || 0,\n  shareCount: item.json.shareCount || item.json.stats?.shareCount || 0,\n  url: item.json.webVideoUrl || `https://www.tiktok.com/@${item.json.authorMeta?.name || 'user'}/video/${item.json.id}`\n}));\n\nvideos.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = videos.slice(0, 10);\n\nreturn top10.map(v => ({ json: v }));"
+      },
+      "id": "tt-sort-top10",
+      "name": "TikTok Sort & Top 10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "tt-loop",
+      "name": "TikTok Comment Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/clockworks~tiktok-comments-scraper/runs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "token", "value": "={{ $credentials.apifyApiToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ postURLs: [$json.url], maxComments: 50, maxRepliesPerComment: 0 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "tt-comments-run",
+      "name": "TikTok Comments Scraper starten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TikTok Kommentare aggregieren\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  allComments.push({\n    text: item.json.text || '',\n    author: item.json.uniqueId || item.json.user?.uniqueId || 'unknown',\n    likes: item.json.diggCount || item.json.likes || 0,\n    videoDesc: item.json._videoDescription || ''\n  });\n}\n\nreturn [{\n  json: {\n    platform: 'TikTok',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+      },
+      "id": "tt-aggregate",
+      "name": "TikTok Kommentare aggregieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2550, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/trudax~reddit-scraper/runs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "token", "value": "={{ $credentials.apifyApiToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ searches: [$('Parameter vorbereiten').first().json.suchbegriff], searchPosts: true, searchComments: false, searchCommunities: false, searchUsers: false, skipComments: false, maxPostCount: 50, maxComments: 50, sort: 'comments', time: $('Parameter vorbereiten').first().json.redditTime, proxy: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "reddit-search",
+      "name": "Reddit Search (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [550, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apify Run-ID für Reddit extrahieren\nconst runData = $input.first().json;\nconst runId = runData.data?.id;\n\nif (!runId) {\n  return [{ json: { platform: 'Reddit', error: 'Apify Run konnte nicht gestartet werden', posts: [] } }];\n}\n\nreturn [{ json: { runId, platform: 'Reddit' } }];"
+      },
+      "id": "reddit-run-check",
+      "name": "Reddit Run ID prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 700]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $json.runId + '?token=' + $credentials.apifyApiToken }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "reddit-wait-run",
+      "name": "Reddit Run Status prüfen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "reddit-status-check",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "reddit-if-done",
+      "name": "Reddit Run fertig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1300, 700]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "reddit-wait",
+      "name": "Reddit Warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1550, 800]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $('Reddit Run ID prüfen').first().json.runId + '/dataset/items?token=' + $credentials.apifyApiToken }}",
+        "options": {}
+      },
+      "id": "reddit-get-results",
+      "name": "Reddit Ergebnisse laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit Posts nach Kommentaranzahl sortieren, Top 10\nconst items = $input.all();\n\nconst posts = items\n  .filter(item => item.json.dataType === 'post' || item.json.type === 'post' || item.json.title)\n  .map(item => ({\n    postId: item.json.id || '',\n    title: item.json.title || '',\n    subreddit: item.json.communityName || item.json.subreddit || '',\n    author: item.json.username || item.json.author || '',\n    upvotes: item.json.numberOfUpvotes || item.json.upvotes || 0,\n    commentCount: item.json.numberOfComments || item.json.num_comments || 0,\n    url: item.json.url || '',\n    comments: item.json.comments || []\n  }));\n\nposts.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = posts.slice(0, 10);\n\nreturn top10.map(p => ({ json: p }));"
+      },
+      "id": "reddit-sort-top10",
+      "name": "Reddit Sort & Top 10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit Kommentare aggregieren (Posts enthalten bereits Kommentare)\nconst allComments = [];\n\nfor (const post of $input.all()) {\n  const comments = post.json.comments || [];\n  for (const c of comments.slice(0, 50)) {\n    allComments.push({\n      text: c.text || c.body || c.content || '',\n      author: c.username || c.author || 'unknown',\n      likes: c.numberOfUpvotes || c.score || 0,\n      postTitle: post.json.title || ''\n    });\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'Reddit',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+      },
+      "id": "reddit-aggregate",
+      "name": "Reddit Kommentare aggregieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 600]
+    },
+    {
+      "parameters": {
+        "mode": "combineMerge",
+        "mergeByFields": {},
+        "options": {},
+        "numberInputs": 3
+      },
+      "id": "merge-platforms",
+      "name": "Alle Plattformen zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2500, 400]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein Experte für Social-Media-Analyse und Kommentar-Auswertung.\nDeine Aufgabe ist es, die Kommentare einer Plattform thematisch zu analysieren.\n\nREGELN:\n- Antworte IMMER auf Deutsch\n- Sortiere Themen ABSTEIGEND nach Häufigkeit (meistgenanntes Thema zuerst)\n- Pro Thema: Sentiment-Verteilung angeben (positiv/negativ/neutral in %)\n- Pro Thema: 2-3 repräsentative Beispiel-Kommentare zitieren\n- Fasse ähnliche Themen zusammen, sei nicht zu granular\n- Ignoriere Spam, Bot-Kommentare und irrelevante Inhalte\n- Gib am Ende eine kurze Gesamt-Einschätzung der Stimmung auf dieser Plattform",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden {{ $json.totalComments }} Kommentare von {{ $json.platform }} zum Thema \"{{ $('Parameter vorbereiten').first().json.suchbegriff }}\".\n\nKOMMENTARE:\n{{ $json.comments.map(c => `[${c.likes} Likes] ${c.author}: ${c.text}`).join('\\n') }}\n\nAUSGABEFORMAT (JSON):\n{\n  \"plattform\": \"{{ $json.platform }}\",\n  \"anzahl_kommentare_analysiert\": <number>,\n  \"themen\": [\n    {\n      \"rang\": 1,\n      \"thema\": \"<Themenbezeichnung>\",\n      \"anzahl_mentions\": <number>,\n      \"anteil_prozent\": <number>,\n      \"sentiment\": { \"positiv\": <number>, \"negativ\": <number>, \"neutral\": <number> },\n      \"beispiel_kommentare\": [\"<Kommentar 1>\", \"<Kommentar 2>\", \"<Kommentar 3>\"]\n    }\n  ],\n  \"gesamt_stimmung\": \"<positiv|negativ|gemischt|neutral>\",\n  \"zusammenfassung\": \"<2-3 Sätze Gesamteinschätzung>\"\n}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4000
+        }
+      },
+      "id": "ai-youtube-analyse",
+      "name": "GPT-4o YouTube Analyse",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2800, 100],
+      "credentials": {
+        "openAiApi": { "id": "", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein Experte für Social-Media-Analyse und Kommentar-Auswertung.\nDeine Aufgabe ist es, die Kommentare einer Plattform thematisch zu analysieren.\n\nREGELN:\n- Antworte IMMER auf Deutsch\n- Sortiere Themen ABSTEIGEND nach Häufigkeit (meistgenanntes Thema zuerst)\n- Pro Thema: Sentiment-Verteilung angeben (positiv/negativ/neutral in %)\n- Pro Thema: 2-3 repräsentative Beispiel-Kommentare zitieren\n- Fasse ähnliche Themen zusammen, sei nicht zu granular\n- Ignoriere Spam, Bot-Kommentare und irrelevante Inhalte\n- Gib am Ende eine kurze Gesamt-Einschätzung der Stimmung auf dieser Plattform",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden {{ $json.totalComments }} Kommentare von {{ $json.platform }} zum Thema \"{{ $('Parameter vorbereiten').first().json.suchbegriff }}\".\n\nKOMMENTARE:\n{{ $json.comments.map(c => `[${c.likes} Likes] ${c.author}: ${c.text}`).join('\\n') }}\n\nAUSGABEFORMAT (JSON):\n{\n  \"plattform\": \"{{ $json.platform }}\",\n  \"anzahl_kommentare_analysiert\": <number>,\n  \"themen\": [\n    {\n      \"rang\": 1,\n      \"thema\": \"<Themenbezeichnung>\",\n      \"anzahl_mentions\": <number>,\n      \"anteil_prozent\": <number>,\n      \"sentiment\": { \"positiv\": <number>, \"negativ\": <number>, \"neutral\": <number> },\n      \"beispiel_kommentare\": [\"<Kommentar 1>\", \"<Kommentar 2>\", \"<Kommentar 3>\"]\n    }\n  ],\n  \"gesamt_stimmung\": \"<positiv|negativ|gemischt|neutral>\",\n  \"zusammenfassung\": \"<2-3 Sätze Gesamteinschätzung>\"\n}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4000
+        }
+      },
+      "id": "ai-tiktok-analyse",
+      "name": "GPT-4o TikTok Analyse",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2800, 400],
+      "credentials": {
+        "openAiApi": { "id": "", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein Experte für Social-Media-Analyse und Kommentar-Auswertung.\nDeine Aufgabe ist es, die Kommentare einer Plattform thematisch zu analysieren.\n\nREGELN:\n- Antworte IMMER auf Deutsch\n- Sortiere Themen ABSTEIGEND nach Häufigkeit (meistgenanntes Thema zuerst)\n- Pro Thema: Sentiment-Verteilung angeben (positiv/negativ/neutral in %)\n- Pro Thema: 2-3 repräsentative Beispiel-Kommentare zitieren\n- Fasse ähnliche Themen zusammen, sei nicht zu granular\n- Ignoriere Spam, Bot-Kommentare und irrelevante Inhalte\n- Gib am Ende eine kurze Gesamt-Einschätzung der Stimmung auf dieser Plattform",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden {{ $json.totalComments }} Kommentare von {{ $json.platform }} zum Thema \"{{ $('Parameter vorbereiten').first().json.suchbegriff }}\".\n\nKOMMENTARE:\n{{ $json.comments.map(c => `[${c.likes} Likes] ${c.author}: ${c.text}`).join('\\n') }}\n\nAUSGABEFORMAT (JSON):\n{\n  \"plattform\": \"{{ $json.platform }}\",\n  \"anzahl_kommentare_analysiert\": <number>,\n  \"themen\": [\n    {\n      \"rang\": 1,\n      \"thema\": \"<Themenbezeichnung>\",\n      \"anzahl_mentions\": <number>,\n      \"anteil_prozent\": <number>,\n      \"sentiment\": { \"positiv\": <number>, \"negativ\": <number>, \"neutral\": <number> },\n      \"beispiel_kommentare\": [\"<Kommentar 1>\", \"<Kommentar 2>\", \"<Kommentar 3>\"]\n    }\n  ],\n  \"gesamt_stimmung\": \"<positiv|negativ|gemischt|neutral>\",\n  \"zusammenfassung\": \"<2-3 Sätze Gesamteinschätzung>\"\n}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4000
+        }
+      },
+      "id": "ai-reddit-analyse",
+      "name": "GPT-4o Reddit Analyse",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2800, 700],
+      "credentials": {
+        "openAiApi": { "id": "", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combineMerge",
+        "mergeByFields": {},
+        "options": {},
+        "numberInputs": 3
+      },
+      "id": "merge-analyses",
+      "name": "Analysen zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [3100, 400]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein Experte für plattformübergreifende Social-Media-Analyse.\nDeine Aufgabe ist es, die Einzelanalysen von YouTube, TikTok und Reddit zu einer Gesamt-Analyse zusammenzuführen.\n\nREGELN:\n- Antworte IMMER auf Deutsch\n- Identifiziere plattformübergreifende Themen\n- Zeige Unterschiede zwischen den Plattformen auf\n- Sortiere nach Gesamt-Relevanz (nicht nur Häufigkeit)\n- Gib strategische Empfehlungen basierend auf den Erkenntnissen",
+              "role": "system"
+            },
+            {
+              "content": "=Erstelle eine plattformübergreifende Gesamt-Analyse zum Thema \"{{ $('Parameter vorbereiten').first().json.suchbegriff }}\".\n\nYOUTUBE-ANALYSE:\n{{ JSON.stringify($input.all()[0]?.json || {}) }}\n\nTIKTOK-ANALYSE:\n{{ JSON.stringify($input.all()[1]?.json || {}) }}\n\nREDDIT-ANALYSE:\n{{ JSON.stringify($input.all()[2]?.json || {}) }}\n\nAUSGABEFORMAT (JSON):\n{\n  \"suchbegriff\": \"{{ $('Parameter vorbereiten').first().json.suchbegriff }}\",\n  \"datum\": \"{{ $now.format('dd.MM.yyyy HH:mm') }}\",\n  \"plattform_uebersicht\": {\n    \"youtube\": { \"kommentare_total\": 0, \"top_thema\": \"\", \"stimmung\": \"\" },\n    \"tiktok\": { \"kommentare_total\": 0, \"top_thema\": \"\", \"stimmung\": \"\" },\n    \"reddit\": { \"kommentare_total\": 0, \"top_thema\": \"\", \"stimmung\": \"\" }\n  },\n  \"cross_platform_themen\": [\n    {\n      \"rang\": 1,\n      \"thema\": \"\",\n      \"praesenz\": [\"YouTube\", \"TikTok\", \"Reddit\"],\n      \"gesamt_mentions\": 0,\n      \"sentiment_trend\": \"\",\n      \"plattform_unterschiede\": \"\"\n    }\n  ],\n  \"key_insights\": [\"<Insight 1>\", \"<Insight 2>\", \"<Insight 3>\"],\n  \"strategische_empfehlungen\": [\"<Empfehlung 1>\", \"<Empfehlung 2>\"],\n  \"gesamt_zusammenfassung\": \"<3-4 Sätze>\"\n}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 4000
+        }
+      },
+      "id": "ai-gesamt-analyse",
+      "name": "GPT-4o Gesamt-Analyse",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [3400, 400],
+      "credentials": {
+        "openAiApi": { "id": "", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gesamt-Analyse JSON parsen und für Google Sheets + Gmail aufbereiten\nconst rawResponse = $input.first().json.message?.content || $input.first().json.text || '{}';\n\nlet analyse;\ntry {\n  // JSON aus der GPT-Antwort extrahieren (ggf. Markdown-Code-Blocks entfernen)\n  const jsonMatch = rawResponse.match(/```json\\n?([\\s\\S]*?)\\n?```/) || rawResponse.match(/\\{[\\s\\S]*\\}/);\n  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : rawResponse;\n  analyse = JSON.parse(jsonStr);\n} catch (e) {\n  analyse = {\n    suchbegriff: $('Parameter vorbereiten').first().json.suchbegriff,\n    datum: new Date().toLocaleString('de-DE'),\n    plattform_uebersicht: { youtube: {}, tiktok: {}, reddit: {} },\n    cross_platform_themen: [],\n    key_insights: ['Analyse konnte nicht vollständig geparst werden'],\n    strategische_empfehlungen: [],\n    gesamt_zusammenfassung: 'Fehler beim Parsen der GPT-Antwort: ' + e.message\n  };\n}\n\nconst email = $('Parameter vorbereiten').first().json.email;\nconst suchbegriff = $('Parameter vorbereiten').first().json.suchbegriff;\n\nreturn [{\n  json: {\n    ...analyse,\n    email,\n    suchbegriff: suchbegriff || analyse.suchbegriff\n  }\n}];"
+      },
+      "id": "parse-gesamt-analyse",
+      "name": "Gesamt-Analyse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3700, 400]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "", "mode": "list" },
+        "sheetName": { "__rl": true, "value": "Übersicht", "mode": "list" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Suchbegriff": "={{ $json.suchbegriff }}",
+            "Datum": "={{ $json.datum }}",
+            "YouTube Kommentare": "={{ $json.plattform_uebersicht?.youtube?.kommentare_total || 0 }}",
+            "YouTube Top-Thema": "={{ $json.plattform_uebersicht?.youtube?.top_thema || '' }}",
+            "YouTube Stimmung": "={{ $json.plattform_uebersicht?.youtube?.stimmung || '' }}",
+            "TikTok Kommentare": "={{ $json.plattform_uebersicht?.tiktok?.kommentare_total || 0 }}",
+            "TikTok Top-Thema": "={{ $json.plattform_uebersicht?.tiktok?.top_thema || '' }}",
+            "TikTok Stimmung": "={{ $json.plattform_uebersicht?.tiktok?.stimmung || '' }}",
+            "Reddit Kommentare": "={{ $json.plattform_uebersicht?.reddit?.kommentare_total || 0 }}",
+            "Reddit Top-Thema": "={{ $json.plattform_uebersicht?.reddit?.top_thema || '' }}",
+            "Reddit Stimmung": "={{ $json.plattform_uebersicht?.reddit?.stimmung || '' }}",
+            "Zusammenfassung": "={{ $json.gesamt_zusammenfassung }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-uebersicht",
+      "name": "Google Sheets Übersicht",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4000, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "", "mode": "list" },
+        "sheetName": { "__rl": true, "value": "Cross-Platform Themen", "mode": "list" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Rang": "={{ $json.rang }}",
+            "Thema": "={{ $json.thema }}",
+            "Plattform-Präsenz": "={{ $json.praesenz?.join(', ') || '' }}",
+            "Gesamt-Mentions": "={{ $json.gesamt_mentions || 0 }}",
+            "Sentiment-Trend": "={{ $json.sentiment_trend || '' }}",
+            "Plattform-Unterschiede": "={{ $json.plattform_unterschiede || '' }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-cross-platform",
+      "name": "Google Sheets Cross-Platform",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4000, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "", "mode": "list" },
+        "sheetName": { "__rl": true, "value": "Key Insights", "mode": "list" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Typ": "={{ $json.typ }}",
+            "Text": "={{ $json.text }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-insights",
+      "name": "Google Sheets Insights",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4000, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cross-Platform Themen und Insights für separate Sheet-Tabs aufbereiten\nconst analyse = $input.first().json;\n\n// Cross-Platform Themen als einzelne Zeilen\nconst crossPlatformRows = (analyse.cross_platform_themen || []).map(t => ({\n  json: {\n    rang: t.rang,\n    thema: t.thema,\n    praesenz: t.praesenz,\n    gesamt_mentions: t.gesamt_mentions,\n    sentiment_trend: t.sentiment_trend,\n    plattform_unterschiede: t.plattform_unterschiede\n  }\n}));\n\n// Key Insights + Empfehlungen als einzelne Zeilen\nconst insightRows = [\n  ...(analyse.key_insights || []).map(i => ({ json: { typ: 'Insight', text: i } })),\n  ...(analyse.strategische_empfehlungen || []).map(e => ({ json: { typ: 'Empfehlung', text: e } }))\n];\n\nreturn [\n  { json: { _outputType: 'cross_platform', items: crossPlatformRows } },\n  { json: { _outputType: 'insights', items: insightRows } },\n  { json: { ...analyse } } // Original für Gmail\n];"
+      },
+      "id": "prepare-sheets-data",
+      "name": "Sheet-Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3700, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTML-Report für Gmail generieren\nconst analyse = $input.first().json;\nconst suchbegriff = analyse.suchbegriff || '';\nconst datum = analyse.datum || new Date().toLocaleString('de-DE');\nconst pu = analyse.plattform_uebersicht || {};\n\nconst badgeClass = (stimmung) => {\n  const s = (stimmung || '').toLowerCase();\n  if (s === 'positiv') return 'badge-positiv';\n  if (s === 'negativ') return 'badge-negativ';\n  if (s === 'gemischt') return 'badge-gemischt';\n  return 'badge-neutral';\n};\n\nconst buildThemenRows = (themen) => {\n  if (!themen || !Array.isArray(themen)) return '';\n  return themen.slice(0, 5).map(t => `\n    <div style=\"display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;\">\n      <span style=\"font-weight:600;\">${t.rang}. ${t.thema}</span>\n      <span style=\"color:#64748b;font-size:14px;\">${t.anzahl_mentions || 0} Mentions (${t.anteil_prozent || 0}%)</span>\n    </div>`).join('');\n};\n\nconst buildInsights = (items) => {\n  if (!items || !Array.isArray(items)) return '';\n  return items.map(i => `\n    <div style=\"background:#f8fafc;border-left:4px solid #667eea;padding:12px 16px;margin-bottom:10px;border-radius:0 8px 8px 0;\">\n      ${i}\n    </div>`).join('');\n};\n\nconst html = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n</head>\n<body style=\"font-family:'Segoe UI',Arial,sans-serif;color:#333;max-width:700px;margin:0 auto;\">\n  <div style=\"background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:30px;border-radius:12px 12px 0 0;\">\n    <h1 style=\"margin:0;font-size:22px;\">Kommentar-Analyse</h1>\n    <p style=\"margin:5px 0 0;opacity:0.9;font-size:14px;\">Thema: '${suchbegriff}' — ${datum}</p>\n  </div>\n\n  <div style=\"padding:25px;background:#fff;\">\n    <h2>Plattform-Übersicht</h2>\n\n    <div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;\">\n      <h3 style=\"margin-top:0;\">YouTube <span style=\"display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${pu.youtube?.stimmung === 'positiv' ? '#dcfce7' : pu.youtube?.stimmung === 'negativ' ? '#fee2e2' : '#f1f5f9'};\">${pu.youtube?.stimmung || 'N/A'}</span></h3>\n      <p><strong>${pu.youtube?.kommentare_total || 0}</strong> Kommentare analysiert</p>\n      <p>Top-Thema: <strong>${pu.youtube?.top_thema || 'N/A'}</strong></p>\n    </div>\n\n    <div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;\">\n      <h3 style=\"margin-top:0;\">TikTok <span style=\"display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${pu.tiktok?.stimmung === 'positiv' ? '#dcfce7' : pu.tiktok?.stimmung === 'negativ' ? '#fee2e2' : '#f1f5f9'};\">${pu.tiktok?.stimmung || 'N/A'}</span></h3>\n      <p><strong>${pu.tiktok?.kommentare_total || 0}</strong> Kommentare analysiert</p>\n      <p>Top-Thema: <strong>${pu.tiktok?.top_thema || 'N/A'}</strong></p>\n    </div>\n\n    <div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;\">\n      <h3 style=\"margin-top:0;\">Reddit <span style=\"display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${pu.reddit?.stimmung === 'positiv' ? '#dcfce7' : pu.reddit?.stimmung === 'negativ' ? '#fee2e2' : '#f1f5f9'};\">${pu.reddit?.stimmung || 'N/A'}</span></h3>\n      <p><strong>${pu.reddit?.kommentare_total || 0}</strong> Kommentare analysiert</p>\n      <p>Top-Thema: <strong>${pu.reddit?.top_thema || 'N/A'}</strong></p>\n    </div>\n\n    <h2>Plattformübergreifende Erkenntnisse</h2>\n    ${buildInsights(analyse.key_insights)}\n\n    <h2>Strategische Empfehlungen</h2>\n    ${buildInsights(analyse.strategische_empfehlungen)}\n\n    <h2>Zusammenfassung</h2>\n    <p>${analyse.gesamt_zusammenfassung || ''}</p>\n  </div>\n\n  <div style=\"padding:20px;text-align:center;color:#94a3b8;font-size:12px;\">\n    <p>Generiert am ${datum} | Cross-Platform Comment Intelligence</p>\n  </div>\n</body>\n</html>`;\n\nreturn [{\n  json: {\n    email: analyse.email,\n    suchbegriff,\n    datum,\n    htmlReport: html\n  }\n}];"
+      },
+      "id": "generate-html-report",
+      "name": "HTML-Report generieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4000, 700]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Kommentar-Analyse: \"{{ $json.suchbegriff }}\" — {{ $json.datum }}",
+        "emailType": "html",
+        "message": "={{ $json.htmlReport }}",
+        "options": {}
+      },
+      "id": "gmail-report",
+      "name": "Gmail Report senden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4300, 700],
+      "credentials": {
+        "gmailOAuth2": { "id": "", "name": "Gmail" }
+      }
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          { "node": "Parameter vorbereiten", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parameter vorbereiten": {
+      "main": [
+        [
+          { "node": "YouTube Search", "type": "main", "index": 0 },
+          { "node": "TikTok Search (Apify)", "type": "main", "index": 0 },
+          { "node": "Reddit Search (Apify)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Search": {
+      "main": [
+        [
+          { "node": "YouTube Video-IDs extrahieren", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Video-IDs extrahieren": {
+      "main": [
+        [
+          { "node": "YouTube Video Statistics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Video Statistics": {
+      "main": [
+        [
+          { "node": "YouTube Sort & Top 10", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Sort & Top 10": {
+      "main": [
+        [
+          { "node": "YouTube Comment Loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Comment Loop": {
+      "main": [
+        [
+          { "node": "YouTube Kommentare aggregieren", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "YouTube Comments laden", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Comments laden": {
+      "main": [
+        [
+          { "node": "YouTube Comment Loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube Kommentare aggregieren": {
+      "main": [
+        [
+          { "node": "Alle Plattformen zusammenführen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Search (Apify)": {
+      "main": [
+        [
+          { "node": "TikTok Run ID prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Run ID prüfen": {
+      "main": [
+        [
+          { "node": "TikTok Run Status prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Run Status prüfen": {
+      "main": [
+        [
+          { "node": "TikTok Run fertig?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Run fertig?": {
+      "main": [
+        [
+          { "node": "TikTok Ergebnisse laden", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "TikTok Warten", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Warten": {
+      "main": [
+        [
+          { "node": "TikTok Run Status prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Ergebnisse laden": {
+      "main": [
+        [
+          { "node": "TikTok Sort & Top 10", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Sort & Top 10": {
+      "main": [
+        [
+          { "node": "TikTok Comment Loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Comment Loop": {
+      "main": [
+        [
+          { "node": "TikTok Kommentare aggregieren", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "TikTok Comments Scraper starten", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Comments Scraper starten": {
+      "main": [
+        [
+          { "node": "TikTok Comment Loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "TikTok Kommentare aggregieren": {
+      "main": [
+        [
+          { "node": "Alle Plattformen zusammenführen", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "Reddit Search (Apify)": {
+      "main": [
+        [
+          { "node": "Reddit Run ID prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Run ID prüfen": {
+      "main": [
+        [
+          { "node": "Reddit Run Status prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Run Status prüfen": {
+      "main": [
+        [
+          { "node": "Reddit Run fertig?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Run fertig?": {
+      "main": [
+        [
+          { "node": "Reddit Ergebnisse laden", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Reddit Warten", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Warten": {
+      "main": [
+        [
+          { "node": "Reddit Run Status prüfen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Ergebnisse laden": {
+      "main": [
+        [
+          { "node": "Reddit Sort & Top 10", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Sort & Top 10": {
+      "main": [
+        [
+          { "node": "Reddit Kommentare aggregieren", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Kommentare aggregieren": {
+      "main": [
+        [
+          { "node": "Alle Plattformen zusammenführen", "type": "main", "index": 2 }
+        ]
+      ]
+    },
+    "Alle Plattformen zusammenführen": {
+      "main": [
+        [
+          { "node": "GPT-4o YouTube Analyse", "type": "main", "index": 0 },
+          { "node": "GPT-4o TikTok Analyse", "type": "main", "index": 0 },
+          { "node": "GPT-4o Reddit Analyse", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "GPT-4o YouTube Analyse": {
+      "main": [
+        [
+          { "node": "Analysen zusammenführen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "GPT-4o TikTok Analyse": {
+      "main": [
+        [
+          { "node": "Analysen zusammenführen", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "GPT-4o Reddit Analyse": {
+      "main": [
+        [
+          { "node": "Analysen zusammenführen", "type": "main", "index": 2 }
+        ]
+      ]
+    },
+    "Analysen zusammenführen": {
+      "main": [
+        [
+          { "node": "GPT-4o Gesamt-Analyse", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "GPT-4o Gesamt-Analyse": {
+      "main": [
+        [
+          { "node": "Gesamt-Analyse aufbereiten", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Gesamt-Analyse aufbereiten": {
+      "main": [
+        [
+          { "node": "Sheet-Daten aufbereiten", "type": "main", "index": 0 },
+          { "node": "HTML-Report generieren", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Sheet-Daten aufbereiten": {
+      "main": [
+        [
+          { "node": "Google Sheets Übersicht", "type": "main", "index": 0 },
+          { "node": "Google Sheets Cross-Platform", "type": "main", "index": 0 },
+          { "node": "Google Sheets Insights", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTML-Report generieren": {
+      "main": [
+        [
+          { "node": "Gmail Report senden", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Kommentar-Analyse" },
+    { "name": "Social Media" },
+    { "name": "AI" }
+  ]
+}
