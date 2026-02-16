@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770952947713,
+  "lastUpdate": 1771226083980,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "705d31c35e93f868b58add97f074500857368381",
-          "message": "fix: mcpTrigger nodes no longer flagged as disconnected (#503) (#506)\n\nFixed validation bug where mcpTrigger nodes were incorrectly flagged as\n\"disconnected nodes\" when using n8n_update_partial_workflow or\nn8n_update_full_workflow. This blocked ALL updates to MCP server workflows.\n\nChanges:\n- Extended validateWorkflowStructure() to check all 7 connection types\n  (main, error, ai_tool, ai_languageModel, ai_memory, ai_embedding, ai_vectorStore)\n- Updated trigger node validation to accept either outgoing OR inbound connections\n- Added 7 new tests covering all AI connection types\n\nFixes #503\n\nConceived by Romuald Członkowski - https://www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2025-12-23T18:50:55+01:00",
-          "tree_id": "bbe4aa26da9600ff36b8951b04e6cf8434e3f51a",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/705d31c35e93f868b58add97f074500857368381"
-        },
-        "date": 1766512366242,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/0611b0a8dec902d9aed93c24be05569f174d20e9"
         },
         "date": 1770952947447,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b52bfda2f9a2126b1c3b0f201a12684bf9a215d4",
+          "message": "Merge pull request #27 from markmocasa-boop/claude/comment-analysis-workflow-Ppl2a\n\nClaude/comment analysis workflow ppl2a",
+          "timestamp": "2026-02-16T08:12:51+01:00",
+          "tree_id": "d348698788719cfbb78d3faa9f29d253e9af5e94",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b52bfda2f9a2126b1c3b0f201a12684bf9a215d4"
+        },
+        "date": 1771226083496,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
