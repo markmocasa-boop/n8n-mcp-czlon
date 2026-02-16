@@ -54,31 +54,29 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "https://www.googleapis.com/youtube/v3/search",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "part", "value": "snippet" },
-            { "name": "q", "value": "={{ $json.suchbegriff }}" },
-            { "name": "type", "value": "video" },
-            { "name": "order", "value": "relevance" },
-            { "name": "maxResults", "value": "50" },
-            { "name": "publishedAfter", "value": "={{ $json.publishedAfter }}" },
-            { "name": "key", "value": "={{ $credentials.youtubeApiKey }}" }
-          ]
-        },
-        "options": {}
+        "resource": "video",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "options": {
+          "q": "={{ $json.suchbegriff }}",
+          "publishedAfter": "={{ $json.publishedAfter }}",
+          "order": "relevance",
+          "regionCode": "DE"
+        }
       },
       "id": "yt-search",
       "name": "YouTube Search",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [550, 100]
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [550, 100],
+      "credentials": {
+        "youTubeOAuth2Api": { "id": "", "name": "YouTube OAuth2" }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Video-IDs aus YouTube Search extrahieren\nconst items = $input.first().json.items || [];\nconst videoIds = items.map(item => item.id.videoId).filter(Boolean);\n\nreturn [{\n  json: {\n    videoIds: videoIds.join(','),\n    suchbegriff: $('Parameter vorbereiten').first().json.suchbegriff,\n    email: $('Parameter vorbereiten').first().json.email\n  }\n}];"
+        "jsCode": "// Video-IDs aus nativem YouTube-Node extrahieren\n// Native Node gibt einzelne Items zurück (nicht items-Array)\nconst items = $input.all();\nconst videoIds = items.map(item => {\n  const id = item.json.id;\n  // Native Node kann ID als String oder als Objekt {videoId} zurückgeben\n  return typeof id === 'string' ? id : (id?.videoId || '');\n}).filter(Boolean);\n\nreturn [{\n  json: {\n    videoIds: videoIds.join(','),\n    suchbegriff: $('Parameter vorbereiten').first().json.suchbegriff,\n    email: $('Parameter vorbereiten').first().json.email\n  }\n}];"
       },
       "id": "yt-extract-ids",
       "name": "YouTube Video-IDs extrahieren",
@@ -104,7 +102,9 @@
       "name": "YouTube Video Statistics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1050, 100]
+      "position": [1050, 100],
+      "notesInFlow": true,
+      "notes": "BEHALTEN: Batch-Abfrage (1 Call für 50 Videos statt 50 einzelne Calls)"
     },
     {
       "parameters": {
@@ -154,7 +154,9 @@
       "name": "YouTube Comments laden",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1800, 100]
+      "position": [1800, 100],
+      "notesInFlow": true,
+      "notes": "BEHALTEN: Kein nativer YouTube-Node für Comment-Threads"
     },
     {
       "parameters": {
@@ -191,7 +193,9 @@
       "name": "TikTok Search (Apify)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [550, 400]
+      "position": [550, 400],
+      "notesInFlow": true,
+      "notes": "BEHALTEN: Kein nativer TikTok-Node in n8n"
     },
     {
       "parameters": {
@@ -333,130 +337,75 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.apify.com/v2/acts/trudax~reddit-scraper/runs",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "token", "value": "={{ $credentials.apifyApiToken }}" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ searches: [$('Parameter vorbereiten').first().json.suchbegriff], searchPosts: true, searchComments: false, searchCommunities: false, searchUsers: false, skipComments: false, maxPostCount: 50, maxComments: 50, sort: 'comments', time: $('Parameter vorbereiten').first().json.redditTime, proxy: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] } }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "resource": "post",
+        "operation": "search",
+        "keyword": "={{ $('Parameter vorbereiten').first().json.suchbegriff }}",
+        "sort": "comments",
+        "time": "={{ $('Parameter vorbereiten').first().json.redditTime }}",
+        "returnAll": false,
+        "limit": 50
       },
       "id": "reddit-search",
-      "name": "Reddit Search (Apify)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [550, 700]
+      "name": "Reddit Search",
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [550, 700],
+      "credentials": {
+        "redditOAuth2Api": { "id": "", "name": "Reddit OAuth2" }
+      },
+      "notesInFlow": true,
+      "notes": "NEU: Nativer Reddit-Node ersetzt Apify HTTP-Requests (eliminiert 5 Nodes)"
     },
     {
       "parameters": {
-        "jsCode": "// Apify Run-ID für Reddit extrahieren\nconst runData = $input.first().json;\nconst runId = runData.data?.id;\n\nif (!runId) {\n  return [{ json: { platform: 'Reddit', error: 'Apify Run konnte nicht gestartet werden', posts: [] } }];\n}\n\nreturn [{ json: { runId, platform: 'Reddit' } }];"
+        "jsCode": "// Reddit Posts nach Kommentaranzahl sortieren, Top 10\n// Nativer Reddit-Node gibt einzelne Items zurück\nconst items = $input.all();\n\nconst posts = items\n  .filter(item => item.json.title)\n  .map(item => ({\n    postId: item.json.id || item.json.name || '',\n    title: item.json.title || '',\n    subreddit: item.json.subreddit || item.json.subreddit_name_prefixed?.replace('r/', '') || '',\n    author: item.json.author || '',\n    upvotes: item.json.ups || item.json.score || 0,\n    commentCount: item.json.num_comments || 0,\n    url: item.json.url || `https://www.reddit.com${item.json.permalink || ''}`,\n    permalink: item.json.permalink || ''\n  }));\n\nposts.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = posts.slice(0, 10);\n\nreturn top10.map(p => ({ json: p }));"
       },
-      "id": "reddit-run-check",
-      "name": "Reddit Run ID prüfen",
+      "id": "reddit-sort-top10",
+      "name": "Reddit Sort & Top 10",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [800, 700]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $json.runId + '?token=' + $credentials.apifyApiToken }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "batchSize": 1,
+        "options": {}
       },
-      "id": "reddit-wait-run",
-      "name": "Reddit Run Status prüfen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "reddit-loop",
+      "name": "Reddit Comment Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
       "position": [1050, 700]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "reddit-status-check",
-              "leftValue": "={{ $json.data.status }}",
-              "rightValue": "SUCCEEDED",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "resource": "postComment",
+        "operation": "getAll",
+        "subreddit": "={{ $json.subreddit }}",
+        "postId": "={{ $json.postId }}",
+        "returnAll": false,
+        "limit": 50
       },
-      "id": "reddit-if-done",
-      "name": "Reddit Run fertig?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1300, 700]
+      "id": "reddit-comments",
+      "name": "Reddit Comments laden",
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [1300, 700],
+      "credentials": {
+        "redditOAuth2Api": { "id": "", "name": "Reddit OAuth2" }
+      },
+      "notesInFlow": true,
+      "notes": "NEU: Nativer Reddit-Node für Kommentar-Abfrage"
     },
     {
       "parameters": {
-        "amount": 10,
-        "unit": "seconds"
-      },
-      "id": "reddit-wait",
-      "name": "Reddit Warten",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [1550, 800]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ 'https://api.apify.com/v2/actor-runs/' + $('Reddit Run ID prüfen').first().json.runId + '/dataset/items?token=' + $credentials.apifyApiToken }}",
-        "options": {}
-      },
-      "id": "reddit-get-results",
-      "name": "Reddit Ergebnisse laden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1550, 600]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Reddit Posts nach Kommentaranzahl sortieren, Top 10\nconst items = $input.all();\n\nconst posts = items\n  .filter(item => item.json.dataType === 'post' || item.json.type === 'post' || item.json.title)\n  .map(item => ({\n    postId: item.json.id || '',\n    title: item.json.title || '',\n    subreddit: item.json.communityName || item.json.subreddit || '',\n    author: item.json.username || item.json.author || '',\n    upvotes: item.json.numberOfUpvotes || item.json.upvotes || 0,\n    commentCount: item.json.numberOfComments || item.json.num_comments || 0,\n    url: item.json.url || '',\n    comments: item.json.comments || []\n  }));\n\nposts.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = posts.slice(0, 10);\n\nreturn top10.map(p => ({ json: p }));"
-      },
-      "id": "reddit-sort-top10",
-      "name": "Reddit Sort & Top 10",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1800, 600]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Reddit Kommentare aggregieren (Posts enthalten bereits Kommentare)\nconst allComments = [];\n\nfor (const post of $input.all()) {\n  const comments = post.json.comments || [];\n  for (const c of comments.slice(0, 50)) {\n    allComments.push({\n      text: c.text || c.body || c.content || '',\n      author: c.username || c.author || 'unknown',\n      likes: c.numberOfUpvotes || c.score || 0,\n      postTitle: post.json.title || ''\n    });\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'Reddit',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+        "jsCode": "// Reddit Kommentare aggregieren (nativer Reddit-Node gibt einzelne Items zurück)\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body || '';\n  if (body && body !== '[deleted]' && body !== '[removed]') {\n    allComments.push({\n      text: body,\n      author: item.json.author || 'unknown',\n      likes: item.json.ups || item.json.score || 0,\n      postTitle: ''\n    });\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'Reddit',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
       },
       "id": "reddit-aggregate",
       "name": "Reddit Kommentare aggregieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2100, 600]
+      "position": [1550, 700]
     },
     {
       "parameters": {
@@ -752,7 +701,7 @@
         [
           { "node": "YouTube Search", "type": "main", "index": 0 },
           { "node": "TikTok Search (Apify)", "type": "main", "index": 0 },
-          { "node": "Reddit Search (Apify)", "type": "main", "index": 0 }
+          { "node": "Reddit Search", "type": "main", "index": 0 }
         ]
       ]
     },
@@ -884,45 +833,7 @@
         ]
       ]
     },
-    "Reddit Search (Apify)": {
-      "main": [
-        [
-          { "node": "Reddit Run ID prüfen", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Reddit Run ID prüfen": {
-      "main": [
-        [
-          { "node": "Reddit Run Status prüfen", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Reddit Run Status prüfen": {
-      "main": [
-        [
-          { "node": "Reddit Run fertig?", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Reddit Run fertig?": {
-      "main": [
-        [
-          { "node": "Reddit Ergebnisse laden", "type": "main", "index": 0 }
-        ],
-        [
-          { "node": "Reddit Warten", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Reddit Warten": {
-      "main": [
-        [
-          { "node": "Reddit Run Status prüfen", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Reddit Ergebnisse laden": {
+    "Reddit Search": {
       "main": [
         [
           { "node": "Reddit Sort & Top 10", "type": "main", "index": 0 }
@@ -932,7 +843,24 @@
     "Reddit Sort & Top 10": {
       "main": [
         [
+          { "node": "Reddit Comment Loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Comment Loop": {
+      "main": [
+        [
           { "node": "Reddit Kommentare aggregieren", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Reddit Comments laden", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Reddit Comments laden": {
+      "main": [
+        [
+          { "node": "Reddit Comment Loop", "type": "main", "index": 0 }
         ]
       ]
     },
