@@ -1,0 +1,589 @@
+{
+  "name": "Social - Reddit Marketing Insights",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "search",
+        "location": "allReddit",
+        "keyword": "={{ $json.message.content }}",
+        "limit": 10,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        -1760,
+        192
+      ],
+      "id": "678cc4e4-d7ce-4723-b4c6-b3ca1b6db5bd",
+      "name": "Reddit",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "STQOFhEaWiqUogPE",
+          "name": "Reddit MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1f62a8d7-2859-41ce-b87d-d34777bfc19b",
+              "leftValue": "={{ $json.ups }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "1b3eb507-03e0-4cd3-8ebd-54bdfde787d5",
+              "leftValue": "={{ $json.selftext }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1360,
+        192
+      ],
+      "id": "d294aa21-33cf-4065-acc2-bc6aa7960c2d",
+      "name": "Filter Upvotes + Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2311fdd-e2bc-413f-a948-2fe4886d78e1",
+              "name": "upvotes",
+              "value": "={{ $('Reddit').item.json.ups }}",
+              "type": "string"
+            },
+            {
+              "id": "991a6ac8-0c9d-4975-8612-b6df33c7f4e7",
+              "name": "subreddit",
+              "value": "={{ $('Reddit').item.json.subreddit }}",
+              "type": "string"
+            },
+            {
+              "id": "c219f718-c595-4156-ae87-b672c50df142",
+              "name": "originalPost",
+              "value": "={{ $('Reddit').item.json.selftext }}",
+              "type": "string"
+            },
+            {
+              "id": "86566583-b073-4615-b3c4-114c9f1de518",
+              "name": "title",
+              "value": "={{ $('Reddit').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "faa2a938-05af-4644-9d37-a55fe748656c",
+              "name": "url",
+              "value": "={{ $('Reddit').item.json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -464,
+        128
+      ],
+      "id": "06007d7c-9163-46db-bc84-78c3dc075f46",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=You are a senior marketing strategist helping a DTC brand extract powerful messaging insights from a batch of Reddit posts.\n\n\nHere are Reddit posts expressing a problems or frustration:\n\n{{ JSON.stringify($json.data) }}\n\n\nThe brand's product is described as: {{ $('On form submission').item.json['Product Explanation'] }}\n\nYour task is to analyze the overall conversation and return the following structured insights:\n\n1. **Top 3 Pain Points**: What are the most commonly mentioned frustrations or struggles?\n2. **Trigger Events**: What events or situations cause people to start looking for a solution like ours?\n3. **Aspirations/Desired Outcomes**: What are users hoping to achieve or feel?\n4. **Interesting Quotes or Phrases**: Pull 3–5 short quotes that are emotionally charged, memorable, or reusable in copy.\n5. **Content Ideas**: List 2–3 content/video ideas we could make based on these insights.\n6. **Ad Copy Hooks**: Write 2 strong ad hooks inspired by these posts.\n7. **Marketing Insight**: Summarize 1 key insight about the mindset or behavior of this audience.\n8. **Trend or Product Opportunity** (Optional): Any repeated unmet need, feature request, or emerging theme we could turn into a product tweak or angle.\n\nOutput format HTML. Format the output that it is well structured and easy to read. Write in German.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        64,
+        128
+      ],
+      "id": "cccda312-9741-4ac6-9a87-9ca4f4f25c35",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "formTitle": "Add Details Here ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Brand Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Website",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Product Explanation",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        192
+      ],
+      "id": "2820b38c-baf4-4ff8-8d9a-27be2ce3f91c",
+      "name": "On form submission",
+      "webhookId": "10a9f5f1-7e44-4028-a0bc-e6ace008c20f"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a marketing strategist and Reddit researcher. \nGiven the following product description, extract a single keyword or phrase (1 to 3 words max) \nthat people on Reddit might use when discussing pain points related to this product or service.\n\nReturn ONLY the keyword or phrase, no extra text. \n\n\nProduct Description:{{ $json['Product Explanation'] }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -2256,
+        192
+      ],
+      "id": "67a403fe-8979-42b7-aa72-afe3cfefa241",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "position": [
+        304,
+        288
+      ],
+      "id": "51ac5097-f292-412d-8f75-10efe5608107",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "content": "## Keyword für Reddit",
+        "height": 340,
+        "width": 580,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2528,
+        64
+      ],
+      "id": "315f804b-bf1c-4693-bcd7-cd56ddbf3fd6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Scrape Reddit",
+        "height": 340,
+        "width": 340,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1888,
+        64
+      ],
+      "id": "7b3f0b0d-582a-4aed-8aa3-ad29ac96fc20",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Filtern bei Beliebtheit",
+        "height": 340,
+        "width": 340,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1488,
+        64
+      ],
+      "id": "1357224c-1984-4e64-a6ce-0e95260a8422",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Auswertung Posts",
+        "height": 400,
+        "width": 400,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "242459f4-ef20-4aa0-bdb5-8d47102044d6",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## EMail Versand",
+        "height": 400,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "b7133df5-9358-4588-b113-a1f2e286c035",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        128
+      ],
+      "id": "4541bd45-9e1a-4ab7-8887-fd74a881e88a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "content": "## Untersuchung der Relevanz der Posts",
+        "height": 340,
+        "width": 500,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        64
+      ],
+      "id": "053a07e2-b664-4b9e-8147-70fd42935333",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1024,
+        272
+      ],
+      "id": "716fa5ac-c7c4-4064-ab9f-846306016ec6",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        288
+      ],
+      "id": "78edb238-b6ea-4aa4-88c3-667b9f392b16",
+      "name": "Think2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Important: always use the think2 tool\n\nYou are a content relevance classifier.\n\nGiven the following DTC product description:\n{{ $('On form submission').item.json['Product Explanation'] }}\n\nAnd the details of a single Reddit post:\n• **Title**: {{ $('Reddit').item.json.title }}\n• **Content**: {{ $('Reddit').item.json.selftext }}\n• **Subreddit**: {{ $('Reddit').item.json.subreddit }}\n• **Upvotes**: {{ $('Reddit').item.json.ups }}\n• **Upvote Ratio**: {{ $('Reddit').item.json.upvote_ratio }}\n• **URL**: {{ $('Reddit').item.json.url }}\n\nYour task is to determine whether this post is relevant for marketing our product.\nReturn **only** a JSON array with one object containing two fields:\n- `isRelevant`: `true` if the post is relevant, otherwise `false`\n- `reason`: a short explanation of why you judged it relevant or not\n\nExample output:\n[\n  {\n    \"isRelevant\": true,\n    \"reason\": \"The user describes the exact pain point our product solves.\"\n  }\n]\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        -960,
+        128
+      ],
+      "id": "9a659911-c9e8-44fe-80ac-a865f93b4e2f",
+      "name": "Post Relevance Classifier"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "[\n  {\n    \"isRelevant\": true,\n    \"reason\": \"The user describes the exact pain point our product solves.\"\n  }\n]\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        272
+      ],
+      "id": "f3fc08d4-0c1a-4a24-b7ad-b9b65fb00ba1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "sendTo": "mark@mo-casa.com",
+        "subject": "Reddit Insights",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        128
+      ],
+      "id": "3dd54f1a-c9f5-4151-b988-434b541ff623",
+      "name": "Send a message",
+      "webhookId": "57b6d992-df89-4244-98a8-b2479f877c4a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        304
+      ],
+      "id": "86dd9af7-37cb-4294-bea5-4e51b916d89d",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Reddit": {
+      "main": [
+        [
+          {
+            "node": "Filter Upvotes + Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Upvotes + Text": {
+      "main": [
+        [
+          {
+            "node": "Post Relevance Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Post Relevance Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Post Relevance Classifier",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Post Relevance Classifier",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Relevance Classifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "48414ca6-9486-4356-9737-ade9e73d5321",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "YwH1Xp79MSbHWlhA",
+  "tags": []
+}

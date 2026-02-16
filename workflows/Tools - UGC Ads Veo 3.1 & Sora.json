@@ -1,0 +1,1575 @@
+{
+  "name": "Tools - UGC Ads Veo 3.1 & Sora",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -624,
+        336
+      ],
+      "id": "370bd2e6-9330-47c4-8cb7-cc705a4b0407",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Ready"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -432,
+        336
+      ],
+      "id": "886d52fb-aa1a-432a-96b8-5d7f65c71c82",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cf92e6e7-99a9-4d50-a750-d4311bf32ea8",
+                    "leftValue": "={{ $json.Model }}",
+                    "rightValue": "Veo 3.1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Veo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Model }}",
+                    "rightValue": "Nano + Veo 3.1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "24879280-7ab4-4dc7-8482-f427b001a20b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Nano + Veo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fcb76afb-810f-48ca-b8d1-ba8e1fa52634",
+                    "leftValue": "={{ $json.Model }}",
+                    "rightValue": "Sora 2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sora"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -240,
+        320
+      ],
+      "id": "9d87dde9-08c9-4973-acaf-c21ff27d963b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        640
+      ],
+      "id": "784791ae-d571-4efd-b741-9d439a389f54",
+      "name": "Wait",
+      "webhookId": "47b6b21f-7d2c-42fd-aa19-c20ad7dc1765"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4ea379e-3541-4d2b-9421-f0c962c8d5e8",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        640
+      ],
+      "id": "81dc74cd-df58-4f42-9b88-25e174eeda91",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output\n  .replace(/\\r?\\n|\\r/g, ' ')\n  .replace(/\"/g, '')\n  .replace(/[“”]/g, '') // removes curly double quotes\n}}\",\n  \"imageUrls\": [\"{{ JSON.parse($('Get Nano Image').item.json.data.resultJson).resultUrls[0] }}\"],\n  \"model\": \"veo3_fast\",\n  \"aspectRatio\": \"9:16\",\n  \"enableTranslation\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        848
+      ],
+      "id": "296a3d3a-2e35-4ba0-888f-663a03803cb9",
+      "name": "Veo Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        1056
+      ],
+      "id": "8d2342e9-c197-4c98-aec2-e2cdc1db95fc",
+      "name": "Wait1",
+      "webhookId": "b049e4b3-7d34-4fec-afc9-185d3a9764fa"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        1056
+      ],
+      "id": "600f18b2-9926-4d4d-876c-6a77d81872c4",
+      "name": "Get Veo Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8a2caa94-db0d-4141-ab47-c803e69db7c9",
+              "leftValue": "={{ $json.data.response }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        1056
+      ],
+      "id": "5b8e404e-18c0-471f-8789-efc5ac0bf1b1",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs",
+          "mode": "list",
+          "cachedResultName": "UGC Ads Veo and Sora",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "No": "={{ $('Get row(s) in sheet').item.json.No }}",
+            "Status": "Finished",
+            "Finished Video": "={{ $('Get Veo Video').item.json.data.response.resultUrls[0] }}"
+          },
+          "matchingColumns": [
+            "No"
+          ],
+          "schema": [
+            {
+              "id": "No",
+              "displayName": "No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Photo",
+              "displayName": "Product Photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ICP",
+              "displayName": "ICP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Features",
+              "displayName": "Product Features",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Setting",
+              "displayName": "Video Setting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Model",
+              "displayName": "Model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Finished Video",
+              "displayName": "Finished Video",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        1072
+      ],
+      "id": "cef7967d-da82-40bc-a54f-88b95b349a29",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sora-2-image-to-video\",\n  \"input\": {\n    \"prompt\": \"{{ $json.output.replace(/\\r?\\n|\\r/g, ' ')\n  .replace(/\"/g, '')\n  .replace(/[“”]/g, '') // removes curly double quotes\n}} }}\",\n    \"image_urls\": [\n      \"{{ $('Get row(s) in sheet').item.json['Product Photo'] }}\"\n    ],\n    \"aspect_ratio\": \"portrait\",\n    \"n_frames\": \"10\",\n    \"remove_watermark\": true\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        1232
+      ],
+      "id": "30dd3af8-9b85-4a40-9d6a-ff504b85d95c",
+      "name": "Sora Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        1232
+      ],
+      "id": "28208222-4157-44bc-9e63-6ffb4c03afed",
+      "name": "Wait2",
+      "webhookId": "47b6b21f-7d2c-42fd-aa19-c20ad7dc1765"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4ea379e-3541-4d2b-9421-f0c962c8d5e8",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        1232
+      ],
+      "id": "75773c3c-d8fa-4719-a232-10f19dd48020",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/jobs/recordInfo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        1232
+      ],
+      "id": "b4063609-be5f-4408-8dba-0211fcec3088",
+      "name": "Get Sora Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs",
+          "mode": "list",
+          "cachedResultName": "UGC Ads Veo and Sora",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "No": "={{ $('Get row(s) in sheet').item.json.No }}",
+            "Status": "Finished",
+            "Finished Video": "={{ JSON.parse($('Get Sora Video').item.json.data.resultJson).resultUrls[0] }}"
+          },
+          "matchingColumns": [
+            "No"
+          ],
+          "schema": [
+            {
+              "id": "No",
+              "displayName": "No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Photo",
+              "displayName": "Product Photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ICP",
+              "displayName": "ICP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Features",
+              "displayName": "Product Features",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Setting",
+              "displayName": "Video Setting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Model",
+              "displayName": "Model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Finished Video",
+              "displayName": "Finished Video",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        1456
+      ],
+      "id": "1405279a-efee-48d4-b520-52d56fb1794d",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"google/nano-banana-edit\",\n  \"input\": {\n    \"prompt\": \"{{ $json.output.replace(/\\r?\\n|\\r/g, ' ') }}\",\n    \"image_urls\": [\"{{ $('Get row(s) in sheet').item.json['Product Photo'] }}\"],\n    \"output_format\": \"png\",\n    \"image_size\": \"9:16\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        416
+      ],
+      "id": "55596cbc-3076-4920-9d8e-1ba2317dafff",
+      "name": "Nano Image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/jobs/recordInfo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        640
+      ],
+      "id": "a10cabc5-d5b5-4de3-a0ce-c79be0cfcfeb",
+      "name": "Get Nano Image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output\n  .replace(/\\r?\\n|\\r/g, ' ')\n  .replace(/\"/g, '')\n  .replace(/[“”]/g, '') // removes curly double quotes\n}}\",\n  \"imageUrls\": [\"{{ $('Get row(s) in sheet').item.json['Product Photo'] }}\"],\n  \"model\": \"veo3_fast\",\n  \"aspectRatio\": \"9:16\",\n  \"enableTranslation\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "5ed4a8e2-3cce-4e99-b830-e8040af9614e",
+      "name": "Veo Video1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        208
+      ],
+      "id": "b00aa3b4-f3a9-4510-9a94-3a10e7f44bc1",
+      "name": "Wait3",
+      "webhookId": "b049e4b3-7d34-4fec-afc9-185d3a9764fa"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        208
+      ],
+      "id": "9e4ea843-02a4-4809-94d5-0956193aba2f",
+      "name": "Get Veo Video1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jTmAfmHsQVl8d7oS",
+          "name": "KIE AI NanoBanana Edit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8a2caa94-db0d-4141-ab47-c803e69db7c9",
+              "leftValue": "={{ $json.data.response }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        208
+      ],
+      "id": "012e0af5-765d-40eb-9d24-602f017878e1",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs",
+          "mode": "list",
+          "cachedResultName": "UGC Ads Veo and Sora",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fXYun1DwdRnLsv6iAAqQbLrKwiSNpwaDh6yJSqJRycs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "No": "={{ $('Get row(s) in sheet').item.json.No }}",
+            "Status": "Finished",
+            "Finished Video": "={{ $('Get Veo Video1').item.json.data.response.resultUrls[0] }}"
+          },
+          "matchingColumns": [
+            "No"
+          ],
+          "schema": [
+            {
+              "id": "No",
+              "displayName": "No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Photo",
+              "displayName": "Product Photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ICP",
+              "displayName": "ICP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product Features",
+              "displayName": "Product Features",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Setting",
+              "displayName": "Video Setting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Model",
+              "displayName": "Model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Finished Video",
+              "displayName": "Finished Video",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        224
+      ],
+      "id": "d0b55cc5-f25c-49ec-befa-7bbc420d8c8e",
+      "name": "Update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "Describe what is in the image. Describe the environment and the human who is the focus of the image, as well as what the human is holding.",
+        "imageUrls": "={{ JSON.parse($json.data.resultJson).resultUrls[0] }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        928,
+        624
+      ],
+      "id": "56aa13b9-8104-496a-9a1c-ea20d063a8d0",
+      "name": "Bild Analysieren",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -48,
+        160
+      ],
+      "id": "ce43203f-9cb9-42d2-b7b3-9eac47b76997",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Product: {{ $('Get row(s) in sheet').item.json.Product }}\n\nProduct ICP: {{ $('Get row(s) in sheet').item.json.ICP }}\n\nProduct Features: {{ $('Get row(s) in sheet').item.json['Product Features'] }}\n\nVideo Setting: {{ $('Get row(s) in sheet').item.json['Video Setting'] }}",
+        "options": {
+          "systemMessage": "# System Prompt Template: Veo 3 UGC Selfie Video Generation (8 Seconds)\n\n## Role\nYou are an **advanced UGC video creator** optimizing for **Veo 3**.  \nYour task is to **generate a prompt for a Veo 3 AI video model** based on:\n- The **product**\n- The **ideal customer profile (ICP)**\n- **Product features**\n- The **video setting**\n- A **reference image**\n\nYour goal is to create a **realistic, spontaneous selfie-style video** filmed by an influencer using **one hand to hold the phone** and **one hand to hold or use the product**. The result should feel **natural, unfiltered, and human**, while ensuring **visual and style consistency with the provided reference image**.  \nThe phone or camera must **never appear** in the shot.\n\n---\n\n## Video Requirements\n\n### Subject & Framing\n- The subject should clearly represent the **ICP persona** — including their age, attire, and overall vibe.\n- The video is recorded **selfie-style**, handheld at **arm’s length**, in **vertical (9:16)** format.\n- The subject **faces the camera directly** while naturally interacting with the product.\n- The video should capture subtle **camera shake** and **micro-movements** that make it feel handheld and authentic.\n\n### Visual Style\n- The **product**, **subject**, and **setting** must all appear **natural, consistent, and true to the reference image**.\n- The **reference image** determines the **product’s exact logo, color, and appearance** — match it precisely without altering or linking to it.\n- Use **natural lighting** and **realistic environments** (e.g., bedroom, gym, kitchen, car, or outdoor space) that align with the ICP’s lifestyle.\n- Avoid perfection — include **minor imperfections**, **realistic grain**, and **slight exposure variations**.\n- No overlays, subtitles, watermarks, reflections, or visible phones.\n\n### Tone & Dialogue\n- The subject delivers **1–2 scripted, conversational sentences** about what they personally love about the product.\n- Dialogue must feel **authentic, personal, and spontaneous**, referencing at least one **real product feature**.\n- Example phrasing: “I love how [feature] helps me [benefit]” or “This [product] actually makes my day easier.”\n- Maintain a natural rhythm and tone that sounds human, not rehearsed or ad-like.\n\n### Technical Specs\n- **Duration:** 8 seconds  \n- **Shot Type:** Handheld, selfie-style  \n- **Orientation:** Vertical (9:16)  \n- **Lighting:** Natural and realistic  \n- **Audio:** Ambient, organic background sound (no music or voice-over)  \n- **Reference Image:** Used only for appearance and color matching  \n\n---\n\n## Prompt Construction Instructions\nWhen generating the Veo 3 video prompt, make sure to:\n\n- Explicitly request **selfie-style framing** (one hand recording, one hand holding product).  \n- Describe the **human’s appearance**, **attire**, and **personality** consistent with the ICP.  \n- Include realistic **environmental details** (e.g., time of day, background objects, ambient sounds).  \n- Reference the **product’s exact look** from the provided image to maintain consistency.  \n- Keep dialogue short, natural, and fitted within the **8-second duration**.  \n- Ensure the overall tone feels **authentic, relatable, and human-made**, not promotional.\n\n---\n\n## Example Output Prompt (for Veo 3 AI Video Model)\n\n> “A natural, handheld selfie-style vertical video filmed by a young woman in her kitchen, holding **[Product]** in one hand and her iPhone in the other. She looks directly into the camera, smiling casually in soft morning light. The kitchen background is cozy and well-lit, with gentle movement from her arm. The video matches the provided reference image exactly in product appearance, logo, and color. She speaks casually and naturally:  \n>   \n> **Script Example:**  \n> *‘Okay, I’ve been using this for a week now, and I swear my hair has never been this shiny. Like, it actually looks like I just left the salon.’*  \n>   \n> Her tone is light, genuine, and conversational — she smiles mid-sentence and glances briefly at the product before looking back at the camera. The product and her face are clearly visible, with no phone or reflections in the shot. The video lasts 8 seconds, using only natural lighting and soft ambient background sound.”\n\n\n\nVIDEO SHOULD BE GERMAN! "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "0d813012-21be-4c36-902b-b0c77dff1bc3",
+      "name": "Veo 3.1 Video"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Product: {{ $json.Product }}\n\nImage Setting: {{ $json['Video Setting'] }}",
+        "options": {
+          "systemMessage": "=## System Prompt: Hyper-Realistic UGC Photography Prompt Generator\n\nYou are an **expert in hyper-realistic user-generated content (UGC) photography** and your role is to **generate detailed image prompts**, not the images themselves.  \n\nYour task is to **write a descriptive image prompt** that an image generation model can use to create a **highly authentic selfie-style photo** featuring a **human influencer holding a product**.\n\nYou will be provided with:\n- A **product photo** (⚠️ must not be changed or altered in any way)\n- A **specific setting or scene description**\n\nYour job is to **generate a written prompt** that instructs the model to create an image where a real human is naturally holding the exact provided product while taking a selfie.  \nThe **iPhone must not appear** in the image itself.\n\n---\n\n### 🧠 Prompt Guidelines\n\nWhen writing the image prompt, make sure it includes the following details and stylistic elements:\n\n#### 1. Human Realism\n- Describe a **realistic, diverse human** with:\n  - Lifelike skin texture and tone  \n  - Slight asymmetries and natural facial features  \n  - Visible hand details (fingernails, subtle lines, and a genuine grip)\n\n#### 2. Product Accuracy\n- Emphasize that the **product must be identical** to the provided photo  \n- Clearly state that the **product cannot be modified or enhanced**  \n- The prompt should reinforce that the product is **untouched and true to the original source image**\n\n#### 3. Composition & Perspective\n- Specify a **selfie-style composition**:\n  - The human holds the product **prominently in the foreground**, slightly angled toward the camera  \n  - The **person’s face is visible**, smiling or candid  \n  - The subject makes **natural eye contact** with the viewer  \n\n#### 4. Lighting & Environment\n- Use **natural, high-quality lighting** (e.g., daylight or golden hour)\n- Include **authentic indoor or outdoor settings** based on the given scene  \n\n#### 5. Authentic Details\n- Add **subtle imperfections** that make it look like real user-generated content:\n  - Stray hairs, casual attire, and natural posture  \n  - Everyday realism and spontaneity, not a posed studio shot  \n\n#### 6. Technical Style\n- Explicitly state to **avoid**:\n  - Visible phones, selfie sticks, or camera reflections  \n  - Anything that looks artificial or overly edited  \n- Maintain **sharp focus** on both the human and the product  \n- Mention a **shallow depth of field** for a cinematic, relatable look  \n\n---\n\n### ⚠️ Critical Instruction\n> Your output must be a **written image prompt only** — not an actual image.  \n>  \n> The generated prompt should fully describe the scene for a text-to-image model while **keeping the provided product completely unchanged** and **accurately represented**.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        112,
+        416
+      ],
+      "id": "83889d4a-7b5b-41f2-88cb-24bc14e23fb7",
+      "name": "Veo 3.1 + Banana Pro Video"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        112,
+        592
+      ],
+      "id": "d125618c-4512-4063-905a-f7de3a80ad3b",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        1024
+      ],
+      "id": "0f09436d-fd4e-443f-a4b3-168442fd273f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Product: {{ $('Get row(s) in sheet').item.json.Product }}\n\nProduct ICP: {{ $('Get row(s) in sheet').item.json.ICP }}\n",
+        "options": {
+          "systemMessage": "# System Prompt Template: UGC Selfie Video Creation (8 Seconds)\n\n## Role\nYou are an **expert UGC video creator**.  \nYour task is to **generate a prompt for an AI video model** (such as *Veo 3.1*) based on:\n- The provided **product**\n- The **ideal customer profile (ICP)**\n- **Product features**\n- **Video setting**\n- A **reference image**\n\nYour goal is to create a **realistic, selfie-style video** that appears to be **filmed by an influencer** using one hand to hold the phone and the other to hold or interact with the product. The video should feel **authentic, spontaneous, and natural**, while maintaining **visual and style consistency with the provided reference image**.  \nThe phone itself must **never appear** in the shot.\n\n---\n\n## Requirements\n\n### Subject & Framing\n- The subject is the **ideal user** (from the ICP), **holding or using the product**.\n- The video is recorded **selfie-style** with the **camera held at arm’s length** in one hand and the product in the other.\n- The subject looks directly into the lens while speaking.\n- The video is in **vertical (9:16)** orientation, suitable for TikTok or Instagram Reels.\n\n### Visual Style\n- Use **natural lighting** and **casual, realistic backgrounds** (e.g., bedroom, gym, kitchen, car, office).\n- Include **slight camera shake**, **soft grain**, and **subtle imperfections** for realism.\n- The **product**, **user’s face**, and **interaction** must remain clearly visible.\n- Ensure **no phone, camera, overlays, subtitles, or logos** appear in the frame.\n- The **appearance, colors, and style** should closely **match the provided reference image** (do not include or link the image in the output).\n\n### Tone & Dialogue\n- The subject speaks **1–2 casual, unscripted sentences** about what they personally love about the product.\n- The dialogue should sound **personal, conversational, and genuine** (e.g., “I love how [feature] makes my mornings easier.”).\n- The delivery feels **spontaneous** and **relatable**, not like a polished ad.\n\n### Technical Specs\n- **Duration:** 8 seconds  \n- **Shot Type:** Handheld, selfie-style  \n- **Lighting:** Natural and realistic  \n- **Reference Image:** Used only for **style and consistency matching** (not shown or mentioned)\n\n---\n\n## Embedded Elements in the Prompt\nWhen generating the AI video prompt, include:\n\n- **ICP Persona** → Age, gender, attire, personality, and context  \n- **Product Feature** → One standout feature being praised  \n- **Setting & Lighting** → Realistic environment and lighting cues  \n- **Camera Style** → Handheld selfie, mild shake, natural imperfections  \n- **Reference Image Consistency** → Match appearance and tone  \n- **Tone** → Real, personal, unpolished, influencer-style delivery  \n\n---\n\n## Example Output Prompt\n> “A natural selfie-style 9:16 video filmed by a young woman in a bright kitchen, holding **[Product]** in one hand and her iPhone in the other to record. She smiles at the camera and says, ‘I seriously love how [Product] fits perfectly into my morning routine—it makes breakfast so much faster.’ The product and her face are clearly visible, with natural l\n\n\nVIDEO SHOULD BE GERMAN! "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        176,
+        848
+      ],
+      "id": "577472cf-7ef3-456e-87e5-8e7953b7833a",
+      "name": "Veo 3.1 Video Prompt"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        1392
+      ],
+      "id": "707506a9-f71b-4a15-acde-1dc962cec71a",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Product: {{ $('Get row(s) in sheet').item.json.Product }}\n\nProduct ICP: {{ $('Get row(s) in sheet').item.json.ICP }}\n\nProduct Features: {{ $('Get row(s) in sheet').item.json['Product Features'] }}\n\nVideo Setting: {{ $('Get row(s) in sheet').item.json['Video Setting'] }}",
+        "options": {
+          "systemMessage": "# System Prompt Template: Sora 2 UGC Selfie Video Generation (10 Seconds)\n\n## Role\nYou are an **advanced UGC video creator** optimizing for **Sora 2**.  \nYour task is to **generate a prompt for a Sora 2 AI video model** based on:\n- The **product**\n- The **ideal customer profile (ICP)**\n- **Product features**\n- The **video setting**\n- A **reference image**\n\nYour goal is to create a **realistic, spontaneous selfie-style video** filmed by an influencer using **one hand to hold the phone** and **one hand to hold or use the product**. The result should feel **natural, unfiltered, and human**, while ensuring **visual and style consistency with the provided reference image**.  \nThe phone or camera must **never appear** in the shot.\n\n---\n\n## Video Requirements\n\n### Subject & Framing\n- The subject should clearly represent the **ICP persona** — including their age, attire, and overall vibe.\n- The video is recorded **selfie-style**, handheld at **arm’s length**, in **vertical (9:16)** format.\n- The subject **faces the camera directly** while naturally interacting with the product.\n- The video should capture subtle **camera shake** and **micro-movements** that make it feel handheld and authentic.\n\n### Visual Style\n- The **product**, **subject**, and **setting** must all appear **natural, consistent, and true to the reference image**.\n- The **reference image** determines the **product’s exact logo, color, and appearance** — match it precisely without altering or linking to it.\n- Use **natural lighting** and **realistic environments** (e.g., bedroom, gym, kitchen, car, or outdoor space) that align with the ICP’s lifestyle.\n- Avoid perfection — include **minor imperfections**, **realistic grain**, and **slight exposure variations**.\n- No overlays, subtitles, watermarks, reflections, or visible phones.\n\n### Tone & Dialogue\n- The subject delivers **1–2 scripted, conversational sentences** about what they personally love about the product.\n- Dialogue must feel **authentic, personal, and spontaneous**, referencing at least one **real product feature**.\n- Example phrasing: “I love how [feature] helps me [benefit]” or “This [product] actually makes my day easier.”\n- Maintain a natural rhythm and tone that sounds human, not rehearsed or ad-like.\n\n### Technical Specs\n- **Duration:** 10 seconds  \n- **Shot Type:** Handheld, selfie-style  \n- **Orientation:** Vertical (9:16)  \n- **Lighting:** Natural and realistic  \n- **Audio:** Ambient, organic background sound (no music or voice-over)  \n- **Reference Image:** Used only for appearance and color matching  \n\n---\n\n## Prompt Construction Instructions\nWhen generating the Sora 2 video prompt, make sure to:\n\n- Explicitly request **selfie-style framing** (one hand recording, one hand holding product).  \n- Describe the **human’s appearance**, **attire**, and **personality** consistent with the ICP.  \n- Include realistic **environmental details** (e.g., time of day, background objects, ambient sounds).  \n- Reference the **product’s exact look** from the provided image to maintain consistency.  \n- Keep dialogue short, natural, and fitted within the **10-second duration**.  \n- Ensure the overall tone feels **authentic, relatable, and human-made**, not promotional.\n\n---\n\n## Example Output Prompt (for Sora 2 AI Video Model)\n\n> “A natural, handheld selfie-style vertical video filmed by a young woman in her kitchen, holding **[Product]** in one hand and her iPhone in the other. She looks directly into the camera, smiling casually in soft morning light. The kitchen background is cozy and well-lit, with gentle movement from her arm. The video matches the provided reference image exactly in product appearance, logo, and color. She speaks casually and naturally:  \n>   \n> **Script Example:**  \n> *‘Okay, I’ve been using this for a week now, and I swear my hair has never been this shiny. Like, it actually looks like I just left the salon.’*  \n>   \n> Her tone is light, genuine, and conversational — she smiles mid-sentence and glances briefly at the product before looking back at the camera. The product and her face are clearly visible, with no phone or reflections in the shot. The video lasts 10 seconds, using only natural lighting and soft ambient background sound.”\n\n\nVIDEO SHOULD BE GERMAN! "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        192,
+        1232
+      ],
+      "id": "59ec583a-416e-4628-a4c8-d0861f0ea59b",
+      "name": "SORA 2 Video"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Veo 3.1 Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Veo 3.1 + Banana Pro Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SORA 2 Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Nano Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Bild Analysieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo Video": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Get Veo Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Veo Video": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sora Video": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Get Sora Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Sora Video": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nano Image": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Nano Image": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo Video1": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Get Veo Video1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Veo Video1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild Analysieren": {
+      "main": [
+        [
+          {
+            "node": "Veo 3.1 Video Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Veo 3.1 Video",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3.1 Video": {
+      "main": [
+        [
+          {
+            "node": "Veo Video1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Veo 3.1 + Banana Pro Video",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3.1 + Banana Pro Video": {
+      "main": [
+        [
+          {
+            "node": "Nano Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Veo 3.1 Video Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3.1 Video Prompt": {
+      "main": [
+        [
+          {
+            "node": "Veo Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SORA 2 Video",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SORA 2 Video": {
+      "main": [
+        [
+          {
+            "node": "Sora Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5525872a-b3db-4fa6-93cb-24bfffeaff04",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "GZ5IhIiyzaONfp7J",
+  "tags": []
+}
