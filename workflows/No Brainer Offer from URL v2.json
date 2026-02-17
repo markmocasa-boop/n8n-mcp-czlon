@@ -1,0 +1,634 @@
+{
+  "name": "No Brainer Offer from URL v2",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Landing Page",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Landing Page URL",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Zielgruppe",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Lieferzeit",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Rabatt in %",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Garantie",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Primäres Problem",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "051b7f10-b9cb-4a73-8b1f-d28931bf910d",
+      "name": "On form submission",
+      "webhookId": "14eddb75-57a1-4bbe-98bc-b534968508bb"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "https://console.apify.com/actors/gzpVrk2dNClWp1Mer/input",
+          "mode": "url"
+        },
+        "customBody": "={\n    \"urls\": [\n        \"{{ $json['Landing Page URL'] }}\"\n    ]\n}",
+        "timeout": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e4b0acd9-9560-4415-9a4b-e7dbfaf0765a",
+      "name": "URL Daten auslesen",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5",
+          "mode": "list",
+          "cachedResultName": "GPT-5"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Du bist ein Offer-Designer. Aufgabe: Aus dem übergebenen Webseiten-Text eine „No-Brainer Offer“ formulieren.\n\nZiele:\n1) Klarer, sofort spürbarer Nutzen\n2) Überproportionaler wahrgenommener Wert\n3) Minimaler Entscheidungswiderstand (Risiko-Umkehr, Garantie, Social Proof, einfache Bestellung)\n\nVorgehen (strict):\n- Extrahiere: Zielkunde, akutes Problem, Ist-Zustand, Wunschzustand, Einwände, Beweise (Cases, Zahlen, Zitate), USPs, Angebote/Leistungen, Lieferzeit, Risiken, Garantien, Preise/Anker.\n- Wenn Angaben fehlen: realistische Annahmen treffen + deutlich kennzeichnen („Annahme“).\n- Schreibe messbar: Zahlen, Zeitgewinne, %-Angaben, konkrete Ergebnisse. Keine Floskeln.\n- Reduziere Reibung: klare Garantie/Risiko-Umkehr, einfacher Bestellweg, knappe Auswahl (1 Hauptoption + ggf. Anker).\n- Nutze Website-Terminologie, Tonalität und Belege aus dem Quelltext.\n- Länge: kompakt, skimmbar, Bullet-first.\n\nAusgabeformat (zuerst menschlich, dann JSON):\nH1 Headline (max. 12 Wörter)\nSubline (1 Satz Nutzen + Zeit bis Ergebnis)\n⚡ Quick Value Summary (3 Bullets, je 1 Zeile, mit Zahl)\nOFFER STACK (Bullets: Leistung, Ergebnis, Zeit/Scope)\nBONI (optional, mit monetärem Wert)\nPREIS & ANKER (Listenpreis/Anker → Deal-Preis → Ersparnis %)\nGARANTIE (klare Risiko-Umkehr, Bedingungen in 1–2 Zeilen)\nSOCIAL PROOF (3 Belege: Zahl/Quote/Logo-Platzhalter)\nCTA (klarer nächster Schritt + Zeitangabe)\nFAQ (5 kurze Q&As zu Einwänden)\nP.S. Dringlichkeit/Limit\n\nJSON (zweiter Block) mit Schlüsseln:\n{ \"headline\": \"\", \"subline\": \"\", \"value_bullets\": [], \"offer_stack\": [], \"bonuses\": [], \"list_price\": \"\", \"deal_price\": \"\", \"savings_percent\": \"\", \"guarantee\": \"\", \"social_proof\": [], \"cta\": \"\", \"faq\": [ { \"q\": \"\", \"a\": \"\" } ], \"assumptions\": [] }\n\nStil:\n- Aktiv, präzise, deutsch.\n- Keine übertriebenen Superlative, keine leeren Versprechen.\n- Immer konkret, kunden-/ergebnisorientiert.\n"
+            },
+            {
+              "content": "=Quelltext (von der gecrawlten Seite):\n{{ $json.text || $json.html || $json.content }}\n\nParameter:\nTARGET_MARKET:{{ $('On form submission').item.json.Zielgruppe }}\nPRIMARY_PROBLEM: {{ $('On form submission').item.json['Primäres Problem'] }}\nDELIVERY_TIME: {{ $('On form submission').item.json.Lieferzeit }}\nDISCOUNT: {{ $('On form submission').item.json['Rabatt in %'] }}\nGUARANTEE: {{ $('On form submission').item.json.Garantie }}\n\n\nAufgabe:\n- Erstelle die No-Brainer Offer gemäß System Prompt.\n- Nutze Daten aus dem Quelltext priorisiert, sonst Annahmen.\n- Zahlen/Zeiten belegen, wo möglich, mit Textstellen aus dem Quelltext.\n- Gib zuerst die menschlich lesbare Version aus, dann die JSON-Struktur.\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c54c6bec-3e92-4d97-a952-93be85f5aba2",
+      "name": "Erstellung No Brainer Offer",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-image-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+        },
+        "prompt": "=Du bist ein kreativer Werbedesigner, spezialisiert auf aufmerksamkeitsstarke Social-Media-Grafiken für Conversion-getriebene Kampagnen. Dein Ziel ist es, aus einer kurzen Beschreibung ein Bildmotiv zu erstellen, das sofort ins Auge fällt, den Nutzen des Angebots visuell kommuniziert und zur Interaktion einlädt. Du denkst in starken Kompositionen, klaren Kontrasten und zielgruppengerechtem Stil.\n\nErstelle ein aufmerksamkeitsstarkes Social-Media-Bild für folgenden Werbetext:\n{{ $json.output[0].content[0].text }}\n\n\nDas Bild soll:\n\nDie Kernbotschaft visuell transportieren\n\nModern, klar und hochwertig wirken\n\nIdeal für LinkedIn, Instagram und X sein (quadratisches Format bevorzugt)\n\nKeine Text-Overlays enthalten (Text wird im Post ergänzt)\n\nFokus auf visuelle Symbolik, Metaphern oder plakative Szenen setzen\n\nVermeide langweilige Standardbilder. Denk in Markenwirkung.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        256
+      ],
+      "id": "4865c7a9-79f0-481c-8135-7878237e61fc",
+      "name": "Generate an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gGQQyjOkRgSzyK0m",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Hier ist ein Werbetext:\n{{ $json.output[0].content[0].text }}\n\nErstelle daraus je einen Social-Media-Post für LinkedIn, Instagram und X. Jeder Post soll:\n\nEinen starken Hook enthalten\n\nDen Nutzen des Angebots hervorheben\n\nEinen klaren Call-to-Action (CTA) haben\n\nAuf die jeweilige Plattform abgestimmt sein (Ton, Länge, Emojis, Hashtags)\n\nNutze eine professionelle, aber aktivierende Sprache. Du darfst Inhalte leicht umformulieren oder zuspitzen.\n\nACHTUNG: Schreibe nur den jeweiligen Plattform Namen und verwende nicht das  Wort Post"
+            },
+            {
+              "content": "=Du bist ein erfahrener Copywriter mit Spezialisierung auf Conversion-optimierte Social-Media-Beiträge. Deine Aufgabe ist es, aus einem kurzen Werbetext (\"No Brainer Offer\") überzeugende Posts für LinkedIn, Instagram und X zu schreiben. Du achtest auf Zielgruppenansprache, Hook, Nutzenargumentation und klare Call-to-Actions. Die Sprache ist direkt, aktiv und wirkungsorientiert. Du variierst Tonalität und Format je nach Plattform.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        256
+      ],
+      "id": "6636ac0e-b969-41e9-b55a-12151a4bc24a",
+      "name": "SM Post erstellen",
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Du bist ein erfahrener Prompt Engineer fuer KI-Bildgenerierung. Deine Aufgabe ist es, aus einem Werbetext einen optimalen Bildgenerations-Prompt auf Englisch zu erstellen.\n\nRegeln:\n- Der Prompt muss auf ENGLISCH sein (Gemini versteht Englisch besser)\n- Beschreibe ein konkretes, visuell starkes Bildmotiv\n- Fokus auf: Komposition, Farben, Stil, Stimmung, Perspektive\n- KEINE Text-Overlays im Bild\n- Quadratisches Format (1:1)\n- Modern, professionell, aufmerksamkeitsstark\n- Nutze visuelle Metaphern fuer abstrakte Konzepte\n- Vermeide generische Stock-Foto-Aesthetik\n- Maximal 200 Woerter\n- Bild fotorealistisch\n\nAusgabe: NUR den Bildprompt, keine Erklaerung, kein Markdown."
+            },
+            {
+              "content": "=Erstelle einen Bildgenerations-Prompt fuer folgende Social-Media-Kampagne:\n\n{{ $json.content[0].text }}\n\nDas Bild soll die Kernbotschaft visuell transportieren und fuer LinkedIn, Instagram und X geeignet sein (quadratisches Format). Das Bild soll sympatisch wirken und den Kunden zum Lesen des Textes anregen."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        368,
+        256
+      ],
+      "id": "8bd22a66-5504-4904-aee3-60aec5b693bc",
+      "name": "Bild-Prompt Ersteller",
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/dzmxm0jen/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "upload_preset",
+              "value": "n8n_upload"
+            },
+            {
+              "name": "public_id",
+              "value": "=offer_img_{{ $now.toMillis() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        544
+      ],
+      "id": "ed248577-0983-4caf-99c9-e053007c4023",
+      "name": "Bild zu Cloudinary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://backend.blotato.com/v2/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.secure_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        544
+      ],
+      "id": "953379d9-d099-43df-9368-40166e588c2e",
+      "name": "Bild zu Blotato",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "huFRTIQcfhSBtrVc",
+          "name": "Blotato"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// SM Post Text aus vorherigem Node holen\nconst smText = $('SM Post erstellen').first().json.content[0].text;\n\n// Bild-URL aus Blotato Media Upload\nconst imageUrl = $input.first().json.url;\n\n// Posts anhand der Markierungen aufteilen\nlet linkedin = '';\nlet instagram = '';\nlet xPost = '';\n\nif (smText.includes('---LINKEDIN---')) {\n  const parts = smText.split(/---(?:LINKEDIN|INSTAGRAM|X)---/);\n  linkedin = (parts[1] || '').trim();\n  instagram = (parts[2] || '').trim();\n  xPost = (parts[3] || '').trim();\n} else {\n  const sections = smText.split(/(?=(?:##?\\s*)?(?:LinkedIn|Instagram|X(?:\\s|:|$)|Twitter))/i);\n  for (const section of sections) {\n    const cleaned = section.replace(/^##?\\s*/gm, '').trim();\n    if (/^LinkedIn/i.test(cleaned)) {\n      linkedin = cleaned.replace(/^LinkedIn[:\\s]*/i, '').trim();\n    } else if (/^Instagram/i.test(cleaned)) {\n      instagram = cleaned.replace(/^Instagram[:\\s]*/i, '').trim();\n    } else if (/^(?:X|Twitter)/i.test(cleaned)) {\n      xPost = cleaned.replace(/^(?:X|Twitter)[:\\s]*/i, '').trim();\n    }\n  }\n}\n\nif (!linkedin && !instagram && !xPost) {\n  linkedin = smText;\n  instagram = smText;\n  xPost = smText;\n}\n\n// Flaches Array – alle 3 Posts als Items auf einem Output\nreturn [\n  { json: { platform: 'linkedin', text: linkedin, imageUrl } },\n  { json: { platform: 'instagram', text: instagram, imageUrl } },\n  { json: { platform: 'x', text: xPost, imageUrl } }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        544
+      ],
+      "id": "5fcbd6ed-8625-435c-a1f8-106a878be579",
+      "name": "SM Posts aufteilen",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://backend.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"target\": {\n      \"targetType\": \"linkedin\"\n    },\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.text) }},\n      \"platform\": \"linkedin\",\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"]\n    },\n    \"accountId\": \"11831\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        800
+      ],
+      "id": "f156cd99-2a33-4811-8084-051cc10b5ad1",
+      "name": "LinkedIn Post",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "huFRTIQcfhSBtrVc",
+          "name": "Blotato"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://backend.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"target\": {\n      \"targetType\": \"instagram\"\n    },\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.text) }},\n      \"platform\": \"instagram\",\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"]\n    },\n    \"accountId\": \"29875\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        800
+      ],
+      "id": "5fbfb213-e3c5-4ca6-8e78-c09a3cc819df",
+      "name": "Instagram Post",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "huFRTIQcfhSBtrVc",
+          "name": "Blotato"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://backend.blotato.com/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": {\n    \"target\": {\n      \"targetType\": \"x\"\n    },\n    \"content\": {\n      \"text\": {{ JSON.stringify($json.text) }},\n      \"platform\": \"x\",\n      \"mediaUrls\": [\"{{ $json.imageUrl }}\"]\n    },\n    \"accountId\": \"DEINE_X_ACCOUNT_ID\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        800
+      ],
+      "id": "8685d92e-d86f-407e-9244-82d1b6f55be9",
+      "name": "X Post"
+    },
+    {
+      "parameters": {
+        "content": "## Anpassen vor Nutzung\n\n1. Cloudinary: URL mit deinem Cloud Name ersetzen, upload_preset ggf. anpassen\n\n2. Blotato Account IDs: LinkedIn, Instagram und X Account IDs eintragen. IDs findest du via GET https://backend.blotato.com/v2/accounts\n\n3. Credentials: Blotato httpHeaderAuth pruefen. Cloudinary benoetigt kein Auth (unsigned upload preset)",
+        "height": 340,
+        "width": 360,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        -16
+      ],
+      "id": "f83b1290-b901-4051-b258-59940bcdfbae",
+      "name": "Setup Hinweis"
+    },
+    {
+      "parameters": {
+        "content": "## Bild-Pipeline\nSM Text -> Prompt Optimierung -> Gemini Bild -> Cloudinary Upload -> Blotato Media",
+        "height": 80,
+        "width": 680,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        448
+      ],
+      "id": "0a54ce17-c57b-4aa2-ab40-6067d8c4b79e",
+      "name": "Bild Pipeline Note"
+    },
+    {
+      "parameters": {
+        "content": "## Social Media Posting\nCode Node splittet Text -> 3 parallele Blotato Posts (LinkedIn, Instagram, X)",
+        "height": 100,
+        "width": 820,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        960
+      ],
+      "id": "221f0c02-c591-4d0f-996a-0195180ce35f",
+      "name": "Posting Note"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "linkedin",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "bb21e20c-d9cc-4528-aa91-d8775cb4318c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "linkedin"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "506729cf-e822-445c-a779-9dfd3f893329",
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "instagram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "instagram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "62a40c8f-2961-4efc-a353-245a8dbf32d4",
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "x",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "x"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        528
+      ],
+      "id": "4e832713-01a0-4a10-b6c5-ff544c1c109f",
+      "name": "Switch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "URL Daten auslesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL Daten auslesen": {
+      "main": [
+        [
+          {
+            "node": "Erstellung No Brainer Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erstellung No Brainer Offer": {
+      "main": [
+        [
+          {
+            "node": "SM Post erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SM Post erstellen": {
+      "main": [
+        [
+          {
+            "node": "Bild-Prompt Ersteller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-Prompt Ersteller": {
+      "main": [
+        [
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild zu Cloudinary": {
+      "main": [
+        [
+          {
+            "node": "Bild zu Blotato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild zu Blotato": {
+      "main": [
+        [
+          {
+            "node": "SM Posts aufteilen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SM Posts aufteilen": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Bild zu Cloudinary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Instagram Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6f6da3c4-399e-46ec-8c3e-b0fa1dfaf24e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "VvUE3RZ6QIauZmzR",
+  "tags": []
+}
