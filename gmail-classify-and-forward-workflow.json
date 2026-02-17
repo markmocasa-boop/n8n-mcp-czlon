@@ -1,0 +1,496 @@
+{
+  "name": "Gmail Klassifizierung & Weiterleitung",
+  "nodes": [
+    {
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": ""
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "extract-email-data",
+      "name": "Email-Daten extrahieren",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-emailId",
+              "name": "emailId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-threadId",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-from",
+              "name": "from",
+              "value": "={{ $json.from.text || $json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-subject",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-body",
+              "name": "body",
+              "value": "={{ $json.text || $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-date",
+              "name": "date",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "openai-classifier",
+      "name": "OpenAI Classifier Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [440, 100],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "classification-agent",
+      "name": "Klassifizierungs-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [440, 300],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.subject }}\n\n{{ $json.body }}",
+        "options": {
+          "systemMessage": "Du bist ein E-Mail-Klassifizierungs-Assistent.\n\nAnalysiere die eingehende E-Mail und klassifiziere sie in GENAU EINE der folgenden Kategorien:\n\n1. TERMINANFRAGE - E-Mails die einen Termin anfragen, ein Meeting vorschlagen, eine Besprechung vereinbaren wollen, Kalendereinladungen, Terminverschiebungen oder Terminbestaetigungen enthalten.\n\n2. ANGEBOTSANFRAGE - E-Mails die ein Angebot anfordern, nach Preisen fragen, eine Offerte wuenschen, Projektanfragen stellen, oder Informationen zu Dienstleistungen und Produkten anfragen.\n\n3. SONSTIGES - Alle anderen E-Mails die weder eine Terminanfrage noch eine Angebotsanfrage sind. Dazu gehoeren Newsletter, Benachrichtigungen, allgemeine Korrespondenz, Rechnungen, Support-Anfragen etc.\n\nAntworte NUR mit einem einzigen Wort: TERMINANFRAGE, ANGEBOTSANFRAGE oder SONSTIGES"
+        }
+      }
+    },
+    {
+      "id": "switch-category",
+      "name": "Kategorie-Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [660, 300],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "TERMINANFRAGE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "terminanfrage"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "ANGEBOTSANFRAGE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "angebotsanfrage"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "SONSTIGES",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "sonstiges"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "mark-read-termin",
+      "name": "Als gelesen markieren (Termin)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 100],
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "forward-termin",
+      "name": "Weiterleitung Terminanfrage",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 100],
+      "parameters": {
+        "sendTo": "termine@example.com",
+        "subject": "[Terminanfrage] {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "Kategorie: TERMINANFRAGE\nOriginal-Absender: {{ $('Email-Daten extrahieren').item.json.from }}\nDatum: {{ $('Email-Daten extrahieren').item.json.date }}\n\n---\n\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "mark-read-angebot",
+      "name": "Als gelesen markieren (Angebot)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 300],
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "forward-angebot",
+      "name": "Weiterleitung Angebotsanfrage",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 300],
+      "parameters": {
+        "sendTo": "angebote@example.com",
+        "subject": "[Angebotsanfrage] {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "Kategorie: ANGEBOTSANFRAGE\nOriginal-Absender: {{ $('Email-Daten extrahieren').item.json.from }}\nDatum: {{ $('Email-Daten extrahieren').item.json.date }}\n\n---\n\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "mark-read-sonstig",
+      "name": "Als gelesen markieren (Sonstiges)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 500],
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "forward-sonstig",
+      "name": "Weiterleitung Sonstiges",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 500],
+      "parameters": {
+        "sendTo": "sonstiges@example.com",
+        "subject": "[Sonstiges] {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "Kategorie: SONSTIGES\nOriginal-Absender: {{ $('Email-Daten extrahieren').item.json.from }}\nDatum: {{ $('Email-Daten extrahieren').item.json.date }}\n\n---\n\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "mark-read-fallback",
+      "name": "Als gelesen markieren (Fallback)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 700],
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Email-Daten extrahieren').item.json.emailId }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "id": "forward-fallback",
+      "name": "Weiterleitung Fallback",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 700],
+      "parameters": {
+        "sendTo": "sonstiges@example.com",
+        "subject": "[Nicht klassifiziert] {{ $('Email-Daten extrahieren').item.json.subject }}",
+        "emailType": "text",
+        "message": "Kategorie: NICHT KLASSIFIZIERT\nOriginal-Absender: {{ $('Email-Daten extrahieren').item.json.from }}\nDatum: {{ $('Email-Daten extrahieren').item.json.date }}\n\n---\n\n{{ $('Email-Daten extrahieren').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email-Daten extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email-Daten extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Klassifizierungs-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Classifier Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Klassifizierungs-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Klassifizierungs-Agent": {
+      "main": [
+        [
+          {
+            "node": "Kategorie-Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kategorie-Router": {
+      "main": [
+        [
+          {
+            "node": "Als gelesen markieren (Termin)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Als gelesen markieren (Angebot)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Als gelesen markieren (Sonstiges)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Als gelesen markieren (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Als gelesen markieren (Termin)": {
+      "main": [
+        [
+          {
+            "node": "Weiterleitung Terminanfrage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Als gelesen markieren (Angebot)": {
+      "main": [
+        [
+          {
+            "node": "Weiterleitung Angebotsanfrage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Als gelesen markieren (Sonstiges)": {
+      "main": [
+        [
+          {
+            "node": "Weiterleitung Sonstiges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Als gelesen markieren (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "Weiterleitung Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "email-automation"
+    },
+    {
+      "name": "ai-classification"
+    },
+    {
+      "name": "gmail-forwarding"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}
