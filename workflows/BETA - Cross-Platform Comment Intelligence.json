@@ -1,0 +1,1159 @@
+{
+  "name": "BETA - Cross-Platform Comment Intelligence",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "video",
+        "limit": 50,
+        "filters": {
+          "publishedAfter": "={{ $json.publishedAfter }}",
+          "q": "={{ $json.suchbegriff }}"
+        },
+        "options": {
+          "order": "relevance"
+        }
+      },
+      "id": "26370fa5-e5ba-4044-9028-c7b7e628fcfb",
+      "name": "YouTube Search",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        1296
+      ],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "dYy7qZ8gqapk9ple",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "location": "allReddit",
+        "keyword": "={{ $('Parameter vorbereiten1').first().json.suchbegriff }}",
+        "limit": 50,
+        "additionalFields": {}
+      },
+      "id": "8b6ac8b5-faa7-4b1a-8b1f-72cf81780ccb",
+      "name": "Reddit Search",
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        1904
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "STQOFhEaWiqUogPE",
+          "name": "Reddit MN1975"
+        }
+      },
+      "notes": "NEU: Nativer Reddit-Node ersetzt Apify HTTP-Requests (eliminiert 5 Nodes)"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1d2059a4-a05d-4187-aa7d-6f98f5eb1b24",
+      "name": "Reddit Comment Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3728,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "postComment",
+        "operation": "getAll",
+        "subreddit": "={{ $json.subreddit }}",
+        "postId": "={{ $json.postId }}",
+        "limit": 50
+      },
+      "id": "2d798db7-5414-4e47-a829-dba0cc9a3757",
+      "name": "Reddit Comments laden",
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        4320,
+        1840
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "STQOFhEaWiqUogPE",
+          "name": "Reddit MN1975"
+        }
+      },
+      "notes": "NEU: Nativer Reddit-Node für Kommentar-Abfrage"
+    },
+    {
+      "parameters": {
+        "path": "0b004f49-2ec8-4a51-9b44-2c9ca575b582",
+        "formTitle": "🔍 Cross-Platform Kommentar-Analyse",
+        "formDescription": "Finde die meistdiskutierten Inhalte zu deinem Thema auf YouTube, TikTok & Reddit",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Suchbegriff / Thema",
+              "placeholder": "z.B. Künstliche Intelligenz, Bitcoin, Fitness...",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Zeitraum",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Letzte Woche"
+                  },
+                  {
+                    "option": "Letzter Monat"
+                  },
+                  {
+                    "option": "Letztes Jahr"
+                  },
+                  {
+                    "option": "Alle"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "E-Mail für Report",
+              "fieldType": "email",
+              "placeholder": "report@example.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c03aedf2-eab3-4a08-85e1-fc8528bb0eff",
+      "name": "Form Trigger1",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [
+        2736,
+        1600
+      ],
+      "webhookId": "0b004f49-2ec8-4a51-9b44-2c9ca575b582"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Zeitraum-Mapping: Dropdown-Wert in ISO-Datum umrechnen\nconst zeitraumMap = {\n  'Letzte Woche': 7,\n  'Letzter Monat': 30,\n  'Letztes Jahr': 365,\n  'Alle': 3650\n};\n\nconst suchbegriff = $input.first().json['Suchbegriff / Thema'];\nconst zeitraum = $input.first().json['Zeitraum'] || 'Letzter Monat';\nconst email = $input.first().json['E-Mail für Report'];\n\nconst tageZurueck = zeitraumMap[zeitraum] || 30;\nconst publishedAfter = new Date(Date.now() - tageZurueck * 24 * 60 * 60 * 1000).toISOString();\n\n// YouTube Zeitfilter\nconst ytTimeMap = {\n  'Letzte Woche': 'week',\n  'Letzter Monat': 'month',\n  'Letztes Jahr': 'year',\n  'Alle': 'all'\n};\n\n// Reddit Zeitfilter\nconst redditTimeMap = {\n  'Letzte Woche': 'week',\n  'Letzter Monat': 'month',\n  'Letztes Jahr': 'year',\n  'Alle': 'all'\n};\n\nreturn [{\n  json: {\n    suchbegriff,\n    zeitraum,\n    email,\n    publishedAfter,\n    ytTime: ytTimeMap[zeitraum] || 'month',\n    redditTime: redditTimeMap[zeitraum] || 'month',\n    tageZurueck\n  }\n}];"
+      },
+      "id": "d3c8af95-a911-40ff-804b-311adad1f5f0",
+      "name": "Parameter vorbereiten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Video-IDs aus nativem YouTube-Node extrahieren\n// Native Node gibt einzelne Items zurück (nicht items-Array)\nconst items = $input.all();\nconst videoIds = items.map(item => {\n  const id = item.json.id;\n  // Native Node kann ID als String oder als Objekt {videoId} zurückgeben\n  return typeof id === 'string' ? id : (id?.videoId || '');\n}).filter(Boolean);\n\nreturn [{\n  json: {\n    videoIds: videoIds.join(','),\n    suchbegriff: $('Parameter vorbereiten1').first().json.suchbegriff,\n    email: $('Parameter vorbereiten1').first().json.email\n  }\n}];"
+      },
+      "id": "5ed936ad-38e1-4513-9b65-46101bcbda38",
+      "name": "YouTube Video-IDs extrahieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alle Videos nach commentCount sortieren, Top 10 nehmen\nconst items = $input.all();\n\nconst videos = items.map(item => ({\n  videoId: item.json.id,\n  title: item.json.snippet?.title,\n  channelTitle: item.json.snippet?.channelTitle,\n  publishedAt: item.json.snippet?.publishedAt,\n  viewCount: parseInt(item.json.statistics?.viewCount || '0'),\n  likeCount: parseInt(item.json.statistics?.likeCount || '0'),\n  commentCount: parseInt(item.json.statistics?.commentCount || '0'),\n  url: `https://www.youtube.com/watch?v=${item.json.id}`\n}));\n\nvideos.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = videos.slice(0, 10);\n\nreturn top10.map(v => ({ json: v }));\n"
+      },
+      "id": "764462f5-2fb4-4d17-bbfb-ae759d45d52f",
+      "name": "YouTube Sort & Top ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c2abdd84-ecbb-4c27-8be7-c97acb41fe6b",
+      "name": "YouTube Comment Loop1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4224,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alle YouTube-Kommentare aggregieren\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  if (item.json.comment) {\n    allComments.push({\n      text: item.json.comment || '',\n      author: item.json.author || 'unknown',\n      likes: item.json.voteCount || 0,\n      videoTitle: item.json.title || ''\n    });\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'YouTube',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];\n"
+      },
+      "id": "e8296eb6-4926-425b-a1b9-312efa80bad3",
+      "name": "YouTube Kommentare aggregieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4768,
+        1264
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "tt-status-check",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3c5372de-b5a6-4cad-b31c-cf3bd737157d",
+      "name": "TikTok Run fertig?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3712,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "76ace3a6-9dad-4e5c-8649-e642280a30ff",
+      "name": "TikTok Warten1",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4256,
+        1600
+      ],
+      "webhookId": "a435cd2c-87b2-4356-96d0-262886c290a7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TikTok Videos nach Kommentaranzahl sortieren, Top 10\nconst items = $input.all();\n\nconst videos = items\n  .filter(item => {\n    const url = item.json.postPage || '';\n    return url.includes('tiktok.com') && url.includes('/video/');\n  })\n  .map(item => ({\n    videoId: item.json.id || '',\n    description: item.json.title || '',\n    author: item.json.authorMeta?.name || item.json.author || '',\n    playCount: item.json.views || 0,\n    likeCount: item.json.likes || 0,\n    commentCount: item.json.comments || 0,\n    shareCount: item.json.shares || 0,\n    bookmarks: item.json.bookmarks || 0,\n    url: item.json.postPage || ''\n  }));\n\nvideos.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = videos.slice(0, 10);\n\nreturn top10.map(v => ({ json: v }));\n\n\n"
+      },
+      "id": "5fb0b74f-52b4-4346-9818-1f1dd1ee80b7",
+      "name": "TikTok Sort & Top ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4932d1b4-0f3b-41c9-a4d8-0852d5abae39",
+      "name": "TikTok Comment Loop1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4720,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TikTok Kommentare aggregieren\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  allComments.push({\n    text: item.json.text || '',\n    author: item.json.uniqueId || item.json.user?.uniqueId || 'unknown',\n    likes: item.json.diggCount || item.json.likes || 0,\n    videoDesc: item.json._videoDescription || ''\n  });\n}\n\nreturn [{\n  json: {\n    platform: 'TikTok',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+      },
+      "id": "db88b1ff-fad0-40c3-ae8f-c21396b25b34",
+      "name": "TikTok Kommentare aggregieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5136,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit Posts nach Kommentaranzahl sortieren, Top 10\n// Nativer Reddit-Node gibt einzelne Items zurück\nconst items = $input.all();\n\nconst posts = items\n  .filter(item => item.json.title)\n  .map(item => ({\n    postId: item.json.id || item.json.name || '',\n    title: item.json.title || '',\n    subreddit: item.json.subreddit || item.json.subreddit_name_prefixed?.replace('r/', '') || '',\n    author: item.json.author || '',\n    upvotes: item.json.ups || item.json.score || 0,\n    commentCount: item.json.num_comments || 0,\n    url: item.json.url || `https://www.reddit.com${item.json.permalink || ''}`,\n    permalink: item.json.permalink || ''\n  }));\n\nposts.sort((a, b) => b.commentCount - a.commentCount);\nconst top10 = posts.slice(0, 10);\n\nreturn top10.map(p => ({ json: p }));"
+      },
+      "id": "3f1de8ec-c3cf-4c90-9111-5ab96e490538",
+      "name": "Reddit Sort & Top ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit Kommentare aggregieren (nativer Reddit-Node gibt einzelne Items zurück)\nconst allComments = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body || '';\n  if (body && body !== '[deleted]' && body !== '[removed]') {\n    allComments.push({\n      text: body,\n      author: item.json.author || 'unknown',\n      likes: item.json.ups || item.json.score || 0,\n      postTitle: ''\n    });\n  }\n}\n\nreturn [{\n  json: {\n    platform: 'Reddit',\n    comments: allComments,\n    totalComments: allComments.length\n  }\n}];"
+      },
+      "id": "374a54d3-70fb-4142-ae3b-ef8510be77b9",
+      "name": "Reddit Kommentare aggregieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4736,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein Experte für Social-Media-Analyse und Kommentar-Auswertung.\nDeine Aufgabe ist es, die Kommentare einer Plattform thematisch zu analysieren.\n\nREGELN:\n- Antworte IMMER auf Deutsch\n- Sortiere Themen ABSTEIGEND nach Häufigkeit (meistgenanntes Thema zuerst)\n- Pro Thema: Sentiment-Verteilung angeben (positiv/negativ/neutral in %)\n- Pro Thema: 2-3 repräsentative Beispiel-Kommentare zitieren\n- Fasse ähnliche Themen zusammen, sei nicht zu granular\n- Ignoriere Spam, Bot-Kommentare und irrelevante Inhalte\n- Gib am Ende eine kurze Gesamt-Einschätzung der Stimmung auf dieser Plattform\n- Antworte ausschließlich mit validem JSON, ohne Markdown-Code-Blocks\n",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden {{ $json.totalComments }} YouTube-Kommentare zum Thema \"{{ $('Parameter vorbereiten1').first().json.suchbegriff }}\n\".\n\nKOMMENTARE:\n{{ $json.comments.map(c => `[${c.likes} Likes] ${c.author}: ${c.text}`).join('\\n') }}\n\nAUSGABEFORMAT (JSON):\n{\n  \"plattform\": \"YouTube\",\n  \"anzahl_kommentare_analysiert\": <number>,\n  \"themen\": [\n    {\n      \"rang\": 1,\n      \"thema\": \"<Themenbezeichnung>\",\n      \"anzahl_mentions\": <number>,\n      \"anteil_prozent\": <number>,\n      \"sentiment\": { \"positiv\": <number>, \"negativ\": <number>, \"neutral\": <number> },\n      \"beispiel_kommentare\": [\"<Kommentar 1>\", \"<Kommentar 2>\", \"<Kommentar 3>\"]\n    }\n  ],\n  \"gesamt_stimmung\": \"<positiv|negativ|gemischt|neutral>\",\n  \"zusammenfassung\": \"<2-3 Sätze Gesamteinschätzung>\"\n}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2baf8280-eeae-4997-93e3-d312acf6e326",
+      "name": "GPT-4o YouTube Analyse1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2832,
+        2304
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein Social-Media-Analyst, spezialisiert auf TikTok-Kommentaranalyse. Deine Aufgabe ist es, eine Liste von TikTok-Kommentaren zusammenzufassen und zu bewerten.\n\nErstelle folgende Analyse:\n\n1. **Zusammenfassung** (3-5 Sätze): Worum geht es in den Kommentaren insgesamt?\n2. **Stimmungsanalyse**: Anteil positiv / neutral / negativ (in Prozent geschätzt)\n3. **Top-Themen**: Die 5 häufigsten Themen oder wiederkehrenden Aussagen\n4. **Engagement-Highlights**: Die 3 Kommentare mit den meisten Likes (mit Autor und Like-Anzahl)\n5. **Auffälligkeiten**: Kontroversen, Spam, oder ungewöhnliche Muster\n6. **Handlungsempfehlung**: 2-3 konkrete Empfehlungen für den Content Creator basierend auf dem Feedback\n\nFormatiere die Ausgabe klar strukturiert mit Markdown-Überschriften. Antworte auf Deutsch.\n",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden TikTok-Kommentare:\n\n{{ $json.comments.map(c => `- @${c.author} (${c.likes} Likes): \"${c.text}\"`).join('\\n') }}\n\nGesamtanzahl Kommentare: {{ $json.comments.length }}\n\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fcfd9f33-c2db-4b67-89b0-04468ba3cf61",
+      "name": "GPT-4o TikTok Analyse1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2832,
+        2496
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein Social-Media-Analyst, spezialisiert auf Reddit-Kommentare. Du analysierst Kommentare sachlich und strukturiert.\n\nDeine Aufgabe:\n1. Fasse alle Kommentare thematisch zusammen\n2. Identifiziere die Hauptstimmung (positiv/neutral/negativ)\n3. Erkenne wiederkehrende Themen und Kritikpunkte\n4. Bewerte das Engagement anhand von Likes\n\nAntworte immer auf Deutsch in diesem Format:\n\n**Zusammenfassung:** (2-3 Sätze Gesamtüberblick)\n\n**Stimmung:** (Positiv/Neutral/Negativ mit Prozentverteilung)\n\n**Top-Themen:**\n- Thema 1 (Häufigkeit)\n- Thema 2 (Häufigkeit)\n\n**Auffällige Kommentare:**\n- Höchste Zustimmung: ...\n- Kontroverseste Meinung: ...\n\n**Handlungsempfehlung:** (1-2 konkrete Vorschläge)\n",
+              "role": "system"
+            },
+            {
+              "content": "=Analysiere die folgenden Reddit-Kommentare:\n\n{{ $json.comments.map(c => `- u/${c.author} (${c.likes} Likes): \"${c.text}\"`).join('\\n') }}\n\nGesamtanzahl Kommentare: {{ $json.comments.length }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fc994cb8-6251-4af0-981f-d85eaa541bf1",
+      "name": "GPT-4o Reddit Analyse1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2832,
+        2720
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "f549473d-d790-4b9e-9d03-fbb39e2808c2",
+      "name": "Analysen zusammenführen1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3392,
+        2320
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein Senior Social-Media-Strategist. Du erhältst einzelne Analysen von verschiedenen Plattformen (TikTok, YouTube, Reddit) und erstellst daraus eine plattformübergreifende Gesamtanalyse.\n\nWICHTIG: Antworte AUSSCHLIESSLICH mit validem JSON. Kein Markdown, kein Text davor oder danach. Nur JSON.\n\nAntwortformat:\n{\n  \"gesamtstimmung\": \"Gewichtete Bewertung über alle Plattformen in 1-2 Sätzen\",\n  \"suchbegriff\": \"der analysierte Suchbegriff\",\n  \"datum\": \"aktuelles Datum\",\n  \"plattform_uebersicht\": {\n    \"youtube\": {\n      \"stimmung\": \"positiv/neutral/negativ/gemischt\",\n      \"hauptthema\": \"Das dominierende Thema in einem Satz\",\n      \"top3_themen\": [\"Thema 1\", \"Thema 2\", \"Thema 3\"],\n      \"engagement\": \"hoch/mittel/niedrig mit kurzer Begründung\",\n      \"zusammenfassung\": \"2-3 Sätze Zusammenfassung der YouTube-Analyse\"\n    },\n    \"tiktok\": {\n      \"stimmung\": \"positiv/neutral/negativ/gemischt\",\n      \"hauptthema\": \"Das dominierende Thema in einem Satz\",\n      \"top3_themen\": [\"Thema 1\", \"Thema 2\", \"Thema 3\"],\n      \"engagement\": \"hoch/mittel/niedrig mit kurzer Begründung\",\n      \"zusammenfassung\": \"2-3 Sätze Zusammenfassung der TikTok-Analyse\"\n    },\n    \"reddit\": {\n      \"stimmung\": \"positiv/neutral/negativ/gemischt\",\n      \"hauptthema\": \"Das dominierende Thema in einem Satz\",\n      \"top3_themen\": [\"Thema 1\", \"Thema 2\", \"Thema 3\"],\n      \"engagement\": \"hoch/mittel/niedrig mit kurzer Begründung\",\n      \"zusammenfassung\": \"2-3 Sätze Zusammenfassung der Reddit-Analyse\"\n    }\n  },\n  \"cross_platform_erkenntnisse\": [\n    \"Wichtigste plattformübergreifende Erkenntnis\",\n    \"Zweite Erkenntnis\",\n    \"Dritte Erkenntnis\"\n  ],\n  \"handlungsempfehlungen\": {\n    \"sofort\": \"Was sofort umgesetzt werden sollte\",\n    \"kurzfristig\": \"Was in den nächsten Wochen geplant werden sollte\",\n    \"langfristig\": \"Was langfristig beobachtet werden sollte\"\n  },\n  \"fazit\": \"3-4 Sätze Gesamtbewertung über alle Plattformen hinweg\"\n}\n\nRegeln:\n- Extrahiere die Top 3 Themen aus den tatsächlichen Kommentarinhalten jeder Plattform\n- Falls eine Plattform keine Daten liefert, setze stimmung auf \"keine Daten\" und top3_themen auf ein leeres Array []\n- Gewichte die Gesamtstimmung nach Datenmenge pro Plattform\n- Handlungsempfehlungen müssen konkret und umsetzbar sein\n- Antworte auf Deutsch\n",
+              "role": "system"
+            },
+            {
+              "content": "=Erstelle eine plattformübergreifende Gesamtanalyse aus den folgenden Einzelanalysen:\n\n{{ $input.all().map((item, i) => `--- Analyse ${i + 1} ---\\n${item.json.output || item.json.text || item.json.message?.content || JSON.stringify(item.json)}`).join('\\n\\n') }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0644364a-8c16-4c43-b07c-4a455222a557",
+      "name": "GPT-4o Gesamt-Analyse1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3664,
+        2336
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "qqAEFbLOk7AgkiYS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gesamt-Analyse JSON/Markdown parsen und für HTML-Report + Gmail aufbereiten\nconst rawResponse = $input.first().json.message?.content ||\n  $input.first().json.text ||\n  $input.first().json.output || '';\n\n// Versuche JSON zu parsen (bevorzugt)\nlet analyse = null;\ntry {\n  // Direkt als JSON parsen\n  analyse = JSON.parse(rawResponse);\n} catch(e) {\n  // Falls in Markdown-Codeblock eingebettet\n  try {\n    const jsonMatch = rawResponse.match(/```json\\s*([\\s\\S]*?)```/);\n    if (jsonMatch) {\n      analyse = JSON.parse(jsonMatch[1]);\n    }\n  } catch(e2) { /* kein JSON */ }\n}\n\n// Falls JSON erfolgreich geparst\nif (analyse && analyse.plattform_uebersicht) {\n  const pu = analyse.plattform_uebersicht;\n\n  // Sicherstellen dass top3_themen überall als Array existiert\n  for (const key of ['youtube', 'tiktok', 'reddit']) {\n    if (pu[key]) {\n      if (!Array.isArray(pu[key].top3_themen)) {\n        pu[key].top3_themen = [];\n      }\n    } else {\n      pu[key] = {\n        stimmung: 'Keine Daten',\n        hauptthema: 'N/A',\n        top3_themen: [],\n        engagement: 'N/A',\n        zusammenfassung: ''\n      };\n    }\n  }\n\n  const suchbegriff = analyse.suchbegriff ||\n    $('Parameter vorbereiten1').first().json.suchbegriff || 'Unbekannt';\n\n  return [{\n    json: {\n      suchbegriff,\n      datum: analyse.datum || new Date().toLocaleDateString('de-DE') + ', ' +\n        new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),\n      gesamtstimmung: analyse.gesamtstimmung || '',\n      plattform_uebersicht: pu,\n      cross_platform_erkenntnisse: analyse.cross_platform_erkenntnisse || [],\n      handlungsempfehlungen: analyse.handlungsempfehlungen || {},\n      fazit: analyse.fazit || '',\n      volltext: rawResponse\n    }\n  }];\n}\n\n// Fallback: Markdown parsen\nfunction extractSection(text, header) {\n  const regex = new RegExp(`\\\\*\\\\*${header}:?\\\\*\\\\*\\\\s*([\\\\s\\\\S]*?)(?=\\\\n\\\\*\\\\*|\\\\n##|$)`);\n  const match = text.match(regex);\n  return match ? match[1].trim() : '';\n}\n\nfunction parseTable(text) {\n  const platforms = { youtube: {}, tiktok: {}, reddit: {} };\n  const tableMatch = text.match(/\\|[\\s\\S]*?\\|[\\s\\S]*?(?=\\n\\n|\\n\\*\\*|$)/);\n  if (!tableMatch) return platforms;\n\n  const rows = tableMatch[0].split('\\n').filter(r => r.includes('|') && !r.includes('---'));\n\n  for (let i = 1; i < rows.length; i++) {\n    const cols = rows[i].split('|').map(c => c.trim()).filter(Boolean);\n    if (cols.length < 2) continue;\n\n    const plattform = cols[0].toLowerCase();\n    const key = plattform.includes('youtube') ? 'youtube'\n      : plattform.includes('tiktok') ? 'tiktok'\n      : plattform.includes('reddit') ? 'reddit' : null;\n\n    if (key) {\n      platforms[key] = {\n        stimmung: cols[1] || 'Keine Daten',\n        hauptthema: cols[2] || 'Keine Daten',\n        engagement: cols[3] || 'Keine Daten',\n        top3_themen: []\n      };\n    }\n  }\n\n  // Top 3 Themen aus separatem Abschnitt parsen\n  const themenBlock = text.match(/\\*\\*Top 3 Themen[^*]*\\*\\*[\\s\\S]*?(?=\\n\\*\\*|\\n##|$)/i);\n  if (themenBlock) {\n    const lines = themenBlock[0].split('\\n').filter(l => l.trim().startsWith('-'));\n    for (const line of lines) {\n      const lower = line.toLowerCase();\n      const key = lower.includes('youtube') ? 'youtube'\n        : lower.includes('tiktok') ? 'tiktok'\n        : lower.includes('reddit') ? 'reddit' : null;\n      if (key && platforms[key]) {\n        const themen = line.replace(/^-\\s*\\w+:\\s*/i, '')\n          .split(/\\d\\)\\s*/)\n          .filter(Boolean)\n          .map(t => t.replace(/,\\s*$/, '').trim());\n        platforms[key].top3_themen = themen.slice(0, 3);\n      }\n    }\n  }\n\n  return platforms;\n}\n\nfunction extractList(text, header) {\n  const section = extractSection(text, header);\n  const items = section.match(/\\d+\\.\\s+.+/g) || [];\n  return items.map(item => item.replace(/^\\d+\\.\\s+/, '').trim());\n}\n\nconst gesamtstimmung = extractSection(rawResponse, 'Gesamtstimmung');\nconst plattformen = parseTable(rawResponse);\nconst erkenntnisse = extractList(rawResponse, 'Top 3 Erkenntnisse');\nconst fazit = extractSection(rawResponse, 'Fazit');\n\nconst sofort = extractSection(rawResponse, 'Sofort umsetzen')\n  || (rawResponse.match(/1\\.\\s*(?:Sofort umsetzen|Sofort):?\\s*(.*)/)?.[1] || '');\nconst kurzfristig = extractSection(rawResponse, 'Kurzfristig planen')\n  || (rawResponse.match(/2\\.\\s*(?:Kurzfristig planen|Kurzfristig):?\\s*(.*)/)?.[1] || '');\nconst langfristig = extractSection(rawResponse, 'Langfristig beobachten')\n  || (rawResponse.match(/3\\.\\s*(?:Langfristig beobachten|Langfristig):?\\s*(.*)/)?.[1] || '');\n\nconst suchbegriff = $('Parameter vorbereiten1').first().json.suchbegriff || 'Unbekannt';\n\nreturn [{\n  json: {\n    suchbegriff,\n    datum: new Date().toLocaleDateString('de-DE') + ', ' +\n      new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),\n    gesamtstimmung,\n    plattform_uebersicht: plattformen,\n    cross_platform_erkenntnisse: erkenntnisse,\n    handlungsempfehlungen: {\n      sofort,\n      kurzfristig,\n      langfristig\n    },\n    fazit,\n    volltext: rawResponse\n  }\n}];\n\n"
+      },
+      "id": "12f665e7-fbe3-42b5-a94b-263a0a143679",
+      "name": "Gesamt-Analyse aufbereiten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        2528
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk",
+          "mode": "list",
+          "cachedResultName": "AnalyseMulit PlatteformSMKommentare",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Übersicht",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "39cc8329-65db-4919-9393-74e9f414c805",
+      "name": "Google Sheets Übersicht1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4432,
+        2208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk",
+          "mode": "list",
+          "cachedResultName": "AnalyseMulit PlatteformSMKommentare",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Cross-Platform Themen",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6ade612c-939e-4d68-ba2f-f71a07c41dbc",
+      "name": "Google Sheets Cross-Platform1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4416,
+        2432
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk",
+          "mode": "list",
+          "cachedResultName": "AnalyseMulit PlatteformSMKommentare",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gUgC2BD530JemmgxwsUW3UtQMYNwOBKh7lMiBmBTuxk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Key Insights",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "678a9d0b-a5b8-4298-a12e-d9587f1b9035",
+      "name": "Google Sheets Insights1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4720,
+        2352
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cross-Platform Themen und Insights für separate Sheet-Tabs aufbereiten\nconst analyse = $input.first().json;\n\n// Cross-Platform Themen als einzelne Zeilen\nconst crossPlatformRows = (analyse.cross_platform_themen || []).map(t => ({\n  json: {\n    rang: t.rang,\n    thema: t.thema,\n    praesenz: t.praesenz,\n    gesamt_mentions: t.gesamt_mentions,\n    sentiment_trend: t.sentiment_trend,\n    plattform_unterschiede: t.plattform_unterschiede\n  }\n}));\n\n// Key Insights + Empfehlungen als einzelne Zeilen\nconst insightRows = [\n  ...(analyse.key_insights || []).map(i => ({ json: { typ: 'Insight', text: i } })),\n  ...(analyse.strategische_empfehlungen || []).map(e => ({ json: { typ: 'Empfehlung', text: e } }))\n];\n\nreturn [\n  { json: { _outputType: 'cross_platform', items: crossPlatformRows } },\n  { json: { _outputType: 'insights', items: insightRows } },\n  { json: { ...analyse } } // Original für Gmail\n];"
+      },
+      "id": "031fd5dc-8267-4ae4-8be3-68bfe52c8bf1",
+      "name": "Sheet-Daten aufbereiten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        2208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTML-Report für Gmail generieren\nconst analyse = $input.first().json;\nconst suchbegriff = analyse.suchbegriff || '';\nconst datum = analyse.datum || new Date().toLocaleDateString('de-DE');\nconst pu = analyse.plattform_uebersicht || {};\nconst gesamtstimmung = analyse.gesamtstimmung || '';\nconst erkenntnisse = analyse.cross_platform_erkenntnisse || [];\nconst empfehlungen = analyse.handlungsempfehlungen || {};\nconst fazit = analyse.fazit || '';\n\nconst badgeClass = (stimmung) => {\n  const s = (stimmung || '').toLowerCase();\n  if (s.includes('positiv') && !s.includes('negativ')) return 'badge-positiv';\n  if (s.includes('negativ')) return 'badge-negativ';\n  if (s.includes('gemischt') || s.includes('neutral')) return 'badge-gemischt';\n  return 'badge-neutral';\n};\n\nconst badgeColor = (cls) => {\n  if (cls === 'badge-positiv') return 'background:#d4edda;color:#155724;';\n  if (cls === 'badge-negativ') return 'background:#f8d7da;color:#721c24;';\n  if (cls === 'badge-gemischt') return 'background:#fff3cd;color:#856404;';\n  return 'background:#e2e3e5;color:#383d41;';\n};\n\nconst buildPlatformCard = (name, emoji, data) => {\n  if (!data || !data.stimmung || data.stimmung === 'Keine Daten') {\n    return `\n      <div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;\">\n        <h3 style=\"margin-top:0;\">${emoji} ${name}</h3>\n        <p style=\"color:#999;\">Keine Daten verfügbar</p>\n      </div>`;\n  }\n  const cls = badgeClass(data.stimmung);\n  const color = badgeColor(cls);\n\n  // Top 3 Themen als nummerierte Liste\n  const themen = data.top3_themen || [];\n  const themenHtml = themen.length > 0\n    ? `<tr>\n        <td style=\"padding:6px 0;color:#666;width:140px;vertical-align:top;\">Top 3 Themen:</td>\n        <td style=\"padding:6px 0;\">\n          <ol style=\"margin:0;padding-left:18px;\">\n            ${themen.map(t => `<li style=\"margin-bottom:4px;\">${t}</li>`).join('')}\n          </ol>\n        </td>\n      </tr>`\n    : '';\n\n  // Zusammenfassung falls vorhanden\n  const zusammenfassung = data.zusammenfassung\n    ? `<tr>\n        <td colspan=\"2\" style=\"padding:8px 0 2px;\">\n          <p style=\"margin:0;color:#555;font-size:13px;line-height:1.5;background:#f8f9fa;padding:10px;border-radius:6px;\">${data.zusammenfassung}</p>\n        </td>\n      </tr>`\n    : '';\n\n  return `\n    <div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;\">\n      <h3 style=\"margin-top:0;\">${emoji} ${name}\n        <span style=\"display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;${color}\">${data.stimmung}</span>\n      </h3>\n      <table style=\"width:100%;border-collapse:collapse;\">\n        <tr>\n          <td style=\"padding:6px 0;color:#666;width:140px;\">Top-Thema:</td>\n          <td style=\"padding:6px 0;font-weight:600;\">${data.hauptthema || 'N/A'}</td>\n        </tr>\n        ${themenHtml}\n        <tr>\n          <td style=\"padding:6px 0;color:#666;\">Engagement:</td>\n          <td style=\"padding:6px 0;\">${data.engagement || 'N/A'}</td>\n        </tr>\n        ${zusammenfassung}\n      </table>\n    </div>`;\n};\n\nconst buildErkenntnisse = (items) => {\n  if (!items || items.length === 0) return '<p style=\"color:#999;\">Keine Erkenntnisse verfügbar</p>';\n  return items.map((item, i) => `\n    <div style=\"display:flex;align-items:flex-start;margin-bottom:10px;\">\n      <span style=\"background:#667eea;color:white;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:10px;flex-shrink:0;\">${i + 1}</span>\n      <span style=\"line-height:1.5;\">${item}</span>\n    </div>`).join('');\n};\n\nconst htmlReport = `<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"></head>\n<body style=\"font-family:'Segoe UI',Arial,sans-serif;color:#333;max-width:700px;margin:0 auto;\">\n  <div style=\"background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:30px;border-radius:12px 12px 0 0;\">\n    <h1 style=\"margin:0;font-size:22px;\">Kommentar-Analyse</h1>\n    <p style=\"margin:5px 0 0;opacity:0.9;font-size:14px;\">Thema: \"${suchbegriff}\" — ${datum}</p>\n  </div>\n\n  <div style=\"padding:25px;background:#fff;\">\n    <div style=\"background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);border-radius:8px;padding:16px;margin-bottom:25px;\">\n      <strong>Gesamtstimmung:</strong> ${gesamtstimmung}\n    </div>\n\n    <h2 style=\"color:#333;border-bottom:2px solid #667eea;padding-bottom:8px;\">Plattform-Übersicht</h2>\n    ${buildPlatformCard('YouTube', '▶', pu.youtube)}\n    ${buildPlatformCard('TikTok', '♪', pu.tiktok)}\n    ${buildPlatformCard('Reddit', '◉', pu.reddit)}\n\n    <h2 style=\"color:#333;border-bottom:2px solid #667eea;padding-bottom:8px;\">Top-Erkenntnisse</h2>\n    ${buildErkenntnisse(erkenntnisse)}\n\n    <h2 style=\"color:#333;border-bottom:2px solid #667eea;padding-bottom:8px;\">Handlungsempfehlungen</h2>\n    <table style=\"width:100%;border-collapse:collapse;\">\n      <tr style=\"background:#d4edda;\">\n        <td style=\"padding:10px;border-radius:6px 0 0 0;font-weight:600;width:130px;\">Sofort</td>\n        <td style=\"padding:10px;border-radius:0 6px 0 0;\">${empfehlungen.sofort || 'N/A'}</td>\n      </tr>\n      <tr style=\"background:#fff3cd;\">\n        <td style=\"padding:10px;font-weight:600;\">Kurzfristig</td>\n        <td style=\"padding:10px;\">${empfehlungen.kurzfristig || 'N/A'}</td>\n      </tr>\n      <tr style=\"background:#cce5ff;\">\n        <td style=\"padding:10px;border-radius:0 0 0 6px;font-weight:600;\">Langfristig</td>\n        <td style=\"padding:10px;border-radius:0 0 6px 0;\">${empfehlungen.langfristig || 'N/A'}</td>\n      </tr>\n    </table>\n\n    <h2 style=\"color:#333;border-bottom:2px solid #667eea;padding-bottom:8px;\">Fazit</h2>\n    <p style=\"background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid #667eea;line-height:1.6;\">\n      ${fazit}\n    </p>\n  </div>\n\n  <div style=\"background:#f1f1f1;padding:15px;text-align:center;border-radius:0 0 12px 12px;font-size:12px;color:#999;\">\n    Automatisch generiert via n8n Kommentar-Analyse\n  </div>\n</body></html>`;\n\nreturn [{ json: { suchbegriff, datum, htmlReport } }];\n\n"
+      },
+      "id": "e4b22eb5-08ff-4fe3-962d-0702a2af9813",
+      "name": "HTML-Report generieren1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4416,
+        2656
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "=mark@mo-casa.com",
+        "subject": "=Kommentar-Analyse: \"{{ $json.suchbegriff }}\" — {{ $json.datum }}",
+        "message": "={{ $json.htmlReport }}",
+        "options": {}
+      },
+      "id": "6cbb6ef4-c938-4c2e-8ef8-749472a4ab24",
+      "name": "Gmail Report senden1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4720,
+        2656
+      ],
+      "webhookId": "396f7b50-8740-40e1-821c-7f459981de99",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "noqhIMn78YkYKCI3",
+          "name": "mn@mo-casa.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "get",
+        "videoId": "={{ $json.videoIds }}",
+        "part": [
+          "snippet",
+          "statistics"
+        ],
+        "options": {}
+      },
+      "id": "f6cad06d-15a7-413d-b90a-53db599afe47",
+      "name": "YouTube Search1",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        3728,
+        1296
+      ],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "dYy7qZ8gqapk9ple",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "p7UMdpQnjKmmpR21D",
+          "mode": "list",
+          "cachedResultName": "YouTube Comments Scraper (streamers/youtube-comments-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/p7UMdpQnjKmmpR21D/input"
+        },
+        "customBody": "={\n    \"maxComments\": 50,\n    \"startUrls\": [\n        {\n            \"url\": \"{{ $json.url }}\"\n        }\n    ]\n}",
+        "timeout": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        4400,
+        1248
+      ],
+      "id": "87f40cf5-77b2-4990-9295-b9dcb352a84c",
+      "name": "Run an Actor and get dataset",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "5K30i8aFccKNF5ICs",
+          "mode": "list",
+          "cachedResultName": "🏯 Tiktok Scraper (Pay Per Result) (apidojo/tiktok-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/5K30i8aFccKNF5ICs/input"
+        },
+        "customBody": "={\n    \"customMapFunction\": \"(object) => { return {...object} }\",\n    \"dateRange\": \"DEFAULT\",\n    \"includeSearchKeywords\": false,\n    \"keywords\": [\n        \"{{ $json.suchbegriff }}\"        \n    ],\n    \"location\": \"DE\",\n    \"maxItems\": 150,\n    \"sortType\": \"RELEVANCE\"\n}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        3328,
+        1600
+      ],
+      "id": "a68cd3d5-991f-4c8c-9ef9-33271e187e95",
+      "name": "TikTok Scraper",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "BDec00yAmCm1QbMEI",
+          "mode": "list",
+          "cachedResultName": "TikTok Comments Scraper (clockworks/tiktok-comments-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/BDec00yAmCm1QbMEI/input"
+        },
+        "customBody": "={\n    \"commentsPerPost\": 100,\n    \"excludePinnedPosts\": false,\n    \"maxRepliesPerComment\": 0,\n    \"postURLs\": [\n        \"{{ $json.url }}\"\n    ],\n    \"resultsPerPage\": 100\n}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        5136,
+        1408
+      ],
+      "id": "09e15d19-639f-44b1-80cf-39bb758db082",
+      "name": "TikTok Comments Scraper1",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "YouTube Search": {
+      "main": [
+        [
+          {
+            "node": "YouTube Video-IDs extrahieren1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Search": {
+      "main": [
+        [
+          {
+            "node": "Reddit Sort & Top ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Comment Loop": {
+      "main": [
+        [
+          {
+            "node": "Reddit Kommentare aggregieren1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reddit Comments laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Comments laden": {
+      "main": [
+        [
+          {
+            "node": "Reddit Comment Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Parameter vorbereiten1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parameter vorbereiten1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reddit Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TikTok Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Video-IDs extrahieren1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Sort & Top ": {
+      "main": [
+        [
+          {
+            "node": "YouTube Comment Loop1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Comment Loop1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Kommentare aggregieren1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run an Actor and get dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Kommentare aggregieren1": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o YouTube Analyse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Run fertig?1": {
+      "main": [
+        [
+          {
+            "node": "TikTok Sort & Top ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TikTok Warten1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Warten1": {
+      "main": [
+        [
+          {
+            "node": "TikTok Run fertig?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Sort & Top ": {
+      "main": [
+        [
+          {
+            "node": "TikTok Comment Loop1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Comment Loop1": {
+      "main": [
+        [
+          {
+            "node": "TikTok Kommentare aggregieren1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TikTok Comments Scraper1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Kommentare aggregieren1": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o TikTok Analyse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Sort & Top ": {
+      "main": [
+        [
+          {
+            "node": "Reddit Comment Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o YouTube Analyse1": {
+      "main": [
+        [
+          {
+            "node": "Analysen zusammenführen1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o TikTok Analyse1": {
+      "main": [
+        [
+          {
+            "node": "Analysen zusammenführen1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Analysen zusammenführen1": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o Gesamt-Analyse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Gesamt-Analyse1": {
+      "main": [
+        [
+          {
+            "node": "Gesamt-Analyse aufbereiten1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gesamt-Analyse aufbereiten1": {
+      "main": [
+        [
+          {
+            "node": "HTML-Report generieren1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet-Daten aufbereiten1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Übersicht1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets Cross-Platform1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets Insights1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML-Report generieren1": {
+      "main": [
+        [
+          {
+            "node": "Gmail Report senden1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Reddit Analyse1": {
+      "main": [
+        [
+          {
+            "node": "Analysen zusammenführen1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "YouTube Search1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Sort & Top ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Kommentare aggregieren1": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o Reddit Analyse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run an Actor and get dataset": {
+      "main": [
+        [
+          {
+            "node": "YouTube Comment Loop1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Scraper": {
+      "main": [
+        [
+          {
+            "node": "TikTok Run fertig?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok Comments Scraper1": {
+      "main": [
+        [
+          {
+            "node": "TikTok Comment Loop1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a056a033-14d5-4bb8-807a-d6460102af5c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a320365cb8af0cfc53c3cf643590b40b68314b98ffb543a3f03872d936accf51"
+  },
+  "id": "nFOgsCbaWI9kk2Idgu_YZ",
+  "tags": []
+}
