@@ -1,316 +1,470 @@
 {
-  "_description": "Webhook-Modifikationen für bestehende Sub-Workflows – Nodes die hinzugefügt werden müssen",
-  "_instructions": "Jeder Sub-Workflow benötigt: (1) einen Webhook Trigger Node, (2) einen Respond to Webhook Node am Ende der Datenverarbeitung. Die bestehende Logik (Schedule Trigger → Verarbeitung → Email) bleibt unberührt.",
-
-  "subWorkflows": [
+  "name": "🔧 Sub-Workflow Webhook Modifikationen (Referenz-Template)",
+  "nodes": [
     {
-      "name": "SEO/GEO Dashboard Weekly Report",
-      "workflowId": "zIvvqg9P2eTQfl6y",
-      "existingTrigger": "Schedule (wöchentlich)",
-      "webhookPath": "/webhook/agent-seo-dashboard",
-      "branchAfterNode": "📦 Combine All Reports",
-      "nodesToAdd": [
-        {
-          "parameters": {
-            "httpMethod": "POST",
-            "path": "agent-seo-dashboard",
-            "responseMode": "responseNode",
-            "options": {}
-          },
-          "id": "webhook-agent-seo",
-          "name": "🌐 Agent Webhook",
-          "type": "n8n-nodes-base.webhook",
-          "typeVersion": 2,
-          "position": [0, 400],
-          "webhookId": "agent-seo-dashboard",
-          "notes": "POST /webhook/agent-seo-dashboard - Triggered by Dept Leader Agent"
-        },
-        {
-          "parameters": {
-            "respondWith": "json",
-            "responseBody": "={{ JSON.stringify($json) }}",
-            "options": {
-              "responseCode": 200,
-              "responseHeaders": {
-                "entries": [
-                  { "name": "Content-Type", "value": "application/json" }
-                ]
-              }
-            }
-          },
-          "id": "respond-webhook-seo",
-          "name": "📤 Respond to Agent",
-          "type": "n8n-nodes-base.respondToWebhook",
-          "typeVersion": 1.1,
-          "position": [1200, 400],
-          "notes": "Returns consolidated SEO data as JSON to the Agent"
-        }
-      ],
-      "connectionsToAdd": {
-        "🌐 Agent Webhook": {
-          "main": [[ { "node": "Calculate Date Range", "type": "main", "index": 0 } ]]
-        },
-        "📦 Combine All Reports": {
-          "main": [[ { "node": "📤 Respond to Agent", "type": "main", "index": 0 } ]]
+      "id": "info-note",
+      "name": "📋 ANLEITUNG",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -600],
+      "parameters": {
+        "content": "# 🔧 Sub-Workflow Webhook Modifikationen\n\nDieses Template enthält die **Webhook Trigger + Respond to Webhook** Node-Paare,\ndie du in deine 5 bestehenden Sub-Workflows einfügen musst.\n\n## Anleitung pro Sub-Workflow:\n1. Öffne den bestehenden Sub-Workflow in n8n\n2. Kopiere das passende **Webhook Trigger + Respond to Webhook** Paar aus diesem Template\n3. Verbinde den Webhook Trigger mit dem ersten Verarbeitungsnode\n4. Verbinde den letzten Datennode mit dem Respond to Webhook Node\n5. Die bestehende Schedule-Trigger → Email Logik bleibt unberührt\n\n## Für die 2 On-Demand Workflows (AI Visibility + Comment Intelligence):\nKein Webhook nötig – der Abteilungsleiter Agent liest direkt aus Google Sheets.\nStelle sicher, dass diese Workflows ihre Ergebnisse in ein Google Sheet schreiben.\n\n## Umgebungsvariablen (in n8n Settings setzen):\n- WEBHOOK_SEO_DASHBOARD\n- WEBHOOK_FUNNEL_REPORT\n- WEBHOOK_CLARITY_REPORT\n- WEBHOOK_KEYWORD_TRACKER\n- WEBHOOK_LINKEDIN_MONITOR\n- SHEET_AI_VISIBILITY (Google Sheet ID)\n- SHEET_COMMENT_INTELLIGENCE (Google Sheet ID)\n- SHEET_WEEKLY_SNAPSHOTS (Google Sheet ID)\n- REPORT_RECIPIENT (z.B. mark@mo-casa.com)",
+        "width": 520,
+        "height": 580,
+        "color": 4
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 1️⃣ SEO/GEO Dashboard\nWorkflow-ID: zIvvqg9P2eTQfl6y\n\n**Webhook Trigger** → verbinde mit deinem ersten Verarbeitungsnode (z.B. \"Calculate Date Range\")\n**Respond to Agent** → verbinde nach \"📦 Combine All Reports\"",
+        "width": 460,
+        "height": 120,
+        "color": 1
+      },
+      "id": "note-seo",
+      "name": "📝 SEO Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, -400]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-seo-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-seo",
+      "name": "🌐 Webhook: SEO Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [80, -240],
+      "webhookId": "agent-seo-dashboard",
+      "notes": "POST /webhook/agent-seo-dashboard\nKopiere diesen Node in den SEO/GEO Dashboard Workflow.\nVerbinde Output → erster Verarbeitungsnode (z.B. Calculate Date Range)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// SEO DASHBOARD: Daten für Agent aufbereiten\n// ========================================\n// Dieser Code Node sammelt die Ergebnisse aus dem SEO Dashboard Workflow\n// und gibt sie im erwarteten JSON-Format zurück.\n//\n// ANPASSUNG NÖTIG: Ersetze die Node-Referenzen mit den tatsächlichen\n// Node-Namen aus deinem SEO Dashboard Workflow.\n// ========================================\n\n// Beispiel: Daten aus vorherigen Nodes holen\n// const gscData = $('GSC Search Analytics').first().json;\n// const ga4Data = $('GA4 Report').first().json;\n// const clarityData = $('Clarity Data').first().json;\n\nconst now = new Date();\n\nreturn {\n  json: {\n    source: 'seo_geo_dashboard',\n    timestamp: now.toISOString(),\n    dateRange: $input.first().json.dateRange || 'nicht angegeben',\n    gsc: {\n      totalClicks: 0,       // ← Ersetzen mit echten Daten\n      totalImpressions: 0,  // ← Ersetzen mit echten Daten\n      totalCtr: 0,\n      avgPosition: 0,\n      topQueries: [],\n      geoPerformance: []\n    },\n    ga4: {\n      organicSessions: 0,\n      organicUsers: 0,\n      avgEngagementRate: 0,\n      avgSessionDuration: 0,\n      conversions: 0,\n      topLandingPages: []\n    },\n    clarity: {\n      totalSessions: 0,\n      deadClickRate: 0,\n      rageClickRate: 0,\n      scrollDepthAvg: 0,\n      topPages: []\n    }\n  }\n};"
+      },
+      "id": "transform-seo",
+      "name": "📦 SEO Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, -240],
+      "notes": "ANPASSEN: Ersetze Platzhalter mit echten Node-Referenzen aus deinem SEO Workflow"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
         }
       },
-      "expectedResponseShape": {
-        "source": "seo_geo_dashboard",
-        "timestamp": "ISO-8601",
-        "dateRange": "YYYY-MM-DD bis YYYY-MM-DD",
-        "gsc": {
-          "totalClicks": "number",
-          "totalImpressions": "number",
-          "totalCtr": "number (%)",
-          "avgPosition": "number",
-          "topQueries": [{ "query": "string", "clicks": "number", "impressions": "number", "ctr": "number", "position": "number" }],
-          "geoPerformance": [{ "country": "string (ISO)", "clicks": "number", "impressions": "number" }]
-        },
-        "ga4": {
-          "organicSessions": "number",
-          "organicUsers": "number",
-          "avgEngagementRate": "number (0-1)",
-          "avgSessionDuration": "number (seconds)",
-          "conversions": "number",
-          "topLandingPages": [{ "page": "string", "sessions": "number", "engagementRate": "number" }]
-        },
-        "clarity": {
-          "totalSessions": "number",
-          "deadClickRate": "number (%)",
-          "rageClickRate": "number (%)",
-          "scrollDepthAvg": "number (%)",
-          "topPages": [{ "url": "string", "sessions": "number", "scrollDepth": "number" }]
-        }
-      }
+      "id": "respond-seo",
+      "name": "📤 Respond: SEO Dashboard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, -240],
+      "notes": "Gibt SEO-Daten als JSON an den Abteilungsleiter Agent zurück"
     },
-
     {
-      "name": "Funnel & Conversion Reporting",
-      "workflowId": "yZG8V-xqjigWY3cXZXDdN",
-      "existingTrigger": "Schedule (Montag 09:00)",
-      "webhookPath": "/webhook/agent-funnel-report",
-      "branchAfterNode": "Calculate KPIs & Generate Report",
-      "nodesToAdd": [
-        {
-          "parameters": {
-            "httpMethod": "POST",
-            "path": "agent-funnel-report",
-            "responseMode": "responseNode",
-            "options": {}
-          },
-          "id": "webhook-agent-funnel",
-          "name": "🌐 Agent Webhook",
-          "type": "n8n-nodes-base.webhook",
-          "typeVersion": 2,
-          "position": [0, 600],
-          "webhookId": "agent-funnel-report"
-        },
-        {
-          "parameters": {
-            "respondWith": "json",
-            "responseBody": "={{ JSON.stringify({ source: 'funnel_conversion', timestamp: new Date().toISOString(), gscMetrics: $json.raw?.gsc || {}, ga4Funnel: { sessions: $json.raw?.ga4?.sessions, conversions: $json.raw?.ga4?.purchases, conversionRate: $json.kpis?.lpCr, revenue: $json.raw?.ga4?.revenue }, kpis: $json.kpis }) }}",
-            "options": { "responseCode": 200 }
-          },
-          "id": "respond-webhook-funnel",
-          "name": "📤 Respond to Agent",
-          "type": "n8n-nodes-base.respondToWebhook",
-          "typeVersion": 1.1,
-          "position": [1200, 600]
-        }
-      ],
-      "connectionsToAdd": {
-        "🌐 Agent Webhook": {
-          "main": [[ { "node": "Calculate Date Range", "type": "main", "index": 0 } ]]
-        },
-        "Calculate KPIs & Generate Report": {
-          "main": [[ { "node": "📤 Respond to Agent", "type": "main", "index": 0 } ]]
-        }
-      }
+      "parameters": {
+        "content": "# 2️⃣ Funnel & Conversion\nWorkflow-ID: yZG8V-xqjigWY3cXZXDdN\n\n**Webhook Trigger** → verbinde mit \"Calculate Date Range\"\n**Respond to Agent** → verbinde nach \"Calculate KPIs & Generate Report\"",
+        "width": 460,
+        "height": 120,
+        "color": 2
+      },
+      "id": "note-funnel",
+      "name": "📝 Funnel Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, -60]
     },
-
     {
-      "name": "Microsoft Clarity Weekly Report",
-      "workflowId": "SrLCQBDR8gutY2Ri",
-      "existingTrigger": "Schedule (wöchentlich)",
-      "webhookPath": "/webhook/agent-clarity-report",
-      "branchAfterNode": "Merge All Data",
-      "nodesToAdd": [
-        {
-          "parameters": {
-            "httpMethod": "POST",
-            "path": "agent-clarity-report",
-            "responseMode": "responseNode",
-            "options": {}
-          },
-          "id": "webhook-agent-clarity",
-          "name": "🌐 Agent Webhook",
-          "type": "n8n-nodes-base.webhook",
-          "typeVersion": 2,
-          "position": [0, 600],
-          "webhookId": "agent-clarity-report"
-        },
-        {
-          "parameters": {
-            "respondWith": "json",
-            "responseBody": "={{ JSON.stringify($json) }}",
-            "options": { "responseCode": 200 }
-          },
-          "id": "respond-webhook-clarity",
-          "name": "📤 Respond to Agent",
-          "type": "n8n-nodes-base.respondToWebhook",
-          "typeVersion": 1.1,
-          "position": [1200, 600]
-        }
-      ],
-      "connectionsToAdd": {
-        "🌐 Agent Webhook": {
-          "main": [[ { "node": "Fetch Clarity Data", "type": "main", "index": 0 } ]]
-        },
-        "Merge All Data": {
-          "main": [[ { "node": "📤 Respond to Agent", "type": "main", "index": 0 } ]]
-        }
-      }
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-funnel-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-funnel",
+      "name": "🌐 Webhook: Funnel Report",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [80, 100],
+      "webhookId": "agent-funnel-report",
+      "notes": "POST /webhook/agent-funnel-report\nKopiere in den Funnel & Conversion Workflow.\nVerbinde Output → Calculate Date Range"
     },
-
     {
-      "name": "Keyword Ranking Tracker",
-      "workflowId": "O4Mh77CwNnBFBPDg",
-      "existingTrigger": "Schedule (Montag)",
-      "webhookPath": "/webhook/agent-keyword-tracker",
-      "branchAfterNode": "Collect All Results",
-      "nodesToAdd": [
-        {
-          "parameters": {
-            "httpMethod": "POST",
-            "path": "agent-keyword-tracker",
-            "responseMode": "responseNode",
-            "options": {}
-          },
-          "id": "webhook-agent-keywords",
-          "name": "🌐 Agent Webhook",
-          "type": "n8n-nodes-base.webhook",
-          "typeVersion": 2,
-          "position": [0, 600],
-          "webhookId": "agent-keyword-tracker"
-        },
-        {
-          "parameters": {
-            "respondWith": "json",
-            "responseBody": "={{ JSON.stringify($json) }}",
-            "options": { "responseCode": 200 }
-          },
-          "id": "respond-webhook-keywords",
-          "name": "📤 Respond to Agent",
-          "type": "n8n-nodes-base.respondToWebhook",
-          "typeVersion": 1.1,
-          "position": [1200, 600]
-        }
-      ],
-      "connectionsToAdd": {
-        "🌐 Agent Webhook": {
-          "main": [[ { "node": "Load Keyword List", "type": "main", "index": 0 } ]]
-        },
-        "Collect All Results": {
-          "main": [[ { "node": "📤 Respond to Agent", "type": "main", "index": 0 } ]]
-        }
-      }
+      "parameters": {
+        "jsCode": "// ========================================\n// FUNNEL REPORT: Daten für Agent aufbereiten\n// ========================================\n// ANPASSUNG NÖTIG: Ersetze Node-Referenzen\n// ========================================\n\nconst now = new Date();\n\nreturn {\n  json: {\n    source: 'funnel_conversion',\n    timestamp: now.toISOString(),\n    dateRange: $input.first().json.dateRange || 'nicht angegeben',\n    gscMetrics: {\n      totalClicks: 0,\n      totalImpressions: 0,\n      totalCtr: 0,\n      byDevice: {\n        MOBILE: { clicks: 0, impressions: 0, ctr: 0 },\n        DESKTOP: { clicks: 0, impressions: 0, ctr: 0 }\n      }\n    },\n    ga4Funnel: {\n      sessions: 0,\n      engagedSessions: 0,\n      conversions: 0,\n      conversionRate: 0,\n      revenue: 0,\n      topConversionPages: []\n    }\n  }\n};"
+      },
+      "id": "transform-funnel",
+      "name": "📦 Funnel Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 100],
+      "notes": "ANPASSEN: Ersetze Platzhalter mit echten Node-Referenzen aus deinem Funnel Workflow"
     },
-
     {
-      "name": "LinkedIn Message Monitoring",
-      "workflowId": "tDairVFjYFw7cjJD8nfct",
-      "existingTrigger": "Schedule (stündlich/täglich)",
-      "webhookPath": "/webhook/agent-linkedin-monitor",
-      "branchAfterNode": "Analyze Unanswered",
-      "nodesToAdd": [
-        {
-          "parameters": {
-            "httpMethod": "POST",
-            "path": "agent-linkedin-monitor",
-            "responseMode": "responseNode",
-            "options": {}
-          },
-          "id": "webhook-agent-linkedin",
-          "name": "🌐 Agent Webhook",
-          "type": "n8n-nodes-base.webhook",
-          "typeVersion": 2,
-          "position": [0, 600],
-          "webhookId": "agent-linkedin-monitor"
-        },
-        {
-          "parameters": {
-            "respondWith": "json",
-            "responseBody": "={{ JSON.stringify($json) }}",
-            "options": { "responseCode": 200 }
-          },
-          "id": "respond-webhook-linkedin",
-          "name": "📤 Respond to Agent",
-          "type": "n8n-nodes-base.respondToWebhook",
-          "typeVersion": 1.1,
-          "position": [1200, 600]
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
         }
-      ],
-      "connectionsToAdd": {
-        "🌐 Agent Webhook": {
-          "main": [[ { "node": "Get Unipile Accounts", "type": "main", "index": 0 } ]]
-        },
-        "Analyze Unanswered": {
-          "main": [[ { "node": "📤 Respond to Agent", "type": "main", "index": 0 } ]]
+      },
+      "id": "respond-funnel",
+      "name": "📤 Respond: Funnel Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 100],
+      "notes": "Gibt Funnel-Daten als JSON an den Abteilungsleiter Agent zurück"
+    },
+    {
+      "parameters": {
+        "content": "# 3️⃣ Microsoft Clarity\nWorkflow-ID: SrLCQBDR8gutY2Ri\n\n**Webhook Trigger** → verbinde mit dem ersten Clarity API Call\n**Respond to Agent** → verbinde nach \"Merge All Data\"",
+        "width": 460,
+        "height": 120,
+        "color": 3
+      },
+      "id": "note-clarity",
+      "name": "📝 Clarity Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, 280]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-clarity-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-clarity",
+      "name": "🌐 Webhook: Clarity Report",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [80, 440],
+      "webhookId": "agent-clarity-report",
+      "notes": "POST /webhook/agent-clarity-report\nKopiere in den Clarity Workflow.\nVerbinde Output → Fetch Clarity Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// CLARITY REPORT: Daten für Agent aufbereiten\n// ========================================\n// ANPASSUNG NÖTIG: Ersetze Node-Referenzen\n// ========================================\n\nconst now = new Date();\n\nreturn {\n  json: {\n    source: 'clarity_report',\n    timestamp: now.toISOString(),\n    totalSessions: 0,\n    deadClickRate: 0,\n    rageClickRate: 0,\n    scrollDepth: { '25': 0, '50': 0, '75': 0, '100': 0 },\n    returningSessions: 0,\n    returningRate: 0,\n    avgActiveTime: 0,\n    topPages: [],\n    topReferrers: []\n  }\n};"
+      },
+      "id": "transform-clarity",
+      "name": "📦 Clarity Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 440],
+      "notes": "ANPASSEN: Ersetze Platzhalter mit echten Node-Referenzen aus deinem Clarity Workflow"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
         }
-      }
+      },
+      "id": "respond-clarity",
+      "name": "📤 Respond: Clarity Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 440],
+      "notes": "Gibt Clarity-Daten als JSON an den Abteilungsleiter Agent zurück"
     },
-
     {
-      "name": "AI Visibility Checker",
-      "workflowId": "ai-visibility-checker",
-      "existingTrigger": "Form Trigger (on-demand)",
-      "approach": "Option A – Agent reads from Google Sheet (recommended)",
-      "modifications": "No webhook needed. The AI Visibility Checker should save its results to a Google Sheet. The Agent reads the last row from this sheet.",
-      "requiredSheetColumns": ["Timestamp", "Queries", "TopSources", "TotalMentions", "CompetitorMentions", "RawData"]
+      "parameters": {
+        "content": "# 4️⃣ Keyword Ranking Tracker\nWorkflow-ID: O4Mh77CwNnBFBPDg\n\n**Webhook Trigger** → verbinde mit \"Load Keyword List\"\n**Respond to Agent** → verbinde nach dem letzten Ranking-Check-Node",
+        "width": 460,
+        "height": 120,
+        "color": 5
+      },
+      "id": "note-keywords",
+      "name": "📝 Keywords Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, 620]
     },
-
     {
-      "name": "Cross-Platform Comment Intelligence",
-      "workflowId": "comment-intelligence",
-      "existingTrigger": "Form Trigger (on-demand)",
-      "approach": "Option A – Agent reads from Google Sheet (recommended)",
-      "modifications": "No webhook needed. The Comment Intelligence workflow should save its results to a Google Sheet. The Agent reads the last row from this sheet.",
-      "requiredSheetColumns": ["Timestamp", "PlatformSummary", "TopThemes", "OverallSentiment", "RawData"]
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-keyword-tracker",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-keywords",
+      "name": "🌐 Webhook: Keyword Tracker",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [80, 780],
+      "webhookId": "agent-keyword-tracker",
+      "notes": "POST /webhook/agent-keyword-tracker\nKopiere in den Keyword Ranking Workflow.\nVerbinde Output → Load Keyword List"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// KEYWORD TRACKER: Daten für Agent aufbereiten\n// ========================================\n// ANPASSUNG NÖTIG: Ersetze Node-Referenzen\n// ========================================\n\nconst now = new Date();\n\nreturn {\n  json: {\n    source: 'keyword_tracker',\n    timestamp: now.toISOString(),\n    totalKeywords: 0,\n    rankings: [],\n    summary: {\n      improved: 0,\n      declined: 0,\n      stable: 0,\n      notRanking: 0,\n      avgPosition: 0,\n      avgPositionPrev: 0\n    }\n  }\n};"
+      },
+      "id": "transform-keywords",
+      "name": "📦 Keyword Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 780],
+      "notes": "ANPASSEN: Ersetze Platzhalter mit echten Node-Referenzen aus deinem Keyword Workflow"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "respond-keywords",
+      "name": "📤 Respond: Keyword Tracker",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 780],
+      "notes": "Gibt Keyword-Ranking-Daten als JSON an den Abteilungsleiter Agent zurück"
+    },
+    {
+      "parameters": {
+        "content": "# 5️⃣ LinkedIn Message Monitoring\nWorkflow-ID: tDairVFjYFw7cjJD8nfct\n\n**Webhook Trigger** → verbinde mit \"Get Unipile Accounts\"\n**Respond to Agent** → verbinde nach \"Analyze Unanswered\"",
+        "width": 460,
+        "height": 120,
+        "color": 6
+      },
+      "id": "note-linkedin",
+      "name": "📝 LinkedIn Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, 960]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-linkedin-monitor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-linkedin",
+      "name": "🌐 Webhook: LinkedIn Monitor",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [80, 1120],
+      "webhookId": "agent-linkedin-monitor",
+      "notes": "POST /webhook/agent-linkedin-monitor\nKopiere in den LinkedIn Monitoring Workflow.\nVerbinde Output → Get Unipile Accounts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// LINKEDIN MONITOR: Daten für Agent aufbereiten\n// ========================================\n// ANPASSUNG NÖTIG: Ersetze Node-Referenzen\n// ========================================\n\nconst now = new Date();\n\nreturn {\n  json: {\n    source: 'linkedin_monitor',\n    timestamp: now.toISOString(),\n    totalScanned: 0,\n    totalUnanswered: 0,\n    unansweredChats: []\n  }\n};"
+      },
+      "id": "transform-linkedin",
+      "name": "📦 LinkedIn Daten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 1120],
+      "notes": "ANPASSEN: Ersetze Platzhalter mit echten Node-Referenzen aus deinem LinkedIn Workflow"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "respond-linkedin",
+      "name": "📤 Respond: LinkedIn Monitor",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 1120],
+      "notes": "Gibt LinkedIn-Daten als JSON an den Abteilungsleiter Agent zurück"
+    },
+    {
+      "parameters": {
+        "content": "# 6️⃣ + 7️⃣ On-Demand Workflows\n\n## AI Visibility Checker\n→ Kein Webhook nötig. Der Agent liest direkt aus Google Sheets.\n→ Stelle sicher, dass der Workflow Ergebnisse in ein Sheet schreibt.\n→ Benötigte Spalten: Timestamp, Queries, TopSources, TotalMentions, CompetitorMentions, RawData\n\n## Cross-Platform Comment Intelligence\n→ Kein Webhook nötig. Der Agent liest direkt aus Google Sheets.\n→ Stelle sicher, dass der Workflow Ergebnisse in ein Sheet schreibt.\n→ Benötigte Spalten: Timestamp, PlatformSummary, TopThemes, OverallSentiment, RawData\n\n## Google Sheet: Weekly Snapshots\n→ Erstelle ein neues Google Sheet mit folgenden Spalten:\nKW | Jahr | Datum | DateLabel | ConsolidatedData | AIAnalysis | OverallStatus | AvailableSources",
+        "width": 520,
+        "height": 320,
+        "color": 7
+      },
+      "id": "note-ondemand",
+      "name": "📝 On-Demand & Sheets Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [640, -400]
+    },
+    {
+      "parameters": {
+        "content": "# 🔑 Benötigte Credentials\n\n1. **OpenAI API** – Für GPT-4.1 AI-Analyse\n2. **Gmail OAuth2** – Für Email-Versand\n3. **Google Sheets OAuth2** – Für Snapshot-Speicherung\n\n# ⚡ Umgebungsvariablen\n\nIn n8n Settings → Environment Variables:\n```\nWEBHOOK_SEO_DASHBOARD=https://dein-n8n.com/webhook/agent-seo-dashboard\nWEBHOOK_FUNNEL_REPORT=https://dein-n8n.com/webhook/agent-funnel-report\nWEBHOOK_CLARITY_REPORT=https://dein-n8n.com/webhook/agent-clarity-report\nWEBHOOK_KEYWORD_TRACKER=https://dein-n8n.com/webhook/agent-keyword-tracker\nWEBHOOK_LINKEDIN_MONITOR=https://dein-n8n.com/webhook/agent-linkedin-monitor\nSHEET_AI_VISIBILITY=<Google Sheet ID>\nSHEET_COMMENT_INTELLIGENCE=<Google Sheet ID>\nSHEET_WEEKLY_SNAPSHOTS=<Google Sheet ID>\nREPORT_RECIPIENT=mark@mo-casa.com\n```",
+        "width": 520,
+        "height": 400,
+        "color": 4
+      },
+      "id": "note-credentials",
+      "name": "📝 Credentials & Env Vars",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [640, 0]
     }
   ],
-
-  "environmentVariables": {
-    "WEBHOOK_SEO_DASHBOARD": "https://your-n8n-instance.com/webhook/agent-seo-dashboard",
-    "WEBHOOK_FUNNEL_REPORT": "https://your-n8n-instance.com/webhook/agent-funnel-report",
-    "WEBHOOK_CLARITY_REPORT": "https://your-n8n-instance.com/webhook/agent-clarity-report",
-    "WEBHOOK_KEYWORD_TRACKER": "https://your-n8n-instance.com/webhook/agent-keyword-tracker",
-    "WEBHOOK_LINKEDIN_MONITOR": "https://your-n8n-instance.com/webhook/agent-linkedin-monitor",
-    "SHEET_AI_VISIBILITY": "<Google Sheet ID>",
-    "SHEET_COMMENT_INTELLIGENCE": "<Google Sheet ID>",
-    "SHEET_WEEKLY_SNAPSHOTS": "<Google Sheet ID>",
-    "REPORT_RECIPIENT": "mark@mo-casa.com",
-    "OPENAI_API_KEY": "<your-api-key>"
-  },
-
-  "requiredCredentials": [
-    { "type": "openAiApi", "name": "OpenAI API", "usage": "GPT-4.1 AI-Analyse" },
-    { "type": "gmailOAuth2", "name": "Gmail OAuth2", "usage": "Email-Versand" },
-    { "type": "googleSheetsOAuth2Api", "name": "Google Sheets OAuth2", "usage": "Snapshot-Speicherung und Lesen von On-Demand-Daten" }
-  ],
-
-  "googleSheetsSetup": {
-    "weeklySnapshots": {
-      "sheetName": "Weekly Snapshots",
-      "columns": [
-        { "name": "KW", "type": "Number", "description": "Kalenderwoche" },
-        { "name": "Jahr", "type": "Number", "description": "Jahr" },
-        { "name": "Datum", "type": "Date", "description": "Report-Datum (ISO)" },
-        { "name": "DateLabel", "type": "String", "description": "z.B. 'KW 7 / 2025'" },
-        { "name": "ConsolidatedData", "type": "String (JSON)", "description": "Alle Kanal-Daten als JSON" },
-        { "name": "AIAnalysis", "type": "String (JSON)", "description": "AI-Report als JSON" },
-        { "name": "OverallStatus", "type": "String", "description": "green/yellow/red" },
-        { "name": "AvailableSources", "type": "String", "description": "Komma-separierte Liste" }
+  "connections": {
+    "🌐 Webhook: SEO Dashboard": {
+      "main": [
+        [
+          {
+            "node": "📦 SEO Daten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 SEO Daten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "📤 Respond: SEO Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook: Funnel Report": {
+      "main": [
+        [
+          {
+            "node": "📦 Funnel Daten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Funnel Daten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "📤 Respond: Funnel Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook: Clarity Report": {
+      "main": [
+        [
+          {
+            "node": "📦 Clarity Daten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Clarity Daten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "📤 Respond: Clarity Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook: Keyword Tracker": {
+      "main": [
+        [
+          {
+            "node": "📦 Keyword Daten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Keyword Daten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "📤 Respond: Keyword Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook: LinkedIn Monitor": {
+      "main": [
+        [
+          {
+            "node": "📦 LinkedIn Daten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 LinkedIn Daten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "📤 Respond: LinkedIn Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Agent", "id": "agent-tag" },
+    { "name": "Template", "id": "template-tag" },
+    { "name": "Webhook", "id": "webhook-tag" }
+  ],
+  "triggerCount": 5,
+  "versionId": "1",
+  "meta": {
+    "instanceId": "",
+    "templateCredsSetupCompleted": false
   }
 }
