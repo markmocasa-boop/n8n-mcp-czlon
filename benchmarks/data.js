@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771575304393,
+  "lastUpdate": 1771578883719,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "28667736cd7aeca5e898c68406706990a72fcb20",
-          "message": "fix: use lowercase for community node names to match n8n convention (#529)\n\n* fix: use lowercase for community node names to match n8n convention\n\nCommunity nodes in n8n use lowercase node class names (e.g., chatwoot\nnot Chatwoot). The extractNodeNameFromPackage method was incorrectly\ncapitalizing node names, causing validation failures.\n\nChanges:\n- Fix extractNodeNameFromPackage to use lowercase instead of capitalizing\n- Add case-insensitive fallback in getNode for robustness\n- Update tests to expect lowercase node names\n- Bump version to 2.32.1\n\nFixes the case sensitivity bug where MCP stored Chatwoot but n8n\nexpected chatwoot.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* chore: rebuild community nodes database with lowercase names\n\nRebuilt database after fixing extractNodeNameFromPackage to use\nlowercase node names matching n8n convention.\n\nConceived by Romuald Członkowski - www.aiadvisors.pl/en\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Romuald Członkowski <romualdczlonkowski@MacBook-Pro-Romuald.local>\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2026-01-08T08:27:56+01:00",
-          "tree_id": "12d64f00fae9c4f941dbbdf14f4a351117e69556",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/28667736cd7aeca5e898c68406706990a72fcb20"
-        },
-        "date": 1767857395185,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/2fdf9b72876af45a87c905cd0cf0880a4a5a31d4"
         },
         "date": 1771575304061,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a0db0741b46abb13f86c354f3a04c3043fc73d4",
+          "message": "Merge pull request #32 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nfeat: add interactive Telegram voice workflow for Abteilungsleiter Agent",
+          "timestamp": "2026-02-20T10:12:44+01:00",
+          "tree_id": "4d34600be236c538bbd206c6d241b0bab2234fa8",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3a0db0741b46abb13f86c354f3a04c3043fc73d4"
+        },
+        "date": 1771578883320,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
