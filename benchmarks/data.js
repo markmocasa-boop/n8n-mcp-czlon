@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771580472094,
+  "lastUpdate": 1771672323266,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "56956555+czlonkowski@users.noreply.github.com",
-            "name": "Romuald Członkowski",
-            "username": "czlonkowski"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "a9c4400a929d644287825afd6bde0681dc4bb103",
-          "message": "fix: sync package.runtime.json version in Docker builds (v2.33.1) (#534)\n\nDocker images were built with stale package.runtime.json (v2.29.5)\nwhile npm package was at v2.33.0. This was caused by the build-docker\njob not syncing the version before building, while publish-npm did.\n\nChanges:\n- Add \"Sync runtime version\" step to release.yml build-docker job\n- Add \"Sync runtime version\" step to docker-build.yml build job\n- Add \"Sync runtime version\" step to docker-build.yml build-railway job\n- Bump version to 2.33.1 to trigger release with fix\n\nThe sync uses a lightweight Node.js one-liner (no npm install needed)\nto update package.runtime.json version from package.json before\nDocker builds.\n\nConceived by Romuald Czlonkowski - www.aiadvisors.pl/en\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
-          "timestamp": "2026-01-12T10:25:58+01:00",
-          "tree_id": "af266b355beb2ab2aea4ed0d332eb035448383ea",
-          "url": "https://github.com/czlonkowski/n8n-mcp/commit/a9c4400a929d644287825afd6bde0681dc4bb103"
-        },
-        "date": 1768210078230,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9cb45ec359f2adf1177bd27482fba0589e063ece"
         },
         "date": 1771580471609,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bdf279839d23fe2bb0fd6682d0cd0fffebb05868",
+          "message": "Merge pull request #34 from markmocasa-boop/claude/fix-directory-search-iAPNZ\n\nfix: directory search, services extraction, and Gemini prompt in GBP …",
+          "timestamp": "2026-02-21T12:10:04+01:00",
+          "tree_id": "b50e46d51fd491b42f3445996df2fc882854fdd6",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/bdf279839d23fe2bb0fd6682d0cd0fffebb05868"
+        },
+        "date": 1771672322532,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
