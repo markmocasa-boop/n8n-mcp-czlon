@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771683525392,
+  "lastUpdate": 1771749003849,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "e0c440b1e37b455c226aba0793dcafd87f0f1e65",
-          "message": "Merge pull request #3 from markmocasa-boop/claude/n8n-youtube-transcription-V7ApL\n\nfeat: add YouTube video dubbing workflow for German translation",
-          "timestamp": "2026-01-15T19:48:16+01:00",
-          "tree_id": "fb3be80d3ca1387c961962f43b5c983bdc407f9b",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e0c440b1e37b455c226aba0793dcafd87f0f1e65"
-        },
-        "date": 1768503009595,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a53903acd57a268e1f846eb6388518001b6e29e0"
         },
         "date": 1771683525096,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b179af66a547a0ddc585236497d2f4bda101eccf",
+          "message": "Merge pull request #36 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nrefactor: replace 4 OpenAI HTTP Request nodes with native @n8n/n8n-no…",
+          "timestamp": "2026-02-22T09:28:03+01:00",
+          "tree_id": "4d1316140b98ca1847197cd8672c5e1ed0d3a030",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b179af66a547a0ddc585236497d2f4bda101eccf"
+        },
+        "date": 1771749003372,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
