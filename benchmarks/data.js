@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771749003849,
+  "lastUpdate": 1771756632140,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "7f7d2b1f219e1efadec25a4a34683afdc2a48cb0",
-          "message": "Merge pull request #4 from markmocasa-boop/claude/linkedin-post-automation-UrcHu\n\nClaude/linkedin post automation urc hu",
-          "timestamp": "2026-01-15T20:25:04+01:00",
-          "tree_id": "d4b9fb4f28c8beb043c1e774ffd5e027c600f2bd",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7f7d2b1f219e1efadec25a4a34683afdc2a48cb0"
-        },
-        "date": 1768505228189,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b179af66a547a0ddc585236497d2f4bda101eccf"
         },
         "date": 1771749003372,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "31187fd5f46fc6c0e5b28b4470960bd2a6cb84bf",
+          "message": "Merge pull request #37 from markmocasa-boop/claude/seo-content-agent-workflow-EGAoJ\n\nClaude/seo content agent workflow eg ao j",
+          "timestamp": "2026-02-22T11:34:58+01:00",
+          "tree_id": "23649dee641ec6ce93c88a866f51df871dc28821",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/31187fd5f46fc6c0e5b28b4470960bd2a6cb84bf"
+        },
+        "date": 1771756631859,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
