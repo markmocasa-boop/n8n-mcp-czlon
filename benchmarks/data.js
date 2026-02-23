@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771837220695,
+  "lastUpdate": 1771842397009,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "570fff83ef604a60b415571a6cf522cc5ffb52f0",
-          "message": "Merge pull request #6 from markmocasa-boop/claude/linkedin-post-automation-UrcHu\n\nfeat: replace LinkedIn native with Blotato + Cloudinary image hosting",
-          "timestamp": "2026-01-19T12:42:19+01:00",
-          "tree_id": "3edf15f93395dfa302f382da732f28cdc6820301",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/570fff83ef604a60b415571a6cf522cc5ffb52f0"
-        },
-        "date": 1768823051255,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e547890ea7fce1490c798d1c257bfd57c70a9ea4"
         },
         "date": 1771837219991,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "19fc875d4746108f3869e1c82d18528686ab17ea",
+          "message": "Merge pull request #39 from markmocasa-boop/claude/seo-marketing-scorecard-gXXJo\n\ndocs: Add demo report with fictional data for SEO Marketing Scorecard",
+          "timestamp": "2026-02-23T11:23:16+01:00",
+          "tree_id": "10b10023111a0c04db1a600778e33e9da08c3015",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/19fc875d4746108f3869e1c82d18528686ab17ea"
+        },
+        "date": 1771842395974,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
