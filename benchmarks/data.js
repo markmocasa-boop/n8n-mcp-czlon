@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771756632140,
+  "lastUpdate": 1771837220695,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "4cf440666b31f22c4729260dd070b7e23999532a",
-          "message": "Merge pull request #5 from markmocasa-boop/claude/gmail-inbound-agent-2LW7E\n\nfeat: add Gmail Inbound Agent workflow for Effizienzheld",
-          "timestamp": "2026-01-17T09:55:41+01:00",
-          "tree_id": "fd6dcbb5dfe44a3f1f10d2ec6c8ae68863fdd04f",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4cf440666b31f22c4729260dd070b7e23999532a"
-        },
-        "date": 1768640271011,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/31187fd5f46fc6c0e5b28b4470960bd2a6cb84bf"
         },
         "date": 1771756631859,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e547890ea7fce1490c798d1c257bfd57c70a9ea4",
+          "message": "Merge pull request #38 from markmocasa-boop/claude/seo-marketing-scorecard-gXXJo\n\nfeat: Add SEO Marketing Scorecard workflow system (7 Workflows)",
+          "timestamp": "2026-02-23T09:58:01+01:00",
+          "tree_id": "762c36f0377898f640cc8b05c9453a835d36bb33",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e547890ea7fce1490c798d1c257bfd57c70a9ea4"
+        },
+        "date": 1771837219991,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
