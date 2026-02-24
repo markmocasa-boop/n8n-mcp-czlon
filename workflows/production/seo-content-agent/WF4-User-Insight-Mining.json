@@ -1,0 +1,670 @@
+{
+  "name": "WF4: User Insight Mining v2",
+  "nodes": [
+    {
+      "id": "wf4-trigger-01",
+      "name": "Expert Input Formular",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [0, 300],
+      "parameters": {
+        "formTitle": "WF4: Expert Input \u2014 User Insight Mining",
+        "formDescription": "Gib die Spreadsheet-ID und optionalen Expert Input ein, um das User Insight Mining zu starten.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Spreadsheet ID",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "Google Sheets ID eingeben"
+            },
+            {
+              "fieldLabel": "Expertenwissen",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Dein Fachwissen, Erfahrungswerte, Brancheninsights..."
+            },
+            {
+              "fieldLabel": "Zitate zum Einbauen",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Zitate von Experten, Studien oder Quellen..."
+            },
+            {
+              "fieldLabel": "Spezifische Perspektive / Unique Angle",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Dein einzigartiger Blickwinkel auf das Thema..."
+            },
+            {
+              "fieldLabel": "Referenz-Links",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "https://... (kommagetrennt)"
+            }
+          ]
+        },
+        "responseMode": "lastNode"
+      },
+      "webhookId": "wf4-user-insight-mining-v2"
+    },
+    {
+      "id": "wf4-set-02",
+      "name": "Variablen setzen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-spreadsheet-id",
+              "name": "spreadsheet_id",
+              "type": "string",
+              "value": "={{ $json['Spreadsheet ID'] }}"
+            },
+            {
+              "id": "assign-expertenwissen",
+              "name": "expertenwissen",
+              "type": "string",
+              "value": "={{ $json['Expertenwissen'] || '' }}"
+            },
+            {
+              "id": "assign-zitate",
+              "name": "zitate",
+              "type": "string",
+              "value": "={{ $json['Zitate zum Einbauen'] || '' }}"
+            },
+            {
+              "id": "assign-unique-angle",
+              "name": "unique_angle",
+              "type": "string",
+              "value": "={{ $json['Spezifische Perspektive / Unique Angle'] || '' }}"
+            },
+            {
+              "id": "assign-referenz-links",
+              "name": "referenz_links",
+              "type": "string",
+              "value": "={{ $json['Referenz-Links'] || '' }}"
+            }
+          ]
+        },
+        "includeOtherFields": false
+      }
+    },
+    {
+      "id": "wf4-sheets-03",
+      "name": "Keywords-Tab lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [560, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Keywords"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ausgewaehlt",
+              "lookupValue": "ja"
+            }
+          ]
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf4-code-04",
+      "name": "Suchbegriffe vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Keywords aus Google Sheets extrahieren und Suchbegriffe fuer Reddit/YouTube bauen\nconst keywords = $input.all().map(i => i.json.keyword).filter(Boolean);\n\n// Relevante Subreddits basierend auf Keywords dynamisch bestimmen\nconst baseSubreddits = ['SEO', 'marketing', 'content_marketing', 'digital_marketing', 'blogging'];\nconst keywordSubreddits = keywords.map(k => k.toLowerCase().replace(/\\s+/g, '_'));\nconst subreddits = [...new Set([...baseSubreddits, ...keywordSubreddits])];\n\n// Suchqueries fuer Reddit\nconst redditQueries = keywords.map(k => `${k} tips OR advice OR how to OR problem OR frustration`);\n\n// Suchqueries fuer YouTube\nconst youtubeQueries = keywords.map(k => `${k} tutorial OR guide OR erklaerung`);\n\n// Expert Input aus vorherigem Set Node weitergeben\nconst vars = $('Variablen setzen').first().json;\n\nreturn [{\n  json: {\n    keywords,\n    subreddits,\n    redditQueries,\n    youtubeQueries,\n    spreadsheet_id: vars.spreadsheet_id,\n    expertenwissen: vars.expertenwissen,\n    zitate: vars.zitate,\n    unique_angle: vars.unique_angle,\n    referenz_links: vars.referenz_links\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-http-05",
+      "name": "Apify Reddit Scraping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1160, 140],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/trudax~reddit-scraper/run-sync-get-dataset-items",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"searches\": $json.redditQueries, \"searchSubreddits\": $json.subreddits, \"maxItems\": 20, \"sort\": \"relevance\", \"time\": \"year\" }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Auxpkk79tNtA85GJ",
+          "name": "Apify API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf4-code-06",
+      "name": "Reddit Insights verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 140],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Reddit-Ergebnisse in einheitliches Insight-Format bringen\nconst results = $input.all();\n\nif (!results || results.length === 0) {\n  return [{ json: { quelle: 'reddit', subreddit_oder_kanal: '', typ: 'keine_daten', inhalt: 'Keine Reddit-Ergebnisse gefunden', relevanz_score: 0, unique_angle: '' } }];\n}\n\nreturn results.map(item => {\n  const data = item.json;\n  const upvotes = data.score || data.ups || 0;\n  const body = data.body || data.selftext || '';\n  const title = data.title || '';\n  const content = (title + ' ' + body).slice(0, 2000);\n  \n  // Typ bestimmen basierend auf Inhalt\n  let typ = 'frage';\n  const lowerContent = content.toLowerCase();\n  if (lowerContent.includes('?') || lowerContent.includes('wie ') || lowerContent.includes('how ') || lowerContent.includes('warum')) {\n    typ = 'frage';\n  } else if (lowerContent.includes('problem') || lowerContent.includes('frustrat') || lowerContent.includes('hate') || lowerContent.includes('sucks') || lowerContent.includes('struggle')) {\n    typ = 'frustration';\n  } else if (lowerContent.includes('solved') || lowerContent.includes('solution') || lowerContent.includes('loesung') || lowerContent.includes('tip') || lowerContent.includes('fixed')) {\n    typ = 'loesung';\n  }\n  \n  // Relevanz-Score normalisieren (0-100 basierend auf Upvotes)\n  const relevanz_score = Math.min(100, Math.round(Math.log2(Math.max(1, upvotes)) * 10));\n  \n  return {\n    json: {\n      quelle: 'reddit',\n      subreddit_oder_kanal: data.subreddit || data.communityName || '',\n      typ,\n      inhalt: content,\n      relevanz_score,\n      unique_angle: ''\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "wf4-http-07",
+      "name": "Apify YouTube Scraping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1160, 460],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/bernardo~youtube-scraper/run-sync-get-dataset-items",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"searchQueries\": $json.youtubeQueries, \"maxResults\": 10, \"maxResultsShorts\": 0 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Auxpkk79tNtA85GJ",
+          "name": "Apify API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf4-code-08",
+      "name": "YouTube Insights verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 460],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// YouTube-Ergebnisse in einheitliches Insight-Format bringen\nconst results = $input.all();\n\nif (!results || results.length === 0) {\n  return [{ json: { quelle: 'youtube', subreddit_oder_kanal: '', typ: 'keine_daten', inhalt: 'Keine YouTube-Ergebnisse gefunden', relevanz_score: 0, unique_angle: '' } }];\n}\n\nreturn results.map(item => {\n  const data = item.json;\n  const views = data.viewCount || data.views || 0;\n  const title = data.title || '';\n  const description = (data.description || '').slice(0, 1500);\n  const content = (title + ' - ' + description).slice(0, 2000);\n  const channel = data.channelName || data.channelTitle || data.author || '';\n  \n  // Typ bestimmen\n  let typ = 'loesung';\n  const lowerTitle = title.toLowerCase();\n  if (lowerTitle.includes('tutorial') || lowerTitle.includes('how to') || lowerTitle.includes('guide') || lowerTitle.includes('anleitung')) {\n    typ = 'loesung';\n  } else if (lowerTitle.includes('review') || lowerTitle.includes('vergleich') || lowerTitle.includes('vs')) {\n    typ = 'vergleich';\n  } else if (lowerTitle.includes('mistake') || lowerTitle.includes('fehler') || lowerTitle.includes('avoid') || lowerTitle.includes('problem')) {\n    typ = 'frustration';\n  }\n  \n  // Relevanz-Score basierend auf Views normalisieren (0-100)\n  const relevanz_score = Math.min(100, Math.round(Math.log10(Math.max(1, views)) * 15));\n  \n  return {\n    json: {\n      quelle: 'youtube',\n      subreddit_oder_kanal: channel,\n      typ,\n      inhalt: content,\n      relevanz_score,\n      unique_angle: ''\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "wf4-code-09",
+      "name": "Expert Input als Insights formatieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 780],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expert Input aus dem Set-Node als Insights formatieren\nconst triggerData = $input.first().json;\nconst vars = $('Variablen setzen').first().json;\nconst insights = [];\n\n// Expertenwissen als expert_take\nif (vars.expertenwissen && vars.expertenwissen.trim()) {\n  insights.push({\n    json: {\n      quelle: 'expert_input',\n      subreddit_oder_kanal: 'expert',\n      typ: 'expert_take',\n      inhalt: vars.expertenwissen.trim(),\n      relevanz_score: 100,\n      unique_angle: 'ja'\n    }\n  });\n}\n\n// Zitate als knowledge_gain\nif (vars.zitate && vars.zitate.trim()) {\n  insights.push({\n    json: {\n      quelle: 'expert_input',\n      subreddit_oder_kanal: 'expert',\n      typ: 'knowledge_gain',\n      inhalt: 'ZITAT: ' + vars.zitate.trim(),\n      relevanz_score: 95,\n      unique_angle: 'ja'\n    }\n  });\n}\n\n// Unique Angle als expert_take\nif (vars.unique_angle && vars.unique_angle.trim()) {\n  insights.push({\n    json: {\n      quelle: 'expert_input',\n      subreddit_oder_kanal: 'expert',\n      typ: 'expert_take',\n      inhalt: 'UNIQUE ANGLE: ' + vars.unique_angle.trim(),\n      relevanz_score: 100,\n      unique_angle: 'ja'\n    }\n  });\n}\n\n// Referenz-Links als knowledge_gain\nif (vars.referenz_links && vars.referenz_links.trim()) {\n  insights.push({\n    json: {\n      quelle: 'expert_input',\n      subreddit_oder_kanal: 'expert',\n      typ: 'knowledge_gain',\n      inhalt: 'REFERENZEN: ' + vars.referenz_links.trim(),\n      relevanz_score: 90,\n      unique_angle: 'ja'\n    }\n  });\n}\n\n// Falls kein Expert Input vorhanden, leeren Platzhalter zurueckgeben\nif (insights.length === 0) {\n  insights.push({\n    json: {\n      quelle: 'expert_input',\n      subreddit_oder_kanal: 'expert',\n      typ: 'expert_take',\n      inhalt: '(Kein Expert Input bereitgestellt)',\n      relevanz_score: 0,\n      unique_angle: 'nein'\n    }\n  });\n}\n\nreturn insights;"
+      }
+    },
+    {
+      "id": "wf4-merge-10",
+      "name": "Alle Insights zusammenfuehren",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1780, 300],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3
+      }
+    },
+    {
+      "id": "wf4-http-11",
+      "name": "Voyage AI Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2080, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.voyageai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"model\": \"voyage-large-2\", \"input\": $input.all().map(function(i) { return i.json.inhalt; }).slice(0, 50) }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Voyage AI API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "wf4-code-12",
+      "name": "Gap Analysis - Luecken identifizieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2380, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Gap Analysis: Welche Themen aus User Insights werden NICHT von Wettbewerbern abgedeckt?\nconst embeddingResponse = $input.first().json;\nconst embeddingData = embeddingResponse.data || [];\nconst mergeNodeName = 'Alle Insights zusammenfuehren';\nconst allInsights = $(mergeNodeName).all();\n\nfunction cosineSimilarity(a, b) {\n  if (!a || !b || a.length !== b.length) return 0;\n  let dot = 0, normA = 0, normB = 0;\n  for (let i = 0; i < a.length; i++) {\n    dot += a[i] * b[i];\n    normA += a[i] * a[i];\n    normB += b[i] * b[i];\n  }\n  const denom = Math.sqrt(normA) * Math.sqrt(normB);\n  return denom === 0 ? 0 : dot / denom;\n}\n\nconst enrichedInsights = [];\n\nfor (let i = 0; i < allInsights.length; i++) {\n  const insight = allInsights[i].json;\n  const embedding = embeddingData[i] ? embeddingData[i].embedding : null;\n  let maxSimilarityToOthers = 0;\n  let isUniqueAngle = false;\n  \n  if (embedding) {\n    for (let j = 0; j < embeddingData.length; j++) {\n      if (i !== j && embeddingData[j]) {\n        const sim = cosineSimilarity(embedding, embeddingData[j].embedding);\n        if (sim > maxSimilarityToOthers) {\n          maxSimilarityToOthers = sim;\n        }\n      }\n    }\n    isUniqueAngle = maxSimilarityToOthers < 0.65;\n  }\n  \n  enrichedInsights.push({\n    json: {\n      quelle: insight.quelle || '',\n      subreddit_oder_kanal: insight.subreddit_oder_kanal || '',\n      typ: insight.typ || '',\n      inhalt: insight.inhalt || '',\n      relevanz_score: insight.relevanz_score || 0,\n      unique_angle: isUniqueAngle ? 'ja' : (insight.unique_angle || 'nein'),\n      gap_score: embedding ? Math.round((1 - maxSimilarityToOthers) * 100) : 0\n    }\n  });\n}\n\nif (enrichedInsights.length === 0) {\n  return [{ json: { quelle: 'system', subreddit_oder_kanal: '', typ: 'info', inhalt: 'Keine Insights fuer Gap Analysis vorhanden', relevanz_score: 0, unique_angle: 'nein', gap_score: 0 } }];\n}\n\nreturn enrichedInsights;"
+      }
+    },
+    {
+      "id": "wf4-sheets-13",
+      "name": "User_Insights-Tab befuellen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2680, 200],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Variablen setzen').first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "User_Insights"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "quelle": "={{ $json.quelle }}",
+            "subreddit_oder_kanal": "={{ $json.subreddit_oder_kanal }}",
+            "typ": "={{ $json.typ }}",
+            "inhalt": "={{ $json.inhalt }}",
+            "relevanz_score": "={{ $json.relevanz_score }}",
+            "unique_angle": "={{ $json.unique_angle }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "quelle",
+              "displayName": "quelle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "subreddit_oder_kanal",
+              "displayName": "subreddit_oder_kanal",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "typ",
+              "displayName": "typ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "inhalt",
+              "displayName": "inhalt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "relevanz_score",
+              "displayName": "relevanz_score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "unique_angle",
+              "displayName": "unique_angle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "range": "A:F",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf4-sheets-14",
+      "name": "Status auf gliederung setzen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2680, 460],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Variablen setzen').first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Projekt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "gliederung",
+            "wf4_completed": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "projekt_id"
+          ],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "wf4_completed",
+              "displayName": "wf4_completed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "projekt_id",
+              "displayName": "projekt_id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf4-sticky-01",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-220, 60],
+      "parameters": {
+        "content": "## WF4: User Insight Mining v2\n**Teil des 8-Workflow SEO Content Agent Systems**\n\nSammelt User Insights aus Reddit und YouTube via Apify,\nkombiniert sie mit Expert Input (Formular) und fuehrt\neine Voyage AI Gap Analysis durch.\n\n**Flow:** Form Trigger --> Set --> Google Sheets (Keywords) --> \nReddit + YouTube + Expert Input --> Merge (3 inputs) --> \nVoyage AI Embeddings --> Gap Analysis --> \nGoogle Sheets (User_Insights + Status=gliederung)",
+        "width": 460,
+        "height": 260,
+        "color": 4
+      }
+    },
+    {
+      "id": "wf4-sticky-02",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1080, -80],
+      "parameters": {
+        "content": "## Apify Actors (run-sync-get-dataset-items)\n- **Reddit:** trudax/reddit-scraper\n- **YouTube:** bernardo/youtube-scraper\n\nTimeout: 120s | retryOnFail: true | maxTries: 2\nAuth: HTTP Header Auth (Bearer Token)",
+        "width": 400,
+        "height": 160,
+        "color": 6
+      }
+    },
+    {
+      "id": "wf4-sticky-03",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1980, 80],
+      "parameters": {
+        "content": "## Voyage AI Gap Analysis\nErstellt Embeddings aller Insights,\nvergleicht per Cosine Similarity und\nmarkiert unique angles (Sim < 0.65).",
+        "width": 340,
+        "height": 130,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Expert Input Formular": {
+      "main": [
+        [
+          {
+            "node": "Variablen setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variablen setzen": {
+      "main": [
+        [
+          {
+            "node": "Keywords-Tab lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keywords-Tab lesen": {
+      "main": [
+        [
+          {
+            "node": "Suchbegriffe vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suchbegriffe vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Apify Reddit Scraping",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify YouTube Scraping",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Expert Input als Insights formatieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Reddit Scraping": {
+      "main": [
+        [
+          {
+            "node": "Reddit Insights verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Insights verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Alle Insights zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify YouTube Scraping": {
+      "main": [
+        [
+          {
+            "node": "YouTube Insights verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Insights verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Alle Insights zusammenfuehren",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Expert Input als Insights formatieren": {
+      "main": [
+        [
+          {
+            "node": "Alle Insights zusammenfuehren",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Alle Insights zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Voyage AI Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voyage AI Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Gap Analysis - Luecken identifizieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gap Analysis - Luecken identifizieren": {
+      "main": [
+        [
+          {
+            "node": "User_Insights-Tab befuellen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Status auf gliederung setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "instanceId": "n8n-seo-content-agent",
+    "workflowId": "YU0QUTXiKBgTZ8NH"
+  },
+  "tags": []
+}

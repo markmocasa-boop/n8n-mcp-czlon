@@ -1,0 +1,501 @@
+{
+  "name": "SEO Agent \u2014 WF8: Finalisierung & Export",
+  "nodes": [
+    {
+      "id": "wf8-node-001",
+      "name": "Export-Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "spreadsheet_id"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wf8-node-002",
+      "name": "WF8 Variablen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $json.spreadsheet_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf8-node-003",
+      "name": "Sheets \u2014 Projekt lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [440, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Projekt"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-004",
+      "name": "Sheets \u2014 Content Draft lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [660, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('WF8 Variablen').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Content_Draft"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-005",
+      "name": "Sheets \u2014 QA Ergebnisse lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [880, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('WF8 Variablen').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "QA_Ergebnisse"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-006",
+      "name": "Sheets \u2014 Meta und Links lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1100, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('WF8 Variablen').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Meta_und_Links"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-007",
+      "name": "Sheets \u2014 Gliederung lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1320, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('WF8 Variablen').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Gliederung"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-008",
+      "name": "Alle Daten konsolidieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 0],
+      "parameters": {
+        "jsCode": "var projekt = $('Sheets \u2014 Projekt lesen').all().map(function(i) { return i.json; });\nvar content = $('Sheets \u2014 Content Draft lesen').all().map(function(i) { return i.json; });\nvar qa = $('Sheets \u2014 QA Ergebnisse lesen').all().map(function(i) { return i.json; });\nvar meta = $('Sheets \u2014 Meta und Links lesen').all().map(function(i) { return i.json; });\nvar gliederung = $('Sheets \u2014 Gliederung lesen').all().map(function(i) { return i.json; });\nvar spreadsheetId = $('WF8 Variablen').first().json.spreadsheet_id;\n\nvar thema = projekt[0] ? projekt[0].thema || 'SEO Artikel' : 'SEO Artikel';\nvar driveFolder = projekt[0] ? projekt[0].google_drive_ordner_url || '' : '';\n// Extract folder ID from URL or use as-is\nvar folderId = '';\nif (driveFolder.indexOf('/folders/') > -1) {\n  folderId = driveFolder.split('/folders/')[1].split('?')[0];\n} else {\n  folderId = driveFolder;\n}\n\n// Build Markdown Article\nvar mdLines = ['# ' + thema, ''];\nfor (var i = 0; i < content.length; i++) {\n  var section = content[i];\n  var text = section.content_final || section.content_humanized || section.content_raw || '';\n  mdLines.push(text);\n  mdLines.push('');\n}\nvar artikelMd = mdLines.join('\\n');\n\n// Build HTML Article\nvar htmlLines = ['<!DOCTYPE html>', '<html lang=\"de\">', '<head>', '<meta charset=\"UTF-8\">', '<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">', '<title>' + thema + '</title>', '<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:2rem;line-height:1.6;color:#333}h1{color:#1a1a1a}h2{color:#2a2a2a;margin-top:2rem}h3{color:#3a3a3a}p{margin:1em 0}</style>', '</head>', '<body>'];\nfor (var j = 0; j < content.length; j++) {\n  var sec = content[j];\n  var t = sec.content_final || sec.content_humanized || sec.content_raw || '';\n  var lines = t.split('\\n');\n  for (var k = 0; k < lines.length; k++) {\n    var line = lines[k];\n    if (line.indexOf('### ') === 0) htmlLines.push('<h3>' + line.substring(4) + '</h3>');\n    else if (line.indexOf('## ') === 0) htmlLines.push('<h2>' + line.substring(3) + '</h2>');\n    else if (line.indexOf('# ') === 0) htmlLines.push('<h1>' + line.substring(2) + '</h1>');\n    else if (line.trim()) htmlLines.push('<p>' + line + '</p>');\n  }\n}\nhtmlLines.push('</body>', '</html>');\nvar artikelHtml = htmlLines.join('\\n');\n\n// Build Analyse-Bericht\nvar berichtLines = ['# Analyse-Bericht: ' + thema, '', '## QA-Ergebnisse', ''];\nfor (var q = 0; q < qa.length; q++) {\n  berichtLines.push('### ' + (qa[q].check_typ || 'Check'));\n  berichtLines.push('- **Status:** ' + (qa[q].status || 'unbekannt'));\n  berichtLines.push('- **Score:** ' + (qa[q].score || 'n/a'));\n  berichtLines.push('- **Details:** ' + (qa[q].details || '-'));\n  berichtLines.push('');\n}\nvar analyseBericht = berichtLines.join('\\n');\n\n// Build Meta-Vorschlaege\nvar metaLines = ['# Meta-Vorschlaege: ' + thema, ''];\nvar titleTags = meta.filter(function(m) { return m.typ === 'title_tag'; });\nvar metaDescs = meta.filter(function(m) { return m.typ === 'meta_description'; });\nmetaLines.push('## Title Tags', '');\nfor (var tt = 0; tt < titleTags.length; tt++) {\n  metaLines.push((tt + 1) + '. ' + (titleTags[tt].vorschlag || ''));\n}\nmetaLines.push('', '## Meta Descriptions', '');\nfor (var md = 0; md < metaDescs.length; md++) {\n  metaLines.push((md + 1) + '. ' + (metaDescs[md].vorschlag || ''));\n}\nvar metaVorschlaege = metaLines.join('\\n');\n\n// Build Link-Strategie\nvar linkLines = ['# Link-Strategie: ' + thema, ''];\nvar links = meta.filter(function(m) { return m.typ && m.typ.indexOf('link') > -1; });\nfor (var l = 0; l < links.length; l++) {\n  linkLines.push('### ' + (links[l].typ || 'Link'));\n  linkLines.push('- **Vorschlag:** ' + (links[l].vorschlag || ''));\n  linkLines.push('- **Position:** ' + (links[l].position_im_text || '-'));\n  linkLines.push('- **Ziel-URL:** ' + (links[l].ziel_url || '-'));\n  linkLines.push('');\n}\nvar linkStrategie = linkLines.join('\\n');\n\n// Build Visual Plan\nvar visualLines = ['# Visual Plan: ' + thema, ''];\nvar visuals = meta.filter(function(m) { return m.typ === 'bild_idee' || m.typ === 'midjourney_prompt'; });\nfor (var v = 0; v < visuals.length; v++) {\n  visualLines.push('### ' + (visuals[v].typ || 'Visual'));\n  visualLines.push('- **Vorschlag:** ' + (visuals[v].vorschlag || ''));\n  visualLines.push('- **Position:** ' + (visuals[v].position_im_text || '-'));\n  visualLines.push('');\n}\nvar visualPlan = visualLines.join('\\n');\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    folder_id: folderId,\n    thema: thema,\n    artikel_md: artikelMd,\n    artikel_html: artikelHtml,\n    analyse_bericht: analyseBericht,\n    meta_vorschlaege: metaVorschlaege,\n    link_strategie: linkStrategie,\n    visual_plan: visualPlan\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf8-node-009",
+      "name": "Drive \u2014 Artikel MD",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1760, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.folder_id }}"
+        },
+        "name": "artikel.md",
+        "content": "={{ $json.artikel_md }}",
+        "options": {
+          "mimeType": "text/markdown"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-010",
+      "name": "Drive \u2014 Artikel HTML",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1980, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Alle Daten konsolidieren').item.json.folder_id }}"
+        },
+        "name": "artikel.html",
+        "content": "={{ $('Alle Daten konsolidieren').item.json.artikel_html }}",
+        "options": {
+          "mimeType": "text/html"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-011",
+      "name": "Drive \u2014 Analyse-Bericht",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2200, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Alle Daten konsolidieren').item.json.folder_id }}"
+        },
+        "name": "analyse-bericht.md",
+        "content": "={{ $('Alle Daten konsolidieren').item.json.analyse_bericht }}",
+        "options": {
+          "mimeType": "text/markdown"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-012",
+      "name": "Drive \u2014 Meta-Vorschlaege",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2420, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Alle Daten konsolidieren').item.json.folder_id }}"
+        },
+        "name": "meta-vorschlaege.md",
+        "content": "={{ $('Alle Daten konsolidieren').item.json.meta_vorschlaege }}",
+        "options": {
+          "mimeType": "text/markdown"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-013",
+      "name": "Drive \u2014 Link-Strategie",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2640, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Alle Daten konsolidieren').item.json.folder_id }}"
+        },
+        "name": "link-strategie.md",
+        "content": "={{ $('Alle Daten konsolidieren').item.json.link_strategie }}",
+        "options": {
+          "mimeType": "text/markdown"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-014",
+      "name": "Drive \u2014 Visual Plan",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2860, -200],
+      "parameters": {
+        "operation": "createFromText",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Alle Daten konsolidieren').item.json.folder_id }}"
+        },
+        "name": "visual-plan.md",
+        "content": "={{ $('Alle Daten konsolidieren').item.json.visual_plan }}",
+        "options": {
+          "mimeType": "text/markdown"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-oauth2",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-015",
+      "name": "Sheets \u2014 Status finalisiert",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [3080, 0],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('WF8 Variablen').first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Projekt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "finalisiert",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            {
+              "id": "projekt_id",
+              "type": "string",
+              "display": true,
+              "displayName": "projekt_id",
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "type": "string",
+              "display": true,
+              "displayName": "status"
+            },
+            {
+              "id": "zuletzt_aktualisiert",
+              "type": "string",
+              "display": true,
+              "displayName": "zuletzt_aktualisiert"
+            }
+          ],
+          "matchingColumns": ["projekt_id"]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "id": "wf8-node-016",
+      "name": "Abschluss-Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3300, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "thema",
+              "name": "thema",
+              "value": "={{ $('Alle Daten konsolidieren').item.json.thema }}",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "finalisiert",
+              "type": "string"
+            },
+            {
+              "id": "files_created",
+              "name": "files_created",
+              "value": "6",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Projekt abgeschlossen. Alle 6 Dateien wurden in Google Drive hochgeladen.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Export-Trigger": {
+      "main": [[{"node": "WF8 Variablen", "type": "main", "index": 0}]]
+    },
+    "WF8 Variablen": {
+      "main": [[{"node": "Sheets \u2014 Projekt lesen", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 Projekt lesen": {
+      "main": [[{"node": "Sheets \u2014 Content Draft lesen", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 Content Draft lesen": {
+      "main": [[{"node": "Sheets \u2014 QA Ergebnisse lesen", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 QA Ergebnisse lesen": {
+      "main": [[{"node": "Sheets \u2014 Meta und Links lesen", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 Meta und Links lesen": {
+      "main": [[{"node": "Sheets \u2014 Gliederung lesen", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 Gliederung lesen": {
+      "main": [[{"node": "Alle Daten konsolidieren", "type": "main", "index": 0}]]
+    },
+    "Alle Daten konsolidieren": {
+      "main": [[{"node": "Drive \u2014 Artikel MD", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Artikel MD": {
+      "main": [[{"node": "Drive \u2014 Artikel HTML", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Artikel HTML": {
+      "main": [[{"node": "Drive \u2014 Analyse-Bericht", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Analyse-Bericht": {
+      "main": [[{"node": "Drive \u2014 Meta-Vorschlaege", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Meta-Vorschlaege": {
+      "main": [[{"node": "Drive \u2014 Link-Strategie", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Link-Strategie": {
+      "main": [[{"node": "Drive \u2014 Visual Plan", "type": "main", "index": 0}]]
+    },
+    "Drive \u2014 Visual Plan": {
+      "main": [[{"node": "Sheets \u2014 Status finalisiert", "type": "main", "index": 0}]]
+    },
+    "Sheets \u2014 Status finalisiert": {
+      "main": [[{"node": "Abschluss-Info", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "tags": []
+}

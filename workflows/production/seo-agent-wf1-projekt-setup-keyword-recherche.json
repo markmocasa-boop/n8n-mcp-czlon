@@ -1,0 +1,315 @@
+{
+  "name": "SEO Agent — WF1: Projekt-Setup & Keyword-Recherche",
+  "id": "1FZxfz2bGwkLLvPv",
+  "nodes": [
+    {
+      "id": "form-trigger",
+      "name": "Projekt-Start Formular",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [0, 0],
+      "parameters": {
+        "formTitle": "SEO Content Agent — Neues Projekt",
+        "formDescription": "Starte ein neues SEO-Content-Projekt. Gib das Thema ein und wähle die Zielsprache.",
+        "formFields": {
+          "values": [
+            {"fieldLabel": "Thema / Titel", "placeholder": "z.B. Keyword-Recherche Guide für Anfänger", "requiredField": true, "fieldType": "text"},
+            {"fieldLabel": "Zielsprache", "fieldType": "dropdown", "fieldOptions": {"values": [{"option": "DE"}, {"option": "EN"}]}, "requiredField": true},
+            {"fieldLabel": "Ziel-URL-Slug", "placeholder": "z.B. keyword-recherche-guide (optional)", "requiredField": false, "fieldType": "text"},
+            {"fieldLabel": "Notizen", "placeholder": "Zusätzliche Hinweise zum Projekt (optional)", "requiredField": false, "fieldType": "textarea"}
+          ]
+        },
+        "options": {"buttonLabel": "Projekt starten", "respondWithData": false},
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "set-projekt-vars",
+      "name": "Projekt-Variablen setzen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [250, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "projekt_id", "name": "projekt_id", "value": "={{ Date.now().toString() }}", "type": "string"},
+            {"id": "thema", "name": "thema", "value": "={{ $json['Thema / Titel'] }}", "type": "string"},
+            {"id": "zielsprache", "name": "zielsprache", "value": "={{ $json['Zielsprache'] }}", "type": "string"},
+            {"id": "url_slug", "name": "url_slug", "value": "={{ $json['Ziel-URL-Slug'] || $json['Thema / Titel'].toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') }}", "type": "string"},
+            {"id": "notizen", "name": "notizen", "value": "={{ $json['Notizen'] || '' }}", "type": "string"},
+            {"id": "erstellt_am", "name": "erstellt_am", "value": "={{ new Date().toISOString() }}", "type": "string"},
+            {"id": "datum_prefix", "name": "datum_prefix", "value": "={{ new Date().toISOString().slice(0, 10) }}", "type": "string"},
+            {"id": "dataforseo_location", "name": "dataforseo_location", "value": "={{ $json['Zielsprache'] === 'DE' ? 2276 : 2840 }}", "type": "number"},
+            {"id": "dataforseo_language", "name": "dataforseo_language", "value": "={{ $json['Zielsprache'] === 'DE' ? 'de' : 'en' }}", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "create-drive-folder",
+      "name": "Google Drive — Projekt-Ordner",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [500, -150],
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{ $json.datum_prefix }}_{{ $json.url_slug }}",
+        "driveId": {"__rl": true, "mode": "list", "value": "myDrive"},
+        "folderId": {"__rl": true, "mode": "list", "value": "root"},
+        "options": {}
+      }
+    },
+    {
+      "id": "create-spreadsheet",
+      "name": "Google Sheets — Spreadsheet erstellen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, 150],
+      "parameters": {
+        "operation": "create",
+        "title": "={{ $json.datum_prefix }}_{{ $json.url_slug }}",
+        "sheetsUi": {
+          "sheetValues": [
+            {"name": "Projekt"}, {"name": "Keywords"}, {"name": "SERP_Wettbewerber"},
+            {"name": "Semantische_Analyse"}, {"name": "User_Insights"}, {"name": "Gliederung"},
+            {"name": "Content_Draft"}, {"name": "QA_Ergebnisse"}, {"name": "Meta_und_Links"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "write-projekt-tab",
+      "name": "Sheets — Projekt-Tab befüllen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [800, 150],
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Google Sheets — Spreadsheet erstellen').first().json.spreadsheetId }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Projekt"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "projekt_id": "={{ $('Projekt-Variablen setzen').first().json.projekt_id }}",
+            "thema": "={{ $('Projekt-Variablen setzen').first().json.thema }}",
+            "status": "keyword_recherche",
+            "erstellt_am": "={{ $('Projekt-Variablen setzen').first().json.erstellt_am }}",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}",
+            "google_drive_ordner_url": "={{ $('Google Drive — Projekt-Ordner').first().json.webViewLink || '' }}"
+          },
+          "schema": [
+            {"id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id"},
+            {"id": "thema", "type": "string", "display": true, "displayName": "thema"},
+            {"id": "status", "type": "string", "display": true, "displayName": "status"},
+            {"id": "erstellt_am", "type": "string", "display": true, "displayName": "erstellt_am"},
+            {"id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert"},
+            {"id": "google_drive_ordner_url", "type": "string", "display": true, "displayName": "google_drive_ordner_url"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dataforseo-matching",
+      "name": "DataForSEO — Matching Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [800, -300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\"keyword\": \"{{ $('Projekt-Variablen setzen').first().json.thema }}\", \"location_code\": {{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}, \"language_code\": \"{{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}\", \"limit\": 30, \"include_seed_keyword\": true, \"include_serp_info\": false}]",
+        "options": {"timeout": 30000}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "dataforseo-suggestions",
+      "name": "DataForSEO — Keyword Suggestions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [800, -100],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\"keyword\": \"{{ $('Projekt-Variablen setzen').first().json.thema }}\", \"location_code\": {{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}, \"language_code\": \"{{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}\", \"limit\": 30, \"include_seed_keyword\": false, \"include_serp_info\": false}]",
+        "options": {"timeout": 30000}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "process-matching",
+      "name": "Matching Keywords verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -300],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst items = [];\n\ntry {\n  const tasks = input.tasks || [];\n  for (const task of tasks) {\n    const result = task.result || [];\n    for (const r of result) {\n      const kwItems = r.items || [];\n      for (const item of kwItems) {\n        const kw = item.keyword_data || item;\n        items.push({\n          json: {\n            keyword: kw.keyword || item.keyword || '',\n            typ: 'matching',\n            suchvolumen: kw.keyword_info?.search_volume || kw.search_volume || 0,\n            schwierigkeit: kw.keyword_info?.keyword_difficulty || kw.keyword_difficulty || 0,\n            suchintention: (kw.search_intent_info?.main_intent || kw.keyword_info?.search_intent || 'informational').toLowerCase(),\n            cpc: kw.keyword_info?.cpc || kw.cpc || 0,\n            prioritaet: '',\n            ausgewaehlt: 'nein'\n          }\n        });\n      }\n    }\n  }\n} catch (e) {\n  items.push({ json: { error: e.message, raw: JSON.stringify(input).slice(0, 500) } });\n}\n\nif (items.length === 0) {\n  items.push({ json: { keyword: 'Keine Ergebnisse', typ: 'matching', suchvolumen: 0, schwierigkeit: 0, suchintention: '', cpc: 0, prioritaet: '', ausgewaehlt: 'nein' } });\n}\n\nreturn items;"
+      }
+    },
+    {
+      "id": "process-suggestions",
+      "name": "Suggestion Keywords verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -100],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst items = [];\n\ntry {\n  const tasks = input.tasks || [];\n  for (const task of tasks) {\n    const result = task.result || [];\n    for (const r of result) {\n      const kwItems = r.items || [];\n      for (const item of kwItems) {\n        items.push({\n          json: {\n            keyword: item.keyword || '',\n            typ: 'related',\n            suchvolumen: item.keyword_info?.search_volume || 0,\n            schwierigkeit: item.keyword_info?.keyword_difficulty || 0,\n            suchintention: (item.search_intent_info?.main_intent || item.keyword_info?.search_intent || 'informational').toLowerCase(),\n            cpc: item.keyword_info?.cpc || 0,\n            prioritaet: '',\n            ausgewaehlt: 'nein'\n          }\n        });\n      }\n    }\n  }\n} catch (e) {\n  items.push({ json: { error: e.message, raw: JSON.stringify(input).slice(0, 500) } });\n}\n\nif (items.length === 0) {\n  items.push({ json: { keyword: 'Keine Ergebnisse', typ: 'related', suchvolumen: 0, schwierigkeit: 0, suchintention: '', cpc: 0, prioritaet: '', ausgewaehlt: 'nein' } });\n}\n\nreturn items;"
+      }
+    },
+    {
+      "id": "merge-keywords",
+      "name": "Keywords zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1350, -200],
+      "parameters": {"mode": "append"}
+    },
+    {
+      "id": "deduplicate-keywords",
+      "name": "Duplikate entfernen & sortieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, -200],
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst seen = new Map();\n\nfor (const item of allItems) {\n  const kw = (item.json.keyword || '').toLowerCase().trim();\n  if (!kw || kw === 'keine ergebnisse') continue;\n  \n  if (!seen.has(kw)) {\n    seen.set(kw, item.json);\n  } else {\n    const existing = seen.get(kw);\n    if ((item.json.suchvolumen || 0) > (existing.suchvolumen || 0)) {\n      seen.set(kw, item.json);\n    }\n  }\n}\n\nconst sorted = Array.from(seen.values())\n  .sort((a, b) => (b.suchvolumen || 0) - (a.suchvolumen || 0));\n\nreturn sorted.map(item => ({ json: item }));"
+      }
+    },
+    {
+      "id": "write-keywords-tab",
+      "name": "Sheets — Keywords schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1850, -200],
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Google Sheets — Spreadsheet erstellen').first().json.spreadsheetId }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Keywords"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "keyword": "={{ $json.keyword }}",
+            "typ": "={{ $json.typ }}",
+            "suchvolumen": "={{ $json.suchvolumen }}",
+            "schwierigkeit": "={{ $json.schwierigkeit }}",
+            "suchintention": "={{ $json.suchintention }}",
+            "prioritaet": "={{ $json.prioritaet }}",
+            "ausgewaehlt": "={{ $json.ausgewaehlt }}"
+          },
+          "schema": [
+            {"id": "keyword", "type": "string", "display": true, "displayName": "keyword"},
+            {"id": "typ", "type": "string", "display": true, "displayName": "typ"},
+            {"id": "suchvolumen", "type": "string", "display": true, "displayName": "suchvolumen"},
+            {"id": "schwierigkeit", "type": "string", "display": true, "displayName": "schwierigkeit"},
+            {"id": "suchintention", "type": "string", "display": true, "displayName": "suchintention"},
+            {"id": "prioritaet", "type": "string", "display": true, "displayName": "prioritaet"},
+            {"id": "ausgewaehlt", "type": "string", "display": true, "displayName": "ausgewaehlt"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "update-status",
+      "name": "Sheets — Status aktualisieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2100, -200],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Google Sheets — Spreadsheet erstellen').first().json.spreadsheetId }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Projekt"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "projekt_id": "={{ $('Projekt-Variablen setzen').first().json.projekt_id }}",
+            "status": "keyword_auswahl",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            {"id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id", "defaultMatch": true, "canBeUsedToMatch": true},
+            {"id": "status", "type": "string", "display": true, "displayName": "status"},
+            {"id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert"}
+          ],
+          "matchingColumns": ["projekt_id"]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "response-summary",
+      "name": "Zusammenfassung für User",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2350, -200],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "message", "name": "message", "value": "=Keyword-Recherche abgeschlossen! Es wurden Keywords für das Thema \"{{ $('Projekt-Variablen setzen').first().json.thema }}\" gesammelt. Bitte prüfe die Keywords im Google Sheet und wähle die relevantesten aus.", "type": "string"},
+            {"id": "spreadsheet_url", "name": "spreadsheet_url", "value": "={{ $('Google Sheets — Spreadsheet erstellen').first().json.spreadsheetUrl }}", "type": "string"},
+            {"id": "projekt_id", "name": "projekt_id", "value": "={{ $('Projekt-Variablen setzen').first().json.projekt_id }}", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-overview",
+      "name": "📋 WF1: Projekt-Setup & Keyword-Recherche",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -450],
+      "parameters": {
+        "content": "## WF1: Projekt-Setup & Keyword-Recherche\n\n**Zweck:** Fundament des SEO Content Agent\n\n**Ablauf:**\n1. User gibt Thema + Sprache via Form ein\n2. Projekt-Variablen werden gesetzt\n3. Google Drive Ordner + Google Sheets werden erstellt\n4. DataForSEO: Matching Keywords + Related Keywords\n5. Keywords werden verarbeitet, dedupliziert & sortiert\n6. Alles wird in Google Sheets geschrieben\n7. Status wird auf 'keyword_auswahl' gesetzt\n\n**API-Credentials benötigt:**\n- DataForSEO (HTTP Basic Auth)\n- Google Drive OAuth2\n- Google Sheets OAuth2\n\n**Nächster Schritt:** WF2 (Keyword-Auswahl & SERP-Scraping)"
+      }
+    },
+    {
+      "id": "sticky-dataforseo",
+      "name": "🔍 DataForSEO API",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [650, -480],
+      "parameters": {
+        "content": "## DataForSEO API\n\n**Endpoints:**\n- `related_keywords/live` → Thematisch passende Keywords\n- `keyword_suggestions/live` → Verwandte Vorschläge\n\n**Auth:** HTTP Basic Auth\n- Username: DataForSEO Login\n- Password: DataForSEO API Key\n\n**Location Codes:**\n- DE: 2276 (Deutschland)\n- EN: 2840 (United States)"
+      }
+    }
+  ],
+  "connections": {
+    "Projekt-Start Formular": {"main": [[{"node": "Projekt-Variablen setzen", "type": "main", "index": 0}]]},
+    "Projekt-Variablen setzen": {"main": [[{"node": "Google Drive — Projekt-Ordner", "type": "main", "index": 0}, {"node": "Google Sheets — Spreadsheet erstellen", "type": "main", "index": 0}, {"node": "DataForSEO — Matching Keywords", "type": "main", "index": 0}, {"node": "DataForSEO — Keyword Suggestions", "type": "main", "index": 0}]]},
+    "Google Sheets — Spreadsheet erstellen": {"main": [[{"node": "Sheets — Projekt-Tab befüllen", "type": "main", "index": 0}]]},
+    "DataForSEO — Matching Keywords": {"main": [[{"node": "Matching Keywords verarbeiten", "type": "main", "index": 0}]]},
+    "DataForSEO — Keyword Suggestions": {"main": [[{"node": "Suggestion Keywords verarbeiten", "type": "main", "index": 0}]]},
+    "Matching Keywords verarbeiten": {"main": [[{"node": "Keywords zusammenführen", "type": "main", "index": 0}]]},
+    "Suggestion Keywords verarbeiten": {"main": [[{"node": "Keywords zusammenführen", "type": "main", "index": 1}]]},
+    "Keywords zusammenführen": {"main": [[{"node": "Duplikate entfernen & sortieren", "type": "main", "index": 0}]]},
+    "Duplikate entfernen & sortieren": {"main": [[{"node": "Sheets — Keywords schreiben", "type": "main", "index": 0}]]},
+    "Sheets — Keywords schreiben": {"main": [[{"node": "Sheets — Status aktualisieren", "type": "main", "index": 0}]]},
+    "Sheets — Status aktualisieren": {"main": [[{"node": "Zusammenfassung für User", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}

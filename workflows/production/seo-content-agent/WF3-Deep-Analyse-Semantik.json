@@ -1,0 +1,423 @@
+{
+  "name": "WF3: Deep Analyse (Semantik)",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "sheets-read-1",
+      "name": "Read SERP Wettbewerber",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [260, 200],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "SERP_Wettbewerber"
+        },
+        "range": "A:F",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "id": "sheets-read-2",
+      "name": "Read Keywords",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [260, 420],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Keywords"
+        },
+        "range": "A:F",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "id": "code-prepare-1",
+      "name": "Prepare Embedding Inputs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Daten aus beiden Inputs sammeln\nconst serpData = $input.all();\n\n// Wir nutzen die Daten aus dem vorherigen Merge/Wait\n// serpData kommt von Read SERP Wettbewerber\n// keywords kommen separat\n\nconst competitors = serpData.map(item => item.json);\n\n// Content-Texte der Wettbewerber extrahieren\nconst contentTexts = competitors\n  .filter(c => c.content_text && c.content_text.trim() !== '')\n  .map(c => c.content_text);\n\n// Metadaten fuer spaetere Zuordnung\nconst competitorMeta = competitors\n  .filter(c => c.content_text && c.content_text.trim() !== '')\n  .map(c => ({\n    url: c.url || '',\n    title: c.title || '',\n    position: c.position || ''\n  }));\n\nreturn [{\n  json: {\n    contentTexts,\n    competitorMeta,\n    competitorCount: contentTexts.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "code-prepare-kw",
+      "name": "Prepare Keyword Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 500],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Keywords aus dem zweiten Sheet\nconst keywordData = $input.all();\nconst keywords = keywordData.map(item => item.json.keyword || item.json.Keyword || '').filter(k => k.trim() !== '');\n\nreturn [{\n  json: {\n    keywords,\n    keywordCount: keywords.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "http-voyage-content",
+      "name": "Voyage AI Content Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [780, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.voyageai.com/v1/embeddings",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ input: $('Prepare Embedding Inputs').item.json.contentTexts.map(t => t.substring(0, 4000)), model: 'voyage-3-lite', input_type: 'document' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.VOYAGE_AI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "http-voyage-keywords",
+      "name": "Voyage AI Keyword Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [780, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.voyageai.com/v1/embeddings",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ input: $('Prepare Keyword Queries').item.json.keywords, model: 'voyage-3-lite', input_type: 'query' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.VOYAGE_AI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "code-cosine",
+      "name": "Cosine Similarity Matrix",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1060, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Cosine Similarity berechnen\nconst allItems = $input.all();\n\n// Content Embeddings (erstes Item von Voyage AI Content)\nconst contentResponse = allItems[0].json;\nconst contentEmbeddings = contentResponse.data ? contentResponse.data.map(d => d.embedding) : [];\n\n// Keyword Embeddings (zweites Item von Voyage AI Keywords)\nconst keywordResponse = allItems[1].json;\nconst keywordEmbeddings = keywordResponse.data ? keywordResponse.data.map(d => d.embedding) : [];\n\n// Metadaten laden\nconst competitorMeta = $('Prepare Embedding Inputs').item.json.competitorMeta;\nconst keywords = $('Prepare Keyword Queries').item.json.keywords;\n\n// Similarity Matrix berechnen: Keywords (Zeilen) x Wettbewerber (Spalten)\nconst matrix = [];\nconst totalCompetitors = contentEmbeddings.length;\n\nfor (let ki = 0; ki < keywordEmbeddings.length; ki++) {\n  const row = {\n    keyword: keywords[ki],\n    scores: {},\n    avgScore: 0,\n    maxScore: 0,\n    minScore: 1,\n    coverageCount: 0\n  };\n  let totalScore = 0;\n  \n  for (let ci = 0; ci < contentEmbeddings.length; ci++) {\n    const vecA = keywordEmbeddings[ki];\n    const vecB = contentEmbeddings[ci];\n    let dotProduct = 0;\n    let normA = 0;\n    let normB = 0;\n    for (let i = 0; i < vecA.length; i++) {\n      dotProduct += vecA[i] * vecB[i];\n      normA += vecA[i] * vecA[i];\n      normB += vecB[i] * vecB[i];\n    }\n    normA = Math.sqrt(normA);\n    normB = Math.sqrt(normB);\n    const score = (normA === 0 || normB === 0) ? 0 : dotProduct / (normA * normB);\n    const roundedScore = Math.round(score * 1000) / 1000;\n    \n    const competitorLabel = competitorMeta[ci] ? (competitorMeta[ci].title || competitorMeta[ci].url || 'Competitor_' + (ci+1)) : 'Competitor_' + (ci+1);\n    row.scores[competitorLabel] = roundedScore;\n    totalScore += roundedScore;\n    if (roundedScore > row.maxScore) row.maxScore = roundedScore;\n    if (roundedScore < row.minScore) row.minScore = roundedScore;\n    if (roundedScore > 0.7) row.coverageCount++;\n  }\n  \n  row.avgScore = contentEmbeddings.length > 0 ? Math.round((totalScore / contentEmbeddings.length) * 1000) / 1000 : 0;\n  matrix.push(row);\n}\n\n// Klassifizierung\nconst commodityTopics = matrix.filter(r => r.coverageCount === totalCompetitors && r.avgScore > 0.7);\nconst differentiationTopics = matrix.filter(r => r.coverageCount > 0 && r.coverageCount < totalCompetitors);\nconst gapTopics = matrix.filter(r => r.coverageCount === 0);\n\nconst result = [{\n  json: {\n    matrix: matrix,\n    summary: {\n      totalKeywords: keywords.length,\n      totalCompetitors: totalCompetitors,\n      commodityCount: commodityTopics.length,\n      differentiationCount: differentiationTopics.length,\n      gapCount: gapTopics.length\n    },\n    commodityTopics: commodityTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore })),\n    differentiationTopics: differentiationTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore, coverage: r.coverageCount + '/' + totalCompetitors })),\n    gapTopics: gapTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore })),\n    competitorMeta: competitorMeta,\n    keywords: keywords\n  }\n}];\n\nreturn result;"
+      }
+    },
+    {
+      "id": "http-claude",
+      "name": "Claude Semantic Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1320, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: 'Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}', messages: [{ role: 'user', content: 'Hier ist die Similarity-Matrix der semantischen Analyse:\\n\\nSummary: ' + JSON.stringify($json.summary) + '\\n\\nCommodity Topics (alle Wettbewerber, Score > 0.7): ' + JSON.stringify($json.commodityTopics) + '\\n\\nDifferenzierungs-Themen (teilweise Abdeckung): ' + JSON.stringify($json.differentiationTopics) + '\\n\\nLuecken (keine Abdeckung): ' + JSON.stringify($json.gapTopics) + '\\n\\nVollstaendige Matrix: ' + JSON.stringify($json.matrix) + '\\n\\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON.' }] }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "code-parse",
+      "name": "Parse Claude Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1580, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Claude API Response parsen\nconst claudeResponse = $input.first().json;\n\n// Text-Content aus Claude Response extrahieren\nlet responseText = '';\nif (claudeResponse.content && Array.isArray(claudeResponse.content)) {\n  responseText = claudeResponse.content\n    .filter(c => c.type === 'text')\n    .map(c => c.text)\n    .join('');\n} else if (typeof claudeResponse.content === 'string') {\n  responseText = claudeResponse.content;\n}\n\n// JSON aus der Antwort extrahieren\nlet analysisData;\ntry {\n  // Versuche direktes JSON Parsing\n  analysisData = JSON.parse(responseText);\n} catch (e) {\n  // Falls in Markdown Code Block eingebettet\n  const jsonMatch = responseText.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    analysisData = JSON.parse(jsonMatch[1].trim());\n  } else {\n    // Fallback: Versuche den groessten JSON-Block zu finden\n    const jsonBlockMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonBlockMatch) {\n      analysisData = JSON.parse(jsonBlockMatch[0]);\n    } else {\n      throw new Error('Konnte kein JSON in der Claude-Antwort finden: ' + responseText.substring(0, 200));\n    }\n  }\n}\n\n// Strukturierte Daten fuer Google Sheets aufbereiten\nconst rows = [];\n\n// Commodity Topics\nif (analysisData.commodity_topics) {\n  for (const topic of analysisData.commodity_topics) {\n    rows.push({\n      analyse_typ: 'commodity',\n      keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '',\n      score: topic.score || 0,\n      details: topic.details || '',\n      kategorie: 'Commodity Topic'\n    });\n  }\n}\n\n// Differenzierungs-Themen\nif (analysisData.differenzierung_themen) {\n  for (const topic of analysisData.differenzierung_themen) {\n    rows.push({\n      analyse_typ: 'differenzierung',\n      keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '',\n      score: topic.score || 0,\n      details: topic.details + (topic.abgedeckt_von ? ' | Abgedeckt von: ' + topic.abgedeckt_von.join(', ') : ''),\n      kategorie: 'Differenzierung'\n    });\n  }\n}\n\n// Luecken\nif (analysisData.luecken) {\n  for (const topic of analysisData.luecken) {\n    rows.push({\n      analyse_typ: 'luecke',\n      keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '',\n      score: topic.score || 0,\n      details: topic.details || '',\n      kategorie: 'Content-Luecke'\n    });\n  }\n}\n\n// Zusammenfassung als eigene Zeile\nif (analysisData.zusammenfassung) {\n  rows.push({\n    analyse_typ: 'zusammenfassung',\n    keyword_oder_thema: 'Gesamtanalyse',\n    score: 0,\n    details: analysisData.zusammenfassung,\n    kategorie: 'Zusammenfassung'\n  });\n}\n\nreturn rows.map(row => ({ json: row }));"
+      }
+    },
+    {
+      "id": "sheets-write-1",
+      "name": "Write Semantische Analyse",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1840, 300],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $('Execute Workflow Trigger').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Semantische_Analyse"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "id": "sheets-status",
+      "name": "Update Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2100, 300],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $('Execute Workflow Trigger').item.json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Status"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "user_insights",
+            "last_step": "WF3_semantic_analysis",
+            "updated_at": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read SERP Wettbewerber",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read SERP Wettbewerber": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Keywords": {
+      "main": [
+        [
+          {
+            "node": "Prepare Keyword Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Embedding Inputs": {
+      "main": [
+        [
+          {
+            "node": "Voyage AI Content Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Keyword Queries": {
+      "main": [
+        [
+          {
+            "node": "Voyage AI Keyword Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voyage AI Content Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Cosine Similarity Matrix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voyage AI Keyword Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Cosine Similarity Matrix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cosine Similarity Matrix": {
+      "main": [
+        [
+          {
+            "node": "Claude Semantic Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Semantic Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Response": {
+      "main": [
+        [
+          {
+            "node": "Write Semantische Analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Semantische Analyse": {
+      "main": [
+        [
+          {
+            "node": "Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true
+  }
+}
