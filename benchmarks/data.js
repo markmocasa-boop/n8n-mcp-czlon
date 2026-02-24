@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771934009028,
+  "lastUpdate": 1771934721340,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "7b15b8c5dd7dd385d4db61ebb56c3b840f7ca1e5",
-          "message": "Merge pull request #8 from markmocasa-boop/claude/lead-magnet-workflow-gRFZl\n\nfeat: add Lead Magnet Builder workflow with multi-platform distribution",
-          "timestamp": "2026-01-19T19:26:32+01:00",
-          "tree_id": "8f19a492ab971ee34d36cf020d2c1de648e75f7f",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7b15b8c5dd7dd385d4db61ebb56c3b840f7ca1e5"
-        },
-        "date": 1768847293909,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/028e942691de285646e975f42ba7f9e01bdcfc23"
         },
         "date": 1771934008234,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "c47dc99cf15c7c424a811bd98372eaac66c0626d",
+          "message": "feat: Master Orchestrator deployed (4qDvNt5iLbYnChZy)\n\n- 22 Nodes: Form Trigger + 8x Execute Workflow + 3 Mid-Workflow Forms\n- Verkettet WF1-WF8 automatisch mit spreadsheet_id Durchreichung\n- 3 interaktive Pausen: Keyword-Auswahl, Expert Input, Gliederungs-Freigabe (in WF5)\n- WF1/WF2/WF4 um Orchestrator-Trigger erweitert (Dual-Trigger)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T13:03:18+01:00",
+          "tree_id": "d4c92f5a40eb7d520206c4b0a66c935a63a79a16",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c47dc99cf15c7c424a811bd98372eaac66c0626d"
+        },
+        "date": 1771934721043,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
