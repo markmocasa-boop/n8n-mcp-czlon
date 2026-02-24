@@ -1,0 +1,196 @@
+{
+  "id": "4qDvNt5iLbYnChZy",
+  "name": "SEO Content Agent — Master Orchestrator",
+  "active": false,
+  "nodes": [
+    {
+      "id": "form-start",
+      "name": "Projekt-Start Formular",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [0, 0],
+      "parameters": {
+        "formTitle": "SEO Content Agent — Neues Projekt",
+        "formDescription": "Starte einen neuen SEO-Artikel. Alle 8 Phasen werden automatisch durchlaufen.",
+        "formFields": {
+          "values": [
+            {"fieldLabel": "Thema / Titel", "fieldType": "text", "requiredField": true, "placeholder": "z.B. Keyword-Recherche Guide 2025"},
+            {"fieldLabel": "Zielsprache", "fieldType": "dropdown", "requiredField": true, "fieldOptions": {"values": [{"option": "DE"}, {"option": "EN"}]}},
+            {"fieldLabel": "Ziel-URL-Slug", "fieldType": "text", "requiredField": false, "placeholder": "z.B. keyword-recherche-guide"},
+            {"fieldLabel": "Notizen", "fieldType": "textarea", "requiredField": false, "placeholder": "Zusaetzliche Hinweise zum Artikel"}
+          ]
+        },
+        "options": {"buttonLabel": "Projekt starten", "respondWithData": false}
+      }
+    },
+    {
+      "id": "set-start-vars",
+      "name": "Start-Variablen setzen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [250, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "thema", "name": "thema", "value": "={{ $json['Thema / Titel'] }}", "type": "string"},
+            {"id": "zielsprache", "name": "zielsprache", "value": "={{ $json['Zielsprache'] }}", "type": "string"},
+            {"id": "url_slug", "name": "url_slug", "value": "={{ $json['Ziel-URL-Slug'] || '' }}", "type": "string"},
+            {"id": "notizen", "name": "notizen", "value": "={{ $json['Notizen'] || '' }}", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {"id": "exec-wf1", "name": "WF1 — Projekt-Setup & Keywords", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [500, 0], "parameters": {"source": "database", "workflowId": "1FZxfz2bGwkLLvPv", "options": {"waitForSubWorkflow": true}}},
+    {
+      "id": "extract-spreadsheet-id",
+      "name": "Spreadsheet-ID extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 0],
+      "parameters": {
+        "jsCode": "var items = $input.all();\nvar spreadsheetId = '';\nfor (var i = 0; i < items.length; i++) {\n  var json = items[i].json;\n  if (json.spreadsheet_id) {\n    spreadsheetId = json.spreadsheet_id;\n    break;\n  }\n}\nif (!spreadsheetId) {\n  try {\n    var firstItem = items[0].json;\n    spreadsheetId = firstItem.spreadsheet_id || firstItem.projekt_id || '';\n  } catch(e) {}\n}\nreturn [{ json: { spreadsheet_id: spreadsheetId, status: 'wf1_complete' } }];"
+      }
+    },
+    {
+      "id": "form-keyword-auswahl",
+      "name": "Keyword-Auswahl",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [1000, 0],
+      "parameters": {
+        "formTitle": "Phase 2: Keyword-Auswahl",
+        "formDescription": "WF1 ist abgeschlossen. Keywords wurden in Google Sheets geschrieben.\n\n1. Oeffne das Google Sheet und pruefe die Keywords im Tab 'Keywords'\n2. Markiere die gewuenschten Keywords in der Spalte 'ausgewaehlt' mit 'ja'\n3. Setze Prioritaeten (1-5) in der Spalte 'prioritaet'\n4. Komme zurueck und klicke 'Weiter'",
+        "formFields": {
+          "values": [
+            {"fieldLabel": "Zusaetzliche Custom-Keywords", "fieldType": "textarea", "requiredField": false, "placeholder": "Ein Keyword pro Zeile (optional)"},
+            {"fieldLabel": "Notizen zur Suchintention", "fieldType": "textarea", "requiredField": false, "placeholder": "z.B. Fokus auf informational keywords"}
+          ]
+        },
+        "options": {"buttonLabel": "Keywords bestaetigen & SERP starten"}
+      }
+    },
+    {
+      "id": "set-wf2-input",
+      "name": "WF2-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1250, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"},
+            {"id": "custom_keywords", "name": "custom_keywords", "value": "={{ $json['Zusaetzliche Custom-Keywords'] || '' }}", "type": "string"},
+            {"id": "notizen", "name": "notizen", "value": "={{ $json['Notizen zur Suchintention'] || '' }}", "type": "string"},
+            {"id": "selected_keywords", "name": "selected_keywords", "value": "aus_sheets", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {"id": "exec-wf2", "name": "WF2 — SERP-Scraping", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [1500, 0], "parameters": {"source": "database", "workflowId": "Phd0mLpT2PPzo3an", "options": {"waitForSubWorkflow": true}}},
+    {"id": "set-wf3-input", "name": "WF3-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [1750, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
+    {"id": "exec-wf3", "name": "WF3 — Deep Analyse (Semantik)", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2000, 0], "parameters": {"source": "database", "workflowId": "PHv6RGRuCu6KpXyL", "options": {"waitForSubWorkflow": true}}},
+    {
+      "id": "form-expert-input",
+      "name": "Expert Input",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [2250, 0],
+      "parameters": {
+        "formTitle": "Phase 4: Expert Input & Wissen",
+        "formDescription": "Die Wettbewerber-Analyse und semantische Auswertung sind abgeschlossen.\n\nJetzt kannst du dein Expertenwissen einbringen, das den Artikel einzigartig macht.",
+        "formFields": {
+          "values": [
+            {"fieldLabel": "Expertenwissen / Erfahrungswerte", "fieldType": "textarea", "requiredField": false, "placeholder": "Teile dein Fachwissen, das nicht in den Top-Rankings steht..."},
+            {"fieldLabel": "Zitate zum Einbauen", "fieldType": "textarea", "requiredField": false, "placeholder": "Eigene Zitate oder Zitate von Experten..."},
+            {"fieldLabel": "Spezifische Perspektive / Unique Angle", "fieldType": "textarea", "requiredField": false, "placeholder": "Was macht deinen Blickwinkel besonders?"},
+            {"fieldLabel": "Referenz-Links", "fieldType": "textarea", "requiredField": false, "placeholder": "URLs zu relevanten Quellen (eine pro Zeile)"}
+          ]
+        },
+        "options": {"buttonLabel": "Expert Input absenden & weiter"}
+      }
+    },
+    {
+      "id": "set-wf4-input",
+      "name": "WF4-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2500, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"},
+            {"id": "expertenwissen", "name": "expertenwissen", "value": "={{ $json['Expertenwissen / Erfahrungswerte'] || '' }}", "type": "string"},
+            {"id": "zitate", "name": "zitate", "value": "={{ $json['Zitate zum Einbauen'] || '' }}", "type": "string"},
+            {"id": "unique_angle", "name": "unique_angle", "value": "={{ $json['Spezifische Perspektive / Unique Angle'] || '' }}", "type": "string"},
+            {"id": "referenz_links", "name": "referenz_links", "value": "={{ $json['Referenz-Links'] || '' }}", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {"id": "exec-wf4", "name": "WF4 — User Insight Mining", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2750, 0], "parameters": {"source": "database", "workflowId": "YU0QUTXiKBgTZ8NH", "options": {"waitForSubWorkflow": true}}},
+    {"id": "set-wf5-input", "name": "WF5-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [3000, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
+    {"id": "exec-wf5", "name": "WF5 — Gliederung & Freigabe", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3250, 0], "parameters": {"source": "database", "workflowId": "pQKMlA4WoeSWcROs", "options": {"waitForSubWorkflow": true}}},
+    {"id": "set-wf6-input", "name": "WF6-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [3500, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
+    {"id": "exec-wf6", "name": "WF6 — Content-Erstellung", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3750, 0], "parameters": {"source": "database", "workflowId": "yTSOGUG42Ys6Hsez", "options": {"waitForSubWorkflow": true}}},
+    {"id": "set-wf7-input", "name": "WF7-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [4000, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
+    {"id": "exec-wf7", "name": "WF7 — QA & Sub-Agenten", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4250, 0], "parameters": {"source": "database", "workflowId": "s1VsRRIonLzgmzrA", "options": {"waitForSubWorkflow": true}}},
+    {"id": "set-wf8-input", "name": "WF8-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [4500, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
+    {"id": "exec-wf8", "name": "WF8 — Finalisierung & Export", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4750, 0], "parameters": {"source": "database", "workflowId": "6BKr9pgmySYfr6QD", "options": {"waitForSubWorkflow": true}}},
+    {
+      "id": "projekt-abschluss",
+      "name": "Projekt abgeschlossen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [5000, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {"id": "status", "name": "status", "value": "finalisiert", "type": "string"},
+            {"id": "message", "name": "message", "value": "=SEO-Artikel erfolgreich erstellt! Alle 8 Phasen abgeschlossen. Dateien in Google Drive.", "type": "string"},
+            {"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Projekt-Start Formular": {"main": [[{"node": "Start-Variablen setzen", "type": "main", "index": 0}]]},
+    "Start-Variablen setzen": {"main": [[{"node": "WF1 — Projekt-Setup & Keywords", "type": "main", "index": 0}]]},
+    "WF1 — Projekt-Setup & Keywords": {"main": [[{"node": "Spreadsheet-ID extrahieren", "type": "main", "index": 0}]]},
+    "Spreadsheet-ID extrahieren": {"main": [[{"node": "Keyword-Auswahl", "type": "main", "index": 0}]]},
+    "Keyword-Auswahl": {"main": [[{"node": "WF2-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF2-Input vorbereiten": {"main": [[{"node": "WF2 — SERP-Scraping", "type": "main", "index": 0}]]},
+    "WF2 — SERP-Scraping": {"main": [[{"node": "WF3-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF3-Input vorbereiten": {"main": [[{"node": "WF3 — Deep Analyse (Semantik)", "type": "main", "index": 0}]]},
+    "WF3 — Deep Analyse (Semantik)": {"main": [[{"node": "Expert Input", "type": "main", "index": 0}]]},
+    "Expert Input": {"main": [[{"node": "WF4-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF4-Input vorbereiten": {"main": [[{"node": "WF4 — User Insight Mining", "type": "main", "index": 0}]]},
+    "WF4 — User Insight Mining": {"main": [[{"node": "WF5-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF5-Input vorbereiten": {"main": [[{"node": "WF5 — Gliederung & Freigabe", "type": "main", "index": 0}]]},
+    "WF5 — Gliederung & Freigabe": {"main": [[{"node": "WF6-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF6-Input vorbereiten": {"main": [[{"node": "WF6 — Content-Erstellung", "type": "main", "index": 0}]]},
+    "WF6 — Content-Erstellung": {"main": [[{"node": "WF7-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF7-Input vorbereiten": {"main": [[{"node": "WF7 — QA & Sub-Agenten", "type": "main", "index": 0}]]},
+    "WF7 — QA & Sub-Agenten": {"main": [[{"node": "WF8-Input vorbereiten", "type": "main", "index": 0}]]},
+    "WF8-Input vorbereiten": {"main": [[{"node": "WF8 — Finalisierung & Export", "type": "main", "index": 0}]]},
+    "WF8 — Finalisierung & Export": {"main": [[{"node": "Projekt abgeschlossen", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
