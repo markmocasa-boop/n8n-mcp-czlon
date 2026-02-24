@@ -9,11 +9,7 @@
       "position": [0, 0],
       "parameters": {
         "workflowInputs": {
-          "values": [
-            {
-              "name": "spreadsheet_id"
-            }
-          ]
+          "values": [{"name": "spreadsheet_id"}]
         }
       }
     },
@@ -47,24 +43,13 @@
       "position": [440, 0],
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Content_Draft"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Content_Draft"},
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
-        }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -75,24 +60,13 @@
       "position": [660, 0],
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('WF7 Variablen').item.json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Semantische_Analyse"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('WF7 Variablen').item.json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Semantische_Analyse"},
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
-        }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -103,24 +77,13 @@
       "position": [880, 0],
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('WF7 Variablen').item.json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Gliederung"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('WF7 Variablen').item.json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Gliederung"},
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
-        }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -146,25 +109,15 @@
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [
-            {
-              "name": "content-type",
-              "value": "application/json"
-            }
-          ]
+          "parameters": [{"name": "content-type", "value": "application/json"}]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'voyage-3-lite', input: [].concat([$json.full_article.substring(0, 8000)], JSON.parse($json.commodity_topics), JSON.parse($json.unique_angles)) }) }}",
-        "options": {
-          "timeout": 30000
-        }
+        "options": {"timeout": 30000}
       },
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "",
-          "name": "Voyage AI API"
-        }
+        "httpHeaderAuth": {"id": "", "name": "Voyage AI API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -183,28 +136,29 @@
     {
       "id": "wf7-node-009",
       "name": "Claude \u2014 AI Humanizer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [1760, 0],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "messages": {
+          "values": [
+            {
+              "content": "=Hier sind die Artikel-Abschnitte zum Humanisieren:\n\n{{ $json.full_article }}",
+              "role": "user"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8192, system: 'Du bist ein AI Humanizer. Ueberarbeite den folgenden Text, sodass er natuerlich, menschlich und authentisch klingt. Entferne typische AI-Floskeln, variiere Satzlaengen, nutze aktive Sprache. Bewahre die Struktur und alle fachlichen Inhalte. Antworte mit dem ueberarbeiteten Text im JSON-Format: {\"sections\": [{\"abschnitt\": \"...\", \"content_humanized\": \"...\"}]}', messages: [{ role: 'user', content: 'Hier sind die Artikel-Abschnitte zum Humanisieren:\\n\\n' + $json.full_article }] }) }}",
-        "options": { "timeout": 60000 }
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein AI Humanizer. Ueberarbeite den folgenden Text, sodass er natuerlich, menschlich und authentisch klingt. Entferne typische AI-Floskeln, variiere Satzlaengen, nutze aktive Sprache. Bewahre die Struktur und alle fachlichen Inhalte. Antworte mit dem ueberarbeiteten Text im JSON-Format: {\"sections\": [{\"abschnitt\": \"...\", \"content_humanized\": \"...\"}]}",
+          "maxTokens": 8192
+        }
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": {"id": "", "name": "Anthropic API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -213,28 +167,29 @@
     {
       "id": "wf7-node-010",
       "name": "Claude \u2014 Voice Checker",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [1980, 0],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "messages": {
+          "values": [
+            {
+              "content": "=Pruefe und optimiere diesen humanisierten Text auf Brand Voice:\n\n{{ $('Claude \u2014 AI Humanizer').first().json.content[0].text }}",
+              "role": "user"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8192, system: 'Du bist ein Voice Checker. Pruefe den Text gegen die Markenstimme: professionell, klar, zugaenglich, ohne Jargon-Ueberladung. Passe den Ton an wo noetig. Antworte im JSON-Format mit sections Array (abschnitt, content_final) und voice_check Objekt (status bestanden oder nacharbeit, details, score 0-100).', messages: [{ role: 'user', content: 'Pruefe und optimiere diesen humanisierten Text auf Brand Voice:\\n\\n' + $('Claude \\u2014 AI Humanizer').first().json.content[0].text }] }) }}",
-        "options": { "timeout": 60000 }
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein Voice Checker. Pruefe den Text gegen die Markenstimme: professionell, klar, zugaenglich, ohne Jargon-Ueberladung. Passe den Ton an wo noetig. Antworte im JSON-Format mit sections Array (abschnitt, content_final) und voice_check Objekt (status bestanden oder nacharbeit, details, score 0-100).",
+          "maxTokens": 8192
+        }
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": {"id": "", "name": "Anthropic API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -243,28 +198,29 @@
     {
       "id": "wf7-node-011",
       "name": "Claude \u2014 Meta Optimizer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [2200, 0],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "messages": {
+          "values": [
+            {
+              "content": "=Erstelle Meta-Tags fuer diesen SEO-Artikel:\n\n{{ $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) }}",
+              "role": "user"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: 'Du bist ein Meta Optimizer fuer SEO. Generiere 3-5 optimierte Title Tags (max 60 Zeichen) und Meta Descriptions (max 155 Zeichen). Antworte im JSON: {\"meta_vorschlaege\": [{\"typ\": \"title_tag\", \"vorschlag\": \"...\", \"position_im_text\": \"\", \"ziel_url\": \"\"}, {\"typ\": \"meta_description\", \"vorschlag\": \"...\", \"position_im_text\": \"\", \"ziel_url\": \"\"}]}', messages: [{ role: 'user', content: 'Erstelle Meta-Tags fuer diesen SEO-Artikel:\\n\\n' + $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) }] }) }}",
-        "options": { "timeout": 60000 }
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein Meta Optimizer fuer SEO. Generiere 3-5 optimierte Title Tags (max 60 Zeichen) und Meta Descriptions (max 155 Zeichen). Antworte im JSON: {\"meta_vorschlaege\": [{\"typ\": \"title_tag\", \"vorschlag\": \"...\", \"position_im_text\": \"\", \"ziel_url\": \"\"}, {\"typ\": \"meta_description\", \"vorschlag\": \"...\", \"position_im_text\": \"\", \"ziel_url\": \"\"}]}",
+          "maxTokens": 2048
+        }
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": {"id": "", "name": "Anthropic API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -273,28 +229,29 @@
     {
       "id": "wf7-node-012",
       "name": "Claude \u2014 Link Strategist",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [2420, 0],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "messages": {
+          "values": [
+            {
+              "content": "=Analysiere diesen Artikel und schlage interne Links vor:\n\n{{ $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) }}",
+              "role": "user"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: 'Du bist ein interner Link-Stratege. Analysiere den Artikel und schlage interne Verlinkungen vor. Antworte im JSON: {\"link_vorschlaege\": [{\"typ\": \"interner_link_im_text\", \"vorschlag\": \"Anchor-Text\", \"position_im_text\": \"Im Abschnitt X\", \"ziel_url\": \"/beispiel-url\"}, {\"typ\": \"interner_link_zu_text\", \"vorschlag\": \"Artikel Y sollte hierher verlinken\", \"position_im_text\": \"\", \"ziel_url\": \"/quell-url\"}]}', messages: [{ role: 'user', content: 'Analysiere diesen Artikel und schlage interne Links vor:\\n\\n' + $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) }] }) }}",
-        "options": { "timeout": 60000 }
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein interner Link-Stratege. Analysiere den Artikel und schlage interne Verlinkungen vor. Antworte im JSON: {\"link_vorschlaege\": [{\"typ\": \"interner_link_im_text\", \"vorschlag\": \"Anchor-Text\", \"position_im_text\": \"Im Abschnitt X\", \"ziel_url\": \"/beispiel-url\"}, {\"typ\": \"interner_link_zu_text\", \"vorschlag\": \"Artikel Y sollte hierher verlinken\", \"position_im_text\": \"\", \"ziel_url\": \"/quell-url\"}]}",
+          "maxTokens": 2048
+        }
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": {"id": "", "name": "Anthropic API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -303,28 +260,29 @@
     {
       "id": "wf7-node-013",
       "name": "Claude \u2014 Visual Planner",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [2640, 0],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "content-type", "value": "application/json" }
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "messages": {
+          "values": [
+            {
+              "content": "=Erstelle Bildkonzepte und Midjourney-Prompts fuer diesen Artikel:\n\n{{ $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) }}\n\nGliederung:\n{{ $('Coverage Score berechnen').first().json.gliederung }}",
+              "role": "user"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: 'Du bist ein Visual Planner. Erstelle Bildideen und Midjourney-Prompts fuer den Artikel. Antworte im JSON: {\"visual_vorschlaege\": [{\"typ\": \"bild_idee\", \"vorschlag\": \"Beschreibung\", \"position_im_text\": \"Nach Abschnitt X\", \"ziel_url\": \"\"}, {\"typ\": \"midjourney_prompt\", \"vorschlag\": \"detailed MJ prompt --ar 16:9 --v 6\", \"position_im_text\": \"Nach Abschnitt X\", \"ziel_url\": \"\"}]}', messages: [{ role: 'user', content: 'Erstelle Bildkonzepte und Midjourney-Prompts fuer diesen Artikel:\\n\\n' + $('Coverage Score berechnen').first().json.full_article.substring(0, 6000) + '\\n\\nGliederung:\\n' + $('Coverage Score berechnen').first().json.gliederung }] }) }}",
-        "options": { "timeout": 60000 }
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein Visual Planner. Erstelle Bildideen und Midjourney-Prompts fuer den Artikel. Antworte im JSON: {\"visual_vorschlaege\": [{\"typ\": \"bild_idee\", \"vorschlag\": \"Beschreibung\", \"position_im_text\": \"Nach Abschnitt X\", \"ziel_url\": \"\"}, {\"typ\": \"midjourney_prompt\", \"vorschlag\": \"detailed MJ prompt --ar 16:9 --v 6\", \"position_im_text\": \"Nach Abschnitt X\", \"ziel_url\": \"\"}]}",
+          "maxTokens": 2048
+        }
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": {"id": "", "name": "Anthropic API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -348,16 +306,8 @@
       "position": [3080, 0],
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "QA_Ergebnisse"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "QA_Ergebnisse"},
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -367,16 +317,16 @@
             "score": "={{ $json.score }}"
           },
           "schema": [
-            { "id": "check_typ", "type": "string", "display": true, "displayName": "check_typ" },
-            { "id": "status", "type": "string", "display": true, "displayName": "status" },
-            { "id": "details", "type": "string", "display": true, "displayName": "details" },
-            { "id": "score", "type": "string", "display": true, "displayName": "score" }
+            {"id": "check_typ", "type": "string", "display": true, "displayName": "check_typ"},
+            {"id": "status", "type": "string", "display": true, "displayName": "status"},
+            {"id": "details", "type": "string", "display": true, "displayName": "details"},
+            {"id": "score", "type": "string", "display": true, "displayName": "score"}
           ]
         },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "google-sheets-oauth2", "name": "Google Sheets OAuth2" }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -387,16 +337,8 @@
       "position": [3300, 0],
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Meta_und_Links"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Meta_und_Links"},
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -406,16 +348,16 @@
             "ziel_url": "={{ $json.ziel_url }}"
           },
           "schema": [
-            { "id": "typ", "type": "string", "display": true, "displayName": "typ" },
-            { "id": "vorschlag", "type": "string", "display": true, "displayName": "vorschlag" },
-            { "id": "position_im_text", "type": "string", "display": true, "displayName": "position_im_text" },
-            { "id": "ziel_url", "type": "string", "display": true, "displayName": "ziel_url" }
+            {"id": "typ", "type": "string", "display": true, "displayName": "typ"},
+            {"id": "vorschlag", "type": "string", "display": true, "displayName": "vorschlag"},
+            {"id": "position_im_text", "type": "string", "display": true, "displayName": "position_im_text"},
+            {"id": "ziel_url", "type": "string", "display": true, "displayName": "ziel_url"}
           ]
         },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "google-sheets-oauth2", "name": "Google Sheets OAuth2" }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -426,16 +368,8 @@
       "position": [3520, 0],
       "parameters": {
         "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Content_Draft"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Content_Draft"},
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -444,16 +378,16 @@
             "content_final": "={{ $json.content_final }}"
           },
           "schema": [
-            { "id": "abschnitt", "type": "string", "display": true, "displayName": "abschnitt" },
-            { "id": "content_humanized", "type": "string", "display": true, "displayName": "content_humanized" },
-            { "id": "content_final", "type": "string", "display": true, "displayName": "content_final" }
+            {"id": "abschnitt", "type": "string", "display": true, "displayName": "abschnitt"},
+            {"id": "content_humanized", "type": "string", "display": true, "displayName": "content_humanized"},
+            {"id": "content_final", "type": "string", "display": true, "displayName": "content_final"}
           ],
           "matchingColumns": ["abschnitt"]
         },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "google-sheets-oauth2", "name": "Google Sheets OAuth2" }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     },
     {
@@ -464,92 +398,46 @@
       "position": [3740, 0],
       "parameters": {
         "operation": "appendOrUpdate",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Projekt"
-        },
+        "documentId": {"__rl": true, "mode": "id", "value": "={{ $('Ergebnisse aufbereiten').first().json.spreadsheet_id }}"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Projekt"},
         "columns": {
           "mappingMode": "defineBelow",
-          "value": {
-            "status": "finalisierung"
-          },
-          "schema": [
-            { "id": "status", "type": "string", "display": true, "displayName": "status" }
-          ],
+          "value": {"status": "finalisierung"},
+          "schema": [{"id": "status", "type": "string", "display": true, "displayName": "status"}],
           "matchingColumns": ["status"]
         },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "google-sheets-oauth2", "name": "Google Sheets OAuth2" }
+        "googleSheetsOAuth2Api": {"id": "google-sheets-oauth2", "name": "Google Sheets OAuth2"}
       }
     }
   ],
   "connections": {
-    "QA-Trigger": {
-      "main": [[{ "node": "WF7 Variablen", "type": "main", "index": 0 }]]
-    },
-    "WF7 Variablen": {
-      "main": [[{ "node": "Sheets \u2014 Content Draft lesen", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 Content Draft lesen": {
-      "main": [[{ "node": "Sheets \u2014 Analyse lesen", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 Analyse lesen": {
-      "main": [[{ "node": "Sheets \u2014 Gliederung lesen", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 Gliederung lesen": {
-      "main": [[{ "node": "QA Daten vorbereiten", "type": "main", "index": 0 }]]
-    },
-    "QA Daten vorbereiten": {
-      "main": [[{ "node": "Voyage AI \u2014 Content Embeddings", "type": "main", "index": 0 }]]
-    },
-    "Voyage AI \u2014 Content Embeddings": {
-      "main": [[{ "node": "Coverage Score berechnen", "type": "main", "index": 0 }]]
-    },
-    "Coverage Score berechnen": {
-      "main": [[{ "node": "Claude \u2014 AI Humanizer", "type": "main", "index": 0 }]]
-    },
-    "Claude \u2014 AI Humanizer": {
-      "main": [[{ "node": "Claude \u2014 Voice Checker", "type": "main", "index": 0 }]]
-    },
-    "Claude \u2014 Voice Checker": {
-      "main": [[{ "node": "Claude \u2014 Meta Optimizer", "type": "main", "index": 0 }]]
-    },
-    "Claude \u2014 Meta Optimizer": {
-      "main": [[{ "node": "Claude \u2014 Link Strategist", "type": "main", "index": 0 }]]
-    },
-    "Claude \u2014 Link Strategist": {
-      "main": [[{ "node": "Claude \u2014 Visual Planner", "type": "main", "index": 0 }]]
-    },
-    "Claude \u2014 Visual Planner": {
-      "main": [[{ "node": "Ergebnisse aufbereiten", "type": "main", "index": 0 }]]
-    },
-    "Ergebnisse aufbereiten": {
-      "main": [[{ "node": "Sheets \u2014 QA Ergebnisse schreiben", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 QA Ergebnisse schreiben": {
-      "main": [[{ "node": "Sheets \u2014 Meta und Links schreiben", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 Meta und Links schreiben": {
-      "main": [[{ "node": "Sheets \u2014 Content Draft aktualisieren", "type": "main", "index": 0 }]]
-    },
-    "Sheets \u2014 Content Draft aktualisieren": {
-      "main": [[{ "node": "Sheets \u2014 Status auf finalisierung", "type": "main", "index": 0 }]]
-    }
+    "QA-Trigger": {"main": [[{"node": "WF7 Variablen", "type": "main", "index": 0}]]},
+    "WF7 Variablen": {"main": [[{"node": "Sheets \u2014 Content Draft lesen", "type": "main", "index": 0}]]},
+    "Sheets \u2014 Content Draft lesen": {"main": [[{"node": "Sheets \u2014 Analyse lesen", "type": "main", "index": 0}]]},
+    "Sheets \u2014 Analyse lesen": {"main": [[{"node": "Sheets \u2014 Gliederung lesen", "type": "main", "index": 0}]]},
+    "Sheets \u2014 Gliederung lesen": {"main": [[{"node": "QA Daten vorbereiten", "type": "main", "index": 0}]]},
+    "QA Daten vorbereiten": {"main": [[{"node": "Voyage AI \u2014 Content Embeddings", "type": "main", "index": 0}]]},
+    "Voyage AI \u2014 Content Embeddings": {"main": [[{"node": "Coverage Score berechnen", "type": "main", "index": 0}]]},
+    "Coverage Score berechnen": {"main": [[{"node": "Claude \u2014 AI Humanizer", "type": "main", "index": 0}]]},
+    "Claude \u2014 AI Humanizer": {"main": [[{"node": "Claude \u2014 Voice Checker", "type": "main", "index": 0}]]},
+    "Claude \u2014 Voice Checker": {"main": [[{"node": "Claude \u2014 Meta Optimizer", "type": "main", "index": 0}]]},
+    "Claude \u2014 Meta Optimizer": {"main": [[{"node": "Claude \u2014 Link Strategist", "type": "main", "index": 0}]]},
+    "Claude \u2014 Link Strategist": {"main": [[{"node": "Claude \u2014 Visual Planner", "type": "main", "index": 0}]]},
+    "Claude \u2014 Visual Planner": {"main": [[{"node": "Ergebnisse aufbereiten", "type": "main", "index": 0}]]},
+    "Ergebnisse aufbereiten": {"main": [[{"node": "Sheets \u2014 QA Ergebnisse schreiben", "type": "main", "index": 0}]]},
+    "Sheets \u2014 QA Ergebnisse schreiben": {"main": [[{"node": "Sheets \u2014 Meta und Links schreiben", "type": "main", "index": 0}]]},
+    "Sheets \u2014 Meta und Links schreiben": {"main": [[{"node": "Sheets \u2014 Content Draft aktualisieren", "type": "main", "index": 0}]]},
+    "Sheets \u2014 Content Draft aktualisieren": {"main": [[{"node": "Sheets \u2014 Status auf finalisierung", "type": "main", "index": 0}]]}
   },
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
     "saveDataErrorExecution": "all",
-    "saveDataSuccessExecution": "all"
-  },
-  "active": false,
-  "tags": []
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }
