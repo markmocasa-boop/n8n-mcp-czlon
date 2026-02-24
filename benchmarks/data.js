@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771940352888,
+  "lastUpdate": 1771940799209,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "324ae141f1a0065a561b504add4b9ae594c94d7d",
-          "message": "Add files via upload",
-          "timestamp": "2026-01-22T07:56:14+01:00",
-          "tree_id": "514c23c5bf2e3fe086a4ddf50fd4498429f00739",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/324ae141f1a0065a561b504add4b9ae594c94d7d"
-        },
-        "date": 1769065083867,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/54d279cd557ca7031e457024da8fe359161d4174"
         },
         "date": 1771940352445,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "4cc03b7e401e296a10c1599b6efa5d98d147336a",
+          "message": "feat: Replace HTTP Request nodes with native nodes across WF1-WF6\n\n- WF1: 2x DataForSEO HTTP Request → native DataForSEO nodes\n- WF2: 1x DataForSEO + 1x Apify HTTP Request → native nodes\n- WF3: 1x Claude HTTP Request → native Anthropic node\n- WF4: 2x Apify HTTP Request → native Apify nodes\n- WF5: 1x Claude HTTP Request → native Anthropic node\n- WF6: 1x Claude HTTP Request → native Anthropic node\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T14:44:31+01:00",
+          "tree_id": "1123c733bfc9e53dfdfb7bd936a6f61eefcafda7",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4cc03b7e401e296a10c1599b6efa5d98d147336a"
+        },
+        "date": 1771940798546,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
