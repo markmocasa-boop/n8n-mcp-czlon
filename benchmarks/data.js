@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771944753634,
+  "lastUpdate": 1771945283410,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "7abc9dc164b6c3f4cee86aaa3b639708d695517f",
-          "message": "Merge pull request #11 from markmocasa-boop/claude/german-price-tracker-yEgwi\n\nClaude/german price tracker y egwi",
-          "timestamp": "2026-01-22T13:22:41+01:00",
-          "tree_id": "ecaf67603b07ce8063bdc49e3ff2d1dd99dafede",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7abc9dc164b6c3f4cee86aaa3b639708d695517f"
-        },
-        "date": 1769084671966,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b0a728eb6420d155ad581490e6c1e3366fa69f8e"
         },
         "date": 1771944753343,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "876aa6d30a39c931da5fa8e430768bfcc1cc1b20",
+          "message": "fix: Rewire WF1 so Spreadsheet creates before DataForSEO calls\n\nDataForSEO nodes now run after Spreadsheet creation instead of parallel.\nThis ensures the spreadsheetId is available when Keywords are written.\nFixes \"unexecuted node reference\" error on Sheets — Keywords schreiben.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T15:59:25+01:00",
+          "tree_id": "7f8dc79f3cdd90d0d9b05dd634c6b62a3adba334",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/876aa6d30a39c931da5fa8e430768bfcc1cc1b20"
+        },
+        "date": 1771945282862,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
