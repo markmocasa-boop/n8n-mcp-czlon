@@ -268,7 +268,7 @@
     "Sheets — SERP_Wettbewerber schreiben": { "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]] },
     "Sheets — Keywords als ausgewählt markieren": { "main": [[{ "node": "Sheets — Status auf serp_scraping", "type": "main", "index": 0 }]] },
     "Sheets — Status auf serp_scraping": { "main": [[{ "node": "Zusammenfassung WF2", "type": "main", "index": 0 }]] },
-    "Orchestrator-Trigger": { "0": [[{ "node": "WF2 Variablen setzen", "type": "0", "index": 0 }]] }
+    "Orchestrator-Trigger": { "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",

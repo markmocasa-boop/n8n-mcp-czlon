@@ -370,7 +370,7 @@
     "Duplikate entfernen & sortieren": { "main": [[{ "node": "Sheets — Keywords schreiben", "type": "main", "index": 0 }]] },
     "Sheets — Keywords schreiben": { "main": [[{ "node": "Sheets — Status aktualisieren", "type": "main", "index": 0 }]] },
     "Sheets — Status aktualisieren": { "main": [[{ "node": "Zusammenfassung für User", "type": "main", "index": 0 }]] },
-    "Orchestrator-Trigger": { "0": [[{ "node": "Projekt-Variablen setzen", "type": "0", "index": 0 }]] }
+    "Orchestrator-Trigger": { "main": [[{ "node": "Projekt-Variablen setzen", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",

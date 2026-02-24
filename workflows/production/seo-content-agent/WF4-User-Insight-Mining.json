@@ -304,7 +304,7 @@
     "Alle Insights zusammenfuehren": { "main": [[{ "node": "Voyage AI Embeddings", "type": "main", "index": 0 }]] },
     "Voyage AI Embeddings": { "main": [[{ "node": "Gap Analysis - Luecken identifizieren", "type": "main", "index": 0 }]] },
     "Gap Analysis - Luecken identifizieren": { "main": [[{ "node": "User_Insights-Tab befuellen", "type": "main", "index": 0 }, { "node": "Status auf gliederung setzen", "type": "main", "index": 0 }]] },
-    "Orchestrator-Trigger": { "0": [[{ "node": "Variablen setzen", "type": "0", "index": 0 }]] }
+    "Orchestrator-Trigger": { "main": [[{ "node": "Variablen setzen", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",
