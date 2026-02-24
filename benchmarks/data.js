@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771842397009,
+  "lastUpdate": 1771934009028,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3ccdf6c97d2709f28bbb42bec9b5bfa49bdee3cf",
-          "message": "Merge pull request #7 from markmocasa-boop/claude/linkedin-dm-tracking-aKYx2\n\nfeat: add LinkedIn DM Follow-up Tracking workflow with PhantomBuster",
-          "timestamp": "2026-01-19T19:21:11+01:00",
-          "tree_id": "c9cdf2d676ddcad4824ca32c0e605bc595f555c3",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3ccdf6c97d2709f28bbb42bec9b5bfa49bdee3cf"
-        },
-        "date": 1768846988835,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/19fc875d4746108f3869e1c82d18528686ab17ea"
         },
         "date": 1771842395974,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "028e942691de285646e975f42ba7f9e01bdcfc23",
+          "message": "feat: SEO Content Agent WF1, WF3, WF4, WF7, WF8 deployed\n\n- WF1: Projekt-Setup & Keyword-Recherche (1FZxfz2bGwkLLvPv)\n- WF3: Deep Analyse mit Voyage AI Embeddings (PHv6RGRuCu6KpXyL)\n- WF4: User Insight Mining - Reddit/YouTube/Expert (YU0QUTXiKBgTZ8NH)\n- WF7: QA & Sub-Agenten - Humanizer, Voice, Meta, Links, Visual (s1VsRRIonLzgmzrA)\n- WF8: Finalisierung & Export nach Google Drive (6BKr9pgmySYfr6QD)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T12:50:54+01:00",
+          "tree_id": "9c77f79f953cdedfade2697a27e86a371a55614c",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/028e942691de285646e975f42ba7f9e01bdcfc23"
+        },
+        "date": 1771934008234,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
