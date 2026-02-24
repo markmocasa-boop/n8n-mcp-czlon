@@ -1,0 +1,243 @@
+{
+  "name": "SEO Agent — WF6: Content-Erstellung",
+  "nodes": [
+    {
+      "id": "wf6-trigger",
+      "name": "Content-Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": { "inputSource": "passthrough" }
+    },
+    {
+      "id": "set-wf6-vars",
+      "name": "WF6 Variablen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [250, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $json.spreadsheet_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "read-gliederung",
+      "name": "Sheets \u2014 Gliederung lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, -100],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Gliederung" },
+        "range": "A:G",
+        "options": {}
+      }
+    },
+    {
+      "id": "read-analyse-wf6",
+      "name": "Sheets \u2014 Analyse lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, 100],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Semantische_Analyse" },
+        "range": "A:E",
+        "options": {}
+      }
+    },
+    {
+      "id": "prepare-sections",
+      "name": "Sektionen vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const gliederung = $('Sheets \u2014 Gliederung lesen').all().map(i => i.json);\nconst analyse = $('Sheets \u2014 Analyse lesen').all().map(i => i.json);\nconst spreadsheetId = $('WF6 Variablen').first().json.spreadsheet_id;\n\n// Nur freigegebene Abschnitte\nconst sections = gliederung.filter(g => g.freigabe === 'ja' || g.freigabe === 'angepasst');\n\n// Falls keine Freigabe vorhanden, alle nehmen\nconst activeSections = sections.length > 0 ? sections : gliederung;\n\n// Gesamte Gliederung als Kontext\nconst outlineContext = activeSections.map(s => \n  `${s.ebene}: ${s.ueberschrift} (${s.typ}) - ${s.stichpunkte}`\n).join('\\n');\n\n// Analyse-Kontext\nconst analyseContext = analyse.map(a => \n  `[${a.kategorie}] ${a.keyword_oder_thema}: ${a.details}`\n).join('\\n');\n\nreturn activeSections.map(section => ({\n  json: {\n    position: section.position,\n    ebene: section.ebene,\n    ueberschrift: section.ueberschrift,\n    typ: section.typ,\n    stichpunkte: section.stichpunkte,\n    basiert_auf: section.basiert_auf,\n    outline_context: outlineContext,\n    analyse_context: analyseContext,\n    spreadsheet_id: spreadsheetId\n  }\n}));"
+      }
+    },
+    {
+      "id": "section-batch",
+      "name": "Sektionen einzeln verarbeiten",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1050, 0],
+      "parameters": { "batchSize": 1, "options": {} }
+    },
+    {
+      "id": "claude-write",
+      "name": "Claude \u2014 Sektion schreiben",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [1300, 0],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": { "mode": "id", "value": "claude-sonnet-4-20250514" },
+        "messages": {
+          "values": [
+            {
+              "content": "=Schreibe den folgenden Abschnitt:\n\n\u00dcBERSCHRIFT: {{ $json.ueberschrift }}\nEBENE: {{ $json.ebene }}\nTYP: {{ $json.typ }}\nSTICHPUNKTE: {{ $json.stichpunkte }}\nBASIS: {{ $json.basiert_auf }}\n\nGESAMTE GLIEDERUNG (f\u00fcr Kontext):\n{{ $json.outline_context }}\n\nSEMANTISCHE ANALYSE:\n{{ $json.analyse_context }}",
+              "role": "user"
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {
+          "system": "Du bist ein erfahrener SEO-Texter. Schreibe einen Artikel-Abschnitt in nat\u00fcrlichem, lesbarem Deutsch. Befolge diese Regeln:\n1. Verwende die vorgegebene \u00dcberschrift und Ebene\n2. Baue die Stichpunkte inhaltlich ein\n3. Schreibe mindestens 200-400 W\u00f6rter pro Abschnitt\n4. Nutze kurze S\u00e4tze und Abs\u00e4tze\n5. Integriere das Keyword nat\u00fcrlich\n6. Formatiere in Markdown\n7. KEINE Wiederholung der \u00dcberschrift am Anfang, starte direkt mit dem Inhalt\n8. Ber\u00fccksichtige den Gesamtkontext der Gliederung",
+          "maxTokens": 3000
+        }
+      },
+      "credentials": {
+        "anthropicApi": { "id": "", "name": "Anthropic API" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "extract-content",
+      "name": "Content extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1550, 0],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst sectionData = $('Sektionen einzeln verarbeiten').first().json;\n\nlet content = '';\ntry {\n  content = response.content?.[0]?.text || response.content || '';\n} catch (e) {\n  content = 'Fehler bei Content-Generierung: ' + e.message;\n}\n\nreturn [{\n  json: {\n    abschnitt: sectionData.ueberschrift,\n    position: sectionData.position,\n    ebene: sectionData.ebene,\n    content_raw: content,\n    content_humanized: '',\n    content_final: '',\n    spreadsheet_id: sectionData.spreadsheet_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "write-draft",
+      "name": "Sheets \u2014 Content Draft schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1800, 0],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Content_Draft" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "abschnitt": "={{ $json.abschnitt }}",
+            "content_raw": "={{ $json.content_raw }}",
+            "content_humanized": "",
+            "content_final": ""
+          },
+          "schema": [
+            { "id": "abschnitt", "type": "string", "display": true, "displayName": "abschnitt" },
+            { "id": "content_raw", "type": "string", "display": true, "displayName": "content_raw" },
+            { "id": "content_humanized", "type": "string", "display": true, "displayName": "content_humanized" },
+            { "id": "content_final", "type": "string", "display": true, "displayName": "content_final" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "loop-back",
+      "name": "N\u00e4chste Sektion",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2050, 0],
+      "parameters": {}
+    },
+    {
+      "id": "update-status-wf6",
+      "name": "Sheets \u2014 Status auf qa",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2050, 200],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "mode": "id", "value": "={{ $('WF6 Variablen').first().json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Projekt" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "projekt_id": "={{ $('WF6 Variablen').first().json.spreadsheet_id }}",
+            "status": "qa",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            { "id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "status", "type": "string", "display": true, "displayName": "status" },
+            { "id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert" }
+          ],
+          "matchingColumns": ["projekt_id"]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-wf6",
+      "name": "WF6: Content-Erstellung",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -300],
+      "parameters": {
+        "content": "## WF6: Content-Erstellung\n\n**Zweck:** Schreibt den Artikel sektionsweise mit Claude\n\n**Ablauf:**\n1. Gliederung + Analyse aus Sheets lesen\n2. Pro Sektion: Claude schreibt Content\n3. Content wird in Content_Draft-Tab gespeichert\n4. Nach allen Sektionen: Status -> 'qa'\n\n**Model:** claude-sonnet-4-20250514\n**Max Tokens pro Sektion:** 3000\n\n**Credentials:** Claude API + Google Sheets OAuth2"
+      }
+    }
+  ],
+  "connections": {
+    "Content-Trigger": {
+      "main": [[{ "node": "WF6 Variablen", "type": "main", "index": 0 }]]
+    },
+    "WF6 Variablen": {
+      "main": [
+        [
+          { "node": "Sheets \u2014 Gliederung lesen", "type": "main", "index": 0 },
+          { "node": "Sheets \u2014 Analyse lesen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Sheets \u2014 Gliederung lesen": {
+      "main": [[{ "node": "Sektionen vorbereiten", "type": "main", "index": 0 }]]
+    },
+    "Sheets \u2014 Analyse lesen": {
+      "main": [[{ "node": "Sektionen vorbereiten", "type": "main", "index": 0 }]]
+    },
+    "Sektionen vorbereiten": {
+      "main": [[{ "node": "Sektionen einzeln verarbeiten", "type": "main", "index": 0 }]]
+    },
+    "Sektionen einzeln verarbeiten": {
+      "main": [
+        [],
+        [{ "node": "Claude \u2014 Sektion schreiben", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude \u2014 Sektion schreiben": {
+      "main": [[{ "node": "Content extrahieren", "type": "main", "index": 0 }]]
+    },
+    "Content extrahieren": {
+      "main": [[{ "node": "Sheets \u2014 Content Draft schreiben", "type": "main", "index": 0 }]]
+    },
+    "Sheets \u2014 Content Draft schreiben": {
+      "main": [[{ "node": "Sektionen einzeln verarbeiten", "type": "main", "index": 0 }]]
+    },
+    "N\u00e4chste Sektion": {
+      "main": [[{ "node": "Sheets \u2014 Status auf qa", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "yTSOGUG42Ys6Hsez",
+    "updatedAt": "2026-02-24T13:35:23.624Z"
+  }
+}

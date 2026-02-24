@@ -1,0 +1,336 @@
+{
+  "name": "SEO Agent — WF5: Gliederung & Freigabe",
+  "nodes": [
+    {
+      "id": "wf5-trigger",
+      "name": "Gliederungs-Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "workflowInputs": {
+          "values": [{ "name": "spreadsheet_id" }]
+        }
+      }
+    },
+    {
+      "id": "set-wf5-vars",
+      "name": "WF5 Variablen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [250, 0],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $json.spreadsheet_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "read-keywords",
+      "name": "Sheets \u2014 Keywords lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, -200],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Keywords" },
+        "range": "A:Z",
+        "options": {}
+      }
+    },
+    {
+      "id": "read-analyse",
+      "name": "Sheets \u2014 Semantische Analyse lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, 0],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "Semantische_Analyse" },
+        "range": "A:Z",
+        "options": {}
+      }
+    },
+    {
+      "id": "read-insights",
+      "name": "Sheets \u2014 User Insights lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [500, 200],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "mode": "name", "value": "User_Insights" },
+        "range": "A:Z",
+        "options": {}
+      }
+    },
+    {
+      "id": "merge-all-data",
+      "name": "Alle Daten zusammenf\u00fchren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": {
+        "jsCode": "const keywords = $('Sheets \u2014 Keywords lesen').all().map(i => i.json);\nconst analyse = $('Sheets \u2014 Semantische Analyse lesen').all().map(i => i.json);\nconst insights = $('Sheets \u2014 User Insights lesen').all().map(i => i.json);\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nconst selectedKeywords = keywords.filter(k => k.ausgewaehlt === 'ja');\nconst commodityTopics = analyse.filter(a => a.kategorie === 'pflicht');\nconst uniqueAngles = insights.filter(i => i.unique_angle === 'ja');\nconst expertInsights = insights.filter(i => i.quelle === 'expert_input');\nconst userQuestions = insights.filter(i => i.typ === 'frage');\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    selected_keywords: JSON.stringify(selectedKeywords),\n    commodity_topics: JSON.stringify(commodityTopics),\n    unique_angles: JSON.stringify(uniqueAngles),\n    expert_insights: JSON.stringify(expertInsights),\n    user_questions: JSON.stringify(userQuestions),\n    all_analyse: JSON.stringify(analyse),\n    keyword_count: selectedKeywords.length,\n    commodity_count: commodityTopics.length,\n    unique_count: uniqueAngles.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "claude-outline",
+      "name": "Claude \u2014 Gliederung generieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [1100, 0],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": { "mode": "id", "value": "claude-sonnet-4-20250514" },
+        "messages": {
+          "values": [
+            {
+              "content": "=Erstelle eine Artikel-Gliederung:\n\nKEYWORDS ({{ $json.keyword_count }}): {{ $json.selected_keywords }}\n\nPFLICHTTHEMEN ({{ $json.commodity_count }}): {{ $json.commodity_topics }}\n\nUNIQUE ANGLES ({{ $json.unique_count }}): {{ $json.unique_angles }}\n\nEXPERT INSIGHTS: {{ $json.expert_insights }}\n\nUSER FRAGEN: {{ $json.user_questions }}\n\nANALYSE: {{ $json.all_analyse }}",
+              "role": "user"
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {
+          "system": "Du bist ein erfahrener SEO-Content-Stratege. Erstelle eine detaillierte Artikel-Gliederung basierend auf den bereitgestellten Daten. Die Gliederung muss:\n1. Alle Commodity Topics abdecken\n2. Unique Angles prominent einbauen\n3. Expert Insights integrieren\n4. User-Fragen als FAQ aufnehmen\n5. Logische H1 > H2 > H3 Hierarchie\n\nAntworte AUSSCHLIESSLICH im JSON-Format (Array von Objekten):\n[{\"position\": 1, \"ebene\": \"h1\", \"ueberschrift\": \"...\", \"typ\": \"einleitung|kerninfo|hauptteil|fehler|faq|fazit\", \"basiert_auf\": \"commodity|unique_angle|expert_take\", \"stichpunkte\": \"Punkt 1; Punkt 2; Punkt 3\"}]",
+          "maxTokens": 4096
+        }
+      },
+      "credentials": {
+        "anthropicApi": { "id": "", "name": "Anthropic API" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "parse-outline",
+      "name": "Gliederung parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 0],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nlet content = '';\ntry {\n  content = response.content?.[0]?.text || response.content || '';\n} catch (e) {\n  content = JSON.stringify(response);\n}\n\nlet outline = [];\ntry {\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (jsonMatch) {\n    outline = JSON.parse(jsonMatch[0]);\n  } else {\n    outline = JSON.parse(content);\n  }\n} catch (e) {\n  outline = [{ position: 1, ebene: 'h1', ueberschrift: 'Parsing fehlgeschlagen', typ: 'hauptteil', basiert_auf: 'commodity', stichpunkte: content.slice(0, 500) }];\n}\n\nreturn outline.map(item => ({\n  json: {\n    position: item.position || 0,\n    ebene: item.ebene || 'h2',\n    ueberschrift: item.ueberschrift || '',\n    typ: item.typ || 'hauptteil',\n    basiert_auf: item.basiert_auf || 'commodity',\n    stichpunkte: item.stichpunkte || '',\n    freigabe: 'nein',\n    spreadsheet_id: spreadsheetId\n  }\n}));"
+      }
+    },
+    {
+      "id": "write-outline",
+      "name": "Sheets \u2014 Gliederung schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1650, 0],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Gliederung" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "position": "={{ $json.position }}",
+            "ebene": "={{ $json.ebene }}",
+            "ueberschrift": "={{ $json.ueberschrift }}",
+            "typ": "={{ $json.typ }}",
+            "basiert_auf": "={{ $json.basiert_auf }}",
+            "stichpunkte": "={{ $json.stichpunkte }}",
+            "freigabe": "={{ $json.freigabe }}"
+          },
+          "schema": [
+            { "id": "position", "type": "string", "display": true, "displayName": "position" },
+            { "id": "ebene", "type": "string", "display": true, "displayName": "ebene" },
+            { "id": "ueberschrift", "type": "string", "display": true, "displayName": "ueberschrift" },
+            { "id": "typ", "type": "string", "display": true, "displayName": "typ" },
+            { "id": "basiert_auf", "type": "string", "display": true, "displayName": "basiert_auf" },
+            { "id": "stichpunkte", "type": "string", "display": true, "displayName": "stichpunkte" },
+            { "id": "freigabe", "type": "string", "display": true, "displayName": "freigabe" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "form-freigabe",
+      "name": "Gliederungs-Freigabe Formular",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [1900, 0],
+      "parameters": {
+        "formTitle": "SEO Content Agent \u2014 Gliederungs-Freigabe",
+        "formDescription": "Pr\u00fcfe die generierte Gliederung und gib sie frei oder passe sie an.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Gesamtfreigabe",
+              "fieldType": "dropdown",
+              "fieldOptions": { "values": [{ "option": "Freigegeben" }, { "option": "Anpassung n\u00f6tig" }] },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Korrektur-Kommentar",
+              "placeholder": "Falls Anpassungen n\u00f6tig: Beschreibe was ge\u00e4ndert werden soll",
+              "requiredField": false,
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Gesamtkommentar",
+              "placeholder": "Allgemeine Anmerkungen zur Gliederung",
+              "requiredField": false,
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": { "buttonLabel": "Gliederung best\u00e4tigen" }
+      }
+    },
+    {
+      "id": "check-freigabe",
+      "name": "Freigabe pr\u00fcfen",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2150, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "freigabe-check",
+              "leftValue": "={{ $json.Gesamtfreigabe }}",
+              "rightValue": "Freigegeben",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "update-freigabe-ja",
+      "name": "Sheets \u2014 Status auf schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2400, -100],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "mode": "id", "value": "={{ $('WF5 Variablen').first().json.spreadsheet_id }}" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Projekt" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "projekt_id": "={{ $('WF5 Variablen').first().json.spreadsheet_id }}",
+            "status": "schreiben",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            { "id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "status", "type": "string", "display": true, "displayName": "status" },
+            { "id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert" }
+          ],
+          "matchingColumns": ["projekt_id"]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "regenerate-outline",
+      "name": "Anpassung n\u00f6tig \u2014 Hinweis",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2400, 100],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "action",
+              "name": "action",
+              "value": "=Gliederung muss angepasst werden. Kommentar: {{ $json.Gesamtkommentar || 'Keine Details' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-wf5",
+      "name": "WF5: Gliederung & Freigabe",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -350],
+      "parameters": {
+        "content": "## WF5: Gliederung & Freigabe\n\n**Zweck:** Generiere Artikel-Gliederung aus allen gesammelten Daten\n\n**Ablauf:**\n1. Lese Keywords, Semantische Analyse, User Insights\n2. Konsolidiere alle Daten in Claude-Prompt\n3. Claude generiert strukturierte Gliederung (JSON)\n4. Gliederung in Sheets schreiben\n5. User prueft via Freigabe-Formular\n6. Freigabe -> Status 'schreiben' | Ablehnung -> Feedback\n\n**Credentials:** Claude API + Google Sheets OAuth2"
+      }
+    }
+  ],
+  "connections": {
+    "Gliederungs-Trigger": {
+      "main": [[{ "node": "WF5 Variablen", "type": "main", "index": 0 }]]
+    },
+    "WF5 Variablen": {
+      "main": [
+        [
+          { "node": "Sheets \u2014 Keywords lesen", "type": "main", "index": 0 },
+          { "node": "Sheets \u2014 Semantische Analyse lesen", "type": "main", "index": 0 },
+          { "node": "Sheets \u2014 User Insights lesen", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Sheets \u2014 Keywords lesen": {
+      "main": [[{ "node": "Alle Daten zusammenf\u00fchren", "type": "main", "index": 0 }]]
+    },
+    "Sheets \u2014 Semantische Analyse lesen": {
+      "main": [[{ "node": "Alle Daten zusammenf\u00fchren", "type": "main", "index": 0 }]]
+    },
+    "Sheets \u2014 User Insights lesen": {
+      "main": [[{ "node": "Alle Daten zusammenf\u00fchren", "type": "main", "index": 0 }]]
+    },
+    "Alle Daten zusammenf\u00fchren": {
+      "main": [[{ "node": "Claude \u2014 Gliederung generieren", "type": "main", "index": 0 }]]
+    },
+    "Claude \u2014 Gliederung generieren": {
+      "main": [[{ "node": "Gliederung parsen", "type": "main", "index": 0 }]]
+    },
+    "Gliederung parsen": {
+      "main": [[{ "node": "Sheets \u2014 Gliederung schreiben", "type": "main", "index": 0 }]]
+    },
+    "Sheets \u2014 Gliederung schreiben": {
+      "main": [[{ "node": "Gliederungs-Freigabe Formular", "type": "main", "index": 0 }]]
+    },
+    "Gliederungs-Freigabe Formular": {
+      "main": [[{ "node": "Freigabe pr\u00fcfen", "type": "main", "index": 0 }]]
+    },
+    "Freigabe pr\u00fcfen": {
+      "main": [
+        [{ "node": "Sheets \u2014 Status auf schreiben", "type": "main", "index": 0 }],
+        [{ "node": "Anpassung n\u00f6tig \u2014 Hinweis", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "pQKMlA4WoeSWcROs",
+    "updatedAt": "2026-02-24T13:34:46.175Z"
+  }
+}

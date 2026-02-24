@@ -1,0 +1,280 @@
+{
+  "name": "SEO Agent — WF2: Keyword-Auswahl & SERP-Scraping",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "SEO Content Agent — Keyword-Auswahl",
+        "formDescription": "Wähle die Keywords aus, die du für deinen Artikel priorisieren möchtest.",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Spreadsheet ID", "placeholder": "Die Google Sheets ID aus WF1", "requiredField": true, "fieldType": "text" },
+            { "fieldLabel": "Ausgewählte Keywords", "placeholder": "Kommagetrennt: keyword1, keyword2, keyword3", "requiredField": true, "fieldType": "textarea" },
+            { "fieldLabel": "Custom Keywords", "placeholder": "Zusätzliche Keywords (optional, kommagetrennt)", "requiredField": false, "fieldType": "textarea" },
+            { "fieldLabel": "Notizen zur Suchintention", "placeholder": "z.B. Fokus auf informational Content", "requiredField": false, "fieldType": "textarea" }
+          ]
+        },
+        "options": { "buttonLabel": "Keywords bestätigen" },
+        "responseMode": "lastNode"
+      },
+      "id": "form-kw-auswahl",
+      "name": "Keyword-Auswahl Formular",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $json['Spreadsheet ID'] }}", "type": "string" },
+            { "id": "selected_keywords_raw", "name": "selected_keywords_raw", "value": "={{ $json['Ausgewählte Keywords'] }}", "type": "string" },
+            { "id": "custom_keywords_raw", "name": "custom_keywords_raw", "value": "={{ $json['Custom Keywords'] || '' }}", "type": "string" },
+            { "id": "notizen", "name": "notizen", "value": "={{ $json['Notizen zur Suchintention'] || '' }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-wf2-vars",
+      "name": "WF2 Variablen setzen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const selectedRaw = $input.first().json.selected_keywords_raw || '';\nconst customRaw = $input.first().json.custom_keywords_raw || '';\nconst spreadsheetId = $input.first().json.spreadsheet_id;\n\nconst selected = selectedRaw.split(',').map(k => k.trim()).filter(k => k.length > 0);\nconst custom = customRaw.split(',').map(k => k.trim()).filter(k => k.length > 0);\n\nconst allKeywords = [...new Set([...selected, ...custom])];\n\nreturn allKeywords.map(keyword => ({\n  json: {\n    keyword,\n    spreadsheet_id: spreadsheetId,\n    typ: custom.includes(keyword) ? 'custom' : 'selected'\n  }\n}));"
+      },
+      "id": "parse-keywords",
+      "name": "Keywords parsen & aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [530, 0]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "mode": "id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Keywords" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "keyword": "={{ $json.keyword }}", "ausgewaehlt": "ja" },
+          "schema": [
+            { "id": "keyword", "type": "string", "display": true, "displayName": "keyword", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "ausgewaehlt", "type": "string", "display": true, "displayName": "ausgewaehlt" }
+          ],
+          "matchingColumns": ["keyword"]
+        },
+        "options": {}
+      },
+      "id": "update-kw-selected",
+      "name": "Sheets — Keywords als ausgewählt markieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [530, 250]
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "id": "serp-batch",
+      "name": "Keywords einzeln verarbeiten",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [800, 0]
+    },
+    {
+      "parameters": {
+        "resource": "serp",
+        "operation": "get-parsed-serp",
+        "keyword": "={{ $json.keyword }}",
+        "location_code": 2276,
+        "language_code": "de",
+        "depth": 5
+      },
+      "id": "dataforseo-serp",
+      "name": "DataForSEO — SERP Organic",
+      "type": "n8n-nodes-dataforseo.dataForSeo",
+      "typeVersion": 1,
+      "position": [1050, 0],
+      "credentials": {
+        "dataForSeoApi": { "id": "", "name": "DataForSEO API" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst items = [];\nconst keyword = $('Keywords einzeln verarbeiten').first().json.keyword;\nconst spreadsheetId = $('WF2 Variablen setzen').first().json.spreadsheet_id;\n\ntry {\n  const tasks = input.tasks || [];\n  for (const task of tasks) {\n    const results = task.result || [];\n    for (const r of results) {\n      const organicItems = (r.items || []).filter(i => i.type === 'organic');\n      let position = 0;\n      for (const item of organicItems.slice(0, 5)) {\n        position++;\n        items.push({\n          json: {\n            keyword: keyword,\n            position: position,\n            url: item.url || '',\n            title: item.title || '',\n            snippet: item.description || '',\n            spreadsheet_id: spreadsheetId\n          }\n        });\n      }\n    }\n  }\n} catch (e) {\n  items.push({ json: { error: e.message, keyword } });\n}\n\nif (items.length === 0) {\n  items.push({ json: { keyword, position: 0, url: '', title: 'Keine SERP-Ergebnisse', snippet: '', spreadsheet_id: spreadsheetId } });\n}\n\nreturn items;"
+      },
+      "id": "process-serp",
+      "name": "SERP-Ergebnisse verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 0]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "apify/website-content-crawler",
+        "input": "={{ JSON.stringify({ \"startUrls\": [{ \"url\": $json.url }], \"maxCrawlDepth\": 0, \"maxCrawlPages\": 1, \"crawlerType\": \"cheerio\", \"includeUrlGlobs\": [], \"excludeUrlGlobs\": [], \"maxResults\": 1 }) }}"
+      },
+      "id": "apify-scrape",
+      "name": "Apify — Content Scrapen",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [1550, 0],
+      "credentials": {
+        "apifyApi": { "id": "", "name": "Apify API" }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const serpData = $('SERP-Ergebnisse verarbeiten').first().json;\nconst scrapeResult = $input.first().json;\n\nlet contentText = '';\nlet wordCount = 0;\nlet headings = [];\n\ntry {\n  if (Array.isArray(scrapeResult)) {\n    const page = scrapeResult[0] || {};\n    contentText = (page.text || page.markdown || '').slice(0, 10000);\n  } else {\n    contentText = (scrapeResult.text || scrapeResult.markdown || scrapeResult.content || '').slice(0, 10000);\n  }\n  \n  wordCount = contentText.split(/\\s+/).filter(w => w.length > 0).length;\n  \n  const headingMatches = contentText.match(/^#{1,6}\\s+.+$/gm) || [];\n  headings = headingMatches.map(h => {\n    const level = h.match(/^(#+)/)[1].length;\n    const text = h.replace(/^#+\\s+/, '');\n    return { level: `h${level}`, text };\n  });\n} catch (e) {\n  contentText = `Scraping fehlgeschlagen: ${e.message}`;\n}\n\nreturn [{\n  json: {\n    keyword: serpData.keyword,\n    position: serpData.position,\n    url: serpData.url,\n    title: serpData.title,\n    content_text: contentText,\n    wortanzahl: wordCount,\n    h_struktur: JSON.stringify(headings),\n    spreadsheet_id: serpData.spreadsheet_id\n  }\n}];"
+      },
+      "id": "process-scraped",
+      "name": "Scraping-Ergebnisse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "SERP_Wettbewerber" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "keyword": "={{ $json.keyword }}", "position": "={{ $json.position }}", "url": "={{ $json.url }}",
+            "title": "={{ $json.title }}", "content_text": "={{ $json.content_text }}",
+            "wortanzahl": "={{ $json.wortanzahl }}", "h_struktur": "={{ $json.h_struktur }}"
+          },
+          "schema": [
+            { "id": "keyword", "type": "string", "display": true, "displayName": "keyword" },
+            { "id": "position", "type": "string", "display": true, "displayName": "position" },
+            { "id": "url", "type": "string", "display": true, "displayName": "url" },
+            { "id": "title", "type": "string", "display": true, "displayName": "title" },
+            { "id": "content_text", "type": "string", "display": true, "displayName": "content_text" },
+            { "id": "wortanzahl", "type": "string", "display": true, "displayName": "wortanzahl" },
+            { "id": "h_struktur", "type": "string", "display": true, "displayName": "h_struktur" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "write-serp-tab",
+      "name": "Sheets — SERP_Wettbewerber schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2050, 0]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "mode": "id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Projekt" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "projekt_id": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}",
+            "status": "deep_analyse",
+            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            { "id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id", "defaultMatch": true, "canBeUsedToMatch": true },
+            { "id": "status", "type": "string", "display": true, "displayName": "status" },
+            { "id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert" }
+          ],
+          "matchingColumns": ["projekt_id"]
+        },
+        "options": {}
+      },
+      "id": "update-status-wf2",
+      "name": "Sheets — Status auf serp_scraping",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2300, 0]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "message", "name": "message", "value": "=SERP-Scraping abgeschlossen! Die Top-5 Wettbewerber-Seiten für alle ausgewählten Keywords wurden gescraped und gespeichert.", "type": "string" },
+            { "id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "response-wf2",
+      "name": "Zusammenfassung WF2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2550, 0]
+    },
+    {
+      "parameters": {
+        "content": "## WF2: Keyword-Auswahl & SERP-Scraping\n\n**Zweck:** Ausgewählte Keywords SERP-analysieren & Wettbewerber-Content scrapen\n\n**Ablauf:**\n1. User wählt Keywords via Form + optional Custom Keywords\n2. Keywords werden in Sheets als 'ausgewählt' markiert\n3. Pro Keyword: DataForSEO SERP (Top 5 organisch) via native Node\n4. Pro SERP-Ergebnis: Apify Content Scraping via native Node\n5. Content + Headings in SERP_Wettbewerber-Tab schreiben\n6. Status auf 'deep_analyse' setzen\n\n**API-Credentials benötigt:**\n- DataForSEO (native Community Node)\n- Apify (native Community Node)\n- Google Sheets OAuth2"
+      },
+      "id": "sticky-wf2",
+      "name": "WF2: Keyword-Auswahl & SERP-Scraping",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -300]
+    },
+    {
+      "parameters": {
+        "content": "## Apify Website Content Crawler (Native Node)\n\n**Node:** @apify/n8n-nodes-apify.apify\n**Operation:** Run actor and get dataset\n**Actor:** apify/website-content-crawler\n\n**Limits:**\n- maxCrawlDepth: 0 (nur die Ziel-URL)\n- maxCrawlPages: 1\n- Content wird auf 10.000 Zeichen gekürzt\n\n**Fallback:** continueOnFail aktiviert"
+      },
+      "id": "sticky-apify",
+      "name": "Apify Scraping",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1400, -300]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "spreadsheet_id" },
+            { "name": "selected_keywords" },
+            { "name": "custom_keywords" },
+            { "name": "notizen" }
+          ]
+        }
+      },
+      "id": "exec-trigger-wf2",
+      "name": "Orchestrator-Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 250]
+    }
+  ],
+  "connections": {
+    "Keyword-Auswahl Formular": { "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]] },
+    "WF2 Variablen setzen": { "main": [[{ "node": "Keywords parsen & aufbereiten", "type": "main", "index": 0 }, { "node": "Sheets — Keywords als ausgewählt markieren", "type": "main", "index": 0 }]] },
+    "Keywords parsen & aufbereiten": { "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]] },
+    "Keywords einzeln verarbeiten": { "main": [[], [{ "node": "DataForSEO — SERP Organic", "type": "main", "index": 0 }]] },
+    "DataForSEO — SERP Organic": { "main": [[{ "node": "SERP-Ergebnisse verarbeiten", "type": "main", "index": 0 }]] },
+    "SERP-Ergebnisse verarbeiten": { "main": [[{ "node": "Apify — Content Scrapen", "type": "main", "index": 0 }]] },
+    "Apify — Content Scrapen": { "main": [[{ "node": "Scraping-Ergebnisse aufbereiten", "type": "main", "index": 0 }]] },
+    "Scraping-Ergebnisse aufbereiten": { "main": [[{ "node": "Sheets — SERP_Wettbewerber schreiben", "type": "main", "index": 0 }]] },
+    "Sheets — SERP_Wettbewerber schreiben": { "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]] },
+    "Sheets — Keywords als ausgewählt markieren": { "main": [[{ "node": "Sheets — Status auf serp_scraping", "type": "main", "index": 0 }]] },
+    "Sheets — Status auf serp_scraping": { "main": [[{ "node": "Zusammenfassung WF2", "type": "main", "index": 0 }]] },
+    "Orchestrator-Trigger": { "0": [[{ "node": "WF2 Variablen setzen", "type": "0", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

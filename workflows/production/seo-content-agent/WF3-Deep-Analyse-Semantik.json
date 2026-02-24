@@ -172,36 +172,34 @@
     {
       "id": "http-claude",
       "name": "Claude Semantic Analysis",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
       "position": [1320, 300],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "none",
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: 'Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}', messages: [{ role: 'user', content: 'Hier ist die Similarity-Matrix der semantischen Analyse:\\n\\nSummary: ' + JSON.stringify($json.summary) + '\\n\\nCommodity Topics (alle Wettbewerber, Score > 0.7): ' + JSON.stringify($json.commodityTopics) + '\\n\\nDifferenzierungs-Themen (teilweise Abdeckung): ' + JSON.stringify($json.differentiationTopics) + '\\n\\nLuecken (keine Abdeckung): ' + JSON.stringify($json.gapTopics) + '\\n\\nVollstaendige Matrix: ' + JSON.stringify($json.matrix) + '\\n\\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON.' }] }) }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "messages": {
+          "values": [
             {
-              "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
-            },
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
+              "content": "=Hier ist die Similarity-Matrix der semantischen Analyse:\n\nSummary: {{ JSON.stringify($json.summary) }}\n\nCommodity Topics (alle Wettbewerber, Score > 0.7): {{ JSON.stringify($json.commodityTopics) }}\n\nDifferenzierungs-Themen (teilweise Abdeckung): {{ JSON.stringify($json.differentiationTopics) }}\n\nLuecken (keine Abdeckung): {{ JSON.stringify($json.gapTopics) }}\n\nVollstaendige Matrix: {{ JSON.stringify($json.matrix) }}\n\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON.",
+              "role": "user"
             }
           ]
         },
+        "simplify": true,
         "options": {
-          "timeout": 120000
+          "system": "Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}",
+          "maxTokens": 4096
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic API"
         }
       },
       "retryOnFail": true,
@@ -289,127 +287,59 @@
     "Execute Workflow Trigger": {
       "main": [
         [
-          {
-            "node": "Read SERP Wettbewerber",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Read Keywords",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Read SERP Wettbewerber", "type": "main", "index": 0 },
+          { "node": "Read Keywords", "type": "main", "index": 0 }
         ]
       ]
     },
     "Read SERP Wettbewerber": {
       "main": [
-        [
-          {
-            "node": "Prepare Embedding Inputs",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Prepare Embedding Inputs", "type": "main", "index": 0 }]
       ]
     },
     "Read Keywords": {
       "main": [
-        [
-          {
-            "node": "Prepare Keyword Queries",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Prepare Keyword Queries", "type": "main", "index": 0 }]
       ]
     },
     "Prepare Embedding Inputs": {
       "main": [
-        [
-          {
-            "node": "Voyage AI Content Embeddings",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Voyage AI Content Embeddings", "type": "main", "index": 0 }]
       ]
     },
     "Prepare Keyword Queries": {
       "main": [
-        [
-          {
-            "node": "Voyage AI Keyword Embeddings",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Voyage AI Keyword Embeddings", "type": "main", "index": 0 }]
       ]
     },
     "Voyage AI Content Embeddings": {
       "main": [
-        [
-          {
-            "node": "Cosine Similarity Matrix",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Cosine Similarity Matrix", "type": "main", "index": 0 }]
       ]
     },
     "Voyage AI Keyword Embeddings": {
       "main": [
-        [
-          {
-            "node": "Cosine Similarity Matrix",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Cosine Similarity Matrix", "type": "main", "index": 0 }]
       ]
     },
     "Cosine Similarity Matrix": {
       "main": [
-        [
-          {
-            "node": "Claude Semantic Analysis",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Claude Semantic Analysis", "type": "main", "index": 0 }]
       ]
     },
     "Claude Semantic Analysis": {
       "main": [
-        [
-          {
-            "node": "Parse Claude Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Parse Claude Response", "type": "main", "index": 0 }]
       ]
     },
     "Parse Claude Response": {
       "main": [
-        [
-          {
-            "node": "Write Semantische Analyse",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Write Semantische Analyse", "type": "main", "index": 0 }]
       ]
     },
     "Write Semantische Analyse": {
       "main": [
-        [
-          {
-            "node": "Update Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Update Status", "type": "main", "index": 0 }]
       ]
     }
   },
@@ -418,6 +348,11 @@
     "timezone": "Europe/Berlin",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveExecutionProgress": true
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "PHv6RGRuCu6KpXyL",
+    "updatedAt": "2026-02-24T13:33:52.135Z"
   }
 }
