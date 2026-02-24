@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771946830665,
+  "lastUpdate": 1771949166028,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "be10ff1f577c8f0c8471374b12e62d471ecabef8",
-          "message": "Merge pull request #13 from markmocasa-boop/claude/linkedin-message-monitoring-vyNbP\n\nfeat: add PhantomBuster alternative for LinkedIn message monitoring",
-          "timestamp": "2026-01-22T17:38:20+01:00",
-          "tree_id": "63f15383d7165ad6fa92543226adb745913891b0",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/be10ff1f577c8f0c8471374b12e62d471ecabef8"
-        },
-        "date": 1769100007327,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fbc5b4ce6c7b96096e1083f7196a78d96307aed8"
         },
         "date": 1771946830211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "92451b96e60f5c97f10c5bb2ce151ea6eb39bd7b",
+          "message": "fix: correct native node parameter names for DataForSEO and Apify\n\n- WF2 DataForSEO SERP: location_name_required → location_name, language_name_required → language_name\n- WF2 Apify: input → customBody (correct param name for native Apify node)\n- WF4 Apify Reddit: input → customBody\n- WF4 Apify YouTube: input → customBody\n\nRoot cause: declarative community nodes use different internal parameter\nnames than what was assumed. DataForSEO SERP uses location_name/language_name\nwhile keywords_data/labs use location_name_required/language_name_required.\nApify native node uses customBody for Input JSON, not input.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T17:03:45+01:00",
+          "tree_id": "89bd1539bb5d47570c2bbe3c212529f363fb2c9a",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/92451b96e60f5c97f10c5bb2ce151ea6eb39bd7b"
+        },
+        "date": 1771949165181,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
