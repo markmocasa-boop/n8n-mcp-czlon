@@ -87,8 +87,8 @@
         "resource": "serp",
         "operation": "get-parsed-serp",
         "keyword": "={{ $json.keyword }}",
-        "location_name_required": "Germany",
-        "language_name_required": "German",
+        "location_name": "Germany",
+        "language_name": "German",
         "depth": 5
       },
       "id": "dataforseo-serp",
@@ -118,7 +118,7 @@
         "resource": "Actors",
         "operation": "Run actor and get dataset",
         "actorId": "apify/website-content-crawler",
-        "input": "={{ JSON.stringify({ \"startUrls\": [{ \"url\": $json.url }], \"maxCrawlDepth\": 0, \"maxCrawlPages\": 1, \"crawlerType\": \"cheerio\", \"includeUrlGlobs\": [], \"excludeUrlGlobs\": [], \"maxResults\": 1 }) }}"
+        "customBody": "={{ JSON.stringify({ \"startUrls\": [{ \"url\": $json.url }], \"maxCrawlDepth\": 0, \"maxCrawlPages\": 1, \"crawlerType\": \"cheerio\", \"includeUrlGlobs\": [], \"excludeUrlGlobs\": [], \"maxResults\": 1 }) }}"
       },
       "id": "apify-scrape",
       "name": "Apify — Content Scrapen",

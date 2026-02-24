@@ -76,7 +76,7 @@
         "resource": "Actors",
         "operation": "Run actor and get dataset",
         "actorId": "trudax/reddit-scraper",
-        "input": "={{ JSON.stringify({ \"searches\": $json.redditQueries, \"searchSubreddits\": $json.subreddits, \"maxItems\": 20, \"sort\": \"relevance\", \"time\": \"year\" }) }}"
+        "customBody": "={{ JSON.stringify({ \"searches\": $json.redditQueries, \"searchSubreddits\": $json.subreddits, \"maxItems\": 20, \"sort\": \"relevance\", \"time\": \"year\" }) }}"
       },
       "id": "wf4-http-05",
       "name": "Apify Reddit Scraping",
@@ -105,7 +105,7 @@
         "resource": "Actors",
         "operation": "Run actor and get dataset",
         "actorId": "bernardo/youtube-scraper",
-        "input": "={{ JSON.stringify({ \"searchQueries\": $json.youtubeQueries, \"maxResults\": 10, \"maxResultsShorts\": 0 }) }}"
+        "customBody": "={{ JSON.stringify({ \"searchQueries\": $json.youtubeQueries, \"maxResults\": 10, \"maxResultsShorts\": 0 }) }}"
       },
       "id": "wf4-http-07",
       "name": "Apify YouTube Scraping",
