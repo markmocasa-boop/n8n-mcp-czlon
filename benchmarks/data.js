@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771949166028,
+  "lastUpdate": 1771952370749,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "20a391842dc9b398b31d76bf803ef80419ca85a5",
-          "message": "Merge pull request #14 from markmocasa-boop/claude/n8n-seo-content-workflow-HcOuY\n\nfeat: add comprehensive SEO Content Planning workflow",
-          "timestamp": "2026-01-26T12:24:57+01:00",
-          "tree_id": "3ce1f39b1aaa7de17ed8bb1867f5fd2e3d5bca72",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/20a391842dc9b398b31d76bf803ef80419ca85a5"
-        },
-        "date": 1769426808600,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/92451b96e60f5c97f10c5bb2ce151ea6eb39bd7b"
         },
         "date": 1771949165181,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "83e435c9b01b5a90c9f73680b396c6af6414d6bb",
+          "message": "fix: Orchestrator-Trigger connection type \"0\" → \"main\" for WF1, WF2, WF4\n\nSub-workflows called via Execute Workflow from Master Orchestrator\nstopped after the trigger node because connection type \"0\" prevented\ndata flow. Changed to \"main\" so data passes through to the next node.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T17:56:52+01:00",
+          "tree_id": "920d7a1c92b0bba6eef4e5d35a0827fb5f6f3d83",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/83e435c9b01b5a90c9f73680b396c6af6414d6bb"
+        },
+        "date": 1771952370376,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
