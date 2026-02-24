@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771934721340,
+  "lastUpdate": 1771940352888,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "50d5370bf3919e953f05594937d3f84817b02484",
-          "message": "Merge pull request #9 from markmocasa-boop/claude/n8n-funnel-reporting-workflow-tDIl2\n\nfeat: add Funnel & Conversion Reporting workflow (weekly)",
-          "timestamp": "2026-01-21T14:09:33+01:00",
-          "tree_id": "0d44c4ccaa422e172108dfbfc4355a62d53d36d0",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/50d5370bf3919e953f05594937d3f84817b02484"
-        },
-        "date": 1769001088597,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c47dc99cf15c7c424a811bd98372eaac66c0626d"
         },
         "date": 1771934721043,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "54d279cd557ca7031e457024da8fe359161d4174",
+          "message": "WF7: Replace 5 Anthropic HTTP Request nodes with native Anthropic nodes\n\nMigrated Claude — AI Humanizer, Voice Checker, Meta Optimizer, Link Strategist,\nand Visual Planner from n8n-nodes-base.httpRequest to @n8n/n8n-nodes-langchain.anthropic.\nSystem prompts, user messages, maxTokens, and retry settings preserved.\nVoyage AI HTTP Request node unchanged.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T14:37:07+01:00",
+          "tree_id": "36105c4ad1038b2f94cfd4892eee1e201ece9662",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/54d279cd557ca7031e457024da8fe359161d4174"
+        },
+        "date": 1771940352445,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
