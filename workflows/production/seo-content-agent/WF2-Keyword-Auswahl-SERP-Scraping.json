@@ -87,8 +87,8 @@
         "resource": "serp",
         "operation": "get-parsed-serp",
         "keyword": "={{ $json.keyword }}",
-        "location_code": 2276,
-        "language_code": "de",
+        "location_name_required": "Germany",
+        "language_name_required": "German",
         "depth": 5
       },
       "id": "dataforseo-serp",
