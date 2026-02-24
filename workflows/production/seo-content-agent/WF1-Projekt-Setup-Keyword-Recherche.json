@@ -360,8 +360,8 @@
   ],
   "connections": {
     "Projekt-Start Formular": { "main": [[{ "node": "Projekt-Variablen setzen", "type": "main", "index": 0 }]] },
-    "Projekt-Variablen setzen": { "main": [[{ "node": "Google Drive — Projekt-Ordner", "type": "main", "index": 0 }, { "node": "Google Sheets — Spreadsheet erstellen", "type": "main", "index": 0 }, { "node": "DataForSEO — Matching Keywords", "type": "main", "index": 0 }, { "node": "DataForSEO — Keyword Suggestions", "type": "main", "index": 0 }]] },
-    "Google Sheets — Spreadsheet erstellen": { "main": [[{ "node": "Sheets — Projekt-Tab befüllen", "type": "main", "index": 0 }]] },
+    "Projekt-Variablen setzen": { "main": [[{ "node": "Google Drive — Projekt-Ordner", "type": "main", "index": 0 }, { "node": "Google Sheets — Spreadsheet erstellen", "type": "main", "index": 0 }]] },
+    "Google Sheets — Spreadsheet erstellen": { "main": [[{ "node": "Sheets — Projekt-Tab befüllen", "type": "main", "index": 0 }, { "node": "DataForSEO — Matching Keywords", "type": "main", "index": 0 }, { "node": "DataForSEO — Keyword Suggestions", "type": "main", "index": 0 }]] },
     "DataForSEO — Matching Keywords": { "main": [[{ "node": "Matching Keywords verarbeiten", "type": "main", "index": 0 }]] },
     "DataForSEO — Keyword Suggestions": { "main": [[{ "node": "Suggestion Keywords verarbeiten", "type": "main", "index": 0 }]] },
     "Matching Keywords verarbeiten": { "main": [[{ "node": "Keywords zusammenführen", "type": "main", "index": 0 }]] },
