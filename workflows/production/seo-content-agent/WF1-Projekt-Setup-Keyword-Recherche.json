@@ -63,8 +63,8 @@
             { "id": "notizen", "name": "notizen", "value": "={{ $json['Notizen'] || '' }}", "type": "string" },
             { "id": "erstellt_am", "name": "erstellt_am", "value": "={{ new Date().toISOString() }}", "type": "string" },
             { "id": "datum_prefix", "name": "datum_prefix", "value": "={{ new Date().toISOString().slice(0, 10) }}", "type": "string" },
-            { "id": "dataforseo_location", "name": "dataforseo_location", "value": "={{ $json['Zielsprache'] === 'DE' ? 2276 : 2840 }}", "type": "number" },
-            { "id": "dataforseo_language", "name": "dataforseo_language", "value": "={{ $json['Zielsprache'] === 'DE' ? 'de' : 'en' }}", "type": "string" }
+            { "id": "dataforseo_location", "name": "dataforseo_location", "value": "={{ $json['Zielsprache'] === 'DE' ? 'Germany' : 'United States' }}", "type": "string" },
+            { "id": "dataforseo_language", "name": "dataforseo_language", "value": "={{ $json['Zielsprache'] === 'DE' ? 'German' : 'English' }}", "type": "string" }
           ]
         },
         "options": {}
@@ -153,12 +153,11 @@
       "parameters": {
         "resource": "keywords_data",
         "operation": "get-keywords-for-keywords",
-        "keyword": "={{ $('Projekt-Variablen setzen').first().json.thema }}",
-        "location_code": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}",
-        "language_code": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}",
-        "limit": 30,
-        "include_seed_keyword": true,
-        "include_serp_info": false
+        "keywords_for_keywords": { "values": [{ "value": "={{ $('Projekt-Variablen setzen').first().json.thema }}" }] },
+        "location_name_required": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}",
+        "language_name_required": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}",
+        "date_from": "=",
+        "date_to": "="
       },
       "id": "dataforseo-matching",
       "name": "DataForSEO — Matching Keywords",
@@ -178,11 +177,10 @@
         "resource": "labs",
         "operation": "get-keyword-suggestions",
         "keyword": "={{ $('Projekt-Variablen setzen').first().json.thema }}",
-        "location_code": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}",
-        "language_code": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}",
+        "location_name_required": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_location }}",
+        "language_name_required": "={{ $('Projekt-Variablen setzen').first().json.dataforseo_language }}",
         "limit": 30,
-        "include_seed_keyword": false,
-        "include_serp_info": false
+        "order_by": ["keyword_info.search_volume,desc"]
       },
       "id": "dataforseo-suggestions",
       "name": "DataForSEO — Keyword Suggestions",
