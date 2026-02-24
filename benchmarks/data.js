@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771940799209,
+  "lastUpdate": 1771944753634,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "386fa94289ac7dea5f83df2db76b7bcf9b35683c",
-          "message": "Merge pull request #10 from markmocasa-boop/claude/german-price-tracker-yEgwi\n\nfeat: add 4 new ScrapingBee shops (Otto, Kaufland, Galaxus, ManoMano)",
-          "timestamp": "2026-01-22T08:20:48+01:00",
-          "tree_id": "a3a12eef1a14ddfef6475c36a49548254e6c5931",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/386fa94289ac7dea5f83df2db76b7bcf9b35683c"
-        },
-        "date": 1769066554724,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4cc03b7e401e296a10c1599b6efa5d98d147336a"
         },
         "date": 1771940798546,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "b0a728eb6420d155ad581490e6c1e3366fa69f8e",
+          "message": "fix: DataForSEO language_name_required expects full name not code\n\nChanged language from \"de\" to \"German\" and location from \"2276\" to\n\"Germany\" for DataForSEO native node parameters. The node sends these\nas language_name/location_name to the API which requires full names.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T15:50:29+01:00",
+          "tree_id": "fcf5cbf5b796b2c23c3f6535d226158cdb7aac93",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b0a728eb6420d155ad581490e6c1e3366fa69f8e"
+        },
+        "date": 1771944753343,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
