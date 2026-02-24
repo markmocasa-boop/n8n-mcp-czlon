@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771945283410,
+  "lastUpdate": 1771946830665,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "dbecfa9c74cd84e25ed6d02b721c2ae709d8ef60",
-          "message": "Merge pull request #12 from markmocasa-boop/claude/linkedin-message-monitoring-vyNbP\n\nfeat: add LinkedIn message monitoring workflow with Unipile API",
-          "timestamp": "2026-01-22T16:36:38+01:00",
-          "tree_id": "6a32a870398d6be56d14c73f260825271eecc0b7",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/dbecfa9c74cd84e25ed6d02b721c2ae709d8ef60"
-        },
-        "date": 1769096310157,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/876aa6d30a39c931da5fa8e430768bfcc1cc1b20"
         },
         "date": 1771945282862,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "fbc5b4ce6c7b96096e1083f7196a78d96307aed8",
+          "message": "fix: WF2 DataForSEO SERP use location_name_required/language_name_required\n\nChanged from location_code/language_code (not recognized by native node)\nto location_name_required/language_name_required with full names.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T16:25:10+01:00",
+          "tree_id": "7b359a9a27d02111c1dac16b1949c4f872617d8a",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fbc5b4ce6c7b96096e1083f7196a78d96307aed8"
+        },
+        "date": 1771946830211,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
