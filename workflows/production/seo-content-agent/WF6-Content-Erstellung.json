@@ -153,14 +153,6 @@
       }
     },
     {
-      "id": "loop-back",
-      "name": "N\u00e4chste Sektion",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [2050, 0],
-      "parameters": {}
-    },
-    {
       "id": "update-status-wf6",
       "name": "Sheets \u2014 Status auf qa",
       "type": "n8n-nodes-base.googleSheets",
@@ -236,9 +228,6 @@
     },
     "Sheets \u2014 Content Draft schreiben": {
       "main": [[{ "node": "Sektionen einzeln verarbeiten", "type": "main", "index": 0 }]]
-    },
-    "N\u00e4chste Sektion": {
-      "main": [[{ "node": "Sheets \u2014 Status auf qa", "type": "main", "index": 0 }]]
     }
   },
   "settings": {

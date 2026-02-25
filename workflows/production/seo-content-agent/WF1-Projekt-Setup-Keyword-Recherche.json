@@ -405,5 +405,8 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "G9cuUnS2bu2vCZGF"
   }
 }

@@ -313,5 +313,8 @@
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "8eWElY86rh30qqrY"
   }
 }
