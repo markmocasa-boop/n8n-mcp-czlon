@@ -157,7 +157,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ \"model\": \"voyage-large-2\", \"input\": $input.all().map(function(i) { return i.json.inhalt; }).slice(0, 50) }) }}",
+        "jsonBody": "={{ JSON.stringify({ \"model\": \"voyage-3-lite\", \"input\": $input.all().map(function(i) { return i.json.inhalt; }).slice(0, 50) }) }}",
         "options": { "timeout": 60000 }
       },
       "id": "wf4-http-11",
@@ -165,7 +165,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [2080, 300],
-      "credentials": { "httpHeaderAuth": { "id": "NEEDS_MANUAL_SETUP", "name": "Voyage AI API" } },
+      "credentials": { "httpHeaderAuth": { "id": "voyage-ai-header-auth", "name": "Voyage AI API" } },
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000

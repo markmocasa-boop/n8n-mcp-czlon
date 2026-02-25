@@ -62,8 +62,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -90,8 +90,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -118,8 +118,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -146,8 +146,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -174,8 +174,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -210,8 +210,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -236,8 +236,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -262,8 +262,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -288,8 +288,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -314,8 +314,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -340,8 +340,8 @@
       },
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "google-drive-oauth2",
-          "name": "Google Drive OAuth2"
+          "id": "Ap8I7jsVqJoRshFc",
+          "name": "Google Drive MarkNiemann1975"
         }
       }
     },
@@ -397,8 +397,8 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "google-sheets-oauth2",
-          "name": "Google Sheets OAuth2"
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -495,7 +495,11 @@
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
     "saveDataErrorExecution": "all",
-    "saveDataSuccessExecution": "all"
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "n8nId": "KDVCn8cTXdijyGAP"
   },
   "tags": []
 }

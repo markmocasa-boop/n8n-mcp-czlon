@@ -1,5 +1,5 @@
 {
-  "id": "4qDvNt5iLbYnChZy",
+  "id": "xXySxmHfntesz7v8",
   "name": "SEO Content Agent — Master Orchestrator",
   "active": false,
   "nodes": [
@@ -43,7 +43,7 @@
         "options": {}
       }
     },
-    {"id": "exec-wf1", "name": "WF1 — Projekt-Setup & Keywords", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [500, 0], "parameters": {"source": "database", "workflowId": "1FZxfz2bGwkLLvPv", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf1", "name": "WF1 — Projekt-Setup & Keywords", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [500, 0], "parameters": {"source": "database", "workflowId": "G9cuUnS2bu2vCZGF", "options": {"waitForSubWorkflow": true}}},
     {
       "id": "extract-spreadsheet-id",
       "name": "Spreadsheet-ID extrahieren",
@@ -92,9 +92,9 @@
         "options": {}
       }
     },
-    {"id": "exec-wf2", "name": "WF2 — SERP-Scraping", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [1500, 0], "parameters": {"source": "database", "workflowId": "Phd0mLpT2PPzo3an", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf2", "name": "WF2 — SERP-Scraping", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [1500, 0], "parameters": {"source": "database", "workflowId": "cBzjPNPpFJC8zMtK", "options": {"waitForSubWorkflow": true}}},
     {"id": "set-wf3-input", "name": "WF3-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [1750, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
-    {"id": "exec-wf3", "name": "WF3 — Deep Analyse (Semantik)", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2000, 0], "parameters": {"source": "database", "workflowId": "PHv6RGRuCu6KpXyL", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf3", "name": "WF3 — Deep Analyse (Semantik)", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2000, 0], "parameters": {"source": "database", "workflowId": "mE8ufIF5H0Z6Ap8l", "options": {"waitForSubWorkflow": true}}},
     {
       "id": "form-expert-input",
       "name": "Expert Input",
@@ -136,15 +136,15 @@
         "options": {}
       }
     },
-    {"id": "exec-wf4", "name": "WF4 — User Insight Mining", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2750, 0], "parameters": {"source": "database", "workflowId": "YU0QUTXiKBgTZ8NH", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf4", "name": "WF4 — User Insight Mining", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [2750, 0], "parameters": {"source": "database", "workflowId": "8eWElY86rh30qqrY", "options": {"waitForSubWorkflow": true}}},
     {"id": "set-wf5-input", "name": "WF5-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [3000, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
-    {"id": "exec-wf5", "name": "WF5 — Gliederung & Freigabe", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3250, 0], "parameters": {"source": "database", "workflowId": "pQKMlA4WoeSWcROs", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf5", "name": "WF5 — Gliederung & Freigabe", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3250, 0], "parameters": {"source": "database", "workflowId": "C7eK32G9cfcnFJ78", "options": {"waitForSubWorkflow": true}}},
     {"id": "set-wf6-input", "name": "WF6-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [3500, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
-    {"id": "exec-wf6", "name": "WF6 — Content-Erstellung", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3750, 0], "parameters": {"source": "database", "workflowId": "yTSOGUG42Ys6Hsez", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf6", "name": "WF6 — Content-Erstellung", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [3750, 0], "parameters": {"source": "database", "workflowId": "1E2YBYz9UUB5wb2q", "options": {"waitForSubWorkflow": true}}},
     {"id": "set-wf7-input", "name": "WF7-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [4000, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
-    {"id": "exec-wf7", "name": "WF7 — QA & Sub-Agenten", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4250, 0], "parameters": {"source": "database", "workflowId": "s1VsRRIonLzgmzrA", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf7", "name": "WF7 — QA & Sub-Agenten", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4250, 0], "parameters": {"source": "database", "workflowId": "WVnoKVXGqjhcAlM4", "options": {"waitForSubWorkflow": true}}},
     {"id": "set-wf8-input", "name": "WF8-Input vorbereiten", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [4500, 0], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}", "type": "string"}]}, "options": {}}},
-    {"id": "exec-wf8", "name": "WF8 — Finalisierung & Export", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4750, 0], "parameters": {"source": "database", "workflowId": "6BKr9pgmySYfr6QD", "options": {"waitForSubWorkflow": true}}},
+    {"id": "exec-wf8", "name": "WF8 — Finalisierung & Export", "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [4750, 0], "parameters": {"source": "database", "workflowId": "KDVCn8cTXdijyGAP", "options": {"waitForSubWorkflow": true}}},
     {
       "id": "projekt-abschluss",
       "name": "Projekt abgeschlossen",

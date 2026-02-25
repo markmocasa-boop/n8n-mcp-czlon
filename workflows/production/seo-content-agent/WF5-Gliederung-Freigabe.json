@@ -47,6 +47,9 @@
         "sheetName": { "mode": "name", "value": "Keywords" },
         "range": "A:Z",
         "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -61,6 +64,9 @@
         "sheetName": { "mode": "name", "value": "Semantische_Analyse" },
         "range": "A:Z",
         "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -75,6 +81,9 @@
         "sheetName": { "mode": "name", "value": "User_Insights" },
         "range": "A:Z",
         "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -160,6 +169,9 @@
           ]
         },
         "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -243,6 +255,9 @@
           "matchingColumns": ["projekt_id"]
         },
         "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -330,7 +345,7 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "meta": {
-    "n8nId": "pQKMlA4WoeSWcROs",
+    "n8nId": "C7eK32G9cfcnFJ78",
     "updatedAt": "2026-02-24T13:34:46.175Z"
   }
 }

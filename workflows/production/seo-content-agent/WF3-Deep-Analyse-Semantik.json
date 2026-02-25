@@ -90,7 +90,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.voyageai.com/v1/embeddings",
-        "authentication": "none",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
@@ -98,10 +99,6 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.VOYAGE_AI_API_KEY }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -111,6 +108,9 @@
         "options": {
           "timeout": 60000
         }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "voyage-ai-header-auth", "name": "Voyage AI API" }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -125,7 +125,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.voyageai.com/v1/embeddings",
-        "authentication": "none",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
@@ -133,10 +134,6 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.VOYAGE_AI_API_KEY }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -146,6 +143,9 @@
         "options": {
           "timeout": 60000
         }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "voyage-ai-header-auth", "name": "Voyage AI API" }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -249,15 +249,18 @@
         },
         "sheetName": {
           "mode": "name",
-          "value": "Status"
+          "value": "Projekt"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
             "status": "user_insights",
-            "last_step": "WF3_semantic_analysis",
-            "updated_at": "={{ $now.toISO() }}"
-          }
+            "zuletzt_aktualisiert": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            { "id": "status", "type": "string", "display": true, "displayName": "status" },
+            { "id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert" }
+          ]
         },
         "options": {
           "cellFormat": "USER_ENTERED"
@@ -337,7 +340,7 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "meta": {
-    "n8nId": "PHv6RGRuCu6KpXyL",
+    "n8nId": "mE8ufIF5H0Z6Ap8l",
     "updatedAt": "2026-02-24T13:33:52.135Z"
   }
 }

@@ -80,7 +80,7 @@
         "resource": "folder",
         "operation": "create",
         "name": "={{ $json.datum_prefix }}_{{ $json.url_slug }}",
-        "driveId": { "__rl": true, "mode": "list", "value": "myDrive" },
+        "driveId": { "__rl": true, "mode": "list", "value": "My Drive" },
         "folderId": { "__rl": true, "mode": "list", "value": "root" },
         "options": {}
       },
@@ -372,12 +372,23 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [0, 250]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 3 Sekunden warten damit Google Sheets API die neuen Tabs propagiert\nawait new Promise(resolve => setTimeout(resolve, 3000));\nreturn $input.all();"
+      },
+      "id": "delay-for-sheets",
+      "name": "Delay 3s",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 150]
     }
   ],
   "connections": {
     "Projekt-Start Formular": { "main": [[{ "node": "Projekt-Variablen setzen", "type": "main", "index": 0 }]] },
     "Projekt-Variablen setzen": { "main": [[{ "node": "Google Drive — Projekt-Ordner", "type": "main", "index": 0 }, { "node": "Google Sheets — Spreadsheet erstellen", "type": "main", "index": 0 }]] },
-    "Google Sheets — Spreadsheet erstellen": { "main": [[{ "node": "Sheets — Projekt-Tab befüllen", "type": "main", "index": 0 }, { "node": "DataForSEO — Matching Keywords", "type": "main", "index": 0 }, { "node": "DataForSEO — Keyword Suggestions", "type": "main", "index": 0 }]] },
+    "Google Sheets — Spreadsheet erstellen": { "main": [[{ "node": "Delay 3s", "type": "main", "index": 0 }, { "node": "DataForSEO — Matching Keywords", "type": "main", "index": 0 }, { "node": "DataForSEO — Keyword Suggestions", "type": "main", "index": 0 }]] },
+    "Delay 3s": { "main": [[{ "node": "Sheets — Projekt-Tab befüllen", "type": "main", "index": 0 }]] },
     "DataForSEO — Matching Keywords": { "main": [[{ "node": "Matching Keywords verarbeiten", "type": "main", "index": 0 }]] },
     "DataForSEO — Keyword Suggestions": { "main": [[{ "node": "Suggestion Keywords verarbeiten", "type": "main", "index": 0 }]] },
     "Matching Keywords verarbeiten": { "main": [[{ "node": "Keywords zusammenführen", "type": "main", "index": 0 }]] },

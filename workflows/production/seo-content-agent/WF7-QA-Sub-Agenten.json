@@ -117,7 +117,7 @@
         "options": {"timeout": 30000}
       },
       "credentials": {
-        "httpHeaderAuth": {"id": "NEEDS_MANUAL_SETUP", "name": "Voyage AI API"}
+        "httpHeaderAuth": {"id": "voyage-ai-header-auth", "name": "Voyage AI API"}
       },
       "retryOnFail": true,
       "maxTries": 3,
