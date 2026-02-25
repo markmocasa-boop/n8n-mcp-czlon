@@ -31,10 +31,7 @@
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": "Google Sheets Account"
-        }
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -57,10 +54,7 @@
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": "Google Sheets Account"
-        }
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -197,10 +191,7 @@
         }
       },
       "credentials": {
-        "anthropicApi": {
-          "id": "",
-          "name": "Anthropic API"
-        }
+        "anthropicApi": { "id": "xJGzDv9YCgZEHb2E", "name": "Claude - 20260127" }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -241,10 +232,7 @@
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": "Google Sheets Account"
-        }
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     },
     {
@@ -276,10 +264,7 @@
         }
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": "Google Sheets Account"
-        }
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
       }
     }
   ],

@@ -89,10 +89,14 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [500, -150],
+      "credentials": {
+        "googleDriveOAuth2Api": { "id": "Ap8I7jsVqJoRshFc", "name": "Google Drive MarkNiemann1975" }
+      },
       "notes": "Erstellt Projekt-Ordner unter SEO Content Agent/Projekte/"
     },
     {
       "parameters": {
+        "resource": "spreadsheet",
         "operation": "create",
         "title": "={{ $json.datum_prefix }}_{{ $json.url_slug }}",
         "sheetsUi": {
@@ -115,6 +119,9 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [500, 150],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      },
       "notes": "Erstellt neues Google Spreadsheet mit allen 9 Projekt-Tabs"
     },
     {
@@ -147,7 +154,10 @@
       "name": "Sheets — Projekt-Tab befüllen",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [800, 150]
+      "position": [800, 150],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      }
     },
     {
       "parameters": {
@@ -165,7 +175,7 @@
       "typeVersion": 1,
       "position": [800, -300],
       "credentials": {
-        "dataForSeoApi": { "id": "", "name": "DataForSEO API" }
+        "dataForSeoApi": { "id": "7moI5XcUYmWsWlQ0", "name": "DataForSEO account" }
       },
       "notes": "DataForSEO native Node: related_keywords — findet thematisch passende Keywords",
       "retryOnFail": true,
@@ -188,7 +198,7 @@
       "typeVersion": 1,
       "position": [800, -100],
       "credentials": {
-        "dataForSeoApi": { "id": "", "name": "DataForSEO API" }
+        "dataForSeoApi": { "id": "7moI5XcUYmWsWlQ0", "name": "DataForSEO account" }
       },
       "notes": "DataForSEO native Node: keyword_suggestions — verwandte Keyword-Vorschläge",
       "retryOnFail": true,
@@ -270,6 +280,9 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [1850, -200],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      },
       "notes": "Schreibt alle Keywords mit Metriken in den Keywords-Tab"
     },
     {
@@ -298,6 +311,9 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [2100, -200],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      },
       "notes": "Setzt Projekt-Status auf 'keyword_auswahl' nach Abschluss"
     },
     {

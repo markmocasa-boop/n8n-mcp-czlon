@@ -99,7 +99,7 @@
         }
       },
       "credentials": {
-        "anthropicApi": { "id": "", "name": "Anthropic API" }
+        "anthropicApi": { "id": "xJGzDv9YCgZEHb2E", "name": "Claude - 20260127" }
       },
       "retryOnFail": true,
       "maxTries": 3,

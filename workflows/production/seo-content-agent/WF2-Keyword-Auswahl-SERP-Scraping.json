@@ -72,7 +72,10 @@
       "name": "Sheets — Keywords als ausgewählt markieren",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [530, 250]
+      "position": [530, 250],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      }
     },
     {
       "parameters": { "batchSize": 1, "options": {} },
@@ -97,7 +100,7 @@
       "typeVersion": 1,
       "position": [1050, 0],
       "credentials": {
-        "dataForSeoApi": { "id": "", "name": "DataForSEO API" }
+        "dataForSeoApi": { "id": "7moI5XcUYmWsWlQ0", "name": "DataForSEO account" }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -126,7 +129,7 @@
       "typeVersion": 1,
       "position": [1550, 0],
       "credentials": {
-        "apifyApi": { "id": "", "name": "Apify API" }
+        "apifyApi": { "id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975" }
       },
       "retryOnFail": true,
       "maxTries": 2,
@@ -171,7 +174,10 @@
       "name": "Sheets — SERP_Wettbewerber schreiben",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2050, 0]
+      "position": [2050, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      }
     },
     {
       "parameters": {
@@ -198,7 +204,10 @@
       "name": "Sheets — Status auf serp_scraping",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2300, 0]
+      "position": [2300, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+      }
     },
     {
       "parameters": {

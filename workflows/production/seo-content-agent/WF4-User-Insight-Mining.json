@@ -57,7 +57,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [560, 300],
-      "credentials": { "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" } }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" } }
     },
     {
       "parameters": {
@@ -83,7 +83,7 @@
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
       "position": [1160, 140],
-      "credentials": { "apifyApi": { "id": "", "name": "Apify API" } },
+      "credentials": { "apifyApi": { "id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975" } },
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 5000
@@ -112,7 +112,7 @@
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
       "position": [1160, 460],
-      "credentials": { "apifyApi": { "id": "", "name": "Apify API" } },
+      "credentials": { "apifyApi": { "id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975" } },
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 5000
@@ -165,7 +165,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [2080, 300],
-      "credentials": { "httpHeaderAuth": { "id": "", "name": "Voyage AI API" } },
+      "credentials": { "httpHeaderAuth": { "id": "NEEDS_MANUAL_SETUP", "name": "Voyage AI API" } },
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000
@@ -212,7 +212,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [2680, 200],
-      "credentials": { "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" } }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" } }
     },
     {
       "parameters": {
@@ -237,7 +237,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [2680, 460],
-      "credentials": { "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets OAuth2" } }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" } }
     },
     {
       "parameters": {
