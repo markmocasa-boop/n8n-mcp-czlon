@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772002683312,
+  "lastUpdate": 1772008911482,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "91f93bb54512e2fb14208340a04345db5d174600",
-          "message": "Merge pull request #16 from markmocasa-boop/claude/n8n-backlink-outreach-XyhQu\n\nfeat: add Backlink Outreach Automatisierung workflow",
-          "timestamp": "2026-01-27T06:59:28+01:00",
-          "tree_id": "5ab8f80dfafb1c136e1a92ea413bbba9c442780e",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/91f93bb54512e2fb14208340a04345db5d174600"
-        },
-        "date": 1769493782108,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a4b96ef82f028d1ac7c2118c96dcef6133d410e8"
         },
         "date": 1772002682496,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "090317dbe1fcc8d38cae684ff577acdd056b37a6",
+          "message": "refactor: redeploy SEO Content Agent workflows with fixes\n\n- Fix WF2/WF6: SplitInBatches done-output now connects to status update\n- Fix WF3: Voyage AI auth switched to httpHeaderAuth credentials\n- Fix WF4: Voyage AI model updated to voyage-3-lite, credential fixed\n- Fix WF5: Added missing Google Sheets credentials to 5 nodes\n- Fix WF6: Added missing Google Sheets credentials to 4 nodes\n- Fix WF7: Voyage AI credential ID fixed\n- Fix WF8: All placeholder credentials replaced with real IDs\n- Master Orchestrator: Updated all sub-workflow IDs after redeployment\n- All 9 workflows redeployed as new (old versions archived)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-25T09:39:45+01:00",
+          "tree_id": "42a5b965a62003f9962f6d111827baa4aef3afba",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/090317dbe1fcc8d38cae684ff577acdd056b37a6"
+        },
+        "date": 1772008911191,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
