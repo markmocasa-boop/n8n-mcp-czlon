@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771952370749,
+  "lastUpdate": 1772002683312,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "7884f0cad01ce70e63285c1f6a6b31f7129123fd",
-          "message": "Merge pull request #15 from markmocasa-boop/claude/n8n-seo-content-workflow-Te5CK\n\nfeat: add Form-based SEO Content Planning workflow",
-          "timestamp": "2026-01-26T19:47:00+01:00",
-          "tree_id": "cee3daba277cce83c71f0e1f85bfdf9b73b282d3",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/7884f0cad01ce70e63285c1f6a6b31f7129123fd"
-        },
-        "date": 1769453324504,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/83e435c9b01b5a90c9f73680b396c6af6414d6bb"
         },
         "date": 1771952370376,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "a4b96ef82f028d1ac7c2118c96dcef6133d410e8",
+          "message": "fix: add real credential IDs to all workflow JSONs (WF1-WF7)\n\nPreviously all credential IDs were empty strings which caused\n\"Found credential with no ID\" errors on deploy via n8n_update_full_workflow.\nAdded real credential IDs for Google Drive, Google Sheets, DataForSEO,\nApify, and Anthropic. Also added resource: \"spreadsheet\" to WF1\nGoogle Sheets create node.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-25T07:55:55+01:00",
+          "tree_id": "c1f842f53c744ed6eae8eb3e50d7e6492d3d7eba",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a4b96ef82f028d1ac7c2118c96dcef6133d410e8"
+        },
+        "date": 1772002682496,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
