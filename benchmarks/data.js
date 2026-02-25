@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772008911482,
+  "lastUpdate": 1772010832803,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "4ce0e0c8e0812af0603f58b2e3d67e7b9c51baa2",
-          "message": "Remove skills-czlon file",
-          "timestamp": "2026-01-27T07:12:16+01:00",
-          "tree_id": "51c6ca3bab3326bcf2d872af329c9f05a8823b9f",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4ce0e0c8e0812af0603f58b2e3d67e7b9c51baa2"
-        },
-        "date": 1769494488319,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/090317dbe1fcc8d38cae684ff577acdd056b37a6"
         },
         "date": 1772008911191,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "d7e101031b050c53424965e274da794174e70a72",
+          "message": "fix: apply czlonkowski/n8n-skills validation fixes to SEO workflows\n\n- WF3: replace .item.json with .first().json in Code nodes and HTTP expressions\n- WF6: remove orphaned \"Nächste Sektion\" NoOp node and connection\n- WF2: replace deprecated continueOnFail with onError: continueRegularOutput\n- WF1/WF2/WF4: add missing meta.n8nId sections\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-25T10:11:42+01:00",
+          "tree_id": "115ce965ea58ed3d5e35eb3b3837508c2bbb1c56",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/d7e101031b050c53424965e274da794174e70a72"
+        },
+        "date": 1772010832040,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
