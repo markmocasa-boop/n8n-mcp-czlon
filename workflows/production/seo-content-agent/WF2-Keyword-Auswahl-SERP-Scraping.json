@@ -1,4 +1,5 @@
 {
+  "id": "cBzjPNPpFJC8zMtK",
   "name": "SEO Agent — WF2: Keyword-Auswahl & SERP-Scraping",
   "nodes": [
     {
@@ -7,13 +8,35 @@
         "formDescription": "Wähle die Keywords aus, die du für deinen Artikel priorisieren möchtest.",
         "formFields": {
           "values": [
-            { "fieldLabel": "Spreadsheet ID", "placeholder": "Die Google Sheets ID aus WF1", "requiredField": true, "fieldType": "text" },
-            { "fieldLabel": "Ausgewählte Keywords", "placeholder": "Kommagetrennt: keyword1, keyword2, keyword3", "requiredField": true, "fieldType": "textarea" },
-            { "fieldLabel": "Custom Keywords", "placeholder": "Zusätzliche Keywords (optional, kommagetrennt)", "requiredField": false, "fieldType": "textarea" },
-            { "fieldLabel": "Notizen zur Suchintention", "placeholder": "z.B. Fokus auf informational Content", "requiredField": false, "fieldType": "textarea" }
+            {
+              "fieldLabel": "Spreadsheet ID",
+              "placeholder": "Die Google Sheets ID aus WF1",
+              "requiredField": true,
+              "fieldType": "text"
+            },
+            {
+              "fieldLabel": "Ausgewählte Keywords",
+              "placeholder": "Kommagetrennt: keyword1, keyword2, keyword3",
+              "requiredField": true,
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Custom Keywords",
+              "placeholder": "Zusätzliche Keywords (optional, kommagetrennt)",
+              "requiredField": false,
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Notizen zur Suchintention",
+              "placeholder": "z.B. Fokus auf informational Content",
+              "requiredField": false,
+              "fieldType": "textarea"
+            }
           ]
         },
-        "options": { "buttonLabel": "Keywords bestätigen" },
+        "options": {
+          "buttonLabel": "Keywords bestätigen"
+        },
         "responseMode": "lastNode"
       },
       "id": "form-kw-auswahl",
@@ -28,10 +51,30 @@
         "duplicateItem": false,
         "assignments": {
           "assignments": [
-            { "id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $json['Spreadsheet ID'] }}", "type": "string" },
-            { "id": "selected_keywords_raw", "name": "selected_keywords_raw", "value": "={{ $json['Ausgewählte Keywords'] }}", "type": "string" },
-            { "id": "custom_keywords_raw", "name": "custom_keywords_raw", "value": "={{ $json['Custom Keywords'] || '' }}", "type": "string" },
-            { "id": "notizen", "name": "notizen", "value": "={{ $json['Notizen zur Suchintention'] || '' }}", "type": "string" }
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $json['Spreadsheet ID'] || $json.spreadsheet_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "selected_keywords_raw",
+              "name": "selected_keywords_raw",
+              "value": "={{ $json['Ausgewählte Keywords'] || $json.selected_keywords || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "custom_keywords_raw",
+              "name": "custom_keywords_raw",
+              "value": "={{ $json['Custom Keywords'] || $json.custom_keywords || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "notizen",
+              "name": "notizen",
+              "value": "={{ $json['Notizen zur Suchintention'] || $json.notizen || '' }}",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -54,31 +97,9 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": { "__rl": true, "mode": "id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}" },
-        "sheetName": { "__rl": true, "mode": "name", "value": "Keywords" },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": { "keyword": "={{ $json.keyword }}", "ausgewaehlt": "ja" },
-          "schema": [
-            { "id": "keyword", "type": "string", "display": true, "displayName": "keyword", "defaultMatch": true, "canBeUsedToMatch": true },
-            { "id": "ausgewaehlt", "type": "string", "display": true, "displayName": "ausgewaehlt" }
-          ],
-          "matchingColumns": ["keyword"]
-        },
+        "batchSize": 1,
         "options": {}
       },
-      "id": "update-kw-selected",
-      "name": "Sheets — Keywords als ausgewählt markieren",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [530, 250],
-      "credentials": {
-        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
-      }
-    },
-    {
-      "parameters": { "batchSize": 1, "options": {} },
       "id": "serp-batch",
       "name": "Keywords einzeln verarbeiten",
       "type": "n8n-nodes-base.splitInBatches",
@@ -100,7 +121,10 @@
       "typeVersion": 1,
       "position": [1050, 0],
       "credentials": {
-        "dataForSeoApi": { "id": "7moI5XcUYmWsWlQ0", "name": "DataForSEO account" }
+        "dataForSeoApi": {
+          "id": "7moI5XcUYmWsWlQ0",
+          "name": "DataForSEO account"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -129,7 +153,10 @@
       "typeVersion": 1,
       "position": [1550, 0],
       "credentials": {
-        "apifyApi": { "id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975" }
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
       },
       "retryOnFail": true,
       "maxTries": 2,
@@ -147,66 +174,72 @@
       "position": [1800, 0]
     },
     {
+      "id": "82c6af17-aac2-4bab-bc41-a6301d9dc144",
+      "name": "Sheets — SERP Wettbewerber schreiben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2050, 0],
       "parameters": {
-        "operation": "append",
-        "documentId": { "__rl": true, "mode": "id", "value": "={{ $json.spreadsheet_id }}" },
-        "sheetName": { "__rl": true, "mode": "name", "value": "SERP_Wettbewerber" },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "keyword": "={{ $json.keyword }}", "position": "={{ $json.position }}", "url": "={{ $json.url }}",
-            "title": "={{ $json.title }}", "content_text": "={{ $json.content_text }}",
-            "wortanzahl": "={{ $json.wortanzahl }}", "h_struktur": "={{ $json.h_struktur }}"
-          },
-          "schema": [
-            { "id": "keyword", "type": "string", "display": true, "displayName": "keyword" },
-            { "id": "position", "type": "string", "display": true, "displayName": "position" },
-            { "id": "url", "type": "string", "display": true, "displayName": "url" },
-            { "id": "title", "type": "string", "display": true, "displayName": "title" },
-            { "id": "content_text", "type": "string", "display": true, "displayName": "content_text" },
-            { "id": "wortanzahl", "type": "string", "display": true, "displayName": "wortanzahl" },
-            { "id": "h_struktur", "type": "string", "display": true, "displayName": "h_struktur" }
-          ]
-        },
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/SERP%20Wettbewerber!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({values: [[$json.keyword || '', $json.position || 0, $json.url || '', $json.title || '', ($json.content_text || '').slice(0, 49000), $json.wortanzahl || 0, $json.h_struktur || '']]}) }}",
         "options": {}
       },
-      "id": "write-serp-tab",
-      "name": "Sheets — SERP_Wettbewerber schreiben",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [2050, 0],
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
       }
     },
     {
+      "id": "f4fca7bc-750e-4e80-974a-378b829db139",
+      "name": "Sheets — Status auf serp_scraping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2300, 0],
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": { "__rl": true, "mode": "id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}" },
-        "sheetName": { "__rl": true, "mode": "name", "value": "Projekt" },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "projekt_id": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}",
-            "status": "deep_analyse",
-            "zuletzt_aktualisiert": "={{ new Date().toISOString() }}"
-          },
-          "schema": [
-            { "id": "projekt_id", "type": "string", "display": true, "displayName": "projekt_id", "defaultMatch": true, "canBeUsedToMatch": true },
-            { "id": "status", "type": "string", "display": true, "displayName": "status" },
-            { "id": "zuletzt_aktualisiert", "type": "string", "display": true, "displayName": "zuletzt_aktualisiert" }
-          ],
-          "matchingColumns": ["projekt_id"]
-        },
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({data: [{range: 'Projekt!C2', values: [['deep_analyse']]}, {range: 'Projekt!E2', values: [[new Date().toISOString()]]}], valueInputOption: 'USER_ENTERED'}) }}",
         "options": {}
       },
-      "id": "update-status-wf2",
-      "name": "Sheets — Status auf serp_scraping",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [2300, 0],
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account" }
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "4c85b8c0-5cf9-44fd-83a4-859aad3ca253",
+      "name": "SERP-Tab Headers schreiben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 100],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}/values/SERP%20Wettbewerber!A1:append?valueInputOption=USER_ENTERED",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({values: [['keyword', 'position', 'url', 'title', 'content_text', 'wortanzahl', 'h_struktur']]}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
       }
     },
     {
@@ -215,8 +248,18 @@
         "duplicateItem": false,
         "assignments": {
           "assignments": [
-            { "id": "message", "name": "message", "value": "=SERP-Scraping abgeschlossen! Die Top-5 Wettbewerber-Seiten für alle ausgewählten Keywords wurden gescraped und gespeichert.", "type": "string" },
-            { "id": "spreadsheet_id", "name": "spreadsheet_id", "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}", "type": "string" }
+            {
+              "id": "message",
+              "name": "message",
+              "value": "=SERP-Scraping abgeschlossen! Die Top-5 Wettbewerber-Seiten für alle ausgewählten Keywords wurden gescraped und gespeichert.",
+              "type": "string"
+            },
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('WF2 Variablen setzen').first().json.spreadsheet_id }}",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -226,26 +269,6 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [2550, 0]
-    },
-    {
-      "parameters": {
-        "content": "## WF2: Keyword-Auswahl & SERP-Scraping\n\n**Zweck:** Ausgewählte Keywords SERP-analysieren & Wettbewerber-Content scrapen\n\n**Ablauf:**\n1. User wählt Keywords via Form + optional Custom Keywords\n2. Keywords werden in Sheets als 'ausgewählt' markiert\n3. Pro Keyword: DataForSEO SERP (Top 5 organisch) via native Node\n4. Pro SERP-Ergebnis: Apify Content Scraping via native Node\n5. Content + Headings in SERP_Wettbewerber-Tab schreiben\n6. Status auf 'deep_analyse' setzen\n\n**API-Credentials benötigt:**\n- DataForSEO (native Community Node)\n- Apify (native Community Node)\n- Google Sheets OAuth2"
-      },
-      "id": "sticky-wf2",
-      "name": "WF2: Keyword-Auswahl & SERP-Scraping",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [-200, -300]
-    },
-    {
-      "parameters": {
-        "content": "## Apify Website Content Crawler (Native Node)\n\n**Node:** @apify/n8n-nodes-apify.apify\n**Operation:** Run actor and get dataset\n**Actor:** apify/website-content-crawler\n\n**Limits:**\n- maxCrawlDepth: 0 (nur die Ziel-URL)\n- maxCrawlPages: 1\n- Content wird auf 10.000 Zeichen gekürzt\n\n**Fallback:** continueOnFail aktiviert"
-      },
-      "id": "sticky-apify",
-      "name": "Apify Scraping",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [1400, -300]
     },
     {
       "parameters": {
@@ -266,17 +289,45 @@
     }
   ],
   "connections": {
-    "Keyword-Auswahl Formular": { "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]] },
-    "WF2 Variablen setzen": { "main": [[{ "node": "Keywords parsen & aufbereiten", "type": "main", "index": 0 }, { "node": "Sheets — Keywords als ausgewählt markieren", "type": "main", "index": 0 }]] },
-    "Keywords parsen & aufbereiten": { "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]] },
-    "Keywords einzeln verarbeiten": { "main": [[{ "node": "Sheets — Status auf serp_scraping", "type": "main", "index": 0 }], [{ "node": "DataForSEO — SERP Organic", "type": "main", "index": 0 }]] },
-    "DataForSEO — SERP Organic": { "main": [[{ "node": "SERP-Ergebnisse verarbeiten", "type": "main", "index": 0 }]] },
-    "SERP-Ergebnisse verarbeiten": { "main": [[{ "node": "Apify — Content Scrapen", "type": "main", "index": 0 }]] },
-    "Apify — Content Scrapen": { "main": [[{ "node": "Scraping-Ergebnisse aufbereiten", "type": "main", "index": 0 }]] },
-    "Scraping-Ergebnisse aufbereiten": { "main": [[{ "node": "Sheets — SERP_Wettbewerber schreiben", "type": "main", "index": 0 }]] },
-    "Sheets — SERP_Wettbewerber schreiben": { "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]] },
-    "Sheets — Status auf serp_scraping": { "main": [[{ "node": "Zusammenfassung WF2", "type": "main", "index": 0 }]] },
-    "Orchestrator-Trigger": { "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]] }
+    "Keyword-Auswahl Formular": {
+      "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]]
+    },
+    "WF2 Variablen setzen": {
+      "main": [[{ "node": "Keywords parsen & aufbereiten", "type": "main", "index": 0 }]]
+    },
+    "Keywords parsen & aufbereiten": {
+      "main": [[{ "node": "SERP-Tab Headers schreiben", "type": "main", "index": 0 }]]
+    },
+    "SERP-Tab Headers schreiben": {
+      "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]]
+    },
+    "Keywords einzeln verarbeiten": {
+      "main": [
+        [{ "node": "Sheets — Status auf serp_scraping", "type": "main", "index": 0 }],
+        [{ "node": "DataForSEO — SERP Organic", "type": "main", "index": 0 }]
+      ]
+    },
+    "DataForSEO — SERP Organic": {
+      "main": [[{ "node": "SERP-Ergebnisse verarbeiten", "type": "main", "index": 0 }]]
+    },
+    "SERP-Ergebnisse verarbeiten": {
+      "main": [[{ "node": "Apify — Content Scrapen", "type": "main", "index": 0 }]]
+    },
+    "Apify — Content Scrapen": {
+      "main": [[{ "node": "Scraping-Ergebnisse aufbereiten", "type": "main", "index": 0 }]]
+    },
+    "Scraping-Ergebnisse aufbereiten": {
+      "main": [[{ "node": "Sheets — SERP Wettbewerber schreiben", "type": "main", "index": 0 }]]
+    },
+    "Sheets — SERP Wettbewerber schreiben": {
+      "main": [[{ "node": "Keywords einzeln verarbeiten", "type": "main", "index": 0 }]]
+    },
+    "Sheets — Status auf serp_scraping": {
+      "main": [[{ "node": "Zusammenfassung WF2", "type": "main", "index": 0 }]]
+    },
+    "Orchestrator-Trigger": {
+      "main": [[{ "node": "WF2 Variablen setzen", "type": "main", "index": 0 }]]
+    }
   },
   "settings": {
     "executionOrder": "v1",
@@ -284,8 +335,5 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "callerPolicy": "workflowsFromSameOwner"
-  },
-  "meta": {
-    "n8nId": "cBzjPNPpFJC8zMtK"
   }
 }
