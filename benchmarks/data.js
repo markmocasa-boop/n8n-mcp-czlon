@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772010832803,
+  "lastUpdate": 1772189147792,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "781886783c05e51c67923af90f3283856d035817",
-          "message": "Merge pull request #17 from markmocasa-boop/claude/n8n-backlink-outreach-XyhQu\n\nrefactor: use native Apify and Anthropic nodes instead of HTTP Request",
-          "timestamp": "2026-01-27T12:33:02+01:00",
-          "tree_id": "d32be36070b996a78c90513e03b1774891faa2b3",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/781886783c05e51c67923af90f3283856d035817"
-        },
-        "date": 1769513693761,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/d7e101031b050c53424965e274da794174e70a72"
         },
         "date": 1772010832040,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "52e16b4f6f70867f222f300a4b23211ace0cba80",
+          "message": "fix: SEO Agent WF2-WF8 — replace broken nodes, add error handling\n\nWF2-WF3: Previous session fixes (Google Sheets HTTP, nested loop)\nWF4: Replace Apify with native Reddit/YouTube nodes, fix Voyage AI rate limit\nWF5: Add onError + try-catch, Form→Set (sub-workflow), defineBelow→HTTP\nWF6: Add onError + try-catch, defineBelow→HTTP Request (2 nodes)\nWF7: Add onError on 3 read nodes, defineBelow→HTTP Request (4 nodes)\nWF8: Add onError on 5 read nodes, try-catch (6 refs), defineBelow→HTTP\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-27T11:43:38+01:00",
+          "tree_id": "96f746d4ddec27621f747a9c970e50a4238da0f7",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/52e16b4f6f70867f222f300a4b23211ace0cba80"
+        },
+        "date": 1772189147469,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
