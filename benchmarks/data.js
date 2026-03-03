@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772513552472,
+  "lastUpdate": 1772515201283,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "ac828f3c6fe8cea25d8d7c0b69c804c93799f0b5",
-          "message": "Merge pull request #18 from markmocasa-boop/claude/n8n-backlink-outreach-XyhQu\n\nClaude/n8n backlink outreach xyh qu",
-          "timestamp": "2026-01-27T14:54:11+01:00",
-          "tree_id": "a6f1bd602aacc2a009b8367f25610523110aacae",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ac828f3c6fe8cea25d8d7c0b69c804c93799f0b5"
-        },
-        "date": 1769522168924,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a8d58e43d72fbd527bd72c031f57595817fe771a"
         },
         "date": 1772513552158,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "10ce145ac0daad2ad89ecf7fe44b81f6e6e96af3",
+          "message": "feat: Etappe 3 — BASHO Email-Sequenz (4 personalisierte B2B-Emails)\n\n17 neue Nodes: GPT BASHO Emails → Parse → 4x Gmail Send → 3x Wait →\n3x Gmail Check → 3x IF Antwort → Sheet Antwort → Ende Sequenz.\nWorkflow hat jetzt 40 Nodes (Etappe 1+2+3 komplett).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T06:17:49+01:00",
+          "tree_id": "5e448319acd2adc1fa07f9fb41f57c2fbd3ad1ce",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/10ce145ac0daad2ad89ecf7fe44b81f6e6e96af3"
+        },
+        "date": 1772515200856,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
