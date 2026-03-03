@@ -1,0 +1,395 @@
+{
+  "id": "O54X9J442WJFax2k",
+  "name": "Geschäftskunden-Akquise mit Bonitätsprüfung (Etappe 1)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000001",
+      "name": "Email Trigger",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "format": "simple"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000002",
+      "name": "GPT Geschäftskunde",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [500, 300],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein Experte für die Analyse von Bestellbestätigungen. Analysiere den folgenden Email-Text und bestimme, ob der Besteller ein Geschäftskunde (B2B) oder ein Privatkunde (B2C) ist.\n\nKriterien für Geschäftskunde:\n- Firmenname in der Adresse\n- USt-IdNr. / Steuernummer vorhanden\n- Gewerbliche Lieferadresse (nicht Wohnadresse)\n- Bestellmenge deutet auf gewerbliche Nutzung hin\n- Branchenspezifische Begriffe (Gastronomie, Hotel, Catering, etc.)\n- \"Firma\", \"GmbH\", \"UG\", \"AG\", \"e.K.\", \"OHG\", \"KG\" im Namen\n\nAntworte ausschließlich im folgenden JSON-Format:\n{\n  \"ist_geschaeftskunde\": true/false,\n  \"konfidenz\": 0.0-1.0,\n  \"firmenname\": \"Name oder null\",\n  \"branche\": \"Erkannte Branche oder null\",\n  \"begruendung\": \"Kurze Begründung\",\n  \"extrahierte_daten\": {\n    \"name\": \"Kontaktname\",\n    \"email\": \"Email-Adresse\",\n    \"adresse\": \"Vollständige Adresse\",\n    \"telefon\": \"Telefonnummer oder null\",\n    \"ust_id\": \"USt-IdNr. oder null\"\n  }\n}"
+              },
+              {
+                "role": "user",
+                "content": "={{ $json.text }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 2000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000003",
+      "name": "Parse Klassifikation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst emailData = $('Email Trigger').first().json;\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      results.push({\n        json: {\n          ...parsed,\n          original_email: {\n            from: emailData.from,\n            subject: emailData.subject,\n            date: emailData.date,\n            text: emailData.text\n          }\n        }\n      });\n    } else {\n      results.push({\n        json: {\n          ist_geschaeftskunde: false,\n          konfidenz: 0,\n          firmenname: null,\n          branche: null,\n          begruendung: 'Kein JSON in GPT-Antwort gefunden',\n          extrahierte_daten: {},\n          original_email: {\n            from: emailData.from,\n            subject: emailData.subject,\n            date: emailData.date\n          }\n        }\n      });\n    }\n  } catch (e) {\n    results.push({\n      json: {\n        ist_geschaeftskunde: false,\n        konfidenz: 0,\n        firmenname: null,\n        branche: null,\n        begruendung: 'Parse-Fehler: ' + e.message,\n        extrahierte_daten: {},\n        original_email: {\n          from: emailData.from,\n          subject: emailData.subject,\n          date: emailData.date\n        }\n      }\n    });\n  }\n}\n\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000004",
+      "name": "Geschäftskunde?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1000, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-biz-1",
+              "leftValue": "={{ $json.ist_geschaeftskunde }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-biz-2",
+              "leftValue": "={{ $json.konfidenz }}",
+              "rightValue": 0.7,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000005",
+      "name": "Ende Privatkunde",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1250, 500],
+      "parameters": {}
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000006",
+      "name": "Creditsafe Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1250, 300],
+      "parameters": {
+        "url": "https://connect.creditsafe.com/v1/authenticate",
+        "method": "POST",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ username: $env.CREDITSAFE_USERNAME, password: $env.CREDITSAFE_PASSWORD }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000007",
+      "name": "Creditsafe Suche",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1500, 300],
+      "parameters": {
+        "url": "https://connect.creditsafe.com/v1/companies",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Creditsafe Auth').first().json.token }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "countries", "value": "DE" },
+            { "name": "name", "value": "={{ $('Parse Klassifikation').first().json.firmenname }}" }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000008",
+      "name": "Firma extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1750, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst classData = $('Parse Klassifikation').first().json;\nlet authToken = null;\ntry { authToken = $('Creditsafe Auth').first().json.token; } catch(e) {}\n\nconst results = [];\n\nfor (const item of items) {\n  const companies = item.json.companies || [];\n\n  if (!authToken) {\n    results.push({\n      json: {\n        ...classData,\n        creditsafe_error: true,\n        creditsafe_error_msg: 'Authentifizierung fehlgeschlagen',\n        company_id: null,\n        company_found: false\n      }\n    });\n  } else if (companies.length > 0) {\n    results.push({\n      json: {\n        ...classData,\n        creditsafe_error: false,\n        company_id: companies[0].id,\n        company_name_cs: companies[0].name,\n        company_found: true\n      }\n    });\n  } else {\n    results.push({\n      json: {\n        ...classData,\n        creditsafe_error: true,\n        creditsafe_error_msg: 'Keine Firma bei Creditsafe gefunden',\n        company_id: null,\n        company_found: false\n      }\n    });\n  }\n}\n\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000009",
+      "name": "Creditsafe Bericht",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2000, 300],
+      "parameters": {
+        "url": "=https://connect.creditsafe.com/v1/companies/{{ $json.company_id }}",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Creditsafe Auth').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000010",
+      "name": "GPT Ampel-Bewertung",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [2250, 300],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein Bonitätsanalyst. Bewerte die folgenden Creditsafe-Daten und ordne dem Unternehmen eine Ampelfarbe zu.\n\nBewertungskriterien:\n\nGRÜN (Guter Lead — sofort kontaktieren):\n- Creditsafe Score >= 70\n- Keine negativen Zahlungserfahrungen\n- Unternehmen existiert seit > 2 Jahren\n- Keine Insolvenzverfahren\n\nGELB (Prüfung nötig — monatlich neu bewerten):\n- Creditsafe Score 40-69\n- Leichte Zahlungsverzögerungen\n- Junges Unternehmen (< 2 Jahre)\n- Unvollständige Daten\n\nROT (Kein Lead — nicht kontaktieren):\n- Creditsafe Score < 40\n- Schwere Zahlungsstörungen\n- Laufendes Insolvenzverfahren\n- Unternehmen aufgelöst/in Liquidation\n\nWICHTIG: Wenn keine Creditsafe-Daten verfügbar sind (API-Fehler, Firma nicht gefunden, oder creditsafe_error ist true), ordne automatisch GELB zu mit der Begründung 'Keine Bonitätsdaten verfügbar - manuelle Prüfung erforderlich'.\n\nAntworte ausschließlich im folgenden JSON-Format:\n{\n  \"ampel\": \"GRUEN\" | \"GELB\" | \"ROT\",\n  \"score\": <Creditsafe-Score oder 0>,\n  \"begruendung\": \"Kurze Begründung der Einstufung\",\n  \"risikofaktoren\": [\"Faktor 1\", \"Faktor 2\"],\n  \"empfehlung\": \"Handlungsempfehlung\"\n}"
+              },
+              {
+                "role": "user",
+                "content": "=Firmendaten:\nFirmenname: {{ $('Parse Klassifikation').first().json.firmenname }}\nBranche: {{ $('Parse Klassifikation').first().json.branche }}\nCreditsafe-Error: {{ $('Firma extrahieren').first().json.creditsafe_error }}\nCreditsafe-Error-Msg: {{ $('Firma extrahieren').first().json.creditsafe_error_msg ?? 'keine' }}\n\nCreditsafe-Bericht:\n{{ JSON.stringify($json) }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0,
+          "maxTokens": 1000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000011",
+      "name": "Parse Ampel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2500, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst classData = $('Parse Klassifikation').first().json;\nconst extractData = $('Firma extrahieren').first().json;\nlet csReport = {};\ntry { csReport = $('Creditsafe Bericht').first().json; } catch(e) {}\n\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      results.push({\n        json: {\n          firmenname: classData.firmenname,\n          branche: classData.branche,\n          extrahierte_daten: classData.extrahierte_daten,\n          original_email: classData.original_email,\n          company_id: extractData.company_id,\n          company_found: extractData.company_found,\n          creditsafe_error: extractData.creditsafe_error,\n          ampel: parsed.ampel,\n          score: parsed.score,\n          ampel_begruendung: parsed.begruendung,\n          risikofaktoren: parsed.risikofaktoren,\n          empfehlung: parsed.empfehlung,\n          creditsafe_raw: csReport\n        }\n      });\n    } else {\n      results.push({\n        json: {\n          firmenname: classData.firmenname,\n          branche: classData.branche,\n          extrahierte_daten: classData.extrahierte_daten,\n          original_email: classData.original_email,\n          ampel: 'GELB',\n          score: 0,\n          ampel_begruendung: 'GPT-Antwort konnte nicht geparst werden',\n          risikofaktoren: ['Parse-Fehler'],\n          empfehlung: 'Manuelle Bonitätsprüfung durchführen'\n        }\n      });\n    }\n  } catch (e) {\n    results.push({\n      json: {\n        firmenname: classData.firmenname,\n        branche: classData.branche,\n        extrahierte_daten: classData.extrahierte_daten,\n        original_email: classData.original_email,\n        ampel: 'GELB',\n        score: 0,\n        ampel_begruendung: 'Fehler: ' + e.message,\n        risikofaktoren: ['Verarbeitungsfehler'],\n        empfehlung: 'Manuelle Bonitätsprüfung durchführen'\n      }\n    });\n  }\n}\n\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000012",
+      "name": "Ampel Routing",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [2750, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "GRUEN",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "GRUEN"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "GELB",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "GELB"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "ROT",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ROT"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000013",
+      "name": "Ausgang GRÜN",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3000, 150],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "assign-status", "name": "status", "value": "GRUEN - Weiter zu Enrichment", "type": "string" },
+            { "id": "assign-timestamp", "name": "pruefungsdatum", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000014",
+      "name": "Sheet GELB",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [3000, 300],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "mode": "url", "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE" },
+        "sheetName": { "mode": "name", "value": "GELB - Monatliche Prüfung" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead-ID": "={{ $now.toMillis() }}",
+            "Datum Erstprüfung": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Firmenname": "={{ $json.firmenname }}",
+            "Branche": "={{ $json.branche }}",
+            "Creditsafe Score": "={{ $json.score }}",
+            "Ampel-Begründung": "={{ $json.ampel_begruendung }}",
+            "Nächste Prüfung": "={{ $now.plus({ days: 30 }).toFormat('yyyy-MM-dd') }}",
+            "Anzahl Prüfungen": "=1",
+            "Status": "Wartet auf Neubewertung",
+            "Email": "={{ $json.extrahierte_daten.email ?? '' }}",
+            "Kontaktperson": "={{ $json.extrahierte_daten.name ?? '' }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000015",
+      "name": "Sheet ROT",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [3000, 450],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "mode": "url", "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE" },
+        "sheetName": { "mode": "name", "value": "ROT - Abgelehnt" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead-ID": "={{ $now.toMillis() }}",
+            "Datum": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Firmenname": "={{ $json.firmenname }}",
+            "Score": "={{ $json.score }}",
+            "Ablehnungsgrund": "={{ $json.ampel_begruendung }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Email Trigger": { "main": [[{ "node": "GPT Geschäftskunde", "type": "main", "index": 0 }]] },
+    "GPT Geschäftskunde": { "main": [[{ "node": "Parse Klassifikation", "type": "main", "index": 0 }]] },
+    "Parse Klassifikation": { "main": [[{ "node": "Geschäftskunde?", "type": "main", "index": 0 }]] },
+    "Geschäftskunde?": { "main": [[{ "node": "Creditsafe Auth", "type": "main", "index": 0 }], [{ "node": "Ende Privatkunde", "type": "main", "index": 0 }]] },
+    "Creditsafe Auth": { "main": [[{ "node": "Creditsafe Suche", "type": "main", "index": 0 }]] },
+    "Creditsafe Suche": { "main": [[{ "node": "Firma extrahieren", "type": "main", "index": 0 }]] },
+    "Firma extrahieren": { "main": [[{ "node": "Creditsafe Bericht", "type": "main", "index": 0 }]] },
+    "Creditsafe Bericht": { "main": [[{ "node": "GPT Ampel-Bewertung", "type": "main", "index": 0 }]] },
+    "GPT Ampel-Bewertung": { "main": [[{ "node": "Parse Ampel", "type": "main", "index": 0 }]] },
+    "Parse Ampel": { "main": [[{ "node": "Ampel Routing", "type": "main", "index": 0 }]] },
+    "Ampel Routing": { "main": [[{ "node": "Ausgang GRÜN", "type": "main", "index": 0 }], [{ "node": "Sheet GELB", "type": "main", "index": 0 }], [{ "node": "Sheet ROT", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
