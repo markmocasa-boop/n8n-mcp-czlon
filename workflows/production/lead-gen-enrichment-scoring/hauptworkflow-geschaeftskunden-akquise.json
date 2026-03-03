@@ -38,18 +38,16 @@
         "operation": "complete",
         "chatModel": "gpt-4o",
         "prompt": {
-          "messages": {
-            "values": [
-              {
-                "role": "system",
-                "content": "Du bist ein Experte für die Analyse von Bestellbestätigungen. Analysiere den folgenden Email-Text und bestimme, ob der Besteller ein Geschäftskunde (B2B) oder ein Privatkunde (B2C) ist.\n\nKriterien für Geschäftskunde:\n- Firmenname in der Adresse\n- USt-IdNr. / Steuernummer vorhanden\n- Gewerbliche Lieferadresse\n- Bestellmenge deutet auf gewerbliche Nutzung hin\n- Branchenspezifische Begriffe\n- \"Firma\", \"GmbH\", \"UG\", \"AG\", \"e.K.\", \"OHG\", \"KG\" im Namen\n\nAntworte als JSON:\n{\"ist_geschaeftskunde\":true/false,\"konfidenz\":0.0-1.0,\"firmenname\":\"Name oder null\",\"branche\":\"Branche oder null\",\"begruendung\":\"...\",\"extrahierte_daten\":{\"name\":\"\",\"email\":\"\",\"adresse\":\"\",\"telefon\":null,\"ust_id\":null}}"
-              },
-              {
-                "role": "user",
-                "content": "={{ $json.text }}"
-              }
-            ]
-          }
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein Experte für die Analyse von Bestellbestätigungen. Analysiere den folgenden Email-Text und bestimme, ob der Besteller ein Geschäftskunde (B2B) oder ein Privatkunde (B2C) ist.\n\nKriterien für Geschäftskunde:\n- Firmenname in der Adresse\n- USt-IdNr. / Steuernummer vorhanden\n- Gewerbliche Lieferadresse\n- Bestellmenge deutet auf gewerbliche Nutzung hin\n- Branchenspezifische Begriffe\n- \"Firma\", \"GmbH\", \"UG\", \"AG\", \"e.K.\", \"OHG\", \"KG\" im Namen\n\nAntworte als JSON:\n{\"ist_geschaeftskunde\":true/false,\"konfidenz\":0.0-1.0,\"firmenname\":\"Name oder null\",\"branche\":\"Branche oder null\",\"begruendung\":\"...\",\"extrahierte_daten\":{\"name\":\"\",\"email\":\"\",\"adresse\":\"\",\"telefon\":null,\"ust_id\":null}}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.text }}"
+            }
+          ]
         },
         "simplifyOutput": true,
         "options": {
@@ -252,18 +250,16 @@
         "operation": "complete",
         "chatModel": "gpt-4o",
         "prompt": {
-          "messages": {
-            "values": [
-              {
-                "role": "system",
-                "content": "Du bist ein Bonitätsanalyst. Bewerte Creditsafe-Daten und ordne eine Ampelfarbe zu.\nGRÜN: Score>=70, keine Negativmerkmale, >2 Jahre\nGELB: Score 40-69, leichte Verzögerungen, <2 Jahre, unvollständig\nROT: Score<40, schwere Störungen, Insolvenz\nBei creditsafe_error=true: GELB zuordnen.\nAntwort als JSON: {\"ampel\":\"GRUEN|GELB|ROT\",\"score\":0,\"begruendung\":\"...\",\"risikofaktoren\":[],\"empfehlung\":\"...\"}"
-              },
-              {
-                "role": "user",
-                "content": "=Firma: {{ $('Parse Klassifikation').first().json.firmenname }}\nBranche: {{ $('Parse Klassifikation').first().json.branche }}\nCS-Error: {{ $('Firma extrahieren').first().json.creditsafe_error }}\nCS-Msg: {{ $('Firma extrahieren').first().json.creditsafe_error_msg ?? 'keine' }}\nBericht: {{ JSON.stringify($json) }}"
-              }
-            ]
-          }
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein Bonitätsanalyst. Bewerte Creditsafe-Daten und ordne eine Ampelfarbe zu.\nGRÜN: Score>=70, keine Negativmerkmale, >2 Jahre\nGELB: Score 40-69, leichte Verzögerungen, <2 Jahre, unvollständig\nROT: Score<40, schwere Störungen, Insolvenz\nBei creditsafe_error=true: GELB zuordnen.\nAntwort als JSON: {\"ampel\":\"GRUEN|GELB|ROT\",\"score\":0,\"begruendung\":\"...\",\"risikofaktoren\":[],\"empfehlung\":\"...\"}"
+            },
+            {
+              "role": "user",
+              "content": "=Firma: {{ $('Parse Klassifikation').first().json.firmenname }}\nBranche: {{ $('Parse Klassifikation').first().json.branche }}\nCS-Error: {{ $('Firma extrahieren').first().json.creditsafe_error }}\nCS-Msg: {{ $('Firma extrahieren').first().json.creditsafe_error_msg ?? 'keine' }}\nBericht: {{ JSON.stringify($json) }}"
+            }
+          ]
         },
         "simplifyOutput": true,
         "options": {
@@ -629,18 +625,16 @@
         "operation": "complete",
         "chatModel": "gpt-4.1",
         "prompt": {
-          "messages": {
-            "values": [
-              {
-                "role": "system",
-                "content": "Du bist ein B2B Sales Analyst. Erstelle einen Lead-Report als JSON:\n{\"zusammenfassung\":\"...\",\"unternehmensprofil\":{\"name\":\"\",\"branche\":\"\",\"groesse\":\"\",\"standort\":\"\",\"website\":\"\",\"linkedin\":\"\"},\"kontaktpersonen\":[{\"name\":\"\",\"position\":\"\",\"email\":\"\"}],\"verkaufschancen\":{\"potenzial\":\"\",\"bedarfe\":[],\"pain_points\":[],\"einstiegspunkte\":[]},\"aktuelle_news\":[],\"wettbewerber\":[],\"empfohlene_ansprache\":\"\"}"
-              },
-              {
-                "role": "user",
-                "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nBonität: {{ $json.ampel }} ({{ $json.score }})\nQuellen: {{ $json.quellen_verfuegbar.join(', ') }}\nApollo: {{ JSON.stringify($json.enrichment.apollo) }}\nLinkedIn: {{ JSON.stringify($json.enrichment.linkedin) }}\nTavily: {{ JSON.stringify($json.enrichment.tavily) }}\nPerplexity: {{ JSON.stringify($json.enrichment.perplexity) }}\nEmail: {{ JSON.stringify($json.extrahierte_daten) }}"
-              }
-            ]
-          }
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein B2B Sales Analyst. Erstelle einen Lead-Report als JSON:\n{\"zusammenfassung\":\"...\",\"unternehmensprofil\":{\"name\":\"\",\"branche\":\"\",\"groesse\":\"\",\"standort\":\"\",\"website\":\"\",\"linkedin\":\"\"},\"kontaktpersonen\":[{\"name\":\"\",\"position\":\"\",\"email\":\"\"}],\"verkaufschancen\":{\"potenzial\":\"\",\"bedarfe\":[],\"pain_points\":[],\"einstiegspunkte\":[]},\"aktuelle_news\":[],\"wettbewerber\":[],\"empfohlene_ansprache\":\"\"}"
+            },
+            {
+              "role": "user",
+              "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nBonität: {{ $json.ampel }} ({{ $json.score }})\nQuellen: {{ $json.quellen_verfuegbar.join(', ') }}\nApollo: {{ JSON.stringify($json.enrichment.apollo) }}\nLinkedIn: {{ JSON.stringify($json.enrichment.linkedin) }}\nTavily: {{ JSON.stringify($json.enrichment.tavily) }}\nPerplexity: {{ JSON.stringify($json.enrichment.perplexity) }}\nEmail: {{ JSON.stringify($json.extrahierte_daten) }}"
+            }
+          ]
         },
         "simplifyOutput": true,
         "options": {
@@ -730,18 +724,16 @@
         "operation": "complete",
         "chatModel": "gpt-4o",
         "prompt": {
-          "messages": {
-            "values": [
-              {
-                "role": "system",
-                "content": "Du bist ein B2B-Vertriebsexperte. Schreibe personalisierte BASHO-Emails auf Deutsch.\n\nEmail 1: Persönlicher Einstieg — aktuelle Situation\nEmail 2: Mehrwert — Pain Points ansprechen\nEmail 3: Social Proof — Branchenbeispiel\nEmail 4: Break-Up — respektvoller Abschluss\n\nRegeln: Sie-Form, max 5-7 Sätze, HTML (<p>/<br>), Signatur: {{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}\n\nJSON: {\"email1_subject\":\"...\",\"email1_body\":\"<p>...</p>\",\"email2_subject\":\"...\",\"email2_body\":\"<p>...</p>\",\"email3_subject\":\"...\",\"email3_body\":\"<p>...</p>\",\"email4_subject\":\"...\",\"email4_body\":\"<p>...</p>\"}"
-              },
-              {
-                "role": "user",
-                "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nAnsprechpartner: {{ $json.kontaktperson }} ({{ $json.position }})\nZusammenfassung: {{ $json.zusammenfassung }}\nBedarfe: {{ $json.bedarfe }}\nPain Points: {{ $json.pain_points }}\nAnsprache: {{ $json.empfohlene_ansprache }}\nNews: {{ $json.aktuelle_news }}\nPotenzial: {{ $json.verkaufspotenzial }}"
-              }
-            ]
-          }
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein B2B-Vertriebsexperte. Schreibe personalisierte BASHO-Emails auf Deutsch.\n\nEmail 1: Persönlicher Einstieg – aktuelle Situation\nEmail 2: Mehrwert – Pain Points ansprechen\nEmail 3: Social Proof – Branchenbeispiel\nEmail 4: Break-Up – respektvoller Abschluss\n\nRegeln: Sie-Form, max 5-7 Sätze, HTML (<p>/<br>), Signatur: {{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}\n\nJSON: {\"email1_subject\":\"...\",\"email1_body\":\"<p>...</p>\",\"email2_subject\":\"...\",\"email2_body\":\"<p>...</p>\",\"email3_subject\":\"...\",\"email3_body\":\"<p>...</p>\",\"email4_subject\":\"...\",\"email4_body\":\"<p>...</p>\"}"
+            },
+            {
+              "role": "user",
+              "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nAnsprechpartner: {{ $json.kontaktperson }} ({{ $json.position }})\nZusammenfassung: {{ $json.zusammenfassung }}\nBedarfe: {{ $json.bedarfe }}\nPain Points: {{ $json.pain_points }}\nAnsprache: {{ $json.empfohlene_ansprache }}\nNews: {{ $json.aktuelle_news }}\nPotenzial: {{ $json.verkaufspotenzial }}"
+            }
+          ]
         },
         "simplifyOutput": true,
         "options": {
@@ -1613,5 +1605,6 @@
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
-  }
+  },
+  "tags": []
 }

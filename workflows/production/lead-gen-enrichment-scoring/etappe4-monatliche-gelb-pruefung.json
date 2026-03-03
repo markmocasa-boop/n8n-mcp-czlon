@@ -1,6 +1,6 @@
 {
   "id": "0IxkfyH9QPavdTPy",
-  "name": "Monatliche GELB-Prüfung (Etappe 4)",
+  "name": "Monatliche GELB-Pr\u00fcfung (Etappe 4)",
   "active": false,
   "nodes": [
     {
@@ -8,10 +8,7 @@
       "name": "Schedule Monatlich",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
-      "position": [
-        250,
-        300
-      ],
+      "position": [250, 300],
       "parameters": {
         "rule": {
           "interval": [
@@ -29,22 +26,11 @@
       "name": "Read GELB Leads",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [
-        500,
-        300
-      ],
+      "position": [500, 300],
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" },
         "range": "A:F",
         "options": {}
       }
@@ -54,10 +40,7 @@
       "name": "IF Hat Leads?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        750,
-        300
-      ],
+      "position": [750, 300],
       "parameters": {
         "conditions": {
           "options": {
@@ -86,10 +69,7 @@
       "name": "Ende Keine Leads",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        1000,
-        500
-      ],
+      "position": [1000, 500],
       "parameters": {}
     },
     {
@@ -97,10 +77,7 @@
       "name": "Creditsafe Auth",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        1000,
-        300
-      ],
+      "position": [1000, 300],
       "parameters": {
         "method": "POST",
         "url": "https://connect.creditsafe.com/v1/authenticate",
@@ -109,9 +86,7 @@
         "jsonBody": "={{ JSON.stringify({username: $env.CREDITSAFE_USERNAME, password: $env.CREDITSAFE_PASSWORD}) }}",
         "options": {
           "response": {
-            "response": {
-              "responseFormat": "json"
-            }
+            "response": { "responseFormat": "json" }
           }
         }
       },
@@ -124,10 +99,7 @@
       "name": "Prepare Leads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1250,
-        300
-      ],
+      "position": [1250, 300],
       "parameters": {
         "jsCode": "const token = $input.first().json.token;\nconst leads = $('Read GELB Leads').all();\nreturn leads.map(lead => ({\n  json: { ...lead.json, cs_token: token }\n}));"
       }
@@ -137,44 +109,27 @@
       "name": "Creditsafe Suche",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        1500,
-        300
-      ],
+      "position": [1500, 300],
       "parameters": {
         "method": "GET",
         "url": "https://connect.creditsafe.com/v1/companies",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "countries",
-              "value": "DE"
-            },
-            {
-              "name": "name",
-              "value": "={{ $json.Firmenname }}"
-            },
-            {
-              "name": "postCode",
-              "value": "={{ $json.PLZ || '' }}"
-            }
+            { "name": "countries", "value": "DE" },
+            { "name": "name", "value": "={{ $json.Firmenname }}" },
+            { "name": "postCode", "value": "={{ $json.PLZ || '' }}" }
           ]
         },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $json.cs_token }}"
-            }
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $json.cs_token }}" }
           ]
         },
         "options": {
           "response": {
-            "response": {
-              "responseFormat": "json"
-            }
+            "response": { "responseFormat": "json" }
           }
         }
       },
@@ -187,10 +142,7 @@
       "name": "Merge Suche",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1750,
-        300
-      ],
+      "position": [1750, 300],
       "parameters": {
         "jsCode": "const leads = $('Prepare Leads').all();\nconst results = $input.all();\nreturn results.map((r, i) => {\n  const lead = leads[i]?.json || {};\n  const companies = r.json?.companies || [];\n  const company = companies[0] || null;\n  return {\n    json: {\n      ...lead,\n      cs_found: !!company,\n      cs_company_id: company?.id || null,\n      cs_company_name: company?.name || null\n    }\n  };\n});"
       }
@@ -200,10 +152,7 @@
       "name": "IF Firma gefunden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        2000,
-        300
-      ],
+      "position": [2000, 300],
       "parameters": {
         "conditions": {
           "options": {
@@ -232,44 +181,27 @@
       "name": "Creditsafe Bericht",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        2250,
-        200
-      ],
+      "position": [2250, 200],
       "parameters": {
         "method": "GET",
         "url": "={{ 'https://connect.creditsafe.com/v1/companies/' + $json.cs_company_id }}",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "language",
-              "value": "de"
-            },
-            {
-              "name": "template",
-              "value": "full"
-            },
-            {
-              "name": "customData",
-              "value": "de_reason_code::1"
-            }
+            { "name": "language", "value": "de" },
+            { "name": "template", "value": "full" },
+            { "name": "customData", "value": "de_reason_code::1" }
           ]
         },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $json.cs_token }}"
-            }
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $json.cs_token }}" }
           ]
         },
         "options": {
           "response": {
-            "response": {
-              "responseFormat": "json"
-            }
+            "response": { "responseFormat": "json" }
           }
         }
       },
@@ -282,52 +214,26 @@
       "name": "Merge Bericht",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2500,
-        200
-      ],
+      "position": [2500, 200],
       "parameters": {
         "jsCode": "const allLeads = $('Merge Suche').all();\nconst foundLeads = allLeads.filter(l => l.json.cs_found);\nconst reports = $input.all();\nreturn reports.map((report, i) => {\n  const lead = foundLeads[i]?.json || {};\n  const cs = report.json?.report?.creditScore?.currentCreditRating || {};\n  return {\n    json: {\n      ...lead,\n      cs_credit_score: cs.commonValue ?? 'N/A',\n      cs_credit_rating: cs.providerValue?.value ?? 'N/A',\n      cs_credit_limit: cs.creditLimit?.value ?? 0,\n      cs_insolvency: report.json?.report?.additionalInformation?.insolvencyFlag ?? false\n    }\n  };\n});"
       }
     },
     {
       "id": "b1afdade-25fa-4277-9ba9-df6b4c42bced",
-      "name": "Set Ohne Bonität",
+      "name": "Set Ohne Bonit\u00e4t",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        2250,
-        450
-      ],
+      "position": [2250, 450],
       "parameters": {
         "mode": "manual",
         "duplicateItem": false,
         "assignments": {
           "assignments": [
-            {
-              "id": "set-score",
-              "name": "cs_credit_score",
-              "value": "nicht_verfuegbar",
-              "type": "string"
-            },
-            {
-              "id": "set-rating",
-              "name": "cs_credit_rating",
-              "value": "nicht_verfuegbar",
-              "type": "string"
-            },
-            {
-              "id": "set-limit",
-              "name": "cs_credit_limit",
-              "value": "0",
-              "type": "string"
-            },
-            {
-              "id": "set-insolvency",
-              "name": "cs_insolvency",
-              "value": "false",
-              "type": "string"
-            }
+            { "id": "set-score", "name": "cs_credit_score", "value": "nicht_verfuegbar", "type": "string" },
+            { "id": "set-rating", "name": "cs_credit_rating", "value": "nicht_verfuegbar", "type": "string" },
+            { "id": "set-limit", "name": "cs_credit_limit", "value": "0", "type": "string" },
+            { "id": "set-insolvency", "name": "cs_insolvency", "value": "false", "type": "string" }
           ]
         },
         "includeOtherFields": true
@@ -335,13 +241,10 @@
     },
     {
       "id": "23bb4c99-ae0b-488b-b5ac-22e9e1fafcbe",
-      "name": "Merge Bonität",
+      "name": "Merge Bonit\u00e4t",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.1,
-      "position": [
-        2750,
-        300
-      ],
+      "position": [2750, 300],
       "parameters": {
         "mode": "append"
       }
@@ -351,27 +254,22 @@
       "name": "GPT Neu-Bewertung",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1.1,
-      "position": [
-        3000,
-        300
-      ],
+      "position": [3000, 300],
       "parameters": {
         "resource": "chat",
         "operation": "complete",
         "chatModel": "gpt-4o",
         "prompt": {
-          "messages": {
-            "values": [
-              {
-                "role": "system",
-                "content": "Du bist ein B2B-Lead-Bewertungsexperte. Bewerte den folgenden GELB-Lead neu basierend auf den aktuellen Creditsafe-Daten.\n\nBewertungskriterien:\n- Credit Score > 50 und Rating A-C = GRUEN (aufwerten)\n- Credit Score 30-50 oder Rating D = GELB (beibehalten)\n- Credit Score < 30 oder Rating E-F oder Insolvenz = ROT (abwerten)\n- Keine Bonitaetsdaten verfuegbar = GELB (beibehalten)\n\nAntworte NUR als JSON:\n{\"neue_ampel\":\"GRUEN/GELB/ROT\",\"neuer_score\":0-100,\"begruendung\":\"...\",\"aenderung\":\"UPGRADE/KEINE/DOWNGRADE\"}"
-              },
-              {
-                "role": "user",
-                "content": "={{ 'Firmenname: ' + ($json.Firmenname || 'unbekannt') + '\\nBranche: ' + ($json.Branche || 'unbekannt') + '\\nAlte Ampel: GELB\\nCredit Score: ' + ($json.cs_credit_score || 'nicht verfuegbar') + '\\nCredit Rating: ' + ($json.cs_credit_rating || 'nicht verfuegbar') + '\\nCredit Limit: ' + ($json.cs_credit_limit || '0') + '\\nInsolvenz: ' + ($json.cs_insolvency || 'false') }}"
-              }
-            ]
-          }
+          "messages": [
+            {
+              "role": "system",
+              "content": "Du bist ein B2B-Lead-Bewertungsexperte. Bewerte den folgenden GELB-Lead neu basierend auf den aktuellen Creditsafe-Daten.\n\nBewertungskriterien:\n- Credit Score > 50 und Rating A-C = GRUEN (aufwerten)\n- Credit Score 30-50 oder Rating D = GELB (beibehalten)\n- Credit Score < 30 oder Rating E-F oder Insolvenz = ROT (abwerten)\n- Keine Bonitaetsdaten verfuegbar = GELB (beibehalten)\n\nAntworte NUR als JSON:\n{\"neue_ampel\":\"GRUEN/GELB/ROT\",\"neuer_score\":0-100,\"begruendung\":\"...\",\"aenderung\":\"UPGRADE/KEINE/DOWNGRADE\"}"
+            },
+            {
+              "role": "user",
+              "content": "={{ 'Firmenname: ' + ($json.Firmenname || 'unbekannt') + '\\nBranche: ' + ($json.Branche || 'unbekannt') + '\\nAlte Ampel: GELB\\nCredit Score: ' + ($json.cs_credit_score || 'nicht verfuegbar') + '\\nCredit Rating: ' + ($json.cs_credit_rating || 'nicht verfuegbar') + '\\nCredit Limit: ' + ($json.cs_credit_limit || '0') + '\\nInsolvenz: ' + ($json.cs_insolvency || 'false') }}"
+            }
+          ]
         },
         "options": {
           "temperature": 0.2,
@@ -379,10 +277,7 @@
         }
       },
       "credentials": {
-        "openAiApi": {
-          "id": "",
-          "name": ""
-        }
+        "openAiApi": { "id": "", "name": "" }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -393,12 +288,9 @@
       "name": "Parse Bewertung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        3250,
-        300
-      ],
+      "position": [3250, 300],
       "parameters": {
-        "jsCode": "const leads = $('Merge Bonität').all();\nconst responses = $input.all();\nreturn responses.map((r, i) => {\n  const lead = leads[i]?.json || {};\n  try {\n    const content = r.json.content || r.json.message?.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const b = JSON.parse(jsonMatch[0]);\n      return { json: { ...lead, neue_ampel: b.neue_ampel || 'GELB', neuer_score: b.neuer_score || 50, begruendung: b.begruendung || '', aenderung: b.aenderung || 'KEINE', letzte_pruefung: $now.toISO() } };\n    }\n  } catch(e) {}\n  return { json: { ...lead, neue_ampel: 'GELB', neuer_score: 50, begruendung: 'Parsing fehlgeschlagen', aenderung: 'KEINE', letzte_pruefung: $now.toISO() } };\n});"
+        "jsCode": "const leads = $('Merge Bonit\u00e4t').all();\nconst responses = $input.all();\nreturn responses.map((r, i) => {\n  const lead = leads[i]?.json || {};\n  try {\n    const content = r.json.content || r.json.message?.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const b = JSON.parse(jsonMatch[0]);\n      return { json: { ...lead, neue_ampel: b.neue_ampel || 'GELB', neuer_score: b.neuer_score || 50, begruendung: b.begruendung || '', aenderung: b.aenderung || 'KEINE', letzte_pruefung: $now.toISO() } };\n    }\n  } catch(e) {}\n  return { json: { ...lead, neue_ampel: 'GELB', neuer_score: 50, begruendung: 'Parsing fehlgeschlagen', aenderung: 'KEINE', letzte_pruefung: $now.toISO() } };\n});"
       }
     },
     {
@@ -406,36 +298,20 @@
       "name": "Sheet GELB Update",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [
-        3500,
-        300
-      ],
+      "position": [3500, 300],
       "parameters": {
         "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" },
         "range": "A:F",
         "columns": {
           "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Firmenname"
-          ]
+          "matchingColumns": ["Firmenname"]
         },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": ""
-        }
+        "googleSheetsOAuth2Api": { "id": "", "name": "" }
       }
     },
     {
@@ -443,10 +319,7 @@
       "name": "Switch Klassifikation",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [
-        3750,
-        200
-      ],
+      "position": [3750, 200],
       "parameters": {
         "rules": {
           "values": [
@@ -457,10 +330,7 @@
                   {
                     "leftValue": "={{ $json.neue_ampel }}",
                     "rightValue": "GRUEN",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
                 "combinator": "and"
@@ -473,10 +343,7 @@
                   {
                     "leftValue": "={{ $json.neue_ampel }}",
                     "rightValue": "ROT",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
                 "combinator": "and"
@@ -491,35 +358,19 @@
     },
     {
       "id": "9a12e953-bf81-4fb1-b729-b657ce561d7f",
-      "name": "Sheet Upgrade GRÜN",
+      "name": "Sheet Upgrade GR\u00dcN",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [
-        4000,
-        100
-      ],
+      "position": [4000, 100],
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData"
-        },
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" },
+        "columns": { "mappingMode": "autoMapInputData" },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": ""
-        }
+        "googleSheetsOAuth2Api": { "id": "", "name": "" }
       }
     },
     {
@@ -527,32 +378,16 @@
       "name": "Sheet Downgrade ROT",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [
-        4000,
-        300
-      ],
+      "position": [4000, 300],
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData"
-        },
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" },
+        "columns": { "mappingMode": "autoMapInputData" },
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "",
-          "name": ""
-        }
+        "googleSheetsOAuth2Api": { "id": "", "name": "" }
       }
     },
     {
@@ -560,10 +395,7 @@
       "name": "Statistik",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        3750,
-        450
-      ],
+      "position": [3750, 450],
       "parameters": {
         "jsCode": "const items = $input.all();\nconst stats = { total: items.length, gruen: 0, gelb: 0, rot: 0, upgrades: [], downgrades: [] };\nfor (const item of items) {\n  const ampel = item.json.neue_ampel || 'GELB';\n  if (ampel === 'GRUEN') { stats.gruen++; stats.upgrades.push(item.json.Firmenname || 'Unbekannt'); }\n  else if (ampel === 'ROT') { stats.rot++; stats.downgrades.push(item.json.Firmenname || 'Unbekannt'); }\n  else { stats.gelb++; }\n}\nconst datum = $now.toFormat('dd.MM.yyyy');\nlet html = '<h2>Monatliche GELB-Pruefung (' + datum + ')</h2>';\nhtml += '<p><strong>Gesamt:</strong> ' + stats.total + ' Leads geprueft</p>';\nhtml += '<table border=\"1\" cellpadding=\"5\" style=\"border-collapse:collapse\">';\nhtml += '<tr><td>GRUEN (Upgrade)</td><td><strong>' + stats.gruen + '</strong></td></tr>';\nhtml += '<tr><td>GELB (unveraendert)</td><td><strong>' + stats.gelb + '</strong></td></tr>';\nhtml += '<tr><td>ROT (Downgrade)</td><td><strong>' + stats.rot + '</strong></td></tr>';\nhtml += '</table>';\nif (stats.upgrades.length > 0) { html += '<h3>Upgrades zu GRUEN:</h3><ul>'; stats.upgrades.forEach(f => html += '<li>' + f + '</li>'); html += '</ul>'; }\nif (stats.downgrades.length > 0) { html += '<h3>Downgrades zu ROT:</h3><ul>'; stats.downgrades.forEach(f => html += '<li>' + f + '</li>'); html += '</ul>'; }\nreturn [{ json: { ...stats, report_html: html, datum: datum } }];"
       }
@@ -573,10 +405,7 @@
       "name": "Gmail Report",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [
-        4000,
-        450
-      ],
+      "position": [4000, 450],
       "parameters": {
         "resource": "message",
         "operation": "send",
@@ -586,226 +415,73 @@
         "message": "={{ $json.report_html }}"
       },
       "credentials": {
-        "gmailOAuth2": {
-          "id": "",
-          "name": ""
-        }
+        "gmailOAuth2": { "id": "", "name": "" }
       }
     }
   ],
   "connections": {
     "Schedule Monatlich": {
-      "main": [
-        [
-          {
-            "node": "Read GELB Leads",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Read GELB Leads", "type": "main", "index": 0 }]]
     },
     "Read GELB Leads": {
-      "main": [
-        [
-          {
-            "node": "IF Hat Leads?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "IF Hat Leads?", "type": "main", "index": 0 }]]
     },
     "IF Hat Leads?": {
       "main": [
-        [
-          {
-            "node": "Creditsafe Auth",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Ende Keine Leads",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Creditsafe Auth", "type": "main", "index": 0 }],
+        [{ "node": "Ende Keine Leads", "type": "main", "index": 0 }]
       ]
     },
     "Creditsafe Auth": {
-      "main": [
-        [
-          {
-            "node": "Prepare Leads",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Prepare Leads", "type": "main", "index": 0 }]]
     },
     "Prepare Leads": {
-      "main": [
-        [
-          {
-            "node": "Creditsafe Suche",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Creditsafe Suche", "type": "main", "index": 0 }]]
     },
     "Creditsafe Suche": {
-      "main": [
-        [
-          {
-            "node": "Merge Suche",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Merge Suche", "type": "main", "index": 0 }]]
     },
     "Merge Suche": {
-      "main": [
-        [
-          {
-            "node": "IF Firma gefunden?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "IF Firma gefunden?", "type": "main", "index": 0 }]]
     },
     "IF Firma gefunden?": {
       "main": [
-        [
-          {
-            "node": "Creditsafe Bericht",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Set Ohne Bonität",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Creditsafe Bericht", "type": "main", "index": 0 }],
+        [{ "node": "Set Ohne Bonit\u00e4t", "type": "main", "index": 0 }]
       ]
     },
     "Creditsafe Bericht": {
-      "main": [
-        [
-          {
-            "node": "Merge Bericht",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Merge Bericht", "type": "main", "index": 0 }]]
     },
     "Merge Bericht": {
-      "main": [
-        [
-          {
-            "node": "Merge Bonität",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Merge Bonit\u00e4t", "type": "main", "index": 0 }]]
     },
-    "Set Ohne Bonität": {
-      "main": [
-        [
-          {
-            "node": "Merge Bonität",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
+    "Set Ohne Bonit\u00e4t": {
+      "main": [[{ "node": "Merge Bonit\u00e4t", "type": "main", "index": 1 }]]
     },
-    "Merge Bonität": {
-      "main": [
-        [
-          {
-            "node": "GPT Neu-Bewertung",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Merge Bonit\u00e4t": {
+      "main": [[{ "node": "GPT Neu-Bewertung", "type": "main", "index": 0 }]]
     },
     "GPT Neu-Bewertung": {
-      "main": [
-        [
-          {
-            "node": "Parse Bewertung",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Parse Bewertung", "type": "main", "index": 0 }]]
     },
     "Parse Bewertung": {
-      "main": [
-        [
-          {
-            "node": "Sheet GELB Update",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Sheet GELB Update", "type": "main", "index": 0 }]]
     },
     "Sheet GELB Update": {
-      "main": [
-        [
-          {
-            "node": "Switch Klassifikation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Statistik",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Switch Klassifikation", "type": "main", "index": 0 },
+        { "node": "Statistik", "type": "main", "index": 0 }
+      ]]
     },
     "Switch Klassifikation": {
       "main": [
-        [
-          {
-            "node": "Sheet Upgrade GRÜN",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Sheet Downgrade ROT",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Sheet Upgrade GR\u00dcN", "type": "main", "index": 0 }],
+        [{ "node": "Sheet Downgrade ROT", "type": "main", "index": 0 }]
       ]
     },
     "Statistik": {
-      "main": [
-        [
-          {
-            "node": "Gmail Report",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Gmail Report", "type": "main", "index": 0 }]]
     }
   },
   "settings": {
@@ -813,6 +489,8 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
-  }
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "tags": []
 }
