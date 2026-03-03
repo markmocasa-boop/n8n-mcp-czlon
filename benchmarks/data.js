@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772515201283,
+  "lastUpdate": 1772519538469,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "1f812d2a64abaa0c2f3ffb6a86a9ffc1b25a0ce0",
-          "message": "Add files via upload",
-          "timestamp": "2026-01-28T08:15:27+01:00",
-          "tree_id": "de2ed90c59548e4479a29dc319cfb15c610d323e",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/1f812d2a64abaa0c2f3ffb6a86a9ffc1b25a0ce0"
-        },
-        "date": 1769584641135,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/10ce145ac0daad2ad89ecf7fe44b81f6e6e96af3"
         },
         "date": 1772515200856,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "8731be04bd6229b139034117a3ae195d0b300821",
+          "message": "feat: Etappe 4 — Monatliche GELB-Prüfung Sub-Workflow (21 Nodes)\n\nSeparater Workflow für monatliche Neubewertung von GELB-Leads:\n- Schedule Trigger (1. des Monats, 9 Uhr)\n- Creditsafe Auth + Firmensuche + Credit Report\n- Code-Nodes als Data Bridges (HTTP Request verliert Input-Daten)\n- GPT-4o Neu-Bewertung mit Ampel-Kriterien\n- Sheet Update + Routing nach GRÜN/ROT/GELB\n- HTML Statistik-Report per Gmail\n\nn8n Cloud ID: 0IxkfyH9QPavdTPy\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T07:29:20+01:00",
+          "tree_id": "2d2308ca56c2f477396a36454f661b6dd8370c86",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8731be04bd6229b139034117a3ae195d0b300821"
+        },
+        "date": 1772519537719,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
