@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772520722124,
+  "lastUpdate": 1772544675223,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "5327851d57d1f97584541a4debe481e88d3ec804",
-          "message": "Merge pull request #19 from markmocasa-boop/claude/social-media-automation-bDfkm\n\nfeat: add social media content automation workflow",
-          "timestamp": "2026-01-28T09:36:15+01:00",
-          "tree_id": "efaaa95cba09fc8f96cc164fc31453d09e2eebe6",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/5327851d57d1f97584541a4debe481e88d3ec804"
-        },
-        "date": 1769589482496,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/30fac110a0e42d2ce032bc7aff61ec05165e63c4"
         },
         "date": 1772520721428,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "6d9bb4faadb192014842ecd3729e77ecc4944464",
+          "message": "fix: OpenAI prompt format — fix empty canvas bug in n8n Cloud UI\n\nRoot cause: OpenAI node prompt used {\"messages\": {\"values\": [...]}} wrapper\nwhich crashes the n8n frontend. Correct format is {\"messages\": [...]}.\n\nFixed 5 OpenAI nodes across both workflows. Added debug report.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T14:29:06+01:00",
+          "tree_id": "c4acdac76a7e086933f788b1a1724a548158dfcd",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6d9bb4faadb192014842ecd3729e77ecc4944464"
+        },
+        "date": 1772544674731,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
