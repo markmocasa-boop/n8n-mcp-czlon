@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772519538469,
+  "lastUpdate": 1772520722124,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "fc581b9c84a58c9377212e3b4ec84878460c926c",
-          "message": "Add files via upload",
-          "timestamp": "2026-01-28T08:17:56+01:00",
-          "tree_id": "1b0896724b7b951a9f7622011d5503d2af52cac0",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fc581b9c84a58c9377212e3b4ec84878460c926c"
-        },
-        "date": 1769584791836,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8731be04bd6229b139034117a3ae195d0b300821"
         },
         "date": 1772519537719,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "30fac110a0e42d2ce032bc7aff61ec05165e63c4",
+          "message": "fix: replace non-UUID node IDs with proper UUID v4 format\n\nBoth workflows had invalid node IDs that caused n8n Cloud UI to show\nan empty canvas. Replaced all IDs with proper UUID v4 format.\n- Etappe 4 (21 nodes): b1000001-style -> UUID v4\n- Hauptworkflow (40 nodes): fake sequential UUIDs -> UUID v4\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T07:49:27+01:00",
+          "tree_id": "e4f9f79011dde1920b7713ee4f6d28a70c85163e",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/30fac110a0e42d2ce032bc7aff61ec05165e63c4"
+        },
+        "date": 1772520721428,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
