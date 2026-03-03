@@ -1,0 +1,1623 @@
+{
+  "id": "O54X9J442WJFax2k",
+  "name": "Gesch\\u00e4ftskunden-Akquise & Bonit\\u00e4tspr\\u00fcfung (Etappe 1+2+3)",
+  "description": null,
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000001",
+      "name": "Email Trigger",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        250,
+        300
+      ],
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "format": "simple"
+      },
+      "credentials": {
+        "imap": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000002",
+      "name": "GPT Geschäftskunde",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein Experte für die Analyse von Bestellbestätigungen. Analysiere den folgenden Email-Text und bestimme, ob der Besteller ein Geschäftskunde (B2B) oder ein Privatkunde (B2C) ist.\n\nKriterien für Geschäftskunde:\n- Firmenname in der Adresse\n- USt-IdNr. / Steuernummer vorhanden\n- Gewerbliche Lieferadresse\n- Bestellmenge deutet auf gewerbliche Nutzung hin\n- Branchenspezifische Begriffe\n- \"Firma\", \"GmbH\", \"UG\", \"AG\", \"e.K.\", \"OHG\", \"KG\" im Namen\n\nAntworte als JSON:\n{\"ist_geschaeftskunde\":true/false,\"konfidenz\":0.0-1.0,\"firmenname\":\"Name oder null\",\"branche\":\"Branche oder null\",\"begruendung\":\"...\",\"extrahierte_daten\":{\"name\":\"\",\"email\":\"\",\"adresse\":\"\",\"telefon\":null,\"ust_id\":null}}"
+              },
+              {
+                "role": "user",
+                "content": "={{ $json.text }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 2000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000003",
+      "name": "Parse Klassifikation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst emailData = $('Email Trigger').first().json;\nconst results = [];\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      results.push({ json: { ...parsed, original_email: { from: emailData.from, subject: emailData.subject, date: emailData.date, text: emailData.text } } });\n    } else {\n      results.push({ json: { ist_geschaeftskunde: false, konfidenz: 0, firmenname: null, branche: null, begruendung: 'Kein JSON gefunden', extrahierte_daten: {}, original_email: { from: emailData.from, subject: emailData.subject, date: emailData.date } } });\n    }\n  } catch (e) {\n    results.push({ json: { ist_geschaeftskunde: false, konfidenz: 0, firmenname: null, branche: null, begruendung: 'Parse-Fehler: ' + e.message, extrahierte_daten: {}, original_email: { from: emailData.from, subject: emailData.subject, date: emailData.date } } });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000004",
+      "name": "Geschäftskunde?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1000,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-biz-1",
+              "leftValue": "={{ $json.ist_geschaeftskunde }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-biz-2",
+              "leftValue": "={{ $json.konfidenz }}",
+              "rightValue": 0.7,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000005",
+      "name": "Ende Privatkunde",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        500
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000006",
+      "name": "Creditsafe Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1250,
+        300
+      ],
+      "parameters": {
+        "url": "https://connect.creditsafe.com/v1/authenticate",
+        "method": "POST",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ username: $env.CREDITSAFE_USERNAME, password: $env.CREDITSAFE_PASSWORD }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000007",
+      "name": "Creditsafe Suche",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1500,
+        300
+      ],
+      "parameters": {
+        "url": "https://connect.creditsafe.com/v1/companies",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Creditsafe Auth').first().json.token }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "countries",
+              "value": "DE"
+            },
+            {
+              "name": "name",
+              "value": "={{ $('Parse Klassifikation').first().json.firmenname }}"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000008",
+      "name": "Firma extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1750,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst classData = $('Parse Klassifikation').first().json;\nlet authToken = null;\ntry { authToken = $('Creditsafe Auth').first().json.token; } catch(e) {}\nconst results = [];\nfor (const item of items) {\n  const companies = item.json.companies || [];\n  if (!authToken) {\n    results.push({ json: { ...classData, creditsafe_error: true, creditsafe_error_msg: 'Auth fehlgeschlagen', company_id: null, company_found: false } });\n  } else if (companies.length > 0) {\n    results.push({ json: { ...classData, creditsafe_error: false, company_id: companies[0].id, company_name_cs: companies[0].name, company_found: true } });\n  } else {\n    results.push({ json: { ...classData, creditsafe_error: true, creditsafe_error_msg: 'Keine Firma gefunden', company_id: null, company_found: false } });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000009",
+      "name": "Creditsafe Bericht",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2000,
+        300
+      ],
+      "parameters": {
+        "url": "=https://connect.creditsafe.com/v1/companies/{{ $json.company_id }}",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Creditsafe Auth').first().json.token }}"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000010",
+      "name": "GPT Ampel-Bewertung",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [
+        2250,
+        300
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein Bonitätsanalyst. Bewerte Creditsafe-Daten und ordne eine Ampelfarbe zu.\nGRÜN: Score>=70, keine Negativmerkmale, >2 Jahre\nGELB: Score 40-69, leichte Verzögerungen, <2 Jahre, unvollständig\nROT: Score<40, schwere Störungen, Insolvenz\nBei creditsafe_error=true: GELB zuordnen.\nAntwort als JSON: {\"ampel\":\"GRUEN|GELB|ROT\",\"score\":0,\"begruendung\":\"...\",\"risikofaktoren\":[],\"empfehlung\":\"...\"}"
+              },
+              {
+                "role": "user",
+                "content": "=Firma: {{ $('Parse Klassifikation').first().json.firmenname }}\nBranche: {{ $('Parse Klassifikation').first().json.branche }}\nCS-Error: {{ $('Firma extrahieren').first().json.creditsafe_error }}\nCS-Msg: {{ $('Firma extrahieren').first().json.creditsafe_error_msg ?? 'keine' }}\nBericht: {{ JSON.stringify($json) }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0,
+          "maxTokens": 1000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000011",
+      "name": "Parse Ampel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst classData = $('Parse Klassifikation').first().json;\nconst extractData = $('Firma extrahieren').first().json;\nlet csReport = {};\ntry { csReport = $('Creditsafe Bericht').first().json; } catch(e) {}\nconst results = [];\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      results.push({ json: { firmenname: classData.firmenname, branche: classData.branche, extrahierte_daten: classData.extrahierte_daten, original_email: classData.original_email, company_id: extractData.company_id, company_found: extractData.company_found, creditsafe_error: extractData.creditsafe_error, ampel: parsed.ampel, score: parsed.score, ampel_begruendung: parsed.begruendung, risikofaktoren: parsed.risikofaktoren, empfehlung: parsed.empfehlung, creditsafe_raw: csReport } });\n    } else {\n      results.push({ json: { firmenname: classData.firmenname, branche: classData.branche, extrahierte_daten: classData.extrahierte_daten, original_email: classData.original_email, ampel: 'GELB', score: 0, ampel_begruendung: 'GPT nicht parsbar', risikofaktoren: ['Parse-Fehler'], empfehlung: 'Manuelle Prüfung' } });\n    }\n  } catch (e) {\n    results.push({ json: { firmenname: classData.firmenname, branche: classData.branche, extrahierte_daten: classData.extrahierte_daten, original_email: classData.original_email, ampel: 'GELB', score: 0, ampel_begruendung: 'Fehler: ' + e.message, risikofaktoren: ['Fehler'], empfehlung: 'Manuelle Prüfung' } });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000012",
+      "name": "Ampel Routing",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2750,
+        300
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "GRUEN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "GRUEN"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "GELB",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "GELB"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ampel }}",
+                    "rightValue": "ROT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ROT"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000013",
+      "name": "Ausgang GRÜN",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3000,
+        150
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-status",
+              "name": "status",
+              "value": "GRUEN - Weiter zu Enrichment",
+              "type": "string"
+            },
+            {
+              "id": "assign-ts",
+              "name": "pruefungsdatum",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000014",
+      "name": "Sheet GELB",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3000,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "GELB - Monatliche Prüfung"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Firmenname": "={{ $json.firmenname }}",
+            "Score": "={{ $json.score }}",
+            "Status": "Wartet auf Neubewertung"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000015",
+      "name": "Sheet ROT",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3000,
+        450
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "ROT - Abgelehnt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Firmenname": "={{ $json.firmenname }}",
+            "Score": "={{ $json.score }}",
+            "Grund": "={{ $json.ampel_begruendung }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000016",
+      "name": "Apollo Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3300,
+        -100
+      ],
+      "parameters": {
+        "url": "https://api.apollo.io/api/v1/organizations/enrich",
+        "method": "POST",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ domain: ($json.extrahierte_daten && $json.extrahierte_daten.email) ? $json.extrahierte_daten.email.split('@')[1] : '', name: $json.firmenname || '' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.APOLLO_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000030",
+      "name": "Apify LinkedIn",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        3300,
+        100
+      ],
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "={{ $env.APIFY_LINKEDIN_ACTOR_ID }}",
+        "customBody": "={{ JSON.stringify({ queries: [$json.firmenname || ''], maxResults: 1 }) }}"
+      },
+      "credentials": {
+        "apifyApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000031",
+      "name": "Tavily Suche",
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        3300,
+        300
+      ],
+      "parameters": {
+        "resource": "search",
+        "operation": "query",
+        "query": "={{ ($json.firmenname || '') + ' ' + ($json.branche || '') + ' Deutschland Unternehmen News' }}",
+        "queryOptions": {
+          "search_depth": "advanced",
+          "max_results": 5
+        }
+      },
+      "credentials": {
+        "tavilyApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000021",
+      "name": "Perplexity Analyse",
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        3300,
+        500
+      ],
+      "parameters": {
+        "model": "sonar-pro",
+        "messages": {
+          "message": [
+            {
+              "role": "user",
+              "content": "=Erstelle eine Unternehmensanalyse für \"{{ $json.firmenname }}\" (Branche: {{ $json.branche ?? 'unbekannt' }}).\nRecherchiere: Größe, Umsatz, Produkte, Marktposition, News, Management, Pain Points.\nFokus deutscher Markt. Antworte auf Deutsch."
+            }
+          ]
+        },
+        "simplify": true,
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "credentials": {
+        "perplexityApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000022",
+      "name": "Merge Enrichment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4100,
+        200
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ampelData = $('Parse Ampel').first().json;\nlet apollo = {}; try { apollo = $('Apollo Enrichment').first().json; } catch(e) { apollo = { error: true }; }\nlet linkedin = {}; try { linkedin = $('Apify LinkedIn').first().json; } catch(e) { linkedin = { error: true }; }\nlet tavily = {}; try { tavily = $('Tavily Suche').first().json; } catch(e) { tavily = { error: true }; }\nlet perplexity = {}; try { perplexity = $('Perplexity Analyse').first().json; } catch(e) { perplexity = { error: true }; }\nconst quellen = [];\nif (!apollo.error) quellen.push('Apollo');\nif (!linkedin.error) quellen.push('LinkedIn');\nif (!tavily.error) quellen.push('Tavily');\nif (!perplexity.error) quellen.push('Perplexity');\nreturn [{ json: { firmenname: ampelData.firmenname, branche: ampelData.branche, extrahierte_daten: ampelData.extrahierte_daten, original_email: ampelData.original_email, ampel: ampelData.ampel, score: ampelData.score, ampel_begruendung: ampelData.ampel_begruendung, risikofaktoren: ampelData.risikofaktoren, empfehlung: ampelData.empfehlung, enrichment: { apollo, linkedin, tavily, perplexity }, enrichment_datum: $now.toISO(), quellen_verfuegbar: quellen } }];"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000023",
+      "name": "GPT Lead-Summary",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [
+        4350,
+        200
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4.1",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein B2B Sales Analyst. Erstelle einen Lead-Report als JSON:\n{\"zusammenfassung\":\"...\",\"unternehmensprofil\":{\"name\":\"\",\"branche\":\"\",\"groesse\":\"\",\"standort\":\"\",\"website\":\"\",\"linkedin\":\"\"},\"kontaktpersonen\":[{\"name\":\"\",\"position\":\"\",\"email\":\"\"}],\"verkaufschancen\":{\"potenzial\":\"\",\"bedarfe\":[],\"pain_points\":[],\"einstiegspunkte\":[]},\"aktuelle_news\":[],\"wettbewerber\":[],\"empfohlene_ansprache\":\"\"}"
+              },
+              {
+                "role": "user",
+                "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nBonität: {{ $json.ampel }} ({{ $json.score }})\nQuellen: {{ $json.quellen_verfuegbar.join(', ') }}\nApollo: {{ JSON.stringify($json.enrichment.apollo) }}\nLinkedIn: {{ JSON.stringify($json.enrichment.linkedin) }}\nTavily: {{ JSON.stringify($json.enrichment.tavily) }}\nPerplexity: {{ JSON.stringify($json.enrichment.perplexity) }}\nEmail: {{ JSON.stringify($json.extrahierte_daten) }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 3000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000024",
+      "name": "Parse Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4600,
+        200
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst enrichData = $('Merge Enrichment').first().json;\nconst results = [];\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    let summary = {};\n    if (jsonMatch) { summary = JSON.parse(jsonMatch[0]); } else { summary = { zusammenfassung: content }; }\n    const kontakt = (summary.kontaktpersonen && summary.kontaktpersonen[0]) || {};\n    const profil = summary.unternehmensprofil || {};\n    const verkauf = summary.verkaufschancen || {};\n    results.push({ json: { firmenname: enrichData.firmenname, branche: enrichData.branche, score: enrichData.score, ampel: enrichData.ampel, kontaktperson: kontakt.name || (enrichData.extrahierte_daten ? enrichData.extrahierte_daten.name : '') || '', position: kontakt.position || '', email: (enrichData.extrahierte_daten ? enrichData.extrahierte_daten.email : '') || kontakt.email || '', telefon: enrichData.extrahierte_daten ? (enrichData.extrahierte_daten.telefon || '') : '', website: profil.website || '', linkedin_url: profil.linkedin || '', zusammenfassung: summary.zusammenfassung || '', verkaufspotenzial: verkauf.potenzial || '', bedarfe: (verkauf.bedarfe || []).join(', '), pain_points: (verkauf.pain_points || []).join(', '), empfohlene_ansprache: summary.empfohlene_ansprache || '', aktuelle_news: (summary.aktuelle_news || []).join('; '), wettbewerber: (summary.wettbewerber || []).join(', '), quellen: enrichData.quellen_verfuegbar.join(', '), enrichment_datum: enrichData.enrichment_datum, enrichment: enrichData.enrichment, lead_summary: summary, original_email: enrichData.original_email, extrahierte_daten: enrichData.extrahierte_daten } });\n  } catch (e) {\n    results.push({ json: { firmenname: enrichData.firmenname, branche: enrichData.branche, score: enrichData.score, zusammenfassung: 'Fehler: ' + e.message, enrichment: enrichData.enrichment, original_email: enrichData.original_email, extrahierte_daten: enrichData.extrahierte_daten } });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000025",
+      "name": "Sheet GRÜN",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4850,
+        200
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "GRÜN - Aktive Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Firmenname": "={{ $json.firmenname }}",
+            "Email": "={{ $json.email }}",
+            "Kontaktperson": "={{ $json.kontaktperson }}",
+            "Zusammenfassung": "={{ $json.zusammenfassung }}",
+            "Status": "Neu - Bereit für BASHO"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000040",
+      "name": "GPT BASHO Emails",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [
+        5100,
+        200
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "Du bist ein B2B-Vertriebsexperte. Schreibe personalisierte BASHO-Emails auf Deutsch.\n\nEmail 1: Persönlicher Einstieg — aktuelle Situation\nEmail 2: Mehrwert — Pain Points ansprechen\nEmail 3: Social Proof — Branchenbeispiel\nEmail 4: Break-Up — respektvoller Abschluss\n\nRegeln: Sie-Form, max 5-7 Sätze, HTML (<p>/<br>), Signatur: {{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}\n\nJSON: {\"email1_subject\":\"...\",\"email1_body\":\"<p>...</p>\",\"email2_subject\":\"...\",\"email2_body\":\"<p>...</p>\",\"email3_subject\":\"...\",\"email3_body\":\"<p>...</p>\",\"email4_subject\":\"...\",\"email4_body\":\"<p>...</p>\"}"
+              },
+              {
+                "role": "user",
+                "content": "=Firma: {{ $json.firmenname }}\nBranche: {{ $json.branche }}\nAnsprechpartner: {{ $json.kontaktperson }} ({{ $json.position }})\nZusammenfassung: {{ $json.zusammenfassung }}\nBedarfe: {{ $json.bedarfe }}\nPain Points: {{ $json.pain_points }}\nAnsprache: {{ $json.empfohlene_ansprache }}\nNews: {{ $json.aktuelle_news }}\nPotenzial: {{ $json.verkaufspotenzial }}"
+              }
+            ]
+          }
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 4000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000041",
+      "name": "Parse BASHO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5350,
+        200
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst leadData = $('Parse Summary').first().json;\nconst results = [];\nfor (const item of items) {\n  try {\n    const content = item.json.content || '';\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const emails = JSON.parse(jsonMatch[0]);\n      results.push({ json: { ...leadData, email1_subject: emails.email1_subject, email1_body: emails.email1_body, email2_subject: emails.email2_subject, email2_body: emails.email2_body, email3_subject: emails.email3_subject, email3_body: emails.email3_body, email4_subject: emails.email4_subject, email4_body: emails.email4_body, basho_generated: true, basho_start: $now.toISO() } });\n    } else {\n      results.push({ json: { ...leadData, email1_subject: 'Zusammenarbeit mit ' + (leadData.firmenname || 'Ihrem Unternehmen'), email1_body: '<p>Guten Tag,</p><p>ich moechte mich vorstellen.</p><p>{{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}</p>', email2_subject: 'Follow-up', email2_body: '<p>Guten Tag,</p><p>kurzes Nachhaken.</p><p>{{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}</p>', email3_subject: 'Kurze Frage', email3_body: '<p>Guten Tag,</p><p>ist das Thema relevant?</p><p>{{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}</p>', email4_subject: 'Abschluss', email4_body: '<p>Guten Tag,</p><p>bei Interesse melden.</p><p>{{ABSENDER_NAME}}<br>{{FIRMA}}<br>{{TELEFON}}</p>', basho_generated: false } });\n    }\n  } catch (e) {\n    results.push({ json: { ...leadData, email1_subject: 'Zusammenarbeit', email1_body: '<p>Vorstellung.</p>', email2_subject: 'Follow-up', email2_body: '<p>Nachhaken.</p>', email3_subject: 'Frage', email3_body: '<p>Relevant?</p>', email4_subject: 'Abschluss', email4_body: '<p>Bei Interesse melden.</p>', basho_generated: false, basho_error: e.message } });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000042",
+      "name": "Gmail Send 1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        5600,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.email1_subject }}",
+        "emailType": "html",
+        "message": "={{ $json.email1_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000043",
+      "name": "Wait 3 Tage",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5850,
+        200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000044",
+      "name": "Gmail Check 1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $('Parse BASHO').first().json.email + ' newer_than:7d' }}"
+        },
+        "simple": true
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000045",
+      "name": "IF Antwort 1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6350,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-reply-1",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000046",
+      "name": "Gmail Send 2",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        6600,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Parse BASHO').first().json.email }}",
+        "subject": "={{ $('Parse BASHO').first().json.email2_subject }}",
+        "emailType": "html",
+        "message": "={{ $('Parse BASHO').first().json.email2_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000047",
+      "name": "Wait 4 Tage",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        6850,
+        200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 4,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000048",
+      "name": "Gmail Check 2",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        7100,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $('Parse BASHO').first().json.email + ' newer_than:14d' }}"
+        },
+        "simple": true
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000049",
+      "name": "IF Antwort 2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7350,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-reply-2",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000050",
+      "name": "Gmail Send 3",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        7600,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Parse BASHO').first().json.email }}",
+        "subject": "={{ $('Parse BASHO').first().json.email3_subject }}",
+        "emailType": "html",
+        "message": "={{ $('Parse BASHO').first().json.email3_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000051",
+      "name": "Wait 5 Tage",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7850,
+        200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 5,
+        "unit": "days"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000052",
+      "name": "Gmail Check 3",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        8100,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "q": "={{ 'from:' + $('Parse BASHO').first().json.email + ' newer_than:21d' }}"
+        },
+        "simple": true
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000053",
+      "name": "IF Antwort 3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8350,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-reply-3",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000054",
+      "name": "Gmail Send 4",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        8600,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Parse BASHO').first().json.email }}",
+        "subject": "={{ $('Parse BASHO').first().json.email4_subject }}",
+        "emailType": "html",
+        "message": "={{ $('Parse BASHO').first().json.email4_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000055",
+      "name": "Sheet Antwort",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        7000,
+        -50
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "ANTWORTEN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}",
+            "Firmenname": "={{ $('Parse BASHO').first().json.firmenname }}",
+            "Email": "={{ $('Parse BASHO').first().json.email }}",
+            "Status": "Antwort erhalten"
+          },
+          "matchingColumns": [],
+          "schema": []
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a1b2c3d4-0001-4000-a000-000000000056",
+      "name": "Ende Sequenz",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        8850,
+        200
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Email Trigger": {
+      "main": [
+        [
+          {
+            "node": "GPT Geschäftskunde",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Geschäftskunde": {
+      "main": [
+        [
+          {
+            "node": "Parse Klassifikation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Klassifikation": {
+      "main": [
+        [
+          {
+            "node": "Geschäftskunde?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geschäftskunde?": {
+      "main": [
+        [
+          {
+            "node": "Creditsafe Auth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ende Privatkunde",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creditsafe Auth": {
+      "main": [
+        [
+          {
+            "node": "Creditsafe Suche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creditsafe Suche": {
+      "main": [
+        [
+          {
+            "node": "Firma extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firma extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Creditsafe Bericht",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creditsafe Bericht": {
+      "main": [
+        [
+          {
+            "node": "GPT Ampel-Bewertung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Ampel-Bewertung": {
+      "main": [
+        [
+          {
+            "node": "Parse Ampel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ampel": {
+      "main": [
+        [
+          {
+            "node": "Ampel Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ampel Routing": {
+      "main": [
+        [
+          {
+            "node": "Ausgang GRÜN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet GELB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet ROT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ausgang GRÜN": {
+      "main": [
+        [
+          {
+            "node": "Apollo Enrichment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Perplexity Analyse",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify LinkedIn",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tavily Suche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apollo Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Analyse": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Suche": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Enrichment": {
+      "main": [
+        [
+          {
+            "node": "GPT Lead-Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Lead-Summary": {
+      "main": [
+        [
+          {
+            "node": "Parse Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Summary": {
+      "main": [
+        [
+          {
+            "node": "Sheet GRÜN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet GRÜN": {
+      "main": [
+        [
+          {
+            "node": "GPT BASHO Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT BASHO Emails": {
+      "main": [
+        [
+          {
+            "node": "Parse BASHO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse BASHO": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send 1": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Tage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Tage": {
+      "main": [
+        [
+          {
+            "node": "Gmail Check 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Check 1": {
+      "main": [
+        [
+          {
+            "node": "IF Antwort 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Antwort 1": {
+      "main": [
+        [
+          {
+            "node": "Sheet Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Send 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send 2": {
+      "main": [
+        [
+          {
+            "node": "Wait 4 Tage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 4 Tage": {
+      "main": [
+        [
+          {
+            "node": "Gmail Check 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Check 2": {
+      "main": [
+        [
+          {
+            "node": "IF Antwort 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Antwort 2": {
+      "main": [
+        [
+          {
+            "node": "Sheet Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Send 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send 3": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 Tage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 Tage": {
+      "main": [
+        [
+          {
+            "node": "Gmail Check 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Check 3": {
+      "main": [
+        [
+          {
+            "node": "IF Antwort 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Antwort 3": {
+      "main": [
+        [
+          {
+            "node": "Sheet Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Send 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send 4": {
+      "main": [
+        [
+          {
+            "node": "Ende Sequenz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "activeVersionId": null,
+  "versionCounter": 5,
+  "triggerCount": 0,
+  "activeVersion": null
+}
