@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772189147792,
+  "lastUpdate": 1772513552472,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "distinct": true,
-          "id": "0b1290e4f19c3be12d63f03f55cb45e50560760c",
-          "message": "Merge branch 'main' of https://github.com/markmocasa-boop/n8n-mcp-czlon",
-          "timestamp": "2026-01-27T12:43:37+01:00",
-          "tree_id": "45f5e4e291fbe1266b8bc5041c14393ba3fd6c09",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/0b1290e4f19c3be12d63f03f55cb45e50560760c"
-        },
-        "date": 1769514340577,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/52e16b4f6f70867f222f300a4b23211ace0cba80"
         },
         "date": 1772189147469,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "a8d58e43d72fbd527bd72c031f57595817fe771a",
+          "message": "feat: Etappe 1+2 — Community Nodes für Tavily & Apify\n\nErsetze HTTP Request Nodes durch native Community Nodes:\n- Apify: 3-Node async Chain (Start→Wait→Get) → 1 @apify/n8n-nodes-apify\n- Tavily: HTTP Request → @tavily/n8n-nodes-tavily\n- 25→23 Nodes, 0 Errors, 29 Warnings (false positives)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T05:50:25+01:00",
+          "tree_id": "950c58d883796013fd286c3bd776d962b42a774b",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a8d58e43d72fbd527bd72c031f57595817fe771a"
+        },
+        "date": 1772513552158,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
