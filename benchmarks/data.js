@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772544675223,
+  "lastUpdate": 1772691314176,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "504d9ad4c2b103b89fb8e84acb4962bc9a3d0ad5",
-          "message": "Merge pull request #20 from markmocasa-boop/claude/ai-coworker-n8n-workflow-c9hkA\n\nfeat: add AI Coworker Slack assistant workflow",
-          "timestamp": "2026-01-29T11:04:36+01:00",
-          "tree_id": "9e6a5d613174079f671e83685e75892785808b14",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/504d9ad4c2b103b89fb8e84acb4962bc9a3d0ad5"
-        },
-        "date": 1769681190103,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6d9bb4faadb192014842ecd3729e77ecc4944464"
         },
         "date": 1772544674731,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "f51da802e538ff005a9577435163cf00a578b788",
+          "message": "feat: SEO Content Audit — Batch Master + Autopilot (deployed)\n\nTwo new workflows for automated SEO content auditing:\n- Batch Master (M4kV1lH3OXtjMb2X): reads Google Sheet with URLs/keywords, loops through each, calls Autopilot sub-workflow\n- Autopilot (kkzX4OzH4SbIjJ2x): runs full WF1-WF8 SEO Content Agent pipeline, compares original vs generated content via GPT-4o, sends email report\n\nFixes applied before deployment:\n- Fixed broken expression: =https://...{{ }} -> ={{ '...' + $json.x + '...' }}\n- Updated HTTP Request typeVersions: 4.2 -> 4.4\n- Moved trigger node off [0,0] position\n- Batch Master workflowId updated to real Autopilot ID\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-05T07:13:01+01:00",
+          "tree_id": "9a1c14f6487ccd24f02b2e57b02cd6a00ee0f501",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f51da802e538ff005a9577435163cf00a578b788"
+        },
+        "date": 1772691313422,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
