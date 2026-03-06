@@ -16,7 +16,8 @@
         "httpMethod": "POST",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "wf2-dual-trigger",
@@ -32,7 +33,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -41,8 +43,7 @@
               "rightValue": "",
               "operator": {
                 "type": "object",
-                "operation": "exists",
-                "singleValue": true
+                "operation": "exists"
               }
             }
           ],
@@ -70,9 +71,8 @@
           "mode": "name",
           "value": "Konfig"
         },
-        "options": {
-          "range": "A:B"
-        }
+        "options": {},
+        "range": "A:B"
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -100,9 +100,8 @@
           "mode": "name",
           "value": "Meta Ads Konfig"
         },
-        "options": {
-          "range": "A:B"
-        }
+        "options": {},
+        "range": "A:B"
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -139,7 +138,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -286,7 +286,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Consolidate campaign, ad set, and ad data from the 3 Graph API calls.\n// Compute KPIs and identify top/bottom performers.\n\nconst apiParams = $('API-Parameter vorbereiten').first().json;\nconst { adAccountId, calendarWeek, year, projectName, dateRangeStart, dateRangeEnd } = apiParams;\n\n// Safely extract data from each Graph API node\nlet campaigns = [];\nlet adsets = [];\nlet ads = [];\n\ntry {\n  const campaignItems = $('Kampagnen abrufen').all();\n  campaigns = campaignItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.campaign_name);\n} catch (e) {\n  campaigns = [];\n}\n\ntry {\n  const adsetItems = $('Anzeigengruppen abrufen').all();\n  adsets = adsetItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.adset_name);\n} catch (e) {\n  adsets = [];\n}\n\ntry {\n  const adItems = $('Anzeigen abrufen').all();\n  ads = adItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.ad_name);\n} catch (e) {\n  ads = [];\n}\n\n// Helper: safely parse number\nconst num = (v) => parseFloat(v) || 0;\n\n// Aggregate campaign-level KPIs\nconst totalSpend = campaigns.reduce((s, c) => s + num(c.spend), 0);\nconst totalImpressions = campaigns.reduce((s, c) => s + num(c.impressions), 0);\nconst totalClicks = campaigns.reduce((s, c) => s + num(c.clicks), 0);\nconst totalReach = campaigns.reduce((s, c) => s + num(c.reach), 0);\n\n// Extract conversions from actions array\nconst getConversions = (actions) => {\n  if (!Array.isArray(actions)) return 0;\n  const purchase = actions.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase');\n  const lead = actions.find(a => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead');\n  return num(purchase?.value) + num(lead?.value);\n};\n\nconst getConversionValue = (actionValues) => {\n  if (!Array.isArray(actionValues)) return 0;\n  const purchase = actionValues.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase');\n  return num(purchase?.value);\n};\n\nconst totalConversions = campaigns.reduce((s, c) => s + getConversions(c.actions), 0);\nconst totalConversionValue = campaigns.reduce((s, c) => s + getConversionValue(c.action_values), 0);\n\nconst overallCtr = totalImpressions > 0 ? (totalClicks / totalImpressions * 100) : 0;\nconst overallCpc = totalClicks > 0 ? (totalSpend / totalClicks) : 0;\nconst overallCpm = totalImpressions > 0 ? (totalSpend / totalImpressions * 1000) : 0;\nconst overallRoas = totalSpend > 0 ? (totalConversionValue / totalSpend) : 0;\n\n// Rank ads by efficiency (spend-weighted CTR * ROAS or simple spend/conversions)\nconst rankedAds = ads\n  .map(ad => ({\n    name: ad.ad_name,\n    adsetName: ad.adset_name,\n    campaignName: ad.campaign_name,\n    platform: ad.publisher_platform || 'unknown',\n    spend: num(ad.spend),\n    impressions: num(ad.impressions),\n    clicks: num(ad.clicks),\n    ctr: num(ad.ctr),\n    cpc: num(ad.cpc),\n    conversions: getConversions(ad.actions),\n    conversionValue: getConversionValue(ad.action_values),\n    roas: num(ad.spend) > 0 ? (getConversionValue(ad.action_values) / num(ad.spend)) : 0\n  }))\n  .filter(ad => ad.spend > 0)\n  .sort((a, b) => b.roas - a.roas || b.ctr - a.ctr);\n\nconst top3 = rankedAds.slice(0, 3);\nconst bottom3 = rankedAds.slice(-3).reverse();\n\n// Platform split (Facebook vs Instagram)\nconst fbAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'facebook');\nconst igAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'instagram');\n\nconst fbSpend = fbAds.reduce((s, a) => s + num(a.spend), 0);\nconst fbImpressions = fbAds.reduce((s, a) => s + num(a.impressions), 0);\nconst igSpend = igAds.reduce((s, a) => s + num(a.spend), 0);\nconst igImpressions = igAds.reduce((s, a) => s + num(a.impressions), 0);\n\nreturn [{\n  json: {\n    adAccountId,\n    projectName,\n    calendarWeek,\n    year,\n    dateRangeStart,\n    dateRangeEnd,\n    summary: {\n      totalCampaigns: campaigns.length,\n      activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,\n      totalSpend: Math.round(totalSpend * 100) / 100,\n      totalImpressions,\n      totalClicks,\n      totalReach,\n      totalConversions,\n      totalConversionValue: Math.round(totalConversionValue * 100) / 100,\n      overallCtr: Math.round(overallCtr * 10000) / 10000,\n      overallCpc: Math.round(overallCpc * 100) / 100,\n      overallCpm: Math.round(overallCpm * 100) / 100,\n      overallRoas: Math.round(overallRoas * 10000) / 10000\n    },\n    top3Ads: top3,\n    bottom3Ads: bottom3,\n    platformSplit: {\n      facebook: { spend: Math.round(fbSpend * 100) / 100, impressions: fbImpressions },\n      instagram: { spend: Math.round(igSpend * 100) / 100, impressions: igImpressions }\n    },\n    rawCampaigns: campaigns,\n    rawAdsets: adsets,\n    rawAds: ads,\n    adsCount: ads.length,\n    hasData: campaigns.length > 0 || ads.length > 0\n  }\n}];"
+        "jsCode": "// Consolidate campaign, ad set, and ad data from the 3 Graph API calls.\n// Compute KPIs and identify top/bottom performers.\n\nconst apiParams = $('API-Parameter vorbereiten').first().json;\nconst { adAccountId, calendarWeek, year, projectName, dateRangeStart, dateRangeEnd } = apiParams;\n\n// Safely extract data from each Graph API node\nlet campaigns = [];\nlet adsets = [];\nlet ads = [];\n\ntry {\n  const campaignItems = $('Kampagnen abrufen').all();\n  campaigns = campaignItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.campaign_name);\n} catch (e) {\n  campaigns = [];\n}\n\ntry {\n  const adsetItems = $('Anzeigengruppen abrufen').all();\n  adsets = adsetItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.adset_name);\n} catch (e) {\n  adsets = [];\n}\n\ntry {\n  const adItems = $('Anzeigen abrufen').all();\n  ads = adItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.ad_name);\n} catch (e) {\n  ads = [];\n}\n\n// Helper: safely parse number\nconst num = (v) => parseFloat(v) || 0;\n\n// Aggregate campaign-level KPIs\nconst totalSpend = campaigns.reduce((s, c) => s + num(c.spend), 0);\nconst totalImpressions = campaigns.reduce((s, c) => s + num(c.impressions), 0);\nconst totalClicks = campaigns.reduce((s, c) => s + num(c.clicks), 0);\nconst totalReach = campaigns.reduce((s, c) => s + num(c.reach), 0);\n\n// Extract conversions from actions array\nconst getConversions = (actions) => !Array.isArray(actions) ? 0 : (() => { const purchase = actions.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'); const lead = actions.find(a => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead'); return num(purchase?.value) + num(lead?.value); })();\n\nconst getConversionValue = (actionValues) => !Array.isArray(actionValues) ? 0 : (() => { const purchase = actionValues.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'); return num(purchase?.value); })();\n\nconst totalConversions = campaigns.reduce((s, c) => s + getConversions(c.actions), 0);\nconst totalConversionValue = campaigns.reduce((s, c) => s + getConversionValue(c.action_values), 0);\n\nconst overallCtr = totalImpressions > 0 ? (totalClicks / totalImpressions * 100) : 0;\nconst overallCpc = totalClicks > 0 ? (totalSpend / totalClicks) : 0;\nconst overallCpm = totalImpressions > 0 ? (totalSpend / totalImpressions * 1000) : 0;\nconst overallRoas = totalSpend > 0 ? (totalConversionValue / totalSpend) : 0;\n\n// Rank ads by efficiency (spend-weighted CTR * ROAS or simple spend/conversions)\nconst rankedAds = ads\n  .map(ad => ({\n    name: ad.ad_name,\n    adsetName: ad.adset_name,\n    campaignName: ad.campaign_name,\n    platform: ad.publisher_platform || 'unknown',\n    spend: num(ad.spend),\n    impressions: num(ad.impressions),\n    clicks: num(ad.clicks),\n    ctr: num(ad.ctr),\n    cpc: num(ad.cpc),\n    conversions: getConversions(ad.actions),\n    conversionValue: getConversionValue(ad.action_values),\n    roas: num(ad.spend) > 0 ? (getConversionValue(ad.action_values) / num(ad.spend)) : 0\n  }))\n  .filter(ad => ad.spend > 0)\n  .sort((a, b) => b.roas - a.roas || b.ctr - a.ctr);\n\nconst top3 = rankedAds.slice(0, 3);\nconst bottom3 = rankedAds.slice(-3).reverse();\n\n// Platform split (Facebook vs Instagram)\nconst fbAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'facebook');\nconst igAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'instagram');\n\nconst fbSpend = fbAds.reduce((s, a) => s + num(a.spend), 0);\nconst fbImpressions = fbAds.reduce((s, a) => s + num(a.impressions), 0);\nconst igSpend = igAds.reduce((s, a) => s + num(a.spend), 0);\nconst igImpressions = igAds.reduce((s, a) => s + num(a.impressions), 0);\n\nreturn [{\n  json: {\n    adAccountId,\n    projectName,\n    calendarWeek,\n    year,\n    dateRangeStart,\n    dateRangeEnd,\n    summary: {\n      totalCampaigns: campaigns.length,\n      activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,\n      totalSpend: Math.round(totalSpend * 100) / 100,\n      totalImpressions,\n      totalClicks,\n      totalReach,\n      totalConversions,\n      totalConversionValue: Math.round(totalConversionValue * 100) / 100,\n      overallCtr: Math.round(overallCtr * 10000) / 10000,\n      overallCpc: Math.round(overallCpc * 100) / 100,\n      overallCpm: Math.round(overallCpm * 100) / 100,\n      overallRoas: Math.round(overallRoas * 10000) / 10000\n    },\n    top3Ads: top3,\n    bottom3Ads: bottom3,\n    platformSplit: {\n      facebook: { spend: Math.round(fbSpend * 100) / 100, impressions: fbImpressions },\n      instagram: { spend: Math.round(igSpend * 100) / 100, impressions: igImpressions }\n    },\n    rawCampaigns: campaigns,\n    rawAdsets: adsets,\n    rawAds: ads,\n    adsCount: ads.length,\n    hasData: campaigns.length > 0 || ads.length > 0\n  }\n}];"
       }
     },
     {
@@ -318,7 +318,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "={{ \"Analysiere die folgenden Meta Ads Kampagnendaten der letzten 7 Tage.\n\nGesamt-Performance:\n\" + JSON.stringify(.first().json.summary, null, 2) + \"\n\nTop 3 Anzeigen:\n\" + JSON.stringify(.first().json.top3Ads, null, 2) + \"\n\nBottom 3 Anzeigen:\n\" + JSON.stringify(.first().json.bottom3Ads, null, 2) + \"\n\nPlattform-Vergleich (Facebook vs Instagram):\n\" + JSON.stringify(.first().json.platformSplit, null, 2) + \"\n\nErstelle eine detaillierte Analyse auf Deutsch mit:\n1. Gesamt-Performance-Zusammenfassung (Spend, ROAS, wichtigste KPIs)\n2. Top 3 performende Anzeigen und warum sie gut laufen\n3. Bottom 3 Anzeigen und Verbesserungsvorschlaege\n4. Budget-Empfehlungen (welche Kampagnen skalieren, welche pausieren)\n5. Targeting-Empfehlungen\n6. Vergleich Instagram vs Facebook Performance\n7. Konkrete Action Items fuer die naechste Woche\n\nFormatiere als JSON-Objekt.\" }}"
+            "content": "={{ \"Analysiere die folgenden Meta Ads Kampagnendaten der letzten 7 Tage.\n\nGesamt-Performance:\n\" + JSON.stringify($json.summary, null, 2) + \"\n\nTop 3 Anzeigen:\n\" + JSON.stringify($json.top3Ads, null, 2) + \"\n\nBottom 3 Anzeigen:\n\" + JSON.stringify($json.bottom3Ads, null, 2) + \"\n\nPlattform-Vergleich (Facebook vs Instagram):\n\" + JSON.stringify($json.platformSplit, null, 2) + \"\n\nErstelle eine detaillierte Analyse auf Deutsch mit:\n1. Gesamt-Performance-Zusammenfassung (Spend, ROAS, wichtigste KPIs)\n2. Top 3 performende Anzeigen und warum sie gut laufen\n3. Bottom 3 Anzeigen und Verbesserungsvorschlaege\n4. Budget-Empfehlungen (welche Kampagnen skalieren, welche pausieren)\n5. Targeting-Empfehlungen\n6. Vergleich Instagram vs Facebook Performance\n7. Konkrete Action Items fuer die naechste Woche\n\nFormatiere als JSON-Objekt.\" }}"
           }
         ],
         "simplify": false,

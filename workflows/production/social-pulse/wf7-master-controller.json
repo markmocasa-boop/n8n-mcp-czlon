@@ -413,21 +413,6 @@
       }
     },
     {
-      "id": "wf7-merge-final",
-      "name": "Final zusammenfuehren",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.1,
-      "position": [
-        4300,
-        440
-      ],
-      "parameters": {
-        "mode": "chooseBranch",
-        "output": "empty",
-        "numberInputs": 3
-      }
-    },
-    {
       "id": "wf7-build-runlog",
       "name": "Finales Run-Log zusammenbauen",
       "type": "n8n-nodes-base.code",
@@ -772,7 +757,7 @@
       "main": [
         [
           {
-            "node": "Final zusammenfuehren",
+            "node": "Finales Run-Log zusammenbauen",
             "type": "main",
             "index": 0
           }
@@ -783,25 +768,14 @@
       "main": [
         [
           {
-            "node": "Final zusammenfuehren",
+            "node": "Finales Run-Log zusammenbauen",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
     },
     "Wave-1 komplett fehlgeschlagen": {
-      "main": [
-        [
-          {
-            "node": "Final zusammenfuehren",
-            "type": "main",
-            "index": 2
-          }
-        ]
-      ]
-    },
-    "Final zusammenfuehren": {
       "main": [
         [
           {
