@@ -1,0 +1,872 @@
+{
+  "name": "SocialPulse WF7: Master Controller",
+  "nodes": [
+    {
+      "id": "wf7-schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        340
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wf7-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        540
+      ],
+      "webhookId": "socialpulse-master-wh",
+      "parameters": {
+        "path": "socialpulse-master",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-merge-trigger",
+      "name": "Trigger zusammenfuehren",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        520,
+        440
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      }
+    },
+    {
+      "id": "wf7-read-konfig",
+      "name": "Konfig-Tab lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        440
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Konfig"
+        },
+        "options": {
+          "range": "A:B"
+        }
+      }
+    },
+    {
+      "id": "wf7-process-config",
+      "name": "Konfig verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Konfig-Tab rows into a config object\nconst config = {};\ntry {\n  const konfigRows = $input.all();\n  for (const row of konfigRows) {\n    const key = (row.json['Einstellung'] || row.json['einstellung'] || '').toString().trim();\n    const val = (row.json['Wert'] || row.json['wert'] || '').toString().trim();\n    if (key) config[key] = val;\n  }\n} catch (e) {\n  throw new Error('Konfig-Tab konnte nicht gelesen werden: ' + e.message);\n}\n\n// Validate required fields\nif (!config.project_name) throw new Error('project_name fehlt in Konfig-Tab');\nif (!config.active_modules) throw new Error('active_modules fehlt in Konfig-Tab');\n\n// Parse active modules\nconst activeModules = config.active_modules.split(',').map(m => m.trim().toLowerCase());\nconst activePlatforms = (config.active_platforms || '').split(',').map(p => p.trim().toLowerCase()).filter(p => p);\n\n// Determine which sub-workflows to run\nconst runWF1 = activeModules.includes('performance');\nconst runWF2 = activeModules.includes('meta_ads');\nconst runWF3 = activeModules.includes('competitor');\nconst runWF4 = activeModules.includes('content');\nconst runWF5 = activeModules.includes('report');\nconst runWF6 = activeModules.includes('report'); // WF6 runs whenever WF5 runs\n\n// Calendar week calculation\nconst now = new Date();\nconst year = now.getFullYear();\nconst jan1 = new Date(year, 0, 1);\nconst days = Math.floor((now - jan1) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + jan1.getDay() + 1) / 7);\n\n// Base URL for sub-workflow webhooks\nconst baseUrl = 'https://meinoffice.app.n8n.cloud/webhook-test';\n\n// Build config payload to send to sub-workflows\nconst configPayload = {\n  project_name: config.project_name,\n  brand_name: config.brand_name || config.project_name,\n  brand_description: config.brand_description || '',\n  brand_tone: config.brand_tone || 'professionell',\n  brand_colors: config.brand_colors || '#1a73e8, #ffffff',\n  active_platforms: activePlatforms,\n  report_recipients: config.report_recipients || '',\n  report_cc: config.report_cc || '',\n  report_language: config.report_language || 'de',\n  apify_rate_limit_ms: parseInt(config.apify_rate_limit_ms || '5000', 10),\n  apify_max_concurrent: parseInt(config.apify_max_concurrent || '2', 10)\n};\n\nconst startedAt = new Date().toISOString();\n\nreturn [{\n  json: {\n    config: configPayload,\n    modules: {\n      wf1: runWF1,\n      wf2: runWF2,\n      wf3: runWF3,\n      wf4: runWF4,\n      wf5: runWF5,\n      wf6: runWF6\n    },\n    calendarWeek,\n    year,\n    startedAt,\n    baseUrl,\n    activeModules,\n    activePlatforms\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-call-wf1",
+      "name": "WF1 Performance Collector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1400,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfig verarbeiten').first().json.baseUrl + '/socialpulse-performance' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $('Konfig verarbeiten').first().json.config }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    },
+    {
+      "id": "wf7-call-wf2",
+      "name": "WF2 Meta Ads Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1400,
+        440
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfig verarbeiten').first().json.baseUrl + '/socialpulse-meta-ads' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $('Konfig verarbeiten').first().json.config }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "wf7-call-wf3",
+      "name": "WF3 Competitor Monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1400,
+        640
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfig verarbeiten').first().json.baseUrl + '/socialpulse-competitor' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $('Konfig verarbeiten').first().json.config }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    },
+    {
+      "id": "wf7-merge-wave1",
+      "name": "Wave-1 Ergebnisse",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        1700,
+        440
+      ],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3,
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-eval-wave1",
+      "name": "Wave-1 auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Evaluate Wave 1 results (WF1, WF2, WF3)\nconst configData = $('Konfig verarbeiten').first().json;\nconst modules = configData.modules;\n\n// Collect results from Wave 1 sub-workflows\nconst wave1Items = $input.all();\nconst wave1Results = [];\nconst wave1Errors = [];\n\n// Map the 3 items to their respective workflows\n// Item order from Merge (append): WF1 (input 0), WF2 (input 1), WF3 (input 2)\nconst wfNames = ['WF1 Performance Collector', 'WF2 Meta Ads Analyzer', 'WF3 Competitor Monitor'];\nconst wfKeys = ['wf1', 'wf2', 'wf3'];\nconst wfModuleActive = [modules.wf1, modules.wf2, modules.wf3];\n\nfor (let i = 0; i < wave1Items.length; i++) {\n  const item = wave1Items[i].json;\n  const wfKey = wfKeys[i] || 'unknown';\n  const wfName = wfNames[i] || 'Unknown';\n  const isActive = wfModuleActive[i] !== false;\n\n  if (!isActive) {\n    wave1Results.push({\n      workflow: wfName,\n      key: wfKey,\n      status: 'skipped',\n      message: 'Modul nicht aktiv in Konfig'\n    });\n    continue;\n  }\n\n  // Check if the HTTP request itself failed (error in response)\n  if (item.error || item.statusCode >= 400) {\n    wave1Errors.push({\n      workflow: wfName,\n      key: wfKey,\n      status: 'error',\n      message: item.error || item.message || ('HTTP ' + (item.statusCode || 'unknown')),\n      details: item\n    });\n    continue;\n  }\n\n  // Check the sub-workflow's structured response\n  if (item.success === false) {\n    wave1Errors.push({\n      workflow: wfName,\n      key: wfKey,\n      status: 'error',\n      message: 'Sub-Workflow meldete Fehler',\n      errors: item.errors\n    });\n    continue;\n  }\n\n  wave1Results.push({\n    workflow: wfName,\n    key: wfKey,\n    status: item.success ? 'success' : 'partial_success',\n    data: item.data || null\n  });\n}\n\nconst wave1Success = wave1Results.filter(r => r.status === 'success' || r.status === 'partial_success').length;\nconst wave1Failed = wave1Errors.length;\nconst wave1Ok = wave1Success > 0;\n\nreturn [{\n  json: {\n    config: configData.config,\n    modules: configData.modules,\n    calendarWeek: configData.calendarWeek,\n    year: configData.year,\n    startedAt: configData.startedAt,\n    baseUrl: configData.baseUrl,\n    wave1: {\n      results: wave1Results,\n      errors: wave1Errors,\n      successCount: wave1Success,\n      errorCount: wave1Failed,\n      ok: wave1Ok\n    },\n    runLog: [\n      ...wave1Results.map(r => ({ wave: 1, workflow: r.workflow, status: r.status })),\n      ...wave1Errors.map(e => ({ wave: 1, workflow: e.workflow, status: 'error', message: e.message }))\n    ]\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-if-wave1",
+      "name": "Wave-1 OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2220,
+        440
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "wave1-ok",
+              "leftValue": "={{ $json.wave1.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-wave1-failed",
+      "name": "Wave-1 komplett fehlgeschlagen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        640
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Wave 1 completely failed -- skip Waves 2-4\nconst data = $input.first().json;\n\ndata.runLog.push({\n  wave: 'skip',\n  workflow: 'WF4/WF5/WF6',\n  status: 'skipped',\n  message: 'Uebersprungen weil Wave-1 komplett fehlgeschlagen'\n});\n\ndata.finalStatus = 'error';\ndata.finalMessage = 'Wave-1 komplett fehlgeschlagen. Keine Daten fuer Content/Report.';\n\nreturn [{ json: data }];"
+      }
+    },
+    {
+      "id": "wf7-call-wf4",
+      "name": "WF4 Content Creator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2480,
+        340
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.baseUrl + '/socialpulse-content' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $json.config }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      }
+    },
+    {
+      "id": "wf7-eval-wave2",
+      "name": "Wave-2 auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2740,
+        340
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Evaluate Wave 2 result (WF4 Content Creator)\nconst prevData = $('Wave-1 auswerten').first().json;\nconst wf4Result = $input.first().json;\nconst modules = prevData.modules;\n\nlet wave2Entry;\n\nif (!modules.wf4) {\n  wave2Entry = { wave: 2, workflow: 'WF4 Content Creator', status: 'skipped', message: 'Modul nicht aktiv' };\n} else if (wf4Result.error || wf4Result.statusCode >= 400) {\n  wave2Entry = { wave: 2, workflow: 'WF4 Content Creator', status: 'error', message: wf4Result.error || wf4Result.message || 'HTTP Fehler' };\n} else if (wf4Result.success === false) {\n  wave2Entry = { wave: 2, workflow: 'WF4 Content Creator', status: 'error', message: 'Sub-WF meldete Fehler', errors: wf4Result.errors };\n} else {\n  wave2Entry = { wave: 2, workflow: 'WF4 Content Creator', status: 'success' };\n}\n\nprevData.runLog.push(wave2Entry);\nprevData.wave2 = { result: wave2Entry, ok: wave2Entry.status === 'success' || wave2Entry.status === 'skipped' };\n\nreturn [{ json: prevData }];"
+      }
+    },
+    {
+      "id": "wf7-call-wf5",
+      "name": "WF5 Report Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3000,
+        340
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.baseUrl + '/socialpulse-report-generator' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $json.config, calendar_week: $json.calendarWeek, year: $json.year }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    },
+    {
+      "id": "wf7-eval-wave3",
+      "name": "Wave-3 auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        340
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Evaluate Wave 3 result (WF5 Report Generator)\nconst prevData = $('Wave-2 auswerten').first().json;\nconst wf5Result = $input.first().json;\nconst modules = prevData.modules;\n\nlet wave3Entry;\nlet reportData = null;\n\nif (!modules.wf5) {\n  wave3Entry = { wave: 3, workflow: 'WF5 Report Generator', status: 'skipped', message: 'Report-Modul nicht aktiv' };\n} else if (wf5Result.error || wf5Result.statusCode >= 400) {\n  wave3Entry = { wave: 3, workflow: 'WF5 Report Generator', status: 'error', message: wf5Result.error || wf5Result.message || 'HTTP Fehler' };\n} else if (wf5Result.success === false) {\n  wave3Entry = { wave: 3, workflow: 'WF5 Report Generator', status: 'error', message: 'Sub-WF meldete Fehler', errors: wf5Result.errors };\n} else {\n  wave3Entry = { wave: 3, workflow: 'WF5 Report Generator', status: 'success' };\n  reportData = wf5Result.data || null;\n}\n\nprevData.runLog.push(wave3Entry);\nprevData.wave3 = { result: wave3Entry, ok: wave3Entry.status === 'success', reportData };\n\nreturn [{ json: prevData }];"
+      }
+    },
+    {
+      "id": "wf7-if-report",
+      "name": "Report erstellt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3520,
+        340
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "report-ok",
+              "leftValue": "={{ $json.wave3.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-call-wf6",
+      "name": "WF6 Report Sender",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3780,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.baseUrl + '/socialpulse-report-sender' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ config: $json.config, reportData: $json.wave3.reportData, calendar_week: $json.calendarWeek, year: $json.year }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "wf7-eval-wave4",
+      "name": "Wave-4 auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4040,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Evaluate Wave 4 result (WF6 Report Sender)\nconst prevData = $('Wave-3 auswerten').first().json;\nconst wf6Result = $input.first().json;\n\nlet wave4Entry;\n\nif (wf6Result.error || wf6Result.statusCode >= 400) {\n  wave4Entry = { wave: 4, workflow: 'WF6 Report Sender', status: 'error', message: wf6Result.error || wf6Result.message || 'HTTP Fehler' };\n} else if (wf6Result.success === false) {\n  wave4Entry = { wave: 4, workflow: 'WF6 Report Sender', status: 'error', message: 'Sub-WF meldete Fehler', errors: wf6Result.errors };\n} else {\n  wave4Entry = { wave: 4, workflow: 'WF6 Report Sender', status: 'success' };\n}\n\nprevData.runLog.push(wave4Entry);\nprevData.wave4 = { result: wave4Entry, ok: wave4Entry.status === 'success' };\n\nreturn [{ json: prevData }];"
+      }
+    },
+    {
+      "id": "wf7-report-skipped",
+      "name": "Report uebersprungen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3780,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Report was not generated -- skip WF6\nconst data = $input.first().json;\n\ndata.runLog.push({\n  wave: 4,\n  workflow: 'WF6 Report Sender',\n  status: 'skipped',\n  message: 'Uebersprungen weil Report nicht erstellt wurde'\n});\n\ndata.wave4 = { result: { status: 'skipped' }, ok: false };\n\nreturn [{ json: data }];"
+      }
+    },
+    {
+      "id": "wf7-merge-final",
+      "name": "Final zusammenfuehren",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        4300,
+        440
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty",
+        "numberInputs": 3
+      }
+    },
+    {
+      "id": "wf7-build-runlog",
+      "name": "Finales Run-Log zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4560,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build final run log from whichever path completed\nlet data;\n\n// Try to get data from the different possible paths\ntry { data = $('Wave-4 auswerten').first().json; } catch(e) {}\nif (!data) { try { data = $('Report uebersprungen').first().json; } catch(e) {} }\nif (!data) { try { data = $('Wave-1 komplett fehlgeschlagen').first().json; } catch(e) {} }\n\nif (!data) {\n  return [{ json: { error: 'Keine Daten von Sub-Workflows erhalten', runLog: [], finalStatus: 'error' } }];\n}\n\nconst finishedAt = new Date().toISOString();\nconst startMs = new Date(data.startedAt).getTime();\nconst endMs = new Date(finishedAt).getTime();\nconst durationSeconds = Math.round((endMs - startMs) / 1000 * 100) / 100;\n\n// Count successes and errors\nconst runLog = data.runLog || [];\nconst successWFs = runLog.filter(r => r.status === 'success').map(r => r.workflow);\nconst errorWFs = runLog.filter(r => r.status === 'error').map(r => r.workflow);\nconst skippedWFs = runLog.filter(r => r.status === 'skipped').map(r => r.workflow);\n\nlet finalStatus;\nif (data.finalStatus) {\n  finalStatus = data.finalStatus;\n} else if (errorWFs.length === 0) {\n  finalStatus = 'success';\n} else if (successWFs.length > 0) {\n  finalStatus = 'partial_success';\n} else {\n  finalStatus = 'error';\n}\n\nreturn [{\n  json: {\n    workflow_name: 'WF7 SocialPulse Controller',\n    workflow_id: $workflow.id || '',\n    execution_id: $execution.id || '',\n    project_name: data.config?.project_name || 'unknown',\n    started_at: data.startedAt,\n    finished_at: finishedAt,\n    duration_seconds: durationSeconds,\n    status: finalStatus,\n    platforms_ok: successWFs,\n    platforms_error: errorWFs,\n    error_details: errorWFs.length > 0 ? JSON.stringify(runLog.filter(r => r.status === 'error')) : null,\n    items_processed: successWFs.length + skippedWFs.length + errorWFs.length,\n    notes: 'Waves: W1=' + (data.wave1?.successCount || 0) + '/' + ((data.wave1?.successCount || 0) + (data.wave1?.errorCount || 0)) + ' OK, W2=' + (data.wave2?.result?.status || 'n/a') + ', W3=' + (data.wave3?.result?.status || 'n/a') + ', W4=' + (data.wave4?.result?.status || 'n/a'),\n    // Pass full data for downstream nodes\n    _config: data.config,\n    _runLog: runLog,\n    _calendarWeek: data.calendarWeek,\n    _year: data.year,\n    _finalMessage: data.finalMessage || '',\n    _wave1: data.wave1,\n    _wave2: data.wave2,\n    _wave3: data.wave3,\n    _wave4: data.wave4\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-supabase-runlog",
+      "name": "Supabase Run-Log schreiben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4820,
+        440
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/workflow_runs' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_name: $json.workflow_name, workflow_id: $json.workflow_id, execution_id: $json.execution_id, project_name: $json.project_name, started_at: $json.started_at, finished_at: $json.finished_at, duration_seconds: $json.duration_seconds, status: $json.status, platforms_ok: $json.platforms_ok, platforms_error: $json.platforms_error, error_details: $json.error_details ? JSON.parse($json.error_details) : null, items_processed: $json.items_processed, notes: $json.notes }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-sheet-runlog",
+      "name": "Sheets Run-Log schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5080,
+        440
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Run Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $('Finales Run-Log zusammenbauen').first().json.finished_at }}",
+            "Workflow": "={{ $('Finales Run-Log zusammenbauen').first().json.workflow_name }}",
+            "Status": "={{ $('Finales Run-Log zusammenbauen').first().json.status }}",
+            "Dauer (s)": "={{ $('Finales Run-Log zusammenbauen').first().json.duration_seconds }}",
+            "Erfolg": "={{ $('Finales Run-Log zusammenbauen').first().json.platforms_ok.join(', ') }}",
+            "Fehler": "={{ ($('Finales Run-Log zusammenbauen').first().json.platforms_error || []).join(', ') }}",
+            "Details": "={{ $('Finales Run-Log zusammenbauen').first().json.notes }}"
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-build-response",
+      "name": "Final Response zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5340,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build comprehensive final response\nconst runLogData = $('Finales Run-Log zusammenbauen').first().json;\n\nconst response = {\n  success: runLogData.status === 'success',\n  workflow: 'WF7 SocialPulse Controller',\n  status: runLogData.status,\n  summary: {\n    projectName: runLogData.project_name,\n    calendarWeek: runLogData._calendarWeek,\n    year: runLogData._year,\n    durationSeconds: runLogData.duration_seconds,\n    startedAt: runLogData.started_at,\n    finishedAt: runLogData.finished_at\n  },\n  waves: {\n    wave1: {\n      workflows: ['WF1', 'WF2', 'WF3'],\n      successCount: runLogData._wave1?.successCount || 0,\n      errorCount: runLogData._wave1?.errorCount || 0,\n      ok: runLogData._wave1?.ok || false\n    },\n    wave2: {\n      workflow: 'WF4',\n      status: runLogData._wave2?.result?.status || 'not_run'\n    },\n    wave3: {\n      workflow: 'WF5',\n      status: runLogData._wave3?.result?.status || 'not_run'\n    },\n    wave4: {\n      workflow: 'WF6',\n      status: runLogData._wave4?.result?.status || 'not_run'\n    }\n  },\n  runLog: runLogData._runLog || [],\n  errors: (runLogData._runLog || []).filter(r => r.status === 'error').length > 0\n    ? (runLogData._runLog || []).filter(r => r.status === 'error')\n    : null,\n  message: runLogData._finalMessage || (runLogData.status === 'success'\n    ? 'Alle Workflows erfolgreich abgeschlossen.'\n    : runLogData.status === 'partial_success'\n      ? 'Teilweise erfolgreich. Einige Workflows hatten Fehler.'\n      : 'Pipeline fehlgeschlagen. Details im runLog.'),\n  timestamp: new Date().toISOString()\n};\n\nreturn [{ json: response }];"
+      }
+    },
+    {
+      "id": "wf7-respond",
+      "name": "Webhook Antwort",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        5600,
+        440
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Trigger zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Trigger zusammenfuehren",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Trigger zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Konfig-Tab lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig-Tab lesen": {
+      "main": [
+        [
+          {
+            "node": "Konfig verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "WF1 Performance Collector",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WF2 Meta Ads Analyzer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WF3 Competitor Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF1 Performance Collector": {
+      "main": [
+        [
+          {
+            "node": "Wave-1 Ergebnisse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF2 Meta Ads Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Wave-1 Ergebnisse",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "WF3 Competitor Monitor": {
+      "main": [
+        [
+          {
+            "node": "Wave-1 Ergebnisse",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Wave-1 Ergebnisse": {
+      "main": [
+        [
+          {
+            "node": "Wave-1 auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wave-1 auswerten": {
+      "main": [
+        [
+          {
+            "node": "Wave-1 OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wave-1 OK?": {
+      "main": [
+        [
+          {
+            "node": "WF4 Content Creator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wave-1 komplett fehlgeschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF4 Content Creator": {
+      "main": [
+        [
+          {
+            "node": "Wave-2 auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wave-2 auswerten": {
+      "main": [
+        [
+          {
+            "node": "WF5 Report Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF5 Report Generator": {
+      "main": [
+        [
+          {
+            "node": "Wave-3 auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wave-3 auswerten": {
+      "main": [
+        [
+          {
+            "node": "Report erstellt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report erstellt?": {
+      "main": [
+        [
+          {
+            "node": "WF6 Report Sender",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Report uebersprungen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF6 Report Sender": {
+      "main": [
+        [
+          {
+            "node": "Wave-4 auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wave-4 auswerten": {
+      "main": [
+        [
+          {
+            "node": "Final zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report uebersprungen": {
+      "main": [
+        [
+          {
+            "node": "Final zusammenfuehren",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wave-1 komplett fehlgeschlagen": {
+      "main": [
+        [
+          {
+            "node": "Final zusammenfuehren",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Final zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Finales Run-Log zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finales Run-Log zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "Supabase Run-Log schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Run-Log schreiben": {
+      "main": [
+        [
+          {
+            "node": "Sheets Run-Log schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Run-Log schreiben": {
+      "main": [
+        [
+          {
+            "node": "Final Response zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Response zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "Webhook Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "name": "SocialPulse"
+    }
+  ]
+}

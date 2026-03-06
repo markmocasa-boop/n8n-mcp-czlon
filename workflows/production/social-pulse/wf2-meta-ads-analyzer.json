@@ -1,0 +1,621 @@
+{
+  "name": "SocialPulse WF2: Meta Ads Analyzer",
+  "nodes": [
+    {
+      "id": "wf2-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        460
+      ],
+      "webhookId": "socialpulse-meta-ads",
+      "parameters": {
+        "path": "socialpulse-meta-ads",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-dual-trigger",
+      "name": "Dual-Trigger Pruefung",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-config",
+              "leftValue": "={{ $json.body.config }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-read-konfig",
+      "name": "Konfig aus Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        620
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "url",
+          "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Konfig"
+        },
+        "options": {
+          "range": "A:B"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "wf2-read-ads-konfig",
+      "name": "Meta Ads Konfig lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        620
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "url",
+          "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Meta Ads Konfig"
+        },
+        "options": {
+          "range": "A:B"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "wf2-merge-config",
+      "name": "Konfig zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge config from either Master (body.config) or Sheet reads.\n// Also merge Meta Ads specific config.\n\nconst webhookData = $('Webhook Trigger').first().json.body || {};\n\nlet config = {};\nlet metaAdsConfig = {};\n\nif (webhookData.config) {\n  // Master provided config\n  config = webhookData.config;\n  metaAdsConfig = webhookData.meta_ads_config || {};\n} else {\n  // Standalone: build config from Sheet rows\n  try {\n    const konfigRows = $('Konfig aus Sheet lesen').all();\n    for (const row of konfigRows) {\n      const key = (row.json['Einstellung'] || row.json['einstellung'] || '').trim();\n      const val = (row.json['Wert'] || row.json['wert'] || '').trim();\n      if (key) config[key] = val;\n    }\n  } catch (e) {\n    // Konfig sheet read may not have run (Master path)\n  }\n\n  try {\n    const adsRows = $('Meta Ads Konfig lesen').all();\n    for (const row of adsRows) {\n      const key = (row.json['Einstellung'] || row.json['einstellung'] || '').trim();\n      const val = (row.json['Wert'] || row.json['wert'] || '').trim();\n      if (key) metaAdsConfig[key] = val;\n    }\n  } catch (e) {\n    // Meta Ads Konfig sheet read may not have run (Master path)\n  }\n}\n\n// Calculate calendar week\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);\n\nreturn [{\n  json: {\n    config,\n    metaAdsConfig,\n    projectName: config.project_name || 'unknown',\n    adAccountId: metaAdsConfig.ad_account_id || '',\n    campaignFilter: metaAdsConfig.campaign_filter || '',\n    dateRangeDays: parseInt(metaAdsConfig.date_range_days || '7'),\n    enabled: (metaAdsConfig.enabled || 'FALSE').toUpperCase() === 'TRUE',\n    calendarWeek,\n    year: now.getFullYear(),\n    timestamp: now.toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-ads-enabled",
+      "name": "Meta Ads aktiv?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ads-enabled",
+              "leftValue": "={{ $json.enabled }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-skipped",
+      "name": "Skipped Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    success: true,\n    workflow: 'WF2 Meta Ads Analyzer',\n    status: 'skipped',\n    reason: 'Meta Ads Modul ist deaktiviert (enabled=FALSE in Meta Ads Konfig)',\n    data: null,\n    errors: null,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-skipped-respond",
+      "name": "Skipped Webhook Antwort",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        620
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "wf2-prepare-api",
+      "name": "API-Parameter vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst { adAccountId, campaignFilter, dateRangeDays, calendarWeek, year, projectName } = input;\n\nif (!adAccountId) {\n  throw new Error('ad_account_id fehlt in Meta Ads Konfig');\n}\n\n// Calculate date range\nconst endDate = new Date();\nconst startDate = new Date();\nstartDate.setDate(endDate.getDate() - dateRangeDays);\n\nconst formatDate = (d) => d.toISOString().split('T')[0];\n\n// Meta Marketing API fields\nconst campaignFields = [\n  'campaign_name', 'objective', 'status',\n  'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',\n  'actions', 'action_values', 'reach', 'frequency'\n].join(',');\n\nconst adsetFields = [\n  'adset_name', 'campaign_name', 'status', 'targeting',\n  'spend', 'impressions', 'clicks', 'ctr', 'cpc',\n  'actions', 'reach', 'frequency'\n].join(',');\n\nconst adFields = [\n  'ad_name', 'adset_name', 'campaign_name', 'status',\n  'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',\n  'actions', 'action_values', 'reach', 'frequency',\n  'publisher_platform'\n].join(',');\n\nreturn [{\n  json: {\n    adAccountId,\n    campaignFilter,\n    calendarWeek,\n    year,\n    projectName,\n    dateRangeStart: formatDate(startDate),\n    dateRangeEnd: formatDate(endDate),\n    timeRange: JSON.stringify({ since: formatDate(startDate), until: formatDate(endDate) }),\n    campaignFields,\n    adsetFields,\n    adFields\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-get-campaigns",
+      "name": "Kampagnen abrufen",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 15000,
+      "parameters": {
+        "hostUrl": "graph.facebook.com",
+        "httpRequestMethod": "GET",
+        "graphApiVersion": "v21.0",
+        "node": "={{ $json.adAccountId }}",
+        "edge": "insights",
+        "options": {
+          "queryParametersJson": "={{ JSON.stringify({ fields: $json.campaignFields, time_range: $json.timeRange, level: 'campaign', limit: '100' }) }}"
+        }
+      }
+    },
+    {
+      "id": "wf2-get-adsets",
+      "name": "Anzeigengruppen abrufen",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 15000,
+      "parameters": {
+        "hostUrl": "graph.facebook.com",
+        "httpRequestMethod": "GET",
+        "graphApiVersion": "v21.0",
+        "node": "={{ $('API-Parameter vorbereiten').first().json.adAccountId }}",
+        "edge": "insights",
+        "options": {
+          "queryParametersJson": "={{ JSON.stringify({ fields: $('API-Parameter vorbereiten').first().json.adsetFields, time_range: $('API-Parameter vorbereiten').first().json.timeRange, level: 'adset', limit: '200' }) }}"
+        }
+      }
+    },
+    {
+      "id": "wf2-get-ads",
+      "name": "Anzeigen abrufen",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 15000,
+      "parameters": {
+        "hostUrl": "graph.facebook.com",
+        "httpRequestMethod": "GET",
+        "graphApiVersion": "v21.0",
+        "node": "={{ $('API-Parameter vorbereiten').first().json.adAccountId }}",
+        "edge": "insights",
+        "options": {
+          "queryParametersJson": "={{ JSON.stringify({ fields: $('API-Parameter vorbereiten').first().json.adFields, time_range: $('API-Parameter vorbereiten').first().json.timeRange, level: 'ad', limit: '500', breakdowns: 'publisher_platform' }) }}"
+        }
+      }
+    },
+    {
+      "id": "wf2-consolidate",
+      "name": "Ads-Daten konsolidieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Consolidate campaign, ad set, and ad data from the 3 Graph API calls.\n// Compute KPIs and identify top/bottom performers.\n\nconst apiParams = $('API-Parameter vorbereiten').first().json;\nconst { adAccountId, calendarWeek, year, projectName, dateRangeStart, dateRangeEnd } = apiParams;\n\n// Safely extract data from each Graph API node\nlet campaigns = [];\nlet adsets = [];\nlet ads = [];\n\ntry {\n  const campaignItems = $('Kampagnen abrufen').all();\n  campaigns = campaignItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.campaign_name);\n} catch (e) {\n  campaigns = [];\n}\n\ntry {\n  const adsetItems = $('Anzeigengruppen abrufen').all();\n  adsets = adsetItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.adset_name);\n} catch (e) {\n  adsets = [];\n}\n\ntry {\n  const adItems = $('Anzeigen abrufen').all();\n  ads = adItems\n    .map(i => i.json)\n    .filter(d => d && !d.error && d.ad_name);\n} catch (e) {\n  ads = [];\n}\n\n// Helper: safely parse number\nconst num = (v) => parseFloat(v) || 0;\n\n// Aggregate campaign-level KPIs\nconst totalSpend = campaigns.reduce((s, c) => s + num(c.spend), 0);\nconst totalImpressions = campaigns.reduce((s, c) => s + num(c.impressions), 0);\nconst totalClicks = campaigns.reduce((s, c) => s + num(c.clicks), 0);\nconst totalReach = campaigns.reduce((s, c) => s + num(c.reach), 0);\n\n// Extract conversions from actions array\nconst getConversions = (actions) => {\n  if (!Array.isArray(actions)) return 0;\n  const purchase = actions.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase');\n  const lead = actions.find(a => a.action_type === 'lead' || a.action_type === 'offsite_conversion.fb_pixel_lead');\n  return num(purchase?.value) + num(lead?.value);\n};\n\nconst getConversionValue = (actionValues) => {\n  if (!Array.isArray(actionValues)) return 0;\n  const purchase = actionValues.find(a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase');\n  return num(purchase?.value);\n};\n\nconst totalConversions = campaigns.reduce((s, c) => s + getConversions(c.actions), 0);\nconst totalConversionValue = campaigns.reduce((s, c) => s + getConversionValue(c.action_values), 0);\n\nconst overallCtr = totalImpressions > 0 ? (totalClicks / totalImpressions * 100) : 0;\nconst overallCpc = totalClicks > 0 ? (totalSpend / totalClicks) : 0;\nconst overallCpm = totalImpressions > 0 ? (totalSpend / totalImpressions * 1000) : 0;\nconst overallRoas = totalSpend > 0 ? (totalConversionValue / totalSpend) : 0;\n\n// Rank ads by efficiency (spend-weighted CTR * ROAS or simple spend/conversions)\nconst rankedAds = ads\n  .map(ad => ({\n    name: ad.ad_name,\n    adsetName: ad.adset_name,\n    campaignName: ad.campaign_name,\n    platform: ad.publisher_platform || 'unknown',\n    spend: num(ad.spend),\n    impressions: num(ad.impressions),\n    clicks: num(ad.clicks),\n    ctr: num(ad.ctr),\n    cpc: num(ad.cpc),\n    conversions: getConversions(ad.actions),\n    conversionValue: getConversionValue(ad.action_values),\n    roas: num(ad.spend) > 0 ? (getConversionValue(ad.action_values) / num(ad.spend)) : 0\n  }))\n  .filter(ad => ad.spend > 0)\n  .sort((a, b) => b.roas - a.roas || b.ctr - a.ctr);\n\nconst top3 = rankedAds.slice(0, 3);\nconst bottom3 = rankedAds.slice(-3).reverse();\n\n// Platform split (Facebook vs Instagram)\nconst fbAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'facebook');\nconst igAds = ads.filter(a => (a.publisher_platform || '').toLowerCase() === 'instagram');\n\nconst fbSpend = fbAds.reduce((s, a) => s + num(a.spend), 0);\nconst fbImpressions = fbAds.reduce((s, a) => s + num(a.impressions), 0);\nconst igSpend = igAds.reduce((s, a) => s + num(a.spend), 0);\nconst igImpressions = igAds.reduce((s, a) => s + num(a.impressions), 0);\n\nreturn [{\n  json: {\n    adAccountId,\n    projectName,\n    calendarWeek,\n    year,\n    dateRangeStart,\n    dateRangeEnd,\n    summary: {\n      totalCampaigns: campaigns.length,\n      activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,\n      totalSpend: Math.round(totalSpend * 100) / 100,\n      totalImpressions,\n      totalClicks,\n      totalReach,\n      totalConversions,\n      totalConversionValue: Math.round(totalConversionValue * 100) / 100,\n      overallCtr: Math.round(overallCtr * 10000) / 10000,\n      overallCpc: Math.round(overallCpc * 100) / 100,\n      overallCpm: Math.round(overallCpm * 100) / 100,\n      overallRoas: Math.round(overallRoas * 10000) / 10000\n    },\n    top3Ads: top3,\n    bottom3Ads: bottom3,\n    platformSplit: {\n      facebook: { spend: Math.round(fbSpend * 100) / 100, impressions: fbImpressions },\n      instagram: { spend: Math.round(igSpend * 100) / 100, impressions: igImpressions }\n    },\n    rawCampaigns: campaigns,\n    rawAdsets: adsets,\n    rawAds: ads,\n    adsCount: ads.length,\n    hasData: campaigns.length > 0 || ads.length > 0\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-claude-analysis",
+      "name": "Claude Analyse",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        2600,
+        460
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "ANTHROPIC_CREDENTIAL_ID_HIER_EINTRAGEN",
+          "name": "Anthropic API"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "mode": "id",
+          "value": "claude-sonnet-4-6"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "={{ \"Analysiere die folgenden Meta Ads Kampagnendaten der letzten 7 Tage.\n\nGesamt-Performance:\n\" + JSON.stringify(.first().json.summary, null, 2) + \"\n\nTop 3 Anzeigen:\n\" + JSON.stringify(.first().json.top3Ads, null, 2) + \"\n\nBottom 3 Anzeigen:\n\" + JSON.stringify(.first().json.bottom3Ads, null, 2) + \"\n\nPlattform-Vergleich (Facebook vs Instagram):\n\" + JSON.stringify(.first().json.platformSplit, null, 2) + \"\n\nErstelle eine detaillierte Analyse auf Deutsch mit:\n1. Gesamt-Performance-Zusammenfassung (Spend, ROAS, wichtigste KPIs)\n2. Top 3 performende Anzeigen und warum sie gut laufen\n3. Bottom 3 Anzeigen und Verbesserungsvorschlaege\n4. Budget-Empfehlungen (welche Kampagnen skalieren, welche pausieren)\n5. Targeting-Empfehlungen\n6. Vergleich Instagram vs Facebook Performance\n7. Konkrete Action Items fuer die naechste Woche\n\nFormatiere als JSON-Objekt.\" }}"
+          }
+        ],
+        "simplify": false,
+        "options": {
+          "system": "Du bist ein erfahrener Meta Ads Performance-Analyst. Antworte IMMER auf Deutsch. Formatiere deine Analyse als valides JSON-Objekt mit den Schlüsseln: zusammenfassung, top_3_analyse, bottom_3_analyse, budget_empfehlungen, targeting_empfehlungen, plattform_vergleich, action_items.",
+          "maxTokens": 4096,
+          "temperature": 0.3
+        }
+      }
+    },
+    {
+      "id": "wf2-process-analysis",
+      "name": "Analyse-Ergebnis verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Process Claude's analysis response and merge with consolidated data.\nconst adsData = $('Ads-Daten konsolidieren').first().json;\nconst claudeResponse = $input.first().json;\n\nlet analysisText = '';\nlet analysisJson = null;\n\ntry {\n  // Claude API response structure: { content: [{ type: 'text', text: '...' }] }\n  const content = claudeResponse.content;\n  if (Array.isArray(content) && content.length > 0) {\n    analysisText = content[0].text || '';\n  } else if (typeof claudeResponse === 'string') {\n    analysisText = claudeResponse;\n  } else if (claudeResponse.error) {\n    throw new Error(`Claude API Fehler: ${JSON.stringify(claudeResponse.error)}`);\n  }\n\n  // Try to parse as JSON (Claude was instructed to return JSON)\n  try {\n    // Remove markdown code fences if present\n    let cleanText = analysisText.trim();\n    if (cleanText.startsWith('```json')) {\n      cleanText = cleanText.replace(/^```json\\s*/, '').replace(/```\\s*$/, '');\n    } else if (cleanText.startsWith('```')) {\n      cleanText = cleanText.replace(/^```\\s*/, '').replace(/```\\s*$/, '');\n    }\n    analysisJson = JSON.parse(cleanText);\n  } catch (parseErr) {\n    // If JSON parsing fails, store as text only\n    analysisJson = { raw_text: analysisText, parse_error: parseErr.message };\n  }\n} catch (error) {\n  analysisText = `Analyse-Fehler: ${error.message}`;\n  analysisJson = { error: error.message };\n}\n\n// Build the Supabase record\nreturn [{\n  json: {\n    project_name: adsData.projectName,\n    calendar_week: adsData.calendarWeek,\n    year: adsData.year,\n    ad_account_id: adsData.adAccountId,\n    total_campaigns: adsData.summary.totalCampaigns,\n    active_campaigns: adsData.summary.activeCampaigns,\n    total_spend: adsData.summary.totalSpend,\n    total_impressions: adsData.summary.totalImpressions,\n    total_clicks: adsData.summary.totalClicks,\n    total_conversions: adsData.summary.totalConversions,\n    overall_ctr: adsData.summary.overallCtr,\n    overall_cpc: adsData.summary.overallCpc,\n    overall_cpm: adsData.summary.overallCpm,\n    overall_roas: adsData.summary.overallRoas,\n    top_3_ads: JSON.stringify(adsData.top3Ads),\n    bottom_3_ads: JSON.stringify(adsData.bottom3Ads),\n    facebook_spend: adsData.platformSplit.facebook.spend,\n    facebook_impressions: adsData.platformSplit.facebook.impressions,\n    instagram_spend: adsData.platformSplit.instagram.spend,\n    instagram_impressions: adsData.platformSplit.instagram.impressions,\n    analysis_text: analysisText,\n    analysis_json: JSON.stringify(analysisJson),\n    raw_campaigns: JSON.stringify(adsData.rawCampaigns),\n    raw_adsets: JSON.stringify(adsData.rawAdsets),\n    raw_ads: JSON.stringify(adsData.rawAds),\n    date_range_start: adsData.dateRangeStart,\n    date_range_end: adsData.dateRangeEnd,\n    collected_at: new Date().toISOString(),\n    data_source: 'wf2_meta_ads_analyzer'\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-supabase-upsert",
+      "name": "Supabase Meta Ads UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3120,
+        460
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/meta_ads_weekly' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-build-response",
+      "name": "Response zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3380,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const adsData = $('Ads-Daten konsolidieren').first().json;\nconst analysisResult = $('Analyse-Ergebnis verarbeiten').first().json;\n\nconst errors = [];\n\n// Check if we got actual data\nif (!adsData.hasData) {\n  errors.push({\n    source: 'meta_api',\n    message: 'Keine Kampagnendaten von Meta API erhalten. Moeglicherweise keine aktiven Kampagnen oder API-Zugriffsfehler.'\n  });\n}\n\n// Check if Claude analysis succeeded\nif (analysisResult.analysis_text && analysisResult.analysis_text.startsWith('Analyse-Fehler:')) {\n  errors.push({\n    source: 'claude_analysis',\n    message: analysisResult.analysis_text\n  });\n}\n\nreturn [{\n  json: {\n    success: errors.length === 0,\n    workflow: 'WF2 Meta Ads Analyzer',\n    status: errors.length === 0 ? 'success' : 'partial_success',\n    data: {\n      adAccountId: adsData.adAccountId,\n      dateRange: `${adsData.dateRangeStart} bis ${adsData.dateRangeEnd}`,\n      summary: adsData.summary,\n      top3Ads: adsData.top3Ads.map(a => a.name),\n      bottom3Ads: adsData.bottom3Ads.map(a => a.name),\n      platformSplit: adsData.platformSplit,\n      analysisAvailable: !analysisResult.analysis_text?.startsWith('Analyse-Fehler:'),\n      supabaseWritten: true\n    },\n    errors: errors.length > 0 ? errors : null,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-respond",
+      "name": "Webhook Antwort",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3640,
+        460
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Dual-Trigger Pruefung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dual-Trigger Pruefung": {
+      "main": [
+        [
+          {
+            "node": "Konfig zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Konfig aus Sheet lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig aus Sheet lesen": {
+      "main": [
+        [
+          {
+            "node": "Meta Ads Konfig lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Ads Konfig lesen": {
+      "main": [
+        [
+          {
+            "node": "Konfig zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Meta Ads aktiv?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Ads aktiv?": {
+      "main": [
+        [
+          {
+            "node": "API-Parameter vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skipped Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skipped Response": {
+      "main": [
+        [
+          {
+            "node": "Skipped Webhook Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API-Parameter vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Kampagnen abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kampagnen abrufen": {
+      "main": [
+        [
+          {
+            "node": "Anzeigengruppen abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anzeigengruppen abrufen": {
+      "main": [
+        [
+          {
+            "node": "Anzeigen abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anzeigen abrufen": {
+      "main": [
+        [
+          {
+            "node": "Ads-Daten konsolidieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ads-Daten konsolidieren": {
+      "main": [
+        [
+          {
+            "node": "Claude Analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Analyse": {
+      "main": [
+        [
+          {
+            "node": "Analyse-Ergebnis verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse-Ergebnis verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Supabase Meta Ads UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Meta Ads UPSERT": {
+      "main": [
+        [
+          {
+            "node": "Response zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "Webhook Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

@@ -1,0 +1,1174 @@
+{
+  "name": "SocialPulse WF4: Content Creator",
+  "nodes": [
+    {
+      "id": "wf4-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        460
+      ],
+      "webhookId": "socialpulse-content",
+      "parameters": {
+        "path": "socialpulse-content",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-dual-trigger",
+      "name": "Dual-Trigger Pruefung",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-config",
+              "leftValue": "={{ $json.body.config }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-read-konfig",
+      "name": "Konfig aus Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        620
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "url",
+          "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Konfig"
+        },
+        "options": {
+          "range": "A:B"
+        }
+      }
+    },
+    {
+      "id": "wf4-merge-config",
+      "name": "Konfig zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge config from Master or Sheet reads (same pattern as WF1/WF3)\nconst webhookData = $('Webhook Trigger').first().json.body;\n\nlet config = {};\nlet performanceData = null;\nlet competitorData = null;\n\nif (webhookData && webhookData.config) {\n  // Master provided config + data\n  config = webhookData.config;\n  performanceData = webhookData.performance_data || null;\n  competitorData = webhookData.competitor_data || null;\n} else {\n  // Standalone: build config from Sheet rows\n  const konfigRows = $('Konfig aus Sheet lesen').all();\n  for (const row of konfigRows) {\n    const key = row.json['Einstellung'] || row.json['einstellung'];\n    const val = row.json['Wert'] || row.json['wert'];\n    if (key) config[key] = val;\n  }\n}\n\n// Parse active platforms\nconst activePlatforms = (config.active_platforms || '')\n  .split(',')\n  .map(p => p.trim().toLowerCase())\n  .filter(p => p.length > 0);\n\n// Calendar week\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);\n\n// Initialize staticData for result accumulation\nconst staticData = $getWorkflowStaticData('global');\nstaticData.results = [];\nstaticData.errors = [];\n\nreturn [{\n  json: {\n    config,\n    activePlatforms,\n    calendarWeek,\n    year: now.getFullYear(),\n    projectName: config.project_name || 'unknown',\n    brandName: config.brand_name || '',\n    brandDescription: config.brand_description || '',\n    branche: config.branche || '',\n    targetAudience: config.target_audience || '',\n    brandTone: config.brand_tone || 'professionell, nahbar',\n    performanceData,\n    competitorData,\n    needsSupabaseRead: !performanceData,\n    timestamp: now.toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-needs-supabase",
+      "name": "Braucht Supabase-Daten?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-supabase",
+              "leftValue": "={{ $json.needsSupabaseRead }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-read-performance",
+      "name": "Supabase Performance lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        620
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/performance_weekly' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "project_name",
+              "value": "=eq.{{ $json.projectName }}"
+            },
+            {
+              "name": "calendar_week",
+              "value": "=eq.{{ $json.calendarWeek }}"
+            },
+            {
+              "name": "year",
+              "value": "=eq.{{ $json.year }}"
+            },
+            {
+              "name": "select",
+              "value": "*"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "wf4-read-competitor",
+      "name": "Supabase Competitor lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1820,
+        620
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/competitor_weekly' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "project_name",
+              "value": "=eq.{{ $json.projectName }}"
+            },
+            {
+              "name": "calendar_week",
+              "value": "=eq.{{ $json.calendarWeek }}"
+            },
+            {
+              "name": "year",
+              "value": "=eq.{{ $json.year }}"
+            },
+            {
+              "name": "select",
+              "value": "*"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "wf4-merge-data",
+      "name": "Daten zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge context data from Supabase reads or from Master-provided data\nconst configData = $('Konfig zusammenfuehren').first().json;\n\nlet performanceData = configData.performanceData;\nlet competitorData = configData.competitorData;\n\n// If standalone, read from Supabase responses\nif (!performanceData) {\n  try {\n    const perfResponse = $('Supabase Performance lesen').first().json;\n    performanceData = Array.isArray(perfResponse) ? perfResponse : (perfResponse.data || []);\n  } catch (e) {\n    performanceData = [];\n  }\n}\n\nif (!competitorData) {\n  try {\n    const compResponse = $('Supabase Competitor lesen').first().json;\n    competitorData = Array.isArray(compResponse) ? compResponse : (compResponse.data || []);\n  } catch (e) {\n    competitorData = [];\n  }\n}\n\nreturn [{\n  json: {\n    ...configData,\n    performanceData,\n    competitorData\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-platform-dispatch",
+      "name": "Platform Dispatcher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Create 1 item per active platform with platform-specific rules\nconst data = $input.first().json;\n\nconst PLATFORM_RULES = {\n  instagram: {\n    contentType: 'feed_post',\n    needsImage: true,\n    needsVideo: false,\n    imageResolution: '1080x1350',\n    maxCaptionChars: 125,\n    hashtagCount: '3-5',\n    tone: 'visuell, aspirativ, storytelling',\n    rules: 'Max 125 Zeichen Caption. CTA in der ersten Zeile. 3-5 relevante Hashtags. Zusaetzlich: Reel-Konzept beschreiben (kurzes Video, vertikales Format). Emojis gezielt einsetzen.'\n  },\n  facebook: {\n    contentType: 'feed_post',\n    needsImage: true,\n    needsVideo: false,\n    imageResolution: '1080x1350',\n    maxCaptionChars: 80,\n    hashtagCount: '1-2',\n    tone: 'konversationell, persoenlich, Fragen stellen',\n    rules: '40-80 Zeichen Text. Max 1-2 Hashtags. Konversationeller Ton — Frage oder Geschichte erzaehlen. Teilen und Kommentare anregen.'\n  },\n  tiktok: {\n    contentType: 'short',\n    needsImage: false,\n    needsVideo: true,\n    videoFormat: '9:16',\n    videoDuration: '15-30s',\n    maxCaptionChars: 300,\n    hashtagCount: '3-5 trending',\n    tone: 'locker, unterhaltsam, trend-orientiert',\n    rules: 'Video-Konzept im 9:16 Format, 15-30 Sekunden. Hook in den ersten 3 Sekunden. Keyword-reiche Caption. 3-5 trendende Hashtags. Beschreibe das Video-Skript Szene fuer Szene.'\n  },\n  linkedin: {\n    contentType: 'article',\n    needsImage: true,\n    needsVideo: false,\n    imageResolution: '1200x627',\n    maxCaptionChars: 3000,\n    maxPreviewChars: 140,\n    hashtagCount: '2-3',\n    tone: 'professionell, thought-leadership, Mehrwert',\n    rules: 'Unter 140 Zeichen vor dem Mehr-Button (Teaser). Professioneller Ton, Thought Leadership. 2-3 Hashtags. Laengerer Text erlaubt (bis 3000 Zeichen), aber Teaser muss fesseln.'\n  },\n  youtube: {\n    contentType: 'short',\n    needsImage: false,\n    needsVideo: true,\n    videoFormat: '9:16',\n    videoDuration: '15-60s',\n    maxTitleChars: 70,\n    hashtagCount: '0',\n    tone: 'informativ, energetisch, Mehrwert',\n    rules: 'Short-Konzept im 9:16 Format, 15-60 Sekunden. Max 70 Zeichen Titel. Keyword-reiche Beschreibung. Beschreibe das Video-Skript Szene fuer Szene. Call-to-Action: Abonnieren.'\n  },\n  x_twitter: {\n    contentType: 'tweet',\n    needsImage: true,\n    needsVideo: false,\n    imageResolution: '1600x900',\n    maxCaptionChars: 280,\n    targetCaptionChars: '70-100',\n    hashtagCount: '1-2',\n    tone: 'praegnant, meinungsstark, Gespraechsstarter',\n    rules: '70-100 Zeichen optimal (max 280). 1-2 Hashtags. Praegnant und meinungsstark. Gespraechsstarter — Antworten provozieren. Kann auch als Thread geplant werden.'\n  }\n};\n\nconst items = [];\n\nfor (const platform of data.activePlatforms) {\n  const rules = PLATFORM_RULES[platform];\n  if (!rules) continue;\n\n  // Find platform-specific performance data\n  const perfForPlatform = (data.performanceData || []).find(\n    p => p.platform === platform\n  ) || {};\n\n  // Find competitor insights for this platform\n  const compForPlatform = (data.competitorData || []).filter(\n    c => c.platform === platform\n  );\n\n  items.push({\n    json: {\n      platform,\n      platformRules: rules,\n      performanceContext: perfForPlatform,\n      competitorContext: compForPlatform,\n      projectName: data.projectName,\n      brandName: data.brandName,\n      brandDescription: data.brandDescription,\n      branche: data.branche,\n      targetAudience: data.targetAudience,\n      brandTone: data.brandTone,\n      calendarWeek: data.calendarWeek,\n      year: data.year,\n      timestamp: data.timestamp\n    }\n  });\n}\n\nif (items.length === 0) {\n  items.push({\n    json: {\n      skip: true,\n      reason: 'Keine aktiven Plattformen fuer Content-Erstellung'\n    }\n  });\n}\n\nreturn items;"
+      }
+    },
+    {
+      "id": "wf4-split",
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2600,
+        460
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-build-prompt",
+      "name": "Claude Prompt aufbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build platform-specific Claude prompt for content generation\nconst item = $input.first().json;\n\n// Skip if no valid platform\nif (item.skip) {\n  return [{ json: { skip: true, reason: item.reason } }];\n}\n\nconst { platform, platformRules, performanceContext, competitorContext,\n        brandName, brandDescription, branche, targetAudience, brandTone } = item;\n\n// Build performance summary\nlet perfSummary = 'Keine Performance-Daten verfuegbar.';\nif (performanceContext && performanceContext.followers) {\n  perfSummary = `Aktuelle Metriken auf ${platform}:\\n` +\n    `- Follower: ${performanceContext.followers || 'N/A'}\\n` +\n    `- Impressions: ${performanceContext.impressions || 'N/A'}\\n` +\n    `- Engagement Rate: ${performanceContext.engagement_rate || 'N/A'}%\\n` +\n    `- Reach: ${performanceContext.reach || 'N/A'}\\n` +\n    `- Likes (Durchschnitt): ${performanceContext.avg_likes || 'N/A'}\\n` +\n    `- Kommentare (Durchschnitt): ${performanceContext.avg_comments || 'N/A'}`;\n}\n\n// Build competitor summary\nlet compSummary = 'Keine Wettbewerber-Insights verfuegbar.';\nif (competitorContext && competitorContext.length > 0) {\n  compSummary = 'Wettbewerber-Insights:\\n';\n  for (const comp of competitorContext.slice(0, 3)) {\n    compSummary += `\\n- ${comp.competitor_name || 'Unbekannt'}:\\n`;\n    compSummary += `  Followers: ${comp.followers || 'N/A'}, Engagement: ${comp.engagement_rate || 'N/A'}%\\n`;\n    if (comp.content_ideas) {\n      const ideas = typeof comp.content_ideas === 'string' ? JSON.parse(comp.content_ideas) : comp.content_ideas;\n      if (Array.isArray(ideas) && ideas.length > 0) {\n        compSummary += `  Top Content-Ideen: ${ideas.slice(0, 2).join(', ')}\\n`;\n      }\n    }\n  }\n}\n\n// System prompt\nconst systemPrompt = `Du bist ein erfahrener Social Media Content Creator fuer den DACH-Markt. Du erstellst plattformspezifischen Content auf Deutsch.\n\nMarke: ${brandName}\nBeschreibung: ${brandDescription}\nBranche: ${branche}\nZielgruppe: ${targetAudience}\nMarkenton: ${brandTone}\n\nDein Output ist IMMER ein valides JSON-Objekt mit exakt dieser Struktur:\n{\n  \"caption\": \"Der fertige Post-Text/Caption\",\n  \"hashtags\": [\"hashtag1\", \"hashtag2\"],\n  \"cta\": \"Call-to-Action Text\",\n  \"content_theme\": \"Kurze Beschreibung des Themas\",\n  \"tone_description\": \"Beschreibung des verwendeten Tons\",\n  \"image_prompt\": \"Englischer Prompt fuer Bildgenerierung (nur wenn Bild benoetigt)\",\n  \"video_concept\": \"Detailliertes Video-Konzept Szene fuer Szene (nur wenn Video benoetigt)\",\n  \"video_prompt\": \"Englischer Prompt fuer Videogenerierung (nur wenn Video benoetigt)\"\n}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt, kein weiterer Text.`;\n\n// User prompt\nconst userPrompt = `Erstelle einen Social Media Post fuer die Plattform: ${platform.toUpperCase()}\n\n## Plattform-Regeln\n${platformRules.rules}\nTon: ${platformRules.tone}\nContent-Typ: ${platformRules.contentType}\n${platformRules.needsImage ? 'Bild-Aufloesung: ' + platformRules.imageResolution : ''}\n${platformRules.needsVideo ? 'Video-Format: ' + platformRules.videoFormat + ', Dauer: ' + platformRules.videoDuration : ''}\n\n## Performance-Daten\n${perfSummary}\n\n## Wettbewerber-Insights\n${compSummary}\n\n## Aufgabe\nErstelle einen optimalen Post fuer ${platform}, der:\n1. Die Plattform-Regeln exakt einhaelt (Zeichenlimit, Hashtag-Anzahl, Ton)\n2. Auf den Performance-Daten aufbaut (was funktioniert? was verbessern?)\n3. Wettbewerber-Insights beruecksichtigt (Differenzierung, Trends)\n4. Zur Marke \"${brandName}\" passt\n5. Die Zielgruppe \"${targetAudience}\" direkt anspricht\n${platformRules.needsImage ? '6. Einen detaillierten englischen Bild-Prompt enthaelt (fuer AI-Bildgenerierung mit Imagen 4, beschreibe Stil, Komposition, Farben, Stimmung)' : ''}\n${platformRules.needsVideo ? '6. Ein detailliertes Video-Konzept Szene fuer Szene enthaelt\\n7. Einen englischen Video-Prompt enthaelt (fuer AI-Videogenerierung mit Veo 3)' : ''}\n\nAntworte NUR mit dem JSON-Objekt.`;\n\nreturn [{\n  json: {\n    ...item,\n    systemPrompt,\n    userPrompt\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-claude-generate",
+      "name": "Claude Content generieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        460
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "ANTHROPIC_CREDENTIAL_ID_HIER_EINTRAGEN",
+          "name": "Anthropic API"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "mode": "id",
+          "value": "claude-sonnet-4-6"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "={{ $json.userPrompt }}"
+          }
+        ],
+        "simplify": false,
+        "options": {
+          "system": "={{ $json.systemPrompt }}",
+          "maxTokens": 2000,
+          "temperature": 0.7
+        }
+      }
+    },
+    {
+      "id": "wf4-parse-claude",
+      "name": "Claude Response parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3380,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Claude response and extract content fields\nconst item = $input.first().json;\n\nif (item.skip) {\n  return [{ json: item }];\n}\n\nlet content = {};\n\ntry {\n  // Claude API response structure: { content: [{ type: 'text', text: '...' }] }\n  const claudeResponse = item;\n  let responseText = '';\n\n  if (claudeResponse.content && Array.isArray(claudeResponse.content)) {\n    responseText = claudeResponse.content\n      .filter(c => c.type === 'text')\n      .map(c => c.text)\n      .join('');\n  } else if (typeof claudeResponse === 'string') {\n    responseText = claudeResponse;\n  }\n\n  // Extract JSON from response (handle potential markdown code blocks)\n  let jsonStr = responseText.trim();\n  if (jsonStr.startsWith('```')) {\n    jsonStr = jsonStr.replace(/^```(?:json)?\\n?/, '').replace(/\\n?```$/, '');\n  }\n\n  content = JSON.parse(jsonStr);\n} catch (e) {\n  content = {\n    caption: 'Content-Generierung fehlgeschlagen: ' + e.message,\n    hashtags: [],\n    cta: '',\n    content_theme: 'Fehler',\n    tone_description: '',\n    image_prompt: '',\n    video_concept: '',\n    video_prompt: ''\n  };\n}\n\n// Retrieve original item data from previous node context\nconst promptData = $('Claude Prompt aufbauen').first().json;\n\nreturn [{\n  json: {\n    platform: promptData.platform,\n    platformRules: promptData.platformRules,\n    projectName: promptData.projectName,\n    brandName: promptData.brandName,\n    calendarWeek: promptData.calendarWeek,\n    year: promptData.year,\n    performanceContext: promptData.performanceContext,\n    competitorContext: promptData.competitorContext,\n    generatedContent: content,\n    rawClaudeResponse: item,\n    systemPrompt: promptData.systemPrompt,\n    userPrompt: promptData.userPrompt\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-needs-image",
+      "name": "Braucht Bild?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3640,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-image",
+              "leftValue": "={{ $json.platformRules.needsImage }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-imagen4",
+      "name": "Imagen 4 Bild generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3900,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4:generateImages",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "GEMINI_API_KEY_PLACEHOLDER"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instances: [{ prompt: ($json.generatedContent.image_prompt || 'Professional social media image') + '. Aspect ratio: ' + ($json.platformRules.imageResolution === '1200x627' ? '1.91:1 landscape' : ($json.platformRules.imageResolution === '1600x900' ? '16:9 landscape' : '4:5 portrait')) + '. High quality, professional, brand photography style.' }], parameters: { sampleCount: 1, aspectRatio: ($json.platformRules.imageResolution === '1200x627' ? '16:9' : ($json.platformRules.imageResolution === '1600x900' ? '16:9' : '3:4')) } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "wf4-parse-image",
+      "name": "Bild-Response parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Imagen 4 response and attach image data\nconst item = $input.first().json;\nconst prevData = $('Claude Response parsen').first().json;\n\nlet imageData = {\n  imageUrl: null,\n  imageBase64: null,\n  imageResolution: prevData.platformRules.imageResolution\n};\n\ntry {\n  // Imagen 4 response: { predictions: [{ bytesBase64Encoded: '...' }] }\n  if (item.predictions && item.predictions.length > 0) {\n    imageData.imageBase64 = item.predictions[0].bytesBase64Encoded || null;\n  }\n  // Alternative response format: { images: [{ image: { imageBytes: '...' } }] }\n  if (!imageData.imageBase64 && item.images && item.images.length > 0) {\n    imageData.imageBase64 = item.images[0].image?.imageBytes || null;\n  }\n  // Alternative: generatedImages format\n  if (!imageData.imageBase64 && item.generatedImages && item.generatedImages.length > 0) {\n    imageData.imageBase64 = item.generatedImages[0].image?.imageBytes || null;\n  }\n} catch (e) {\n  // Image generation failed -- continue with text-only content\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    imageData,\n    rawImagenResponse: item\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-no-image",
+      "name": "Kein Bild noetig",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Pass through data without image -- for video-only platforms\nconst prevData = $('Claude Response parsen').first().json;\n\nreturn [{\n  json: {\n    ...prevData,\n    imageData: { imageUrl: null, imageBase64: null, imageResolution: null },\n    rawImagenResponse: null\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-needs-video",
+      "name": "Braucht Video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4420,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-video",
+              "leftValue": "={{ $json.platformRules.needsVideo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-veo3-submit",
+      "name": "Veo 3 Video generieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4680,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 15000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3:generateVideos",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "GEMINI_API_KEY_PLACEHOLDER"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instances: [{ prompt: ($json.generatedContent.video_prompt || 'Professional short-form video content') + '. Vertical 9:16 format. ' + ($json.platformRules.videoDuration || '15-30 seconds') + ' duration.' }], parameters: { aspectRatio: '9:16', durationSeconds: ($json.platform === 'tiktok' ? 20 : 30) } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "wf4-veo3-wait",
+      "name": "Veo 3 Wartezeit",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4940,
+        300
+      ],
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "wf4-veo3-poll",
+      "name": "Veo 3 Ergebnis abrufen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5200,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 30000,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/' + ($('Veo 3 Video generieren').first().json.name || 'operations/placeholder') }}",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "GEMINI_API_KEY_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "wf4-parse-video",
+      "name": "Video-Response parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5460,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Veo 3 response and extract video data\nconst item = $input.first().json;\nconst prevData = $('Braucht Video?').first().json;\n\nlet videoData = {\n  videoUrl: null,\n  videoConcept: prevData.generatedContent.video_concept || '',\n  videoPrompt: prevData.generatedContent.video_prompt || '',\n  videoDuration: prevData.platformRules.videoDuration || '',\n  videoFormat: prevData.platformRules.videoFormat || '9:16'\n};\n\ntry {\n  // Check if operation is done\n  if (item.done === true && item.response) {\n    // Completed: extract video URL\n    const videos = item.response.generatedVideos || item.response.videos || [];\n    if (videos.length > 0) {\n      videoData.videoUrl = videos[0].video?.uri || videos[0].uri || null;\n    }\n  } else if (item.generatedVideos && item.generatedVideos.length > 0) {\n    // Direct response format\n    videoData.videoUrl = item.generatedVideos[0].video?.uri || null;\n  }\n} catch (e) {\n  // Video generation failed -- concept is still available\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    videoData,\n    rawVeoResponse: item\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-no-video",
+      "name": "Kein Video noetig",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4680,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Pass through data without video -- for image-only platforms\nconst item = $input.first().json;\n\nreturn [{\n  json: {\n    ...item,\n    videoData: { videoUrl: null, videoConcept: '', videoPrompt: '', videoDuration: '', videoFormat: '' },\n    rawVeoResponse: null\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-collect-result",
+      "name": "Ergebnis sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect result into staticData for final aggregation\nconst item = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\n\nif (!staticData.results) staticData.results = [];\nif (!staticData.errors) staticData.errors = [];\n\nif (item.skip) {\n  // Skipped platform\n  return [{ json: { collected: true } }];\n}\n\ntry {\n  const result = {\n    platform: item.platform,\n    contentType: item.platformRules.contentType,\n    caption: item.generatedContent.caption || '',\n    hashtags: item.generatedContent.hashtags || [],\n    cta: item.generatedContent.cta || '',\n    contentTheme: item.generatedContent.content_theme || '',\n    toneDescription: item.generatedContent.tone_description || '',\n    imagePrompt: item.generatedContent.image_prompt || '',\n    imageResolution: item.imageData?.imageResolution || null,\n    imageBase64: item.imageData?.imageBase64 || null,\n    imageUrl: item.imageData?.imageUrl || null,\n    videoConcept: item.videoData?.videoConcept || '',\n    videoPrompt: item.videoData?.videoPrompt || '',\n    videoUrl: item.videoData?.videoUrl || null,\n    videoDuration: item.videoData?.videoDuration || '',\n    videoFormat: item.videoData?.videoFormat || '',\n    charCount: (item.generatedContent.caption || '').length,\n    hashtagCount: (item.generatedContent.hashtags || []).length,\n    projectName: item.projectName,\n    calendarWeek: item.calendarWeek,\n    year: item.year\n  };\n\n  staticData.results.push(result);\n} catch (e) {\n  staticData.errors.push({\n    platform: item.platform || 'unknown',\n    error: e.message,\n    timestamp: new Date().toISOString()\n  });\n}\n\nreturn [{ json: { collected: true } }];"
+      }
+    },
+    {
+      "id": "wf4-api-pause",
+      "name": "API Pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5980,
+        460
+      ],
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "wf4-prepare-results",
+      "name": "Ergebnisse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        780
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Prepare final results from staticData for persistence\nconst staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\n\n// Clean up staticData\ndelete staticData.results;\ndelete staticData.errors;\n\n// Build Supabase UPSERT rows\nconst supabaseRows = results.map(r => ({\n  project_name: r.projectName,\n  calendar_week: r.calendarWeek,\n  year: r.year,\n  platform: r.platform,\n  content_type: r.contentType,\n  caption: r.caption,\n  hashtags: r.hashtags,\n  cta_text: r.cta,\n  char_count: r.charCount,\n  hashtag_count: r.hashtagCount,\n  image_prompt: r.imagePrompt,\n  image_url: r.imageUrl,\n  image_base64: r.imageBase64 ? '(base64 data stored)' : null,\n  image_resolution: r.imageResolution,\n  video_prompt: r.videoPrompt,\n  video_url: r.videoUrl,\n  video_concept: r.videoConcept,\n  video_duration_target: r.videoDuration,\n  video_format: r.videoFormat,\n  tone_description: r.toneDescription,\n  content_theme: r.contentTheme,\n  status: 'draft',\n  data_source: 'wf4_content_creator'\n}));\n\n// Build Sheet rows\nconst sheetRows = results.map(r => ({\n  Plattform: r.platform,\n  ContentTyp: r.contentType,\n  Caption: r.caption,\n  Hashtags: (r.hashtags || []).join(', '),\n  CTA: r.cta,\n  Thema: r.contentTheme,\n  Ton: r.toneDescription,\n  BildAufloesung: r.imageResolution || '-',\n  BildPrompt: r.imagePrompt || '-',\n  VideoKonzept: r.videoConcept || '-',\n  VideoDauer: r.videoDuration || '-',\n  Status: 'Entwurf',\n  KW: r.calendarWeek,\n  Jahr: r.year,\n  Erstellt: new Date().toISOString()\n}));\n\nreturn [{\n  json: {\n    results,\n    errors,\n    supabaseRows,\n    sheetRows,\n    totalPlatforms: results.length,\n    totalErrors: errors.length,\n    projectName: results.length > 0 ? results[0].projectName : 'unknown'\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-supabase-upsert",
+      "name": "Supabase UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3120,
+        780
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/content_generated' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.supabaseRows) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "wf4-split-sheet-rows",
+      "name": "Sheet Daten splitten",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3380,
+        780
+      ],
+      "parameters": {
+        "fieldToSplitOut": "sheetRows",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-write-sheet",
+      "name": "Content Plan schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3640,
+        780
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Content Plan"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-build-response",
+      "name": "Response zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3900,
+        780
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build structured response\nconst resultData = $('Ergebnisse aufbereiten').first().json;\n\nconst hasErrors = (resultData.errors || []).length > 0;\n\nreturn [{\n  json: {\n    success: !hasErrors || resultData.totalPlatforms > 0,\n    workflow: 'WF4_Content_Creator',\n    data: {\n      totalPlatforms: resultData.totalPlatforms,\n      platforms: (resultData.results || []).map(r => ({\n        platform: r.platform,\n        contentType: r.contentType,\n        captionPreview: (r.caption || '').substring(0, 100) + ((r.caption || '').length > 100 ? '...' : ''),\n        hashtagCount: r.hashtagCount,\n        hasImage: !!(r.imageBase64 || r.imageUrl),\n        hasVideo: !!r.videoUrl,\n        hasVideoConcept: !!r.videoConcept\n      })),\n      projectName: resultData.projectName\n    },\n    errors: resultData.errors || [],\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        4160,
+        780
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Dual-Trigger Pruefung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dual-Trigger Pruefung": {
+      "main": [
+        [
+          {
+            "node": "Konfig zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Konfig aus Sheet lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig aus Sheet lesen": {
+      "main": [
+        [
+          {
+            "node": "Konfig zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Braucht Supabase-Daten?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Braucht Supabase-Daten?": {
+      "main": [
+        [
+          {
+            "node": "Supabase Performance lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Daten zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Performance lesen": {
+      "main": [
+        [
+          {
+            "node": "Supabase Competitor lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Competitor lesen": {
+      "main": [
+        [
+          {
+            "node": "Daten zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daten zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "Platform Dispatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Platform Dispatcher": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "Ergebnisse aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude Prompt aufbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Prompt aufbauen": {
+      "main": [
+        [
+          {
+            "node": "Claude Content generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Content generieren": {
+      "main": [
+        [
+          {
+            "node": "Claude Response parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Response parsen": {
+      "main": [
+        [
+          {
+            "node": "Braucht Bild?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Braucht Bild?": {
+      "main": [
+        [
+          {
+            "node": "Imagen 4 Bild generieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kein Bild noetig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen 4 Bild generieren": {
+      "main": [
+        [
+          {
+            "node": "Bild-Response parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-Response parsen": {
+      "main": [
+        [
+          {
+            "node": "Braucht Video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kein Bild noetig": {
+      "main": [
+        [
+          {
+            "node": "Braucht Video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Braucht Video?": {
+      "main": [
+        [
+          {
+            "node": "Veo 3 Video generieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kein Video noetig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3 Video generieren": {
+      "main": [
+        [
+          {
+            "node": "Veo 3 Wartezeit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3 Wartezeit": {
+      "main": [
+        [
+          {
+            "node": "Veo 3 Ergebnis abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3 Ergebnis abrufen": {
+      "main": [
+        [
+          {
+            "node": "Video-Response parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video-Response parsen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kein Video noetig": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis sammeln": {
+      "main": [
+        [
+          {
+            "node": "API Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Pause": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnisse aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "Supabase UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase UPSERT": {
+      "main": [
+        [
+          {
+            "node": "Sheet Daten splitten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet Daten splitten": {
+      "main": [
+        [
+          {
+            "node": "Content Plan schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Plan schreiben": {
+      "main": [
+        [
+          {
+            "node": "Response zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": []
+}

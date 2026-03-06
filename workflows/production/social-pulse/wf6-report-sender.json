@@ -1,0 +1,355 @@
+{
+  "name": "SocialPulse WF6: Report Sender",
+  "nodes": [
+    {
+      "id": "wf6-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        460
+      ],
+      "webhookId": "socialpulse-report-sender",
+      "parameters": {
+        "path": "socialpulse-report-sender",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf6-dual-trigger",
+      "name": "Dual-Trigger Pruefung",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-report",
+              "leftValue": "={{ $json.body.reportData }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf6-read-konfig",
+      "name": "Konfig aus Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        620
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "url",
+          "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Konfig"
+        },
+        "options": {
+          "range": "A:B"
+        }
+      }
+    },
+    {
+      "id": "wf6-standalone-prep",
+      "name": "Standalone-Daten vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Standalone mode: build config from Sheet rows and prepare minimal report\nconst config = {};\ntry {\n  const konfigRows = $('Konfig aus Sheet lesen').all();\n  for (const row of konfigRows) {\n    const key = (row.json['Einstellung'] || row.json['einstellung'] || '').trim();\n    const val = (row.json['Wert'] || row.json['wert'] || '').trim();\n    if (key) config[key] = val;\n  }\n} catch (e) {\n  // Fallback\n}\n\n// Calendar week\nconst now = new Date();\nconst year = now.getFullYear();\nconst jan1 = new Date(year, 0, 1);\nconst days = Math.floor((now - jan1) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + jan1.getDay() + 1) / 7);\n\nconst brandName = config.brand_name || config.project_name || 'SocialPulse';\n\n// In standalone mode, we don't have the full HTML report.\n// Create a simple notification email instead.\nconst htmlReport = `<!DOCTYPE html>\n<html lang=\"de\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:40px;\">\n<h1 style=\"color:#1a73e8;\">SocialPulse Report | ${brandName} | KW ${calendarWeek}/${year}</h1>\n<p style=\"font-size:16px;color:#4b5563;\">Dieser Report wurde im Standalone-Modus ausgeloest.</p>\n<p>Fuer den vollstaendigen Report mit Performance-Daten, KI-Analyse und PDF-Anhang starten Sie bitte den Master-Workflow (WF7).</p>\n<hr style=\"border:1px solid #e5e7eb;margin:20px 0;\">\n<p style=\"font-size:12px;color:#9ca3af;\">Generiert von SocialPulse | ${now.toLocaleDateString('de-DE')}</p>\n</body>\n</html>`;\n\nreturn [{\n  json: {\n    config,\n    reportData: {\n      reportSubject: 'SocialPulse Report | ' + brandName + ' | KW ' + calendarWeek + '/' + year,\n      htmlReport,\n      brandName,\n      calendarWeek,\n      year,\n      reportRecipients: (config.report_recipients || '').split(',').map(e => e.trim()).filter(e => e),\n      reportCc: (config.report_cc || '').split(',').map(e => e.trim()).filter(e => e),\n      pdfGenerated: false,\n      standaloneMode: true\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf6-merge-report",
+      "name": "Report-Daten zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge report data from Master or standalone preparation.\nconst webhookData = $('Webhook Trigger').first().json.body || {};\n\nlet reportData;\nlet config;\n\nif (webhookData.reportData) {\n  // Master provided report data\n  reportData = webhookData.reportData;\n  config = webhookData.config || {};\n\n  // Ensure recipients are parsed\n  if (typeof reportData.reportRecipients === 'string') {\n    reportData.reportRecipients = reportData.reportRecipients.split(',').map(e => e.trim()).filter(e => e);\n  }\n  if (typeof reportData.reportCc === 'string') {\n    reportData.reportCc = reportData.reportCc.split(',').map(e => e.trim()).filter(e => e);\n  }\n} else {\n  // Standalone mode -- data from Node 4\n  try {\n    const standaloneResult = $('Standalone-Daten vorbereiten').first().json;\n    reportData = standaloneResult.reportData;\n    config = standaloneResult.config;\n  } catch (e) {\n    // Absolute fallback\n    reportData = {\n      reportSubject: 'SocialPulse Report',\n      htmlReport: '<html><body><p>Report konnte nicht geladen werden.</p></body></html>',\n      reportRecipients: [],\n      reportCc: [],\n      pdfGenerated: false,\n      standaloneMode: true\n    };\n    config = {};\n  }\n}\n\n// Validate recipients\nif (!reportData.reportRecipients || reportData.reportRecipients.length === 0) {\n  // Try to get from config\n  const recipients = (config.report_recipients || '').split(',').map(e => e.trim()).filter(e => e);\n  if (recipients.length > 0) {\n    reportData.reportRecipients = recipients;\n  }\n}\n\nreturn [{\n  json: {\n    reportSubject: reportData.reportSubject || 'SocialPulse Report',\n    htmlReport: reportData.htmlReport || '',\n    brandName: reportData.brandName || config.brand_name || 'SocialPulse',\n    calendarWeek: reportData.calendarWeek || 0,\n    year: reportData.year || new Date().getFullYear(),\n    recipients: (reportData.reportRecipients || []).join(', '),\n    cc: (reportData.reportCc || []).join(', '),\n    pdfAvailable: reportData.pdfGenerated || false,\n    standaloneMode: reportData.standaloneMode || false,\n    projectName: config.project_name || reportData.projectName || 'unknown'\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf6-prepare-email",
+      "name": "E-Mail vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\n\n// Validate recipients\nif (!data.recipients || data.recipients.trim().length === 0) {\n  throw new Error('Keine Empfaenger konfiguriert. Bitte report_recipients in der Konfig-Tab setzen.');\n}\n\n// Build subject line\nconst subject = data.reportSubject || ('SocialPulse Report | ' + data.brandName + ' | KW ' + data.calendarWeek + '/' + data.year);\n\n// Wrap HTML report in email-safe container\nlet emailHtml = data.htmlReport;\n\n// If standalone, the HTML is already minimal\n// If from Master, the full report HTML is email-ready (inline CSS)\n\n// PDF attachment filename\nconst pdfFilename = 'SocialPulse_Report_' + data.brandName.replace(/[^a-zA-Z0-9]/g, '_') + '_KW' + data.calendarWeek + '_' + data.year + '.pdf';\n\nreturn [{\n  json: {\n    sendTo: data.recipients,\n    cc: data.cc || '',\n    subject,\n    emailHtml,\n    pdfFilename,\n    pdfAvailable: data.pdfAvailable,\n    standaloneMode: data.standaloneMode,\n    brandName: data.brandName,\n    calendarWeek: data.calendarWeek,\n    year: data.year,\n    projectName: data.projectName\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf6-gmail-send",
+      "name": "Report versenden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1300,
+        460
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "sendTo": "={{ $json.sendTo }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.emailHtml }}",
+        "options": {
+          "ccList": "={{ $json.cc }}",
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "wf6-run-log",
+      "name": "Supabase Run-Log schreiben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/workflow_runs' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_name: 'WF6 Report Sender', workflow_id: $workflow.id, execution_id: $execution.id, project_name: $('E-Mail vorbereiten').first().json.projectName, started_at: new Date().toISOString(), finished_at: new Date().toISOString(), status: 'success', platforms_ok: [], platforms_error: [], items_processed: 1, notes: 'Report gesendet an: ' + $('E-Mail vorbereiten').first().json.sendTo }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "wf6-build-response",
+      "name": "Response zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const emailData = $('E-Mail vorbereiten').first().json;\nconst gmailResult = $('Report versenden').first().json;\n\nconst errors = [];\n\n// Check Gmail result\nif (gmailResult && gmailResult.error) {\n  errors.push({\n    source: 'gmail',\n    message: 'E-Mail-Versand fehlgeschlagen: ' + JSON.stringify(gmailResult.error)\n  });\n}\n\n// Check if run log succeeded\ntry {\n  const runLogResult = $('Supabase Run-Log schreiben').first().json;\n  if (runLogResult && runLogResult.error) {\n    errors.push({\n      source: 'run_log',\n      message: 'Run-Log konnte nicht geschrieben werden: ' + JSON.stringify(runLogResult.error)\n    });\n  }\n} catch (e) {\n  // Run log is non-critical\n}\n\nreturn [{\n  json: {\n    success: !errors.some(e => e.source === 'gmail'),\n    workflow: 'WF6 Report Sender',\n    status: errors.length === 0 ? 'success' : (errors.some(e => e.source === 'gmail') ? 'error' : 'partial_success'),\n    data: {\n      recipients: emailData.sendTo,\n      cc: emailData.cc || '',\n      subject: emailData.subject,\n      pdfAttached: emailData.pdfAvailable,\n      standaloneMode: emailData.standaloneMode,\n      gmailMessageId: gmailResult?.id || gmailResult?.messageId || null\n    },\n    errors: errors.length > 0 ? errors : null,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf6-respond",
+      "name": "Webhook Antwort",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        460
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Dual-Trigger Pruefung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dual-Trigger Pruefung": {
+      "main": [
+        [
+          {
+            "node": "Report-Daten zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Konfig aus Sheet lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfig aus Sheet lesen": {
+      "main": [
+        [
+          {
+            "node": "Standalone-Daten vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Standalone-Daten vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Report-Daten zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report-Daten zusammenfuehren": {
+      "main": [
+        [
+          {
+            "node": "E-Mail vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Report versenden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report versenden": {
+      "main": [
+        [
+          {
+            "node": "Supabase Run-Log schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Run-Log schreiben": {
+      "main": [
+        [
+          {
+            "node": "Response zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "Webhook Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "name": "SocialPulse"
+    }
+  ],
+  "active": false
+}
