@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772691314176,
+  "lastUpdate": 1772798248071,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "cbfe6011a115559d06e60c2ec1981119b7cfbb06",
-          "message": "Merge pull request #21 from markmocasa-boop/claude/ai-coworker-n8n-workflow-c9hkA\n\nfix: resolve n8n Cloud import compatibility issues",
-          "timestamp": "2026-01-29T13:07:33+01:00",
-          "tree_id": "21fe89b543595786ed7c50d7ba61c0dd80ab868e",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/cbfe6011a115559d06e60c2ec1981119b7cfbb06"
-        },
-        "date": 1769688555012,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f51da802e538ff005a9577435163cf00a578b788"
         },
         "date": 1772691313422,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "ba032e6a6580a452ccc219aed93a88159561486d",
+          "message": "feat: add SocialPulse 7-workflow system (all validated, 0 errors)\n\nWF1-WF7 deployed and validated on meinoffice.app.n8n.cloud.\nAll validation errors fixed: IF node conditions, Google Sheets range,\nWebhook onError, Gmail resource/operation, expression brackets,\nWF5 HTML node helper functions rewritten as ternary expressions.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-06T12:54:02+01:00",
+          "tree_id": "43bfa7901081a8aea4196f1a316d048dfabf51bb",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ba032e6a6580a452ccc219aed93a88159561486d"
+        },
+        "date": 1772798247367,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
