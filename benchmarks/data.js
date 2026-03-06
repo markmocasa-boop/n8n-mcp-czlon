@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772798248071,
+  "lastUpdate": 1772799574673,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "43138855115af56c6e8d5e87261ad7ff931206fe",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-01T16:18:34+01:00",
-          "tree_id": "d5d83b509df50e7a1a9067f1b1224d58b3f37f84",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/43138855115af56c6e8d5e87261ad7ff931206fe"
-        },
-        "date": 1769959256252,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ba032e6a6580a452ccc219aed93a88159561486d"
         },
         "date": 1772798247367,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "04bc985eefa8ee79654ef8814efd73d996795486",
+          "message": "fix(social-pulse): WF2 meta ads analyzer + WF7 merge hang\n\nWF2 fixes:\n- Replace wrong WF1 content with correct Meta Ads Analyzer (18 nodes)\n- Fix IF exists operator: remove singleValue:true (binary operator bug)\n- Fix Google Sheets: move range from options.range to top-level\n- Fix Claude message: restore $json.summary references (was broken .first())\n- Fix Webhook Trigger: add onError continueRegularOutput\n- Rewrite getConversions/getConversionValue helpers as ternaries (validator)\n- Add version:2 to IF node conditions options\n\nWF7 fixes:\n- Remove Final zusammenfuehren merge node (chooseBranch numberInputs:3 hang)\n- Connect Wave-4/Report-uebersprungen/Wave-1-failed directly to Finales Run-Log\n- Finales Run-Log already uses try/catch to detect which path fired\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-06T13:17:29+01:00",
+          "tree_id": "4b77f0c928fad5d82ed59bfc51eb72b679bfa553",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/04bc985eefa8ee79654ef8814efd73d996795486"
+        },
+        "date": 1772799574323,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
