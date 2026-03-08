@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Jeder qualifizierte Lead (Score ≥ 30) erhält automatisch eine personalisierte 4-E-Mail-Sequenz.
-**Current focus:** Phase 4 — LinkedIn Content (WF5) — EXECUTED
+**Current focus:** Phase 4 — LinkedIn Content (WF5) — VERIFIED
 
 ## Current Position
 
-Phase: 4 of 5 (LinkedIn Content) — EXECUTED
-Workflow: WF5 LinkedIn Content Generator — deployed, ready to verify
-Status: Phase 4 executed — WF5 (9 nodes) + WF0 updated (20 nodes) deployed
-Last activity: 2026-03-08 — Phase 4 deployed
+Phase: 4 of 5 (LinkedIn Content) — VERIFIED
+Workflow: WF5 LinkedIn Content Generator — deployed and verified PASS
+Status: Phase 4 complete — WF5 (9 nodes) + WF0 (20 nodes) deployed and verified
+Last activity: 2026-03-08 — Phase 4 verified
 
 Progress: [████████░░] 80%
 
@@ -25,7 +25,7 @@ Progress: [████████░░] 80%
 | WF2 | Sales Agent — WF2 Lead Scoring | GAqEpcFUuLrKGYFH | Inactive | 2026-03-08 | PASS |
 | WF3 | Sales Agent — WF3 E-Mail Sequenz Generator | uWkGHyQQ8FBeqErW | Inactive | 2026-03-08 | PASS |
 | WF4 | Sales Agent — WF4 E-Mail Sender | O2RnTBvoLAOV4agj | Inactive | 2026-03-08 | PASS (fixed) |
-| WF5 | Sales Agent — WF5 LinkedIn Content Generator | bQQfeZfngg6AyuwZ | Inactive | 2026-03-08 | Pending |
+| WF5 | Sales Agent — WF5 LinkedIn Content Generator | bQQfeZfngg6AyuwZ | Inactive | 2026-03-08 | PASS |
 | WF0 | Sales Agent — WF0 Master Orchestrator | 58ysZ3NLKZfsMfND | Inactive | 2026-03-08 | PASS (updated Phase 4) |
 
 ## Local File Paths
@@ -37,8 +37,8 @@ Progress: [████████░░] 80%
 | `production/sales-agent/WF2-Lead-Scoring.json` | Lead Scoring (deployed Phase 2, fixed) |
 | `production/sales-agent/WF3-Email-Sequenz-Generator.json` | Email Sequenz Generator (Phase 3) |
 | `production/sales-agent/WF4-Email-Sender.json` | Email Sender (Phase 3, fixed) |
-| `production/sales-agent/WF5-LinkedIn-Content-Generator.json` | LinkedIn Content Generator (Phase 4) |
-| `production/sales-agent/WF0-Master-Orchestrator.json` | Master Orchestrator (updated Phase 4) |
+| `production/sales-agent/WF5-LinkedIn-Content-Generator.json` | LinkedIn Content Generator (Phase 4, verified) |
+| `production/sales-agent/WF0-Master-Orchestrator.json` | Master Orchestrator (updated Phase 4, verified) |
 
 **Placeholders still needed (REQUIRED before live testing):**
 - `SALES_AGENT_SHEET_ID` in WF6 + WF0 — Google Sheet must be created first
@@ -79,6 +79,10 @@ Progress: [████████░░] 80%
 
 - WF4 Code: Build WF6 Update Payload used `naechster_kontakt` (ascii) instead of `nächster_kontakt` (with ä umlaut). WF6 uses autoMapInputData so wrong field name would silently fail to update next-contact date in CRM. Fixed and redeployed.
 
+### Validation Issues (Phase 4 — accepted/cosmetic)
+
+- WF5 local JSON had credential name "Anthropic account" while live shows "Claude - 20260127". Cosmetic only (credential ID 5LmibcuA2kdHKaqB is correct). Local JSON updated to match live.
+
 ### Blockers/Concerns
 
 - **REQUIRED BEFORE LIVE TESTING**: Google Sheet + SALES_AGENT_SHEET_ID
@@ -88,5 +92,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Phase 4 executed. WF5 (9 nodes) deployed to bQQfeZfngg6AyuwZ. WF0 updated with Set:Lead Context for WF5 bridge node (20 nodes total).
-Next step: `/gsd-n8n:verify-phase 4` — WF5 LinkedIn Content Generator.
+Stopped at: Phase 4 verified PASS. WF5 + WF0 bridge node both verified against live n8n API.
+Next step: Phase 5 — Inbox & Calendar Manager (WF7).

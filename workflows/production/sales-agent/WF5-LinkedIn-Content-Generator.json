@@ -6,7 +6,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [100, 300],
+      "position": [
+        100,
+        300
+      ],
       "parameters": {}
     },
     {
@@ -14,7 +17,10 @@
       "name": "Set: Store Trigger Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [350, 300],
+      "position": [
+        350,
+        300
+      ],
       "parameters": {
         "fields": {
           "values": []
@@ -28,7 +34,10 @@
       "name": "LLM: LinkedIn DM",
       "type": "nodes-langchain.chainLlm",
       "typeVersion": 1.4,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "parameters": {
         "promptType": "define",
         "text": "={{ 'Schreibe eine LinkedIn-Direktnachricht fuer diesen Lead:\\n\\nName: ' + $json.vorname + ' ' + $json.nachname + '\\nPosition: ' + $json.position + ' bei ' + $json.unternehmen + '\\nBranche: ' + $json.branche + ' (' + $json.mitarbeiter_anzahl + ' Mitarbeiter)\\nHauptschmerz: ' + ($json.hauptschmerz || 'nicht angegeben') + '\\nLinkedIn Headline: ' + ($json.angereichert?.linkedin_headline || 'nicht verfuegbar') + '\\nLinkedIn About: ' + ($json.angereichert?.linkedin_about || 'nicht verfuegbar') + '\\nEmpfohlene Ansprache: ' + ($json.empfohlene_ansprache || 'direkt') + '\\n\\nANFORDERUNGEN:\\n- Maximal 300 Zeichen (zaehle STRIKT)\\n- Kein Pitch, kein Produkt erwaehnen\\n- Persoenlicher Bezug auf Hauptschmerz oder Branche\\n- Modernes Deutsch, aktive Sprache\\n- Echte Verbindung herstellen, kein Verkauf\\n- Mit Vornamen ansprechen\\n\\nGib NUR den DM-Text zurueck - kein JSON, kein Kommentar, keine Erklaerung.' }}",
@@ -48,7 +57,10 @@
       "name": "Anthropic Chat Model 1",
       "type": "nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
-      "position": [600, 500],
+      "position": [
+        600,
+        500
+      ],
       "parameters": {
         "model": {
           "mode": "id",
@@ -62,7 +74,7 @@
       "credentials": {
         "anthropicApi": {
           "id": "5LmibcuA2kdHKaqB",
-          "name": "Anthropic account"
+          "name": "Claude - 20260127"
         }
       }
     },
@@ -71,7 +83,10 @@
       "name": "LLM: LinkedIn Post",
       "type": "nodes-langchain.chainLlm",
       "typeVersion": 1.4,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "parameters": {
         "promptType": "define",
         "text": "={{ 'Erstelle eine LinkedIn-Post-Idee fuer folgendes Thema, basierend auf diesem Lead-Kontext:\\n\\nBranche: ' + $(\\'Set: Store Trigger Data\\').first().json.branche + '\\nHauptschmerz: ' + ($(\\'Set: Store Trigger Data\\').first().json.hauptschmerz || \\'nicht angegeben\\') + '\\nUnternehmens-Kontext: ' + ($(\\'Set: Store Trigger Data\\').first().json.angereichert?.unternehmens_beschreibung || \\'nicht verfuegbar\\') + '\\nAktuelle Herausforderungen: ' + ($(\\'Set: Store Trigger Data\\').first().json.angereichert?.aktuelle_herausforderungen || \\'nicht verfuegbar\\') + '\\nKaufmotiv: ' + ($(\\'Set: Store Trigger Data\\').first().json.kaufmotiv || \\'Effizienz\\') + '\\n\\nStruktur PFLICHT:\\n- Hook: 1 starker erster Satz (Aufmerksamkeit sofort)\\n- 3 bis 5 kurze Absaetze (je 2-3 Saetze, Mehrwert-Fokus)\\n- Community-Frage am Ende (offene Frage an die Audience)\\n\\nUmfang: 150 bis 250 Woerter gesamt\\nSprache: Modernes Deutsch, B2B-Kontext, DACH-Markt\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks:\\n{\\\"hook\\\": \\\"Hook-Text hier\\\", \\\"absaetze\\\": [\\\"Absatz 1\\\", \\\"Absatz 2\\\", \\\"Absatz 3\\\"], \\\"community_frage\\\": \\\"Frage hier\\\"}' }}",
@@ -91,7 +106,10 @@
       "name": "Anthropic Chat Model 2",
       "type": "nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
-      "position": [900, 500],
+      "position": [
+        900,
+        500
+      ],
       "parameters": {
         "model": {
           "mode": "id",
@@ -105,7 +123,7 @@
       "credentials": {
         "anthropicApi": {
           "id": "5LmibcuA2kdHKaqB",
-          "name": "Anthropic account"
+          "name": "Claude - 20260127"
         }
       }
     },
@@ -114,7 +132,10 @@
       "name": "Code: Build WF6 Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1200, 300],
+      "position": [
+        1200,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const trigger = $('Set: Store Trigger Data').first().json;\n\n// --- Extract LinkedIn DM ---\nconst dmRaw = $('LLM: LinkedIn DM').first().json.text || '';\nconst linkedin_dm = dmRaw.trim();\n\n// --- Extract LinkedIn Post ---\nconst postRaw = $('LLM: LinkedIn Post').first().json.text || '';\nconst postCleaned = postRaw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nlet linkedin_post = { hook: '', absaetze: [], community_frage: '' };\ntry {\n  linkedin_post = JSON.parse(postCleaned);\n} catch (e) {\n  linkedin_post = {\n    hook: postRaw.substring(0, 200) || 'Post-Idee konnte nicht geparst werden',\n    absaetze: [],\n    community_frage: 'Was sind eure Erfahrungen damit?'\n  };\n}\n\n// --- Build combined storage value for column V ---\nconst linkedin_nachricht_value = JSON.stringify({\n  dm: linkedin_dm,\n  post: linkedin_post\n});\n\n// --- Build WF6 inputs ---\nconst updates = JSON.stringify({\n  linkedin_nachricht: linkedin_nachricht_value\n});\n\nconst log_eintrag = JSON.stringify({\n  aktion: 'linkedin_content_generiert',\n  inhalt: 'DM + Post-Idee erstellt',\n  status: 'ok'\n});\n\nreturn [{\n  json: {\n    lead_id: trigger.lead_id,\n    updates: updates,\n    log_eintrag: log_eintrag,\n    _linkedin_dm: linkedin_dm,\n    _linkedin_post: linkedin_post\n  }\n}];"
@@ -125,7 +146,10 @@
       "name": "Execute WF6: Update CRM",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [1450, 300],
+      "position": [
+        1450,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
@@ -146,7 +170,10 @@
       "name": "Set: Success Output",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1700, 300],
+      "position": [
+        1700,
+        300
+      ],
       "parameters": {
         "fields": {
           "values": [
@@ -175,42 +202,90 @@
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{"node": "Set: Store Trigger Data", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Set: Store Trigger Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Set: Store Trigger Data": {
       "main": [
-        [{"node": "LLM: LinkedIn DM", "type": "main", "index": 0}]
+        [
+          {
+            "node": "LLM: LinkedIn DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Anthropic Chat Model 1": {
       "ai_languageModel": [
-        [{"node": "LLM: LinkedIn DM", "type": "ai_languageModel", "index": 0}]
+        [
+          {
+            "node": "LLM: LinkedIn DM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
       ]
     },
     "LLM: LinkedIn DM": {
       "main": [
-        [{"node": "LLM: LinkedIn Post", "type": "main", "index": 0}]
+        [
+          {
+            "node": "LLM: LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Anthropic Chat Model 2": {
       "ai_languageModel": [
-        [{"node": "LLM: LinkedIn Post", "type": "ai_languageModel", "index": 0}]
+        [
+          {
+            "node": "LLM: LinkedIn Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
       ]
     },
     "LLM: LinkedIn Post": {
       "main": [
-        [{"node": "Code: Build WF6 Payload", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Code: Build WF6 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Code: Build WF6 Payload": {
       "main": [
-        [{"node": "Execute WF6: Update CRM", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Execute WF6: Update CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Execute WF6: Update CRM": {
       "main": [
-        [{"node": "Set: Success Output", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Set: Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
