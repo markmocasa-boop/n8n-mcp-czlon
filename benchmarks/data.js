@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772965468281,
+  "lastUpdate": 1772965642572,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "b1574e12037bf235840da3fca70d4cb85ae1ba0a",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-06T09:17:41+01:00",
-          "tree_id": "8c18c27dca7caaeb77c470b77d174561ccf86512",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b1574e12037bf235840da3fca70d4cb85ae1ba0a"
-        },
-        "date": 1770365989623,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/1a799318930cbb7f68eecccf76e1d9f7e53c642b"
         },
         "date": 1772965467703,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "fbc1a6702e672a19dcbeaa5c744f65522696c63e",
+          "message": "Phase 2 verified: WF1 Lead Enrichment + WF2 Lead Scoring\n\n- WF1 PASS: 13 nodes, all requirements API-01/API-02/DATA-02/ERR-03/ERR-04 covered\n- WF2 PASS (after fix): Score threshold corrected KALT 0-29/WARM 30-79/HEISS 80-100 to match DATA-03\n- All 8 Phase 2 requirements covered\n- 0 HTTP Request nodes, all community/native nodes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T11:25:19+01:00",
+          "tree_id": "a8f9d5c06a053ef8399a869c98d659d9445b6e36",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fbc1a6702e672a19dcbeaa5c744f65522696c63e"
+        },
+        "date": 1772965642086,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
