@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772984303027,
+  "lastUpdate": 1772985348528,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "ab978411efe67d3331b8485eb7d3f784abca219a",
-          "message": "Merge pull request #23 from markmocasa-boop/claude/offer-comprehensibility-checker-WoJ2o\n\nAdd Angebots-Verständlichkeits-Checker workflow",
-          "timestamp": "2026-02-10T12:33:39+01:00",
-          "tree_id": "cf0e72dd6097d3b09bc77e638045af7723689537",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ab978411efe67d3331b8485eb7d3f784abca219a"
-        },
-        "date": 1770723336651,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8ffd222010158f45eb5413a39c14650496189e32"
         },
         "date": 1772984302571,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "dcf69607f06f9f3168f92ef6d0c21887366981b6",
+          "message": "Phase 4: Deploy WF5 LinkedIn Content Generator + update WF0\n\n- WF5 (9 nodes): generates LinkedIn DM (≤300 chars) + Post-Idee via 2 sequential LLM chains, writes linkedin_nachricht to CRM via WF6\n- WF0: added Set:Lead Context for WF5 bridge node to pass full lead context (WF4 output only carries 4 fields)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T16:53:41+01:00",
+          "tree_id": "a758a10df02b3781f7eccade6dbfa5237684f548",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/dcf69607f06f9f3168f92ef6d0c21887366981b6"
+        },
+        "date": 1772985348181,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
