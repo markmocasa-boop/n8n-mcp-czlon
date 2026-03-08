@@ -14,7 +14,7 @@
 ## Phases
 
 - [x] **Phase 1: Fundament** — Master Orchestrator + CRM Updater deploybar, Loop-Struktur valide ✓ VERIFIED 2026-03-08
-- [ ] **Phase 2: Enrichment & Scoring** — Lead-Anreicherung via Tavily/Apify + Claude-Scoring funktioniert
+- [x] **Phase 2: Enrichment & Scoring** — Lead-Anreicherung via Tavily/Apify + Claude-Scoring funktioniert ✓ VERIFIED 2026-03-08
 - [ ] **Phase 3: E-Mail-Maschinerie** — 4-E-Mail-Sequenz wird generiert und zeitgesteuert versendet
 - [ ] **Phase 4: LinkedIn Content** — DM + Post-Idee werden generiert und ins CRM geschrieben
 - [ ] **Phase 5: Inbox & Calendar Manager** — Posteingang-Monitoring, Termin-Erkennung, Draft-Erstellung
@@ -156,7 +156,7 @@
 | Phase | Workflows | Tasks | Status | Deployed |
 |---|---|---|---|---|
 | 1. Fundament | WF0, WF6 | 7/7 | ✓ Verified | 2026-03-08 |
-| 2. Enrichment & Scoring | WF1, WF2 | 0/8 | Not started | - |
+| 2. Enrichment & Scoring | WF1, WF2 | 8/8 | ✓ Verified | 2026-03-08 |
 | 3. E-Mail-Maschinerie | WF3, WF4 | 0/8 | Not started | - |
 | 4. LinkedIn Content | WF5 | 0/4 | Not started | - |
 | 5. Inbox & Calendar Manager | WF7 | 0/8 | Not started | - |
