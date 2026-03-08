@@ -41,7 +41,7 @@
           "messageValues": [
             {
               "type": "SystemMessage",
-              "message": "Du bist ein erfahrener B2B-Vertriebsexperte im DACH-Markt.\nBewerte Leads anhand des folgenden 5-Schichten Sales Frameworks:\n\nSCHICHT 1 – PSYCHOLOGIE: Ist der Lead empfänglich? (Signale für Offenheit, Schmerzen, Kaufmotive)\nSCHICHT 2 – METHODIK: Ist der Lead qualifiziert? (Entscheider, Budget, Bedarf, Zeitrahmen – BANT)\nSCHICHT 3 – PITCH-BEREITSCHAFT: Gibt es einen konkreten Anlass für ein Gespräch?\nSCHICHT 4 – POSITIONIERUNG: Passt der Lead zur Zielgruppe (DACH, B2B, relevante Branche)?\nSCHICHT 5 – POTENZIAL: Langfristiges Relationship-Potenzial (Unternehmensgröße, Wachstum, Netzwerk)\n\nGib einen Score von 0–100 zurück sowie eine kurze Begründung (max. 3 Sätze).\nKlassifiziere zusätzlich: HEISS (80–100) / WARM (50–79) / KALT (0–49)\n\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblöcke:\n{\"score\": 75, \"klassifikation\": \"WARM\", \"begründung\": \"...\", \"empfohlene_ansprache\": \"direkt\", \"hauptschmerz\": \"...\", \"kaufmotiv\": \"Gewinn\"}"
+              "message": "Du bist ein erfahrener B2B-Vertriebsexperte im DACH-Markt.\nBewerte Leads anhand des folgenden 5-Schichten Sales Frameworks:\n\nSCHICHT 1 – PSYCHOLOGIE: Ist der Lead empfänglich? (Signale für Offenheit, Schmerzen, Kaufmotive)\nSCHICHT 2 – METHODIK: Ist der Lead qualifiziert? (Entscheider, Budget, Bedarf, Zeitrahmen – BANT)\nSCHICHT 3 – PITCH-BEREITSCHAFT: Gibt es einen konkreten Anlass für ein Gespräch?\nSCHICHT 4 – POSITIONIERUNG: Passt der Lead zur Zielgruppe (DACH, B2B, relevante Branche)?\nSCHICHT 5 – POTENZIAL: Langfristiges Relationship-Potenzial (Unternehmensgröße, Wachstum, Netzwerk)\n\nGib einen Score von 0–100 zurück sowie eine kurze Begründung (max. 3 Sätze).\nKlassifiziere zusätzlich: HEISS (80–100) / WARM (30–79) / KALT (0–29)\n\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblöcke:\n{\"score\": 75, \"klassifikation\": \"WARM\", \"begründung\": \"...\", \"empfohlene_ansprache\": \"direkt\", \"hauptschmerz\": \"...\", \"kaufmotiv\": \"Gewinn\"}"
             }
           ]
         }
@@ -66,7 +66,7 @@
       },
       "credentials": {
         "anthropicApi": {
-          "id": "ANTHROPIC_CREDENTIAL_ID",
+          "id": "5LmibcuA2kdHKaqB",
           "name": "Anthropic account"
         }
       }
@@ -79,7 +79,7 @@
       "position": [850, 300],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const trigger = $('Execute Workflow Trigger').first().json;\n\nconst rawOutput = $input.first().json.text || $input.first().json.output || $input.first().json.response || '';\n\nlet parsed = {};\nlet parseError = false;\n\ntry {\n  const cleaned = rawOutput\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parseError = true;\n  parsed = {\n    score: 0,\n    klassifikation: 'KALT',\n    begründung: 'JSON-Parsing fehlgeschlagen: ' + e.message,\n    empfohlene_ansprache: 'direkt',\n    hauptschmerz: '',\n    kaufmotiv: 'Gewinn'\n  };\n}\n\nconst score = parseInt(parsed.score) || 0;\nconst klassifikation = parsed.klassifikation || (score >= 80 ? 'HEISS' : score >= 50 ? 'WARM' : 'KALT');\n\nreturn [{\n  json: {\n    ...trigger,\n    score: score,\n    klassifikation: klassifikation,\n    score_begründung: parsed.begründung || '',\n    empfohlene_ansprache: parsed.empfohlene_ansprache || 'direkt',\n    hauptschmerz: parsed.hauptschmerz || '',\n    kaufmotiv: parsed.kaufmotiv || 'Gewinn',\n    parse_error: parseError,\n    raw_claude_output: rawOutput\n  }\n}];"
+        "jsCode": "const trigger = $('Execute Workflow Trigger').first().json;\n\nconst rawOutput = $input.first().json.text || $input.first().json.output || $input.first().json.response || '';\n\nlet parsed = {};\nlet parseError = false;\n\ntry {\n  const cleaned = rawOutput\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parseError = true;\n  parsed = {\n    score: 0,\n    klassifikation: 'KALT',\n    begründung: 'JSON-Parsing fehlgeschlagen: ' + e.message,\n    empfohlene_ansprache: 'direkt',\n    hauptschmerz: '',\n    kaufmotiv: 'Gewinn'\n  };\n}\n\nconst score = parseInt(parsed.score) || 0;\nconst klassifikation = parsed.klassifikation || (score >= 80 ? 'HEISS' : score >= 30 ? 'WARM' : 'KALT');\n\nreturn [{\n  json: {\n    ...trigger,\n    score: score,\n    klassifikation: klassifikation,\n    score_begründung: parsed.begründung || '',\n    empfohlene_ansprache: parsed.empfohlene_ansprache || 'direkt',\n    hauptschmerz: parsed.hauptschmerz || '',\n    kaufmotiv: parsed.kaufmotiv || 'Gewinn',\n    parse_error: parseError,\n    raw_claude_output: rawOutput\n  }\n}];"
       }
     },
     {
