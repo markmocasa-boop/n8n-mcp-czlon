@@ -5,28 +5,28 @@
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Jeder qualifizierte Lead (Score ≥ 30) erhält automatisch eine personalisierte 4-E-Mail-Sequenz.
-**Current focus:** Phase 1 — Fundament (WF0 Master + WF6 CRM Updater)
+**Current focus:** Phase 2 — Enrichment & Scoring (WF1 + WF2)
 
 ## Current Position
 
-Phase: 1 of 5 (Fundament)
-Workflow: Phase 1 vollständig deployed
-Status: Phase 1 abgeschlossen — bereit für Verify
-Last activity: 2026-03-08 — Alle 7 Workflows via REST API deployed
+Phase: 1 of 5 (Fundament) — VERIFIED
+Workflow: Phase 1 vollständig verified
+Status: Phase 1 PASS WITH WARNINGS — bereit für Phase 2
+Last activity: 2026-03-08 — Phase 1 verification abgeschlossen (0 Errors, 3 accepted warnings)
 
-Progress: [████░░░░░░] 35%
+Progress: [████░░░░░░] 40%
 
 ## Deployed Workflows
 
-| WF | Name | n8n ID | Status | Deployed |
-|---|---|---|---|---|
-| WF6 | Sales Agent — WF6 CRM Updater | HxOD2a8He72tvKmR | Active | 2026-03-08 |
-| WF1-Stub | Sales Agent — WF1 Stub (Phase 1) | mPtLL7QxoW1lJKu2 | Active | 2026-03-08 |
-| WF2-Stub | Sales Agent — WF2 Stub (Phase 1) | GAqEpcFUuLrKGYFH | Active | 2026-03-08 |
-| WF3-Stub | Sales Agent — WF3 Stub (Phase 1) | uWkGHyQQ8FBeqErW | Active | 2026-03-08 |
-| WF4-Stub | Sales Agent — WF4 Stub (Phase 1) | O2RnTBvoLAOV4agj | Active | 2026-03-08 |
-| WF5-Stub | Sales Agent — WF5 Stub (Phase 1) | bQQfeZfngg6AyuwZ | Active | 2026-03-08 |
-| WF0 | Sales Agent — WF0 Master Orchestrator | 58ysZ3NLKZfsMfND | Active | 2026-03-08 |
+| WF | Name | n8n ID | Status | Deployed | Verified |
+|---|---|---|---|---|---|
+| WF6 | Sales Agent — WF6 CRM Updater | HxOD2a8He72tvKmR | Active | 2026-03-08 | PASS |
+| WF1-Stub | Sales Agent — WF1 Stub (Phase 1) | mPtLL7QxoW1lJKu2 | Active | 2026-03-08 | PASS |
+| WF2-Stub | Sales Agent — WF2 Stub (Phase 1) | GAqEpcFUuLrKGYFH | Active | 2026-03-08 | PASS |
+| WF3-Stub | Sales Agent — WF3 Stub (Phase 1) | uWkGHyQQ8FBeqErW | Active | 2026-03-08 | PASS |
+| WF4-Stub | Sales Agent — WF4 Stub (Phase 1) | O2RnTBvoLAOV4agj | Active | 2026-03-08 | PASS |
+| WF5-Stub | Sales Agent — WF5 Stub (Phase 1) | bQQfeZfngg6AyuwZ | Active | 2026-03-08 | PASS |
+| WF0 | Sales Agent — WF0 Master Orchestrator | 58ysZ3NLKZfsMfND | Active | 2026-03-08 | PASS |
 
 ## Local File Paths
 
@@ -40,10 +40,8 @@ Progress: [████░░░░░░] 35%
 | `production/sales-agent/stubs/WF5-Stub.json` | Deploy sixth |
 | `production/sales-agent/WF0-Master-Orchestrator.json` | Deploy LAST (fill in real IDs first) |
 
-**Placeholders to replace in WF0 before deploying:**
-- `PLACEHOLDER_WF1_ID`, `PLACEHOLDER_WF2_ID`, `PLACEHOLDER_WF3_ID`
-- `PLACEHOLDER_WF4_ID` (2 nodes), `PLACEHOLDER_WF5_ID`, `PLACEHOLDER_WF6_ID` (2 nodes)
-- `SALES_AGENT_SHEET_ID` in both WF6 and WF0
+**Placeholders still needed (not yet a blocker, but required before live testing):**
+- `SALES_AGENT_SHEET_ID` in both WF6 (HxOD2a8He72tvKmR) and WF0 (58ysZ3NLKZfsMfND) — user must create Google Sheet first
 
 ## Accumulated Context
 
@@ -56,17 +54,21 @@ Progress: [████░░░░░░] 35%
 - Alle Phasen: Anthropic Chat Model Node (`nodes-langchain.lmChatAnthropic`) statt HTTP Request zu Anthropic API
 - Google Sheets: Spaltennamen mit Umlauten (nächster_kontakt etc.) → im Expression-Test validieren
 
-### Validation Issues
+### Validation Issues (Phase 1 — all resolved/accepted)
 
-Keine noch.
+- SALES_AGENT_SHEET_ID placeholder in WF6 + WF0 — expected, user action required
+- WF0 Merge trigger uses output "input1" (passThrough) — acceptable, trigger data unused
+- WF6 IF boolean unary operator — auto-sanitized by n8n on save
 
 ### Blockers/Concerns
 
+- **REQUIRED BEFORE LIVE TESTING**: Google Sheet must be created, SALES_AGENT_SHEET_ID must be filled in WF6 + WF0
 - Google OAuth2 Credential braucht erweiterte Scopes: gmail.modify + gmail.compose + calendar + calendar.events — vor Phase 3/5 prüfen ob bestehende Credential ausreicht oder neue nötig
 - Apify Async-Pattern: Actor-Polling kann >30s dauern → Webhook-Timeout beachten; ggf. als separaten WF mit Callback lösen
 
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Phase 1 JSONs built. MCP deployment pending.
-Next step: `/gsd-n8n:verify-phase 1` — dann Google Sheet erstellen + SALES_AGENT_SHEET_ID in WF6 + WF0 eintragen.
+Stopped at: Phase 1 verification complete. PASS WITH WARNINGS.
+Next step: `/gsd-n8n:plan-phase 2` — dann WF1 (Lead Enrichment) + WF2 (Lead Scoring) bauen.
+Pre-condition: Google Sheet erstellen + SALES_AGENT_SHEET_ID eintragen (kann parallel zu Phase 2 Planung passieren).
