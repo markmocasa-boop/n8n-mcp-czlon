@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772985348528,
+  "lastUpdate": 1772986049412,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "8b1a7638e151b4047d4128a50c5a115aba64b2b7",
-          "message": "Merge pull request #24 from markmocasa-boop/claude/google-business-audit-workflow-vbGWF\n\nAdd Google Business Profil Audit workflow (Lead Magnet)",
-          "timestamp": "2026-02-10T13:15:01+01:00",
-          "tree_id": "5b8cf8998c600df30503da339c2b48f11240e9ae",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8b1a7638e151b4047d4128a50c5a115aba64b2b7"
-        },
-        "date": 1770725822518,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/dcf69607f06f9f3168f92ef6d0c21887366981b6"
         },
         "date": 1772985348181,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "b510e56e3314a104eb48c2656c8bf489d958cbd8",
+          "message": "Phase 4 verified: WF5 LinkedIn Content Generator PASS\n\n- WF5: 9 nodes, all checks clean, ai_languageModel connections correct\n- WF0 bridge node (Set:Lead Context for WF5) verified\n- Cosmetic fix: credential name updated to match live instance\n- ROADMAP.md: Phase 3 + Phase 4 marked verified\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T17:05:26+01:00",
+          "tree_id": "250cea79a8f4dd3f9886be05486864bea6b50525",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b510e56e3314a104eb48c2656c8bf489d958cbd8"
+        },
+        "date": 1772986049093,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
