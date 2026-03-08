@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772987688876,
+  "lastUpdate": 1772993936688,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "4ae4d06500d68b0d01605570d62055bc1cc5d8e2",
-          "message": "Merge pull request #26 from markmocasa-boop/claude/google-business-audit-workflow-vbGWF\n\nFix: Remove $env references for n8n Cloud compatibility",
-          "timestamp": "2026-02-10T15:37:51+01:00",
-          "tree_id": "a9203d8f966c74e7dc86ac0184281bce6d40acd4",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/4ae4d06500d68b0d01605570d62055bc1cc5d8e2"
-        },
-        "date": 1770734390533,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ea00a66c264a68ec7afb8dca7192b0f80d43cca6"
         },
         "date": 1772987688568,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "683ee26544a4383d03e0e12cac7d4f7bcafafd33",
+          "message": "Social Pulse: Apply all Critical fixes from debug session\n\n- WF1: YouTube credential set, Supabase native credential set + onError\n- WF2: Anthropic credential set (Claude - 20260127)\n- WF3: Anthropic credential set, Supabase credential set + onError, Sheets column mapping fixed\n- WF4: Anthropic credential set (Claude - 20260127)\n- WF5: Anthropic credential set, html2pdf auth header added\n- WF6: Gmail credential set (Kh7cApAx6TAe4Hpy)\n- WF7: baseUrl fixed webhook-test -> webhook (production URLs now correct)\n\nAll 7 workflows validate: 0 errors each.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T19:16:40+01:00",
+          "tree_id": "edeed639c12fd73d7a8339e2ddf88a3e61e7dd1f",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/683ee26544a4383d03e0e12cac7d4f7bcafafd33"
+        },
+        "date": 1772993936370,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
