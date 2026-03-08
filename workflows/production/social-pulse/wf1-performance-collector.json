@@ -381,8 +381,8 @@
       ],
       "credentials": {
         "youTubeOAuth2Api": {
-          "id": "",
-          "name": "YouTube OAuth2"
+          "id": "dYy7qZ8gqapk9ple",
+          "name": "YouTube account"
         }
       },
       "onError": "continueRegularOutput",
@@ -757,8 +757,8 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "",
-          "name": "Supabase API"
+          "id": "PhfVIbHXOKRFaybe",
+          "name": "Supabase account"
         }
       },
       "retryOnFail": true,
@@ -768,7 +768,8 @@
         "operation": "create",
         "tableId": "workflow_runs",
         "dataToSend": "autoMapInputData"
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "build-response",

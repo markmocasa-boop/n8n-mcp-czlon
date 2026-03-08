@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Franka Weekly Report – KW 09/2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* COVER PAGE */
+  .cover {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+  }
+
+  .cover .logo-ring {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a855f7, #6366f1, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    margin-bottom: 28px;
+    box-shadow: 0 0 60px rgba(168,85,247,0.5);
+  }
+
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #a855f7, #6366f1, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .cover .subtitle {
+    font-size: 16px;
+    color: #a0a0c0;
+    margin-bottom: 40px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .cover .meta-box {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 28px 48px;
+    margin-top: 20px;
+  }
+
+  .cover .meta-box p {
+    font-size: 15px;
+    color: #c0c0e0;
+    margin: 6px 0;
+  }
+
+  .cover .meta-box strong {
+    color: #ffffff;
+  }
+
+  .cover .platforms {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 36px;
+    flex-wrap: wrap;
+  }
+
+  .cover .platform-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #e0e0ff;
+  }
+
+  /* MAIN CONTENT */
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e8e8f0;
+  }
+
+  .section-header .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .section-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .section-header .kw-tag {
+    margin-left: auto;
+    background: #f3f0ff;
+    color: #6366f1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* FRANKA SUMMARY BOX */
+  .franka-summary {
+    background: linear-gradient(135deg, #0f0c29, #302b63);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: white;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .franka-summary::before {
+    content: 'F';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 100px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.04);
+  }
+
+  .franka-summary h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #a78bfa;
+    margin-bottom: 12px;
+  }
+
+  .franka-summary p {
+    font-size: 15px;
+    color: #d0d0f0;
+    line-height: 1.7;
+    max-width: 760px;
+  }
+
+  .franka-summary .verdict {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4ade80;
+  }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-left: 4px solid #6366f1;
+  }
+
+  .kpi-card.green { border-left-color: #22c55e; }
+  .kpi-card.red { border-left-color: #ef4444; }
+  .kpi-card.yellow { border-left-color: #f59e0b; }
+  .kpi-card.blue { border-left-color: #3b82f6; }
+  .kpi-card.purple { border-left-color: #a855f7; }
+
+  .kpi-card .label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .kpi-card .value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a1a2e;
+  }
+
+  .kpi-card .change {
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .change.up { color: #22c55e; }
+  .change.down { color: #ef4444; }
+  .change.neutral { color: #888; }
+
+  /* PLATFORM CARDS */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .platform-card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+
+  .platform-card .platform-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .platform-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .ig { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); }
+  .tk { background: #010101; }
+  .yt { background: #ff0000; }
+  .li { background: #0077b5; }
+  .tw { background: #000000; }
+  .fb { background: #1877f2; }
+
+  .platform-card h4 {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .platform-card .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: auto;
+  }
+
+  .dot-green { background: #22c55e; }
+  .dot-yellow { background: #f59e0b; }
+  .dot-red { background: #ef4444; }
+
+  .platform-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .metric-item .metric-label {
+    font-size: 10px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metric-item .metric-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .metric-item .metric-delta {
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  /* TOP CONTENT */
+  .top-content-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
+  }
+
+  .top-content-table thead {
+    background: linear-gradient(90deg, #0f0c29, #302b63);
+    color: white;
+  }
+
+  .top-content-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .top-content-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid #f0f0f5;
+    font-size: 12px;
+  }
+
+  .top-content-table tr:last-child td { border-bottom: none; }
+  .top-content-table tr:hover td { background: #fafaff; }
+
+  .rank-badge {
+    background: #f3f0ff;
+    color: #6366f1;
+    font-weight: 700;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .rank-badge.gold { background: #fef9c3; color: #ca8a04; }
+  .rank-badge.silver { background: #f1f5f9; color: #475569; }
+  .rank-badge.bronze { background: #fef3c7; color: #b45309; }
+
+  /* META ADS SECTION */
+  .ads-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .ads-card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+
+  .ads-card h4 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ad-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f8;
+    font-size: 12px;
+  }
+
+  .ad-row:last-child { border-bottom: none; }
+  .ad-name { color: #555; flex: 1; }
+  .ad-value { font-weight: 700; color: #1a1a2e; }
+  .ad-value.green { color: #16a34a; }
+  .ad-value.red { color: #dc2626; }
+
+  .ads-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .ads-kpi {
+    background: #f8f7ff;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .ads-kpi .val { font-size: 20px; font-weight: 800; color: #302b63; }
+  .ads-kpi .lbl { font-size: 10px; color: #888; margin-top: 2px; }
+
+  /* COMPETITOR SECTION */
+  .competitor-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
+  }
+
+  .competitor-table thead {
+    background: #1e1b4b;
+    color: white;
+  }
+
+  .competitor-table th {
+    padding: 11px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .competitor-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f8;
+    font-size: 12px;
+  }
+
+  .competitor-table tr:last-child td { border-bottom: none; }
+
+  .trend-up { color: #16a34a; font-weight: 600; }
+  .trend-down { color: #dc2626; font-weight: 600; }
+  .trend-same { color: #888; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .tag-viral { background: #fef9c3; color: #854d0e; }
+  .tag-stable { background: #f0fdf4; color: #166534; }
+  .tag-dropping { background: #fff1f2; color: #9f1239; }
+
+  /* CONTENT SUGGESTIONS */
+  .suggestions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .suggestion-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-top: 3px solid #6366f1;
+  }
+
+  .suggestion-card.ig-card { border-top-color: #fd1d1d; }
+  .suggestion-card.tk-card { border-top-color: #010101; }
+  .suggestion-card.li-card { border-top-color: #0077b5; }
+  .suggestion-card.yt-card { border-top-color: #ff0000; }
+
+  .suggestion-card .platform-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6366f1;
+    margin-bottom: 6px;
+  }
+
+  .ig-card .platform-tag { color: #fd1d1d; }
+  .tk-card .platform-tag { color: #555; }
+  .li-card .platform-tag { color: #0077b5; }
+  .yt-card .platform-tag { color: #ff0000; }
+
+  .suggestion-card h5 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #1a1a2e;
+  }
+
+  .suggestion-card p {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  .suggestion-meta {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .meta-pill {
+    background: #f5f5f8;
+    color: #555;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  /* ACTION ITEMS */
+  .action-list {
+    background: white;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
+  }
+
+  .action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f8;
+  }
+
+  .action-item:last-child { border-bottom: none; }
+
+  .action-priority {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: white;
+  }
+
+  .priority-high { background: #ef4444; }
+  .priority-mid { background: #f59e0b; }
+  .priority-low { background: #22c55e; }
+
+  .action-text { font-size: 13px; color: #333; flex: 1; }
+  .action-owner { font-size: 11px; color: #999; margin-top: 2px; }
+
+  /* FOOTER */
+  .footer {
+    background: linear-gradient(135deg, #0f0c29, #302b63);
+    color: white;
+    padding: 28px 40px;
+    text-align: center;
+    margin-top: 20px;
+    border-radius: 16px;
+  }
+
+  .footer p { font-size: 12px; color: #a0a0c0; margin: 4px 0; }
+  .footer strong { color: #a78bfa; }
+
+  /* PAGE BREAKS */
+  .page-break { page-break-before: always; padding-top: 40px; }
+
+  /* SCORE RING */
+  .score-section {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .score-ring {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: conic-gradient(#6366f1 0% 78%, #e8e8f0 78% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .score-ring::before {
+    content: '';
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+  }
+
+  .score-ring .score-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: #302b63;
+    z-index: 1;
+  }
+
+  .score-details h4 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .score-details p { font-size: 12px; color: #666; line-height: 1.6; }
+
+  .score-bars {
+    flex: 1;
+    display: grid;
+    gap: 8px;
+  }
+
+  .score-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .score-bar-label { width: 120px; color: #666; }
+  .score-bar-track {
+    flex: 1;
+    height: 6px;
+    background: #f0f0f5;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill { height: 100%; border-radius: 3px; background: #6366f1; }
+  .score-bar-num { width: 32px; text-align: right; font-weight: 700; color: #333; }
+
+  /* HIGHLIGHTS BOX */
+  .highlights {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .highlight-box {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .highlight-box .hl-icon { font-size: 22px; margin-bottom: 8px; }
+  .highlight-box .hl-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+  .highlight-box .hl-value { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+  .highlight-box .hl-sub { font-size: 11px; color: #888; margin-top: 2px; }
+
+  @media print {
+    body { background: white; }
+    .page { padding: 20px; }
+    .cover { min-height: auto; padding: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER PAGE ===== -->
+<div class="cover">
+  <div class="logo-ring">F</div>
+  <h1>Franka</h1>
+  <div class="subtitle">KI Social Media Managerin</div>
+
+  <div class="meta-box">
+    <p><strong>Weekly Performance Report</strong></p>
+    <p>Kalenderwoche 09 / 2026 &nbsp;|&nbsp; 23. Feb – 01. Mrz 2026</p>
+    <p style="margin-top:12px; font-size:13px;">Erstellt am <strong>02. Mrz 2026, 07:42 Uhr</strong> &nbsp;·&nbsp; Vollautomatisch generiert</p>
+    <p style="font-size:12px; color:#7878a0;">Erstellt für: <strong style="color:#c0c0e0;">MeinOffice GmbH</strong></p>
+  </div>
+
+  <div class="platforms">
+    <span class="platform-badge">📸 Instagram</span>
+    <span class="platform-badge">🎵 TikTok</span>
+    <span class="platform-badge">▶️ YouTube</span>
+    <span class="platform-badge">💼 LinkedIn</span>
+    <span class="platform-badge">✕ X (Twitter)</span>
+    <span class="platform-badge">🔵 Facebook</span>
+    <span class="platform-badge">📣 Meta Ads</span>
+  </div>
+</div>
+
+<!-- ===== PAGE 2: EXECUTIVE SUMMARY ===== -->
+<div class="page">
+
+  <div class="section-header">
+    <div class="icon" style="background:#f3f0ff;">📋</div>
+    <h2>Executive Summary</h2>
+    <span class="kw-tag">KW 09 / 2026</span>
+  </div>
+
+  <div class="franka-summary">
+    <h3>Frankas Analyse</h3>
+    <p>
+      KW 09 war eine starke Woche mit überdurchschnittlichem Engagement auf Instagram und TikTok.
+      Das Reels-Format outperformt weiterhin statische Posts um den Faktor 3,2x — das Carousel vom
+      25. Feb (Produktvergleich) wurde zur meistgespeicherten Publikation des Monats. LinkedIn zeigt
+      solides B2B-Wachstum (+18 % Impressionen). YouTube Shorts generieren erste organische Reichweite.
+      Meta Ads laufen effizient: ROAS 4,1x bei gleichbleibendem Budget. Handlungsbedarf bei X/Twitter
+      (Reichweitenrückgang -22 %) und Facebook (Engagement-Rate unter Benchmark).
+    </p>
+    <div class="verdict">
+      <span>✅</span>
+      <span>Gesamtbewertung: Sehr gut — 4 von 6 Kanäle über Benchmark</span>
+    </div>
+  </div>
+
+  <!-- OVERALL SCORE -->
+  <div class="score-section">
+    <div class="score-ring">
+      <span class="score-value">78</span>
+    </div>
+    <div>
+      <div class="score-details">
+        <h4>Gesamt-Score</h4>
+        <p>Vergangene Woche: 72 &nbsp;|&nbsp; <span style="color:#22c55e; font-weight:600;">+6 Punkte</span></p>
+        <p style="margin-top:4px; font-size:11px; color:#888;">Score errechnet aus Reichweite, Engagement, Wachstum, Consistency &amp; Ad-Performance</p>
+      </div>
+    </div>
+    <div class="score-bars">
+      <div class="score-bar-row">
+        <span class="score-bar-label">Reichweite</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:85%"></div></div>
+        <span class="score-bar-num">85</span>
+      </div>
+      <div class="score-bar-row">
+        <span class="score-bar-label">Engagement</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:82%"></div></div>
+        <span class="score-bar-num">82</span>
+      </div>
+      <div class="score-bar-row">
+        <span class="score-bar-label">Wachstum</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:71%"></div></div>
+        <span class="score-bar-num">71</span>
+      </div>
+      <div class="score-bar-row">
+        <span class="score-bar-label">Konsistenz</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:90%; background:#22c55e;"></div></div>
+        <span class="score-bar-num">90</span>
+      </div>
+      <div class="score-bar-row">
+        <span class="score-bar-label">Ad-Effizienz</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:74%; background:#f59e0b;"></div></div>
+        <span class="score-bar-num">74</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP KPIs -->
+  <div class="section-header">
+    <div class="icon" style="background:#ecfdf5;">📊</div>
+    <h2>Gesamt-KPIs der Woche</h2>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="label">Gesamtreichweite</div>
+      <div class="value">284.700</div>
+      <div class="change up">▲ +14,3 % vs. Vorwoche</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="label">Gesamtimpressionen</div>
+      <div class="value">519.200</div>
+      <div class="change up">▲ +9,7 %</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="label">Engagement gesamt</div>
+      <div class="value">18.430</div>
+      <div class="change up">▲ +21,2 %</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Ø Engagement-Rate</div>
+      <div class="value">3,54 %</div>
+      <div class="change up">▲ +0,4 Punkte</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="label">Neue Follower gesamt</div>
+      <div class="value">+1.247</div>
+      <div class="change up">▲ +18,6 %</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="label">Postings gesamt</div>
+      <div class="value">23</div>
+      <div class="change neutral">→ Plan erfüllt (23/23)</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="label">Ad Spend (Meta)</div>
+      <div class="value">€ 1.840</div>
+      <div class="change neutral">→ Budget: € 2.000</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="label">ROAS</div>
+      <div class="value">4,1x</div>
+      <div class="change up">▲ +0,3x vs. KW08</div>
+    </div>
+  </div>
+
+  <!-- HIGHLIGHTS -->
+  <div class="highlights">
+    <div class="highlight-box">
+      <div class="hl-icon">🏆</div>
+      <div class="hl-title">Post der Woche</div>
+      <div class="hl-value">IG Carousel – Produktvergleich</div>
+      <div class="hl-sub">4.820 Saves · 1.230 Shares</div>
+    </div>
+    <div class="highlight-box">
+      <div class="hl-icon">🚀</div>
+      <div class="hl-title">Größter Kanal-Gewinner</div>
+      <div class="hl-value">TikTok</div>
+      <div class="hl-sub">+32 % Reichweite WoW</div>
+    </div>
+    <div class="highlight-box">
+      <div class="hl-icon">⚠️</div>
+      <div class="hl-title">Handlungsbedarf</div>
+      <div class="hl-value">X (Twitter)</div>
+      <div class="hl-sub">-22 % Reichweite · Strategie überdenken</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== PAGE 3: PLATFORM PERFORMANCE ===== -->
+<div class="page page-break">
+
+  <div class="section-header">
+    <div class="icon" style="background:#fff1f2;">📱</div>
+    <h2>Plattform-Performance</h2>
+    <span class="kw-tag">KW 09 / 2026</span>
+  </div>
+
+  <div class="platform-grid">
+
+    <!-- INSTAGRAM -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon ig">📸</div>
+        <h4>Instagram</h4>
+        <div class="status-dot dot-green"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Follower</div>
+          <div class="metric-value">12.840</div>
+          <div class="metric-delta up change">▲ +234</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Reichweite</div>
+          <div class="metric-value">89.420</div>
+          <div class="metric-delta up change">▲ +18 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Eng.-Rate</div>
+          <div class="metric-value">5,2 %</div>
+          <div class="metric-delta up change">▲ +0,8 Pt.</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">7</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Top Format</div>
+          <div class="metric-value" style="font-size:12px;">Reels</div>
+          <div class="metric-delta up change">3,2x vs. Static</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Saves</div>
+          <div class="metric-value">4.820</div>
+          <div class="metric-delta up change">▲ Rekord</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIKTOK -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon tk" style="color:white;">🎵</div>
+        <h4>TikTok</h4>
+        <div class="status-dot dot-green"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Follower</div>
+          <div class="metric-value">5.612</div>
+          <div class="metric-delta up change">▲ +418</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Video-Views</div>
+          <div class="metric-value">61.300</div>
+          <div class="metric-delta up change">▲ +32 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Ø Watch Time</div>
+          <div class="metric-value">68 %</div>
+          <div class="metric-delta up change">▲ +12 Pt.</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">5</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Viral (>10K)</div>
+          <div class="metric-value">2 Videos</div>
+          <div class="metric-delta up change">▲ neu</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Shares</div>
+          <div class="metric-value">1.890</div>
+          <div class="metric-delta up change">▲ +44 %</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- YOUTUBE -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon yt" style="color:white;">▶</div>
+        <h4>YouTube</h4>
+        <div class="status-dot dot-yellow"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Abonnenten</div>
+          <div class="metric-value">2.103</div>
+          <div class="metric-delta up change">▲ +87</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Views</div>
+          <div class="metric-value">14.720</div>
+          <div class="metric-delta up change">▲ +6 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Watch Hours</div>
+          <div class="metric-value">312 h</div>
+          <div class="metric-delta up change">▲ +28 h</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">3</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">CTR</div>
+          <div class="metric-value">4,8 %</div>
+          <div class="metric-delta neutral change">→ Benchmark</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Ø Views/Video</div>
+          <div class="metric-value">4.907</div>
+          <div class="metric-delta up change">▲ +9 %</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKEDIN -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon li" style="color:white;">in</div>
+        <h4>LinkedIn</h4>
+        <div class="status-dot dot-green"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Follower</div>
+          <div class="metric-value">3.847</div>
+          <div class="metric-delta up change">▲ +112</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Impressionen</div>
+          <div class="metric-value">28.900</div>
+          <div class="metric-delta up change">▲ +18 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Eng.-Rate</div>
+          <div class="metric-value">3,1 %</div>
+          <div class="metric-delta up change">▲ +0,4 Pt.</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">4</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Klicks</div>
+          <div class="metric-value">892</div>
+          <div class="metric-delta up change">▲ +23 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Reposts</div>
+          <div class="metric-value">67</div>
+          <div class="metric-delta up change">▲ stark</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- X (TWITTER) -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon tw" style="color:white; font-size:16px; font-weight:900;">✕</div>
+        <h4>X (Twitter)</h4>
+        <div class="status-dot dot-red"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Follower</div>
+          <div class="metric-value">1.924</div>
+          <div class="metric-delta down change">▼ −14</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Impressionen</div>
+          <div class="metric-value">8.340</div>
+          <div class="metric-delta down change">▼ −22 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Eng.-Rate</div>
+          <div class="metric-value">1,1 %</div>
+          <div class="metric-delta down change">▼ unter Benchmark</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">4</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Retweets</div>
+          <div class="metric-value">18</div>
+          <div class="metric-delta down change">▼ −40 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Mentions</div>
+          <div class="metric-value">7</div>
+          <div class="metric-delta neutral change">→ stabil</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FACEBOOK -->
+    <div class="platform-card">
+      <div class="platform-header">
+        <div class="platform-icon fb" style="color:white; font-size:20px; font-weight:900;">f</div>
+        <h4>Facebook</h4>
+        <div class="status-dot dot-yellow"></div>
+      </div>
+      <div class="platform-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Page-Likes</div>
+          <div class="metric-value">6.211</div>
+          <div class="metric-delta up change">▲ +40</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Reichweite</div>
+          <div class="metric-value">22.100</div>
+          <div class="metric-delta neutral change">→ −1 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Eng.-Rate</div>
+          <div class="metric-value">1,8 %</div>
+          <div class="metric-delta down change">▼ unter Benchmark (2,5%)</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Postings</div>
+          <div class="metric-value">4</div>
+          <div class="metric-delta neutral change">→ Plan</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Shares</div>
+          <div class="metric-value">134</div>
+          <div class="metric-delta down change">▼ −8 %</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Comments</div>
+          <div class="metric-value">89</div>
+          <div class="metric-delta neutral change">→ stabil</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOP 5 CONTENT PIECES -->
+  <div class="section-header">
+    <div class="icon" style="background:#fef9c3;">🏅</div>
+    <h2>Top 5 Content-Pieces der Woche</h2>
+  </div>
+
+  <table class="top-content-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Plattform</th>
+        <th>Content</th>
+        <th>Datum</th>
+        <th>Reichweite</th>
+        <th>Engagement</th>
+        <th>Saves/Shares</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="rank-badge gold">1</span></td>
+        <td>📸 Instagram</td>
+        <td><strong>Carousel: Produktvergleich "Welches passt zu dir?"</strong></td>
+        <td>25. Feb</td>
+        <td>34.200</td>
+        <td>8,4 %</td>
+        <td>4.820 Saves</td>
+      </tr>
+      <tr>
+        <td><span class="rank-badge silver">2</span></td>
+        <td>🎵 TikTok</td>
+        <td><strong>Video: "3 Fehler die jeder macht" (Tutorial-Format)</strong></td>
+        <td>26. Feb</td>
+        <td>28.100</td>
+        <td>7,2 %</td>
+        <td>1.890 Shares</td>
+      </tr>
+      <tr>
+        <td><span class="rank-badge bronze">3</span></td>
+        <td>🎵 TikTok</td>
+        <td><strong>Behind the Scenes: Produktion Tag</strong></td>
+        <td>27. Feb</td>
+        <td>19.400</td>
+        <td>6,1 %</td>
+        <td>1.240 Shares</td>
+      </tr>
+      <tr>
+        <td><span class="rank-badge">4</span></td>
+        <td>💼 LinkedIn</td>
+        <td><strong>Case Study: Kunde X erreicht +40 % Effizienz</strong></td>
+        <td>24. Feb</td>
+        <td>11.200</td>
+        <td>4,8 %</td>
+        <td>67 Reposts</td>
+      </tr>
+      <tr>
+        <td><span class="rank-badge">5</span></td>
+        <td>📸 Instagram</td>
+        <td><strong>Reel: "Der 60-Sekunden-Morning-Hack"</strong></td>
+        <td>28. Feb</td>
+        <td>9.800</td>
+        <td>4,2 %</td>
+        <td>612 Saves</td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+
+<!-- ===== PAGE 4: META ADS ===== -->
+<div class="page page-break">
+
+  <div class="section-header">
+    <div class="icon" style="background:#eff6ff;">📣</div>
+    <h2>Meta Ads Analyse</h2>
+    <span class="kw-tag">KW 09 / 2026</span>
+  </div>
+
+  <div class="ads-kpi-row">
+    <div class="ads-kpi">
+      <div class="val">€ 1.840</div>
+      <div class="lbl">Ad Spend</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val" style="color:#16a34a;">4,1x</div>
+      <div class="lbl">ROAS</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">2,34 %</div>
+      <div class="lbl">Ø CTR</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">€ 0,82</div>
+      <div class="lbl">Ø CPM</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">€ 1,24</div>
+      <div class="lbl">Ø CPC</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">1.483</div>
+      <div class="lbl">Conversions</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">€ 7.542</div>
+      <div class="lbl">Conversion Value</div>
+    </div>
+    <div class="ads-kpi">
+      <div class="val">€ 5,08</div>
+      <div class="lbl">Cost/Conversion</div>
+    </div>
+  </div>
+
+  <div class="ads-grid">
+
+    <div class="ads-card">
+      <h4>🏆 Top 3 Anzeigen (nach ROAS)</h4>
+      <div class="ad-row">
+        <span class="ad-name">Produktvorstellung – Variante B</span>
+        <span class="ad-value green">6,2x ROAS</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Testimonial-Video "Kundin Maria"</span>
+        <span class="ad-value green">5,8x ROAS</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Karussell "3 Gründe" – Retargeting</span>
+        <span class="ad-value green">5,1x ROAS</span>
+      </div>
+      <div style="margin-top:12px; padding-top:10px; border-top:1px solid #f0f0f8;">
+        <p style="font-size:11px; color:#888; font-style:italic;">
+          Frankas Empfehlung: Budget der Top-Variante B um 30 % erhöhen,
+          Testimonialsformat für weitere Produkte replizieren.
+        </p>
+      </div>
+    </div>
+
+    <div class="ads-card">
+      <h4>⚠️ Bottom 3 Anzeigen (nach ROAS)</h4>
+      <div class="ad-row">
+        <span class="ad-name">Statisches Bild "Angebot Feb"</span>
+        <span class="ad-value red">1,2x ROAS</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Story-Ad – allgemein (Broad)</span>
+        <span class="ad-value red">1,4x ROAS</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Collection-Ad – Kategorie X</span>
+        <span class="ad-value red">1,6x ROAS</span>
+      </div>
+      <div style="margin-top:12px; padding-top:10px; border-top:1px solid #f0f0f8;">
+        <p style="font-size:11px; color:#888; font-style:italic;">
+          Frankas Empfehlung: Bottom-Anzeigen pausieren oder Creative erneuern.
+          Broad-Targeting auf Lookalike-Audience wechseln.
+        </p>
+      </div>
+    </div>
+
+    <div class="ads-card">
+      <h4>📊 Kampagnen-Übersicht</h4>
+      <div class="ad-row">
+        <span class="ad-name">Awareness Kampagne</span>
+        <span class="ad-value">CPM: € 0,61</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Traffic Kampagne</span>
+        <span class="ad-value">CPC: € 0,94</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Conversion Kampagne</span>
+        <span class="ad-value green">ROAS: 4,8x</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Retargeting Kampagne</span>
+        <span class="ad-value green">ROAS: 5,3x</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Lead Gen Kampagne</span>
+        <span class="ad-value">CPL: € 3,20</span>
+      </div>
+    </div>
+
+    <div class="ads-card">
+      <h4>🎯 Audience Performance</h4>
+      <div class="ad-row">
+        <span class="ad-name">Lookalike 1 % (DE)</span>
+        <span class="ad-value green">CTR: 3,1 %</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Custom: Website-Besucher 30d</span>
+        <span class="ad-value green">CTR: 4,2 %</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Interest: Online-Shopping DE</span>
+        <span class="ad-value">CTR: 1,8 %</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Broad: 25–45 DE</span>
+        <span class="ad-value red">CTR: 0,9 %</span>
+      </div>
+      <div class="ad-row">
+        <span class="ad-name">Custom: Käufer 180d (Retarget)</span>
+        <span class="ad-value green">CTR: 5,4 %</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ===== PAGE 5: COMPETITOR + CONTENT PLAN ===== -->
+<div class="page page-break">
+
+  <div class="section-header">
+    <div class="icon" style="background:#fff7ed;">🔍</div>
+    <h2>Wettbewerber-Monitor</h2>
+    <span class="kw-tag">KW 09 / 2026</span>
+  </div>
+
+  <table class="competitor-table">
+    <thead>
+      <tr>
+        <th>Wettbewerber</th>
+        <th>Plattform</th>
+        <th>Follower</th>
+        <th>Trend</th>
+        <th>Top Content dieser Woche</th>
+        <th>Insights</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Konkurrent A</strong></td>
+        <td>Instagram</td>
+        <td>48.200</td>
+        <td class="trend-up">▲ +1.200</td>
+        <td>Unboxing-Video → 42K Views</td>
+        <td>Setzt auf UGC-Testimonials</td>
+        <td><span class="tag tag-viral">Viral</span></td>
+      </tr>
+      <tr>
+        <td><strong>Konkurrent A</strong></td>
+        <td>TikTok</td>
+        <td>31.900</td>
+        <td class="trend-up">▲ +3.400</td>
+        <td>Challenge-Format → 210K Views</td>
+        <td>Challenge startet organischen Loop</td>
+        <td><span class="tag tag-viral">Viral</span></td>
+      </tr>
+      <tr>
+        <td><strong>Konkurrent B</strong></td>
+        <td>LinkedIn</td>
+        <td>12.100</td>
+        <td class="trend-up">▲ +290</td>
+        <td>Thought Leadership Post CEO</td>
+        <td>B2B-Storytelling stark gestiegen</td>
+        <td><span class="tag tag-stable">Stabil</span></td>
+      </tr>
+      <tr>
+        <td><strong>Konkurrent B</strong></td>
+        <td>Instagram</td>
+        <td>22.400</td>
+        <td class="trend-same">→ +80</td>
+        <td>Produktlaunch-Reel</td>
+        <td>Launches erzeugen Spike-Muster</td>
+        <td><span class="tag tag-stable">Stabil</span></td>
+      </tr>
+      <tr>
+        <td><strong>Konkurrent C</strong></td>
+        <td>YouTube</td>
+        <td>8.700</td>
+        <td class="trend-down">▼ −120</td>
+        <td>Tutorial (schwache Performance)</td>
+        <td>Upload-Frequenz sinkt deutlich</td>
+        <td><span class="tag tag-dropping">Rückgang</span></td>
+      </tr>
+      <tr>
+        <td><strong>Konkurrent C</strong></td>
+        <td>TikTok</td>
+        <td>4.200</td>
+        <td class="trend-down">▼ −340</td>
+        <td>—</td>
+        <td>Kaum aktiv diese Woche</td>
+        <td><span class="tag tag-dropping">Rückgang</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="franka-summary" style="margin-bottom:28px;">
+    <h3>Frankas Wettbewerbs-Analyse</h3>
+    <p>
+      Konkurrent A setzt diese Woche stark auf User-Generated-Content und eine TikTok-Challenge —
+      das virale Muster ist replizierbar. Empfehlung: Eigene UGC-Kampagne auf Instagram + TikTok
+      starten, um den Wachstumsschub zu nutzen bevor das Momentum verebbt. Konkurrent C schwächelt
+      spürbar — Marktanteile in Sichtweite, wenn wir Posting-Frequenz auf YouTube hochhalten.
+    </p>
+  </div>
+
+  <!-- CONTENT SUGGESTIONS -->
+  <div class="section-header">
+    <div class="icon" style="background:#f0fdf4;">💡</div>
+    <h2>Content-Empfehlungen für KW 10</h2>
+  </div>
+
+  <div class="suggestions-grid">
+
+    <div class="suggestion-card ig-card">
+      <div class="platform-tag">Instagram</div>
+      <h5>Reel: "Das 1-Minuten-Geheimnis unserer besten Kunden"</h5>
+      <p>Testimonial-Reel mit 3 kurzen Kundenstatements. Hook: Schnittfrequenz 0,5s.
+         Nutze UGC-Stil für Authentizität. Bestes Posting-Fenster: Di 11–12 Uhr.</p>
+      <div class="suggestion-meta">
+        <span class="meta-pill">⏱ Reels</span>
+        <span class="meta-pill">📅 Di 11 Uhr</span>
+        <span class="meta-pill">🎯 Ø ER: 5–7 %</span>
+      </div>
+    </div>
+
+    <div class="suggestion-card tk-card">
+      <div class="platform-tag">TikTok</div>
+      <h5>"Try It With Me" – Produkterfahrung live</h5>
+      <p>Echtzeitnutzung des Produkts, authentisch und ungeschnitten.
+         Trending Sound aus "Lifestyle DE" Kategorie nutzen. Hashtags: #probierenmitmir #alltagshack.</p>
+      <div class="suggestion-meta">
+        <span class="meta-pill">⏱ 30–45s</span>
+        <span class="meta-pill">📅 Mi 18 Uhr</span>
+        <span class="meta-pill">🎯 Ø 15–25K Views</span>
+      </div>
+    </div>
+
+    <div class="suggestion-card li-card">
+      <div class="platform-tag">LinkedIn</div>
+      <h5>Thought Leadership: "Was 2026 für [Branche] bedeutet"</h5>
+      <p>CEO/Gründer-Post zu Branchentrends. Listicle-Format "5 Erkenntnisse aus 100 Kundengesprächen".
+         Personal Branding stärkt B2B-Vertrauen und generiert Inbound.</p>
+      <div class="suggestion-meta">
+        <span class="meta-pill">📝 Text + 1 Grafik</span>
+        <span class="meta-pill">📅 Di 8 Uhr</span>
+        <span class="meta-pill">🎯 Ø 3–5 % ER</span>
+      </div>
+    </div>
+
+    <div class="suggestion-card yt-card">
+      <div class="platform-tag">YouTube Shorts</div>
+      <h5>"Vorher / Nachher" – Transformation in 60s</h5>
+      <p>Klassisches Before/After-Format mit Produkteinsatz.
+         Stark für SEO: Titel-Keywords "wie funktioniert X" + "Erfahrungsbericht".
+         Auch als Reel wiederverwendbar.</p>
+      <div class="suggestion-meta">
+        <span class="meta-pill">⏱ 45–60s</span>
+        <span class="meta-pill">📅 Do 15 Uhr</span>
+        <span class="meta-pill">🔄 Cross-Post: IG + TK</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ===== PAGE 6: ACTION ITEMS ===== -->
+<div class="page page-break">
+
+  <div class="section-header">
+    <div class="icon" style="background:#fff1f2;">✅</div>
+    <h2>Maßnahmen &amp; Next Steps</h2>
+    <span class="kw-tag">Sofort / KW 10</span>
+  </div>
+
+  <div class="action-list">
+
+    <div class="action-item">
+      <div class="action-priority priority-high">!</div>
+      <div>
+        <div class="action-text"><strong>X/Twitter-Strategie überarbeiten:</strong> Posting-Frequenz auf 2x/Woche reduzieren, Format auf Threads + Grafiken umstellen. Breite Text-Posts performen aktuell kaum.</div>
+        <div class="action-owner">Verantwortlich: Social Media Team · Deadline: KW 10 Montag</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-high">!</div>
+      <div>
+        <div class="action-text"><strong>Meta Ads: Bottom-Anzeigen pausieren.</strong> "Statisches Bild Angebot Feb" + "Story-Ad Broad" deaktivieren. Budget auf Testimonial-Variante B und Retargeting verschieben.</div>
+        <div class="action-owner">Verantwortlich: Performance Marketing · Deadline: Heute</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-high">!</div>
+      <div>
+        <div class="action-text"><strong>UGC-Kampagne starten:</strong> Konkurrent A's Challenge-Erfolg als Opportunity nutzen. Eigene UGC-Challenge auf TikTok + Instagram launchen. Template erstellen und 5 Bestandskunden direkt ansprechen.</div>
+        <div class="action-owner">Verantwortlich: Content + CRM · Deadline: KW 10 Mitte</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-mid">2</div>
+      <div>
+        <div class="action-text"><strong>Facebook Engagement verbessern:</strong> Engagement-Rate liegt bei 1,8 % (Benchmark: 2,5 %). Testweise Frage-Posts und interaktive Polls einführen. Video-Anteil erhöhen.</div>
+        <div class="action-owner">Verantwortlich: Social Media Team · Deadline: KW 10</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-mid">2</div>
+      <div>
+        <div class="action-text"><strong>Instagram Carousel-Erfolg replizieren:</strong> "Welches passt zu dir?"-Format hat 4.820 Saves erzeugt. 2 weitere Carousels im gleichen Stil für KW 10+11 produzieren.</div>
+        <div class="action-owner">Verantwortlich: Design + Content · Deadline: KW 10 Anfang</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-mid">2</div>
+      <div>
+        <div class="action-text"><strong>YouTube Watch Time optimieren:</strong> Intro-Länge auf max. 8s kürzen. Ende-Screen-CTAs testen. Aktuelle Ø Watch Time: 312h — Ziel KW 10: 380h.</div>
+        <div class="action-owner">Verantwortlich: Video Team · Deadline: nächstes Upload</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-low">3</div>
+      <div>
+        <div class="action-text"><strong>LinkedIn CEO-Post planen:</strong> Thought Leadership "Was 2026 für [Branche] bedeutet" als persönlicher CEO-Post. Letzter CEO-Post vor 3 Wochen hatte 4,8 % ER.</div>
+        <div class="action-owner">Verantwortlich: CEO + Content Team · Deadline: Di KW 10</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-priority priority-low">3</div>
+      <div>
+        <div class="action-text"><strong>Meta Ads Lookalike erweitern:</strong> Lookalike 2 % (DE) als neue Audience testen. Basis: Käufer 180d Custom Audience (beste Performer CTR 5,4 %). Testbudget: € 200.</div>
+        <div class="action-owner">Verantwortlich: Performance Marketing · Deadline: KW 10</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p style="font-size:18px; font-weight:700; color:#a78bfa; margin-bottom:8px;">Franka – KI Social Media Managerin</p>
+    <p>Report erstellt: <strong>02. März 2026 · 07:42 Uhr</strong> &nbsp;|&nbsp; Berichtszeitraum: <strong>23. Feb – 01. Mrz 2026 (KW 09)</strong></p>
+    <p>Datenquellen: Meta Business Suite · TikTok Analytics · YouTube Studio · LinkedIn Analytics · X Analytics</p>
+    <p style="margin-top:12px; font-size:11px; color:#6060a0;">
+      Dieser Report wurde vollautomatisch von Franka generiert — einem KI-System bestehend aus 7 spezialisierten n8n-Workflows.<br>
+      Plattformdaten werden wöchentlich abgerufen, analysiert und zu diesem Report zusammengeführt.
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

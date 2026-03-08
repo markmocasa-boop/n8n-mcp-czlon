@@ -316,8 +316,8 @@
       ],
       "credentials": {
         "anthropicApi": {
-          "id": "ANTHROPIC_CREDENTIAL_ID_HIER_EINTRAGEN",
-          "name": "Anthropic API"
+          "id": "xJGzDv9YCgZEHb2E",
+          "name": "Claude - 20260127"
         }
       },
       "onError": "continueRegularOutput",

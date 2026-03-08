@@ -134,8 +134,8 @@
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "",
-          "name": "Gmail OAuth2"
+          "id": "Kh7cApAx6TAe4Hpy",
+          "name": "Gmail account"
         }
       },
       "retryOnFail": true,
