@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772965642572,
+  "lastUpdate": 1772983907446,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "6ecd82f93f641492032f111201b94ac908d3afe3",
-          "message": "Delete workflows/MO - Social Media Content Automation - VaSi.json",
-          "timestamp": "2026-02-06T09:23:10+01:00",
-          "tree_id": "0438f8d47e0249e135d5138f914cbed24f69e15a",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6ecd82f93f641492032f111201b94ac908d3afe3"
-        },
-        "date": 1770366315737,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/fbc1a6702e672a19dcbeaa5c744f65522696c63e"
         },
         "date": 1772965642086,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "07d98436e9f2225b0913fdd04e7d8c27a1d032d9",
+          "message": "Phase 3: Deploy WF3 E-Mail Sequenz Generator + WF4 E-Mail Sender\n\n- WF3 (11 nodes): 4 sequential LLM chains (BASHO/SPIN/Klaff/Gitomer) + 4 Anthropic Chat Models + Set passthrough + Code output builder. claude-sonnet-4-20250514, temp 0.7\n- WF4 (12 nodes): Antwort-check gate -> Datum-check gate -> Email slot detection -> Gmail send (retryOnFail 3x 30min) -> WF6 CRM update with scheduling (+3/+4/+7 days)\n- Both replace Phase 1 stubs (uWkGHyQQ8FBeqErW, O2RnTBvoLAOV4agj)\n- 0 HTTP Request nodes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T16:29:43+01:00",
+          "tree_id": "bc071e28b6215ef28c22a0f00e99b4a5aafad734",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/07d98436e9f2225b0913fdd04e7d8c27a1d032d9"
+        },
+        "date": 1772983906677,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
