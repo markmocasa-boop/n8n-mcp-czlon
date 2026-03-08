@@ -1,0 +1,362 @@
+{
+  "name": "Sales Agent — WF3 E-Mail Sequenz Generator",
+  "nodes": [
+    {
+      "id": "wf3-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "wf3-set-context",
+      "name": "Set: Store Trigger Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        300
+      ],
+      "parameters": {
+        "fields": {
+          "values": []
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf3-llm-email1",
+      "name": "LLM: Email 1 BASHO",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Schreibe E-Mail 1 (BASHO-Methode) fuer diesen Lead:\\n\\nName: ' + $json.vorname + ' ' + $json.nachname + '\\nPosition: ' + $json.position + '\\nUnternehmen: ' + $json.unternehmen + ' (Branche: ' + $json.branche + ', ' + $json.mitarbeiter_anzahl + ' Mitarbeiter)\\nHauptschmerz: ' + ($json.hauptschmerz || 'nicht angegeben') + '\\nKaufmotiv: ' + ($json.kaufmotiv || 'Effizienz') + '\\nUnternehmens-Kontext: ' + ($json.angereichert?.unternehmens_beschreibung || 'nicht verfuegbar') + '\\nAktuelle Herausforderungen: ' + ($json.angereichert?.aktuelle_herausforderungen || 'nicht verfuegbar') + '\\nLinkedIn Headline: ' + ($json.angereichert?.linkedin_headline || 'nicht verfuegbar') + '\\n\\nBASHO-Methode: Sehr kurze, hochpersonalisierte E-Mail. Beginne mit einem konkreten Beobachtungs-Hook. Dann 1 Satz Relevanz. Dann 1 Satz Value Proposition. Dann 1 klarer CTA (Frage nach 15-Min-Gespraech).\\n\\nMaximal 120 Woerter. Kein generisches Pitch-Blabla. Direkt starten.\\n\\nGeneriere DREI unterschiedliche Betreff-Varianten (A/B/C-Test) und den E-Mail-Text.\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\\\"betreff_varianten\\\": [\\\"Betreff A\\\", \\\"Betreff B\\\", \\\"Betreff C\\\"], \\\"text\\\": \\\"E-Mail-Text hier\\\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Sales-Experte und Copywriter fuer den DACH-Markt.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nTonalitaets-Regeln:\n- HEISS (Score 80-100): Sehr persoenlich, dringlicher Ton, direkte Ansprache auf Augenhoehe\n- WARM (Score 30-79): Professionell-direkt, freundlich aber geschaeftlich\n\nFormat-Regeln:\n- Kein generisches Pitch-Sprech\n- Modernes Deutsch, aktive Sprache\n- Kurze Saetze, kein Fachjargon\n- Immer mit Vornamen ansprechen\n- Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf3-anthropic-1",
+      "name": "Anthropic Chat Model 1",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        500,
+        500
+      ],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.7
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "id": "wf3-llm-email2",
+      "name": "LLM: Email 2 SPIN",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        800,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Schreibe E-Mail 2 (SPIN Follow-up) - Lead hat auf E-Mail 1 nicht geantwortet:\\n\\nName: ' + $('Set: Store Trigger Data').first().json.vorname + ' ' + $('Set: Store Trigger Data').first().json.nachname + '\\nPosition: ' + $('Set: Store Trigger Data').first().json.position + '\\nUnternehmen: ' + $('Set: Store Trigger Data').first().json.unternehmen + ' (Branche: ' + $('Set: Store Trigger Data').first().json.branche + ')\\nHauptschmerz: ' + ($('Set: Store Trigger Data').first().json.hauptschmerz || 'nicht angegeben') + '\\nKaufmotiv: ' + ($('Set: Store Trigger Data').first().json.kaufmotiv || 'Effizienz') + '\\nHerausforderungen: ' + ($('Set: Store Trigger Data').first().json.angereichert?.aktuelle_herausforderungen || 'nicht verfuegbar') + '\\n\\nSPIN-Methode: Situation (1 Satz Bezug). Problem (1 Satz typisches Problem). Implikation (1 starke Frage: Was passiert wenn das Problem bleibt?). Need-Payoff (1 Satz Loesung).\\n\\nMaximal 100 Woerter. Kein Ich wollte nur kurz nachhaken. Mehrwert statt Druck.\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\\\"betreff\\\": \\\"Betreff hier\\\", \\\"text\\\": \\\"E-Mail-Text hier\\\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Sales-Experte und Copywriter fuer den DACH-Markt.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nTonalitaets-Regeln:\n- HEISS (Score 80-100): Sehr persoenlich, dringlicher Ton, direkte Ansprache auf Augenhoehe\n- WARM (Score 30-79): Professionell-direkt, freundlich aber geschaeftlich\n\nFormat-Regeln:\n- Kein generisches Pitch-Sprech\n- Modernes Deutsch, aktive Sprache\n- Kurze Saetze, kein Fachjargon\n- Immer mit Vornamen ansprechen\n- Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf3-anthropic-2",
+      "name": "Anthropic Chat Model 2",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        500
+      ],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.7
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "id": "wf3-llm-email3",
+      "name": "LLM: Email 3 Klaff",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Schreibe E-Mail 3 (Oren Klaff Pitch-Methode) - Lead hat auf E-Mails 1+2 nicht geantwortet:\\n\\nName: ' + $('Set: Store Trigger Data').first().json.vorname + ' ' + $('Set: Store Trigger Data').first().json.nachname + '\\nPosition: ' + $('Set: Store Trigger Data').first().json.position + '\\nUnternehmen: ' + $('Set: Store Trigger Data').first().json.unternehmen + ' (Branche: ' + $('Set: Store Trigger Data').first().json.branche + ', ' + $('Set: Store Trigger Data').first().json.mitarbeiter_anzahl + ' Mitarbeiter)\\nHauptschmerz: ' + ($('Set: Store Trigger Data').first().json.hauptschmerz || 'nicht angegeben') + '\\nUnternehmens-Kontext: ' + ($('Set: Store Trigger Data').first().json.angereichert?.unternehmens_beschreibung || 'nicht verfuegbar') + '\\n\\nKlaff Pitch: Big Idea Frame (1 Satz starke Idee). Before/After-Story (2-3 Saetze wie andere Unternehmen das Problem loesten - ohne Namen). Intrigue Frame (1 Satz Neugier). Konkreter CTA (z.B.: Ich habe Dienstag oder Donnerstag 15 Minuten - was passt?).\\n\\nMaximal 130 Woerter.\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\\\"betreff\\\": \\\"Betreff hier\\\", \\\"text\\\": \\\"E-Mail-Text hier\\\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Sales-Experte und Copywriter fuer den DACH-Markt.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nTonalitaets-Regeln:\n- HEISS (Score 80-100): Sehr persoenlich, dringlicher Ton, direkte Ansprache auf Augenhoehe\n- WARM (Score 30-79): Professionell-direkt, freundlich aber geschaeftlich\n\nFormat-Regeln:\n- Kein generisches Pitch-Sprech\n- Modernes Deutsch, aktive Sprache\n- Kurze Saetze, kein Fachjargon\n- Immer mit Vornamen ansprechen\n- Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf3-anthropic-3",
+      "name": "Anthropic Chat Model 3",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1100,
+        500
+      ],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.7
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "id": "wf3-llm-email4",
+      "name": "LLM: Email 4 Gitomer",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        1400,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Schreibe E-Mail 4 (Jeffrey Gitomer Break-up) - Lead hat auf alle E-Mails nicht geantwortet:\\n\\nName: ' + $('Set: Store Trigger Data').first().json.vorname + ' ' + $('Set: Store Trigger Data').first().json.nachname + '\\nPosition: ' + $('Set: Store Trigger Data').first().json.position + '\\nUnternehmen: ' + $('Set: Store Trigger Data').first().json.unternehmen + '\\nHauptschmerz: ' + ($('Set: Store Trigger Data').first().json.hauptschmerz || 'nicht angegeben') + '\\n\\nGitomer Break-up: Ehrlich, respektvoll, Tuere offen lassen. Kein Vorwurf. Kein Druck. Signalisiere dass du aufhoerst zu schreiben. Einladung fuer spaeter offen lassen.\\n\\nMaximal 80 Woerter. Echt, menschlich, respektvoll.\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\\\"betreff\\\": \\\"Betreff hier\\\", \\\"text\\\": \\\"E-Mail-Text hier\\\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Sales-Experte und Copywriter fuer den DACH-Markt.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nTonalitaets-Regeln:\n- HEISS (Score 80-100): Sehr persoenlich, dringlicher Ton, direkte Ansprache auf Augenhoehe\n- WARM (Score 30-79): Professionell-direkt, freundlich aber geschaeftlich\n\nFormat-Regeln:\n- Kein generisches Pitch-Sprech\n- Modernes Deutsch, aktive Sprache\n- Kurze Saetze, kein Fachjargon\n- Immer mit Vornamen ansprechen\n- Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf3-anthropic-4",
+      "name": "Anthropic Chat Model 4",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1400,
+        500
+      ],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.7
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "id": "wf3-code-output",
+      "name": "Code: Build Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const trigger = $('Set: Store Trigger Data').first().json;\n\nfunction parseEmailJson(nodeOutput, emailNr) {\n  const raw = nodeOutput.text || nodeOutput.output || nodeOutput.response || '';\n  const cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch(e) {\n    if (emailNr === 1) {\n      return { betreff_varianten: ['Follow-up', 'Kurze Frage', 'Idee fuer ' + (trigger.unternehmen || 'Ihr Unternehmen')], text: raw || '' };\n    } else {\n      return { betreff: 'Follow-up: ' + (trigger.unternehmen || 'Ihr Unternehmen'), text: raw || '' };\n    }\n  }\n}\n\nconst e1 = parseEmailJson($('LLM: Email 1 BASHO').first().json, 1);\nconst e2 = parseEmailJson($('LLM: Email 2 SPIN').first().json, 2);\nconst e3 = parseEmailJson($('LLM: Email 3 Klaff').first().json, 3);\nconst e4 = parseEmailJson($('LLM: Email 4 Gitomer').first().json, 4);\n\nreturn [{ json: {\n  lead_id: trigger.lead_id,\n  emails: [\n    { nr: 1, betreff_varianten: e1.betreff_varianten || ['Betreff A', 'Betreff B', 'Betreff C'], text: e1.text || '' },\n    { nr: 2, betreff: e2.betreff || 'Follow-up', text: e2.text || '' },\n    { nr: 3, betreff: e3.betreff || 'Follow-up', text: e3.text || '' },\n    { nr: 4, betreff: e4.betreff || 'Letzte Nachricht', text: e4.text || '' }\n  ]\n}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set: Store Trigger Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Store Trigger Data": {
+      "main": [
+        [
+          {
+            "node": "LLM: Email 1 BASHO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model 1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Email 1 BASHO",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Email 1 BASHO": {
+      "main": [
+        [
+          {
+            "node": "LLM: Email 2 SPIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model 2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Email 2 SPIN",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Email 2 SPIN": {
+      "main": [
+        [
+          {
+            "node": "LLM: Email 3 Klaff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Email 3 Klaff",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Email 3 Klaff": {
+      "main": [
+        [
+          {
+            "node": "LLM: Email 4 Gitomer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model 4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM: Email 4 Gitomer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Email 4 Gitomer": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null
+}

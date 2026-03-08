@@ -1,0 +1,453 @@
+{
+  "name": "Sales Agent — WF4 E-Mail Sender",
+  "nodes": [
+    {
+      "id": "wf4-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "wf4-if-antwort",
+      "name": "IF: Antwort erhalten?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        350,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "antwort-check",
+              "leftValue": "={{ $json['antwort_erhalten'] }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-set-stop-antwort",
+      "name": "Set: Stop — Antwort erhalten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        600,
+        150
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "email_gesendet",
+              "value": false
+            },
+            {
+              "name": "status",
+              "value": "gestoppt_antwort_erhalten"
+            },
+            {
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-if-datum",
+      "name": "IF: Datum heute?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "datum-leer",
+              "leftValue": "={{ $json['n\\u00e4chster_kontakt'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "datum-heute",
+              "leftValue": "={{ $json['n\\u00e4chster_kontakt'] }}",
+              "rightValue": "={{ $today.toFormat('yyyy-MM-dd') }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combineOperation": "any"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-set-stop-datum",
+      "name": "Set: Stop — Nicht heute",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        850,
+        550
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "email_gesendet",
+              "value": false
+            },
+            {
+              "name": "status",
+              "value": "nicht_faellig"
+            },
+            {
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-code-next-email",
+      "name": "Code: Determine Next Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        350
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\n\nlet emailNr = null;\nif (!data.email_1_gesendet || data.email_1_gesendet === false || data.email_1_gesendet === 'FALSE') {\n  emailNr = 1;\n} else if (!data.email_2_gesendet || data.email_2_gesendet === false || data.email_2_gesendet === 'FALSE') {\n  emailNr = 2;\n} else if (!data.email_3_gesendet || data.email_3_gesendet === false || data.email_3_gesendet === 'FALSE') {\n  emailNr = 3;\n} else if (!data.email_4_gesendet || data.email_4_gesendet === false || data.email_4_gesendet === 'FALSE') {\n  emailNr = 4;\n} else {\n  emailNr = null;\n}\n\nconst emails = data.emails || [];\nlet emailData = null;\nif (emailNr !== null) {\n  emailData = emails.find(e => e.nr === emailNr) || null;\n}\n\nlet betreff = '';\nif (emailNr === 1 && emailData && emailData.betreff_varianten && emailData.betreff_varianten.length > 0) {\n  betreff = emailData.betreff_varianten[0];\n} else if (emailData) {\n  betreff = emailData.betreff || 'Follow-up';\n}\n\nreturn [{\n  json: {\n    ...data,\n    next_email_nr: emailNr,\n    all_sent: emailNr === null,\n    email_betreff: betreff,\n    email_text: emailData ? emailData.text : ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-if-alle-gesendet",
+      "name": "IF: Alle 4 gesendet?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        350
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "alle-gesendet-check",
+              "leftValue": "={{ $json.all_sent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf4-exec-wf6-complete",
+      "name": "Execute WF6: Sequenz abgeschlossen",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [
+        1350,
+        200
+      ],
+      "parameters": {
+        "workflowId": {
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "updates": "={{ JSON.stringify({ status: 'Sequenz abgeschlossen' }) }}",
+            "log_eintrag": "={{ JSON.stringify({ aktion: 'sequenz_abgeschlossen', inhalt: 'Alle 4 E-Mails gesendet.', status: 'ok' }) }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf4-gmail-send",
+      "name": "Gmail: Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1350,
+        450
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.email_betreff }}",
+        "emailType": "text",
+        "message": "={{ $json.email_text }}",
+        "options": {
+          "senderName": "Mark"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1800000
+    },
+    {
+      "id": "wf4-code-wf6-payload",
+      "name": "Code: Build WF6 Update Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\nconst emailNr = data.next_email_nr;\n\nconst today = new Date();\nconst todayStr = today.toISOString().split('T')[0];\n\nconst offsetDays = { 1: 3, 2: 4, 3: 7, 4: 0 };\nconst offset = offsetDays[emailNr] || 0;\n\nlet nextKontaktStr = '';\nif (offset > 0) {\n  const nextDate = new Date(today);\n  nextDate.setDate(nextDate.getDate() + offset);\n  nextKontaktStr = nextDate.toISOString().split('T')[0];\n}\n\nconst updates = {\n  letzter_kontakt: todayStr,\n  sequenz_schritt: emailNr\n};\n\nupdates['email_' + emailNr + '_gesendet'] = true;\n\nif (nextKontaktStr) {\n  updates['naechster_kontakt'] = nextKontaktStr;\n} else {\n  updates['status'] = 'Sequenz abgeschlossen';\n}\n\nif (data.status === 'Neu') {\n  updates['status'] = 'In Sequenz';\n}\n\nconst logEintrag = {\n  aktion: 'email_gesendet',\n  inhalt: 'E-Mail ' + emailNr + ' gesendet an ' + data.email + ' (Betreff: ' + data.email_betreff + ')',\n  status: 'ok'\n};\n\nreturn [{\n  json: {\n    lead_id: data.lead_id,\n    email_nr: emailNr,\n    updates: updates,\n    log_eintrag: logEintrag\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf4-exec-wf6-update",
+      "name": "Execute WF6: Update CRM",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        450
+      ],
+      "parameters": {
+        "workflowId": {
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "updates": "={{ JSON.stringify($json.updates) }}",
+            "log_eintrag": "={{ JSON.stringify($json.log_eintrag) }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf4-set-success",
+      "name": "Set: Success Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2100,
+        450
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "email_gesendet",
+              "value": true
+            },
+            {
+              "name": "email_nr",
+              "value": "={{ $('Code: Determine Next Email').first().json.next_email_nr }}"
+            },
+            {
+              "name": "status",
+              "value": "ok"
+            },
+            {
+              "name": "lead_id",
+              "value": "={{ $('Execute Workflow Trigger').first().json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "IF: Antwort erhalten?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Antwort erhalten?": {
+      "main": [
+        [
+          {
+            "node": "Set: Stop — Antwort erhalten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Datum heute?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Datum heute?": {
+      "main": [
+        [
+          {
+            "node": "Code: Determine Next Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set: Stop — Nicht heute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Determine Next Email": {
+      "main": [
+        [
+          {
+            "node": "IF: Alle 4 gesendet?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Alle 4 gesendet?": {
+      "main": [
+        [
+          {
+            "node": "Execute WF6: Sequenz abgeschlossen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail: Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Send Email": {
+      "main": [
+        [
+          {
+            "node": "Code: Build WF6 Update Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build WF6 Update Payload": {
+      "main": [
+        [
+          {
+            "node": "Execute WF6: Update CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute WF6: Update CRM": {
+      "main": [
+        [
+          {
+            "node": "Set: Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null
+}
