@@ -1,0 +1,1390 @@
+{
+  "name": "Sales Agent — WF7 Inbox & Calendar Manager",
+  "nodes": [
+    {
+      "id": "wf7-cron-inbox",
+      "name": "Cron: Every 15 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wf7-gmail-get-unread",
+      "name": "Gmail: Get Unread Messages",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [350, 300],
+      "parameters": {
+        "operation": "getAll",
+        "filters": {
+          "q": "is:unread in:inbox"
+        },
+        "returnAll": false,
+        "limit": 20,
+        "options": {
+          "format": "full"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-sheets-get-leads",
+      "name": "Google Sheets: Get All Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [600, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Leads"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-filter-leads",
+      "name": "Code: Filter Known Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const allLeads = $input.all().map(item => item.json);\nconst gmailMessages = $('Gmail: Get Unread Messages').all().map(item => item.json);\n\n// Build email -> lead lookup map\nconst emailToLead = {};\nfor (const lead of allLeads) {\n  if (lead.email) {\n    emailToLead[lead.email.toLowerCase().trim()] = lead;\n  }\n}\n\nconst results = [];\n\nfor (const msg of gmailMessages) {\n  // Extract sender from headers\n  const headers = msg.payload?.headers || [];\n  const fromHeader = headers.find(h => h.name === 'From' || h.name === 'from');\n  const fromValue = fromHeader?.value || '';\n\n  // Extract email from \"Name <email@domain.com>\" or \"email@domain.com\"\n  const emailMatch = fromValue.match(/<([^>]+)>/) || fromValue.match(/([^\\s]+@[^\\s]+)/);\n  const senderEmail = emailMatch ? emailMatch[1].toLowerCase().trim() : '';\n\n  if (!senderEmail || !emailToLead[senderEmail]) {\n    // Unknown sender — ignore\n    continue;\n  }\n\n  const lead = emailToLead[senderEmail];\n  const subjectHeader = headers.find(h => h.name === 'Subject' || h.name === 'subject');\n  const dateHeader = headers.find(h => h.name === 'Date' || h.name === 'date');\n\n  results.push({\n    json: {\n      message_id: msg.id,\n      thread_id: msg.threadId,\n      sender_email: senderEmail,\n      subject: subjectHeader?.value || '',\n      date: dateHeader?.value || '',\n      snippet: msg.snippet || '',\n      lead_id: lead.lead_id,\n      lead_vorname: lead.vorname,\n      lead_nachname: lead.nachname,\n      lead_email: lead.email,\n      lead_unternehmen: lead.unternehmen,\n      lead_position: lead.position,\n      lead_branche: lead.branche,\n      lead_hauptschmerz: lead.hauptschmerz || '',\n      lead_status: lead.status,\n      lead_antwort_erhalten: lead.antwort_erhalten,\n      lead_draft_erstellt: lead.draft_erstellt,\n      lead_termin_vereinbart: lead.termin_vereinbart,\n      lead_score: lead.score || 0,\n      lead_score_klassifikation: lead.score_klassifikation || ''\n    }\n  });\n}\n\nreturn results;"
+      }
+    },
+    {
+      "id": "wf7-if-any-leads",
+      "name": "IF: Known Lead Emails Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-leads-check",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-no-leads",
+      "name": "Set: No Known Leads Found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1350, 450],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "status",
+              "value": "no_known_leads"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-split-emails",
+      "name": "SplitInBatches: Per Email",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1350, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-path-a-done",
+      "name": "Set: Path A Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 150],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "path",
+              "value": "inbox_monitor"
+            },
+            {
+              "name": "status",
+              "value": "complete"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-sheets-get-log",
+      "name": "Google Sheets: Get Sequenz Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1600, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Sequenz_Log"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-check-duplicate",
+      "name": "Code: Check Duplicate Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const currentItem = $('SplitInBatches: Per Email').first().json;\nconst messageId = currentItem.message_id;\n\nconst logEntries = $input.all().map(item => item.json);\n\nconst isDuplicate = logEntries.some(entry => {\n  return entry.aktion === 'draft_erstellt' &&\n         typeof entry.inhalt === 'string' &&\n         entry.inhalt.includes(messageId);\n});\n\nreturn [{\n  json: {\n    ...currentItem,\n    is_duplicate: isDuplicate,\n    message_id: messageId\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-if-duplicate",
+      "name": "IF: Already Processed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2100, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "duplicate-check",
+              "leftValue": "={{ $json.is_duplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-skip",
+      "name": "Set: Skip Already Processed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2350, 150],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "skipped",
+              "value": true
+            },
+            {
+              "name": "reason",
+              "value": "duplicate_draft"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-gmail-get-thread",
+      "name": "Gmail: Get Thread Messages",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2350, 350],
+      "parameters": {
+        "operation": "getAll",
+        "filters": {
+          "q": "={{ 'threadId:' + $json.thread_id }}"
+        },
+        "returnAll": true,
+        "options": {
+          "format": "full"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-thread-context",
+      "name": "Code: Build Thread Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 350],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const threadMessages = $input.all().map(item => item.json);\nconst triggerData = $('Code: Check Duplicate Draft').first().json;\n\n// Sort by internalDate (milliseconds since epoch as string)\nconst sorted = [...threadMessages].sort((a, b) => {\n  return parseInt(a.internalDate || '0') - parseInt(b.internalDate || '0');\n});\n\n// Extract text body from a Gmail message payload\nfunction extractBody(payload) {\n  if (!payload) return '';\n\n  // Direct body\n  if (payload.body && payload.body.data) {\n    try {\n      return Buffer.from(payload.body.data, 'base64').toString('utf-8');\n    } catch(e) { return ''; }\n  }\n\n  // Parts\n  if (payload.parts) {\n    for (const part of payload.parts) {\n      if (part.mimeType === 'text/plain' && part.body && part.body.data) {\n        try {\n          return Buffer.from(part.body.data, 'base64').toString('utf-8');\n        } catch(e) { return ''; }\n      }\n    }\n    // Try nested parts\n    for (const part of payload.parts) {\n      const nested = extractBody(part);\n      if (nested) return nested;\n    }\n  }\n\n  return payload.snippet || '';\n}\n\nconst threadContext = sorted.map(msg => {\n  const headers = msg.payload?.headers || [];\n  const fromHeader = headers.find(h => h.name === 'From' || h.name === 'from');\n  const dateHeader = headers.find(h => h.name === 'Date' || h.name === 'date');\n  const body = extractBody(msg.payload);\n\n  // Clean body (remove excessive whitespace, limit length)\n  const cleanBody = body\n    .replace(/\\r\\n/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim()\n    .substring(0, 1000);\n\n  return `[${dateHeader?.value || 'unbekannt'}] Von: ${fromHeader?.value || 'unbekannt'}\\n${cleanBody}`;\n}).join('\\n\\n---\\n\\n');\n\nreturn [{\n  json: {\n    ...triggerData,\n    thread_context: threadContext,\n    thread_message_count: sorted.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-set-msg-context",
+      "name": "Set: Store Message Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2850, 350],
+      "parameters": {
+        "fields": {
+          "values": []
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-llm-termin-check",
+      "name": "LLM: Terminwunsch Erkennung",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [3100, 350],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Analysiere diesen E-Mail-Thread und erkenne ob ein Terminwunsch vorliegt.\\n\\nLead: ' + $json.lead_vorname + ' ' + $json.lead_nachname + ' (' + $json.lead_unternehmen + ')\\n\\nE-Mail-Thread (chronologisch):\\n' + $json.thread_context + '\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\"terminwunsch_erkannt\": true/false, \"konfidenz\": 0.0-1.0, \"vorgeschlagene_zeiten\": [\"Zeitangabe 1\", \"Zeitangabe 2\"], \"terminnotiz\": \"kurze Zusammenfassung des Terminwunschs oder leer\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein Assistent der B2B-Sales-E-Mails analysiert. Deine Aufgabe ist es, Terminwuensche in E-Mail-Threads zu erkennen.\n\nEin Terminwunsch liegt vor wenn:\n- Die Person explizit einen Termin, ein Meeting, ein Gespraech oder einen Call vorschlaegt\n- Die Person nach Verfuegbarkeit fragt\n- Die Person eine konkrete Zeit/Datum nennt fuer ein Treffen\n- Die Person auf einen Terminvorschlag aus der Sequenz reagiert\n\nKein Terminwunsch:\n- Allgemeine Fragen zum Angebot ohne Terminvorschlag\n- Absagen ohne Terminvorschlag\n- Reine Informationsanfragen\n\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks."
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf7-anthropic-a",
+      "name": "Anthropic Chat Model A",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [3100, 550],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.1
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "id": "wf7-code-parse-termin",
+      "name": "Code: Parse Terminwunsch JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3350, 350],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const llmOutput = $input.first().json;\nconst storeData = $('Set: Store Message Context').first().json;\n\nconst rawText = llmOutput.text || '';\nconst cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed = {\n  terminwunsch_erkannt: false,\n  konfidenz: 0,\n  vorgeschlagene_zeiten: [],\n  terminnotiz: ''\n};\n\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  // Keep defaults\n}\n\nreturn [{\n  json: {\n    ...storeData,\n    terminwunsch_erkannt: parsed.terminwunsch_erkannt === true,\n    termin_konfidenz: parsed.konfidenz || 0,\n    vorgeschlagene_zeiten: parsed.vorgeschlagene_zeiten || [],\n    terminnotiz: parsed.terminnotiz || ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-if-terminwunsch",
+      "name": "IF: Terminwunsch erkannt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3600, 350],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "termin-check",
+              "leftValue": "={{ $json.terminwunsch_erkannt }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-no-termin",
+      "name": "Set: No Termin Found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3850, 550],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "termin_erstellt",
+              "value": false
+            },
+            {
+              "name": "calendar_event_id",
+              "value": ""
+            },
+            {
+              "name": "termin_datum",
+              "value": ""
+            },
+            {
+              "name": "termin_uhrzeit",
+              "value": ""
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-code-build-freebusy",
+      "name": "Code: Build Freebusy Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3850, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inputData = $input.first().json;\n\nconst now = DateTime.now().setZone('Europe/Berlin');\n\nconst workdays = [];\nlet day = now.plus({ days: 1 });\nwhile (workdays.length < 5) {\n  const weekday = day.weekday; // Luxon: 1=Mon, 7=Sun\n  if (weekday >= 1 && weekday <= 5) {\n    workdays.push(day.toFormat('yyyy-MM-dd'));\n  }\n  day = day.plus({ days: 1 });\n}\n\nconst timeMin = workdays[0] + 'T09:00:00+01:00';\nconst timeMax = workdays[workdays.length - 1] + 'T17:00:00+01:00';\n\nconst freebusyBody = {\n  timeMin: timeMin,\n  timeMax: timeMax,\n  items: [{ id: 'primary' }]\n};\n\nreturn [{\n  json: {\n    ...inputData,\n    freebusy_body: freebusyBody,\n    freebusy_workdays: workdays,\n    freebusy_time_min: timeMin,\n    freebusy_time_max: timeMax\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-http-freebusy",
+      "name": "HTTP Request: Freebusy Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [4100, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/freeBusy",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.freebusy_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xhweiA0UKiD5rxB8",
+          "name": "Google Calendar mark@mo-casa.com"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-find-slots",
+      "name": "Code: Find Available Slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4350, 200],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const freebusyResponse = $input.first().json;\nconst prevData = $('Code: Build Freebusy Body').first().json;\n\n// Parse freebusy response\nconst busyPeriods = freebusyResponse.calendars?.primary?.busy || [];\n\n// Recompute workdays\nconst now = DateTime.now().setZone('Europe/Berlin');\nconst workdays = [];\nlet checkDay = now.plus({ days: 1 });\nwhile (workdays.length < 5) {\n  if (checkDay.weekday >= 1 && checkDay.weekday <= 5) {\n    workdays.push(checkDay.toFormat('yyyy-MM-dd'));\n  }\n  checkDay = checkDay.plus({ days: 1 });\n}\n\n// Find available 1-hour slots\nconst availableSlots = [];\nfor (const dateStr of workdays) {\n  for (let hour = 9; hour <= 16; hour++) {\n    const slotStart = DateTime.fromISO(dateStr + 'T' + String(hour).padStart(2, '0') + ':00:00', { zone: 'Europe/Berlin' });\n    const slotEnd = slotStart.plus({ hours: 1 });\n\n    const isBusy = busyPeriods.some(period => {\n      const busyStart = DateTime.fromISO(period.start);\n      const busyEnd = DateTime.fromISO(period.end);\n      // Check overlap\n      return slotStart < busyEnd && slotEnd > busyStart;\n    });\n\n    if (!isBusy) {\n      availableSlots.push({\n        start: slotStart.toISO(),\n        end: slotEnd.toISO(),\n        display: slotStart.toFormat('EEEE, dd.MM.yyyy HH:mm') + ' Uhr'\n      });\n    }\n\n    if (availableSlots.length >= 3) break;\n  }\n  if (availableSlots.length >= 3) break;\n}\n\n// Use first available slot for the calendar event\nconst chosenSlot = availableSlots[0] || null;\n\nreturn [{\n  json: {\n    ...prevData,\n    available_slots: availableSlots,\n    chosen_slot_start: chosenSlot?.start || '',\n    chosen_slot_end: chosenSlot?.end || '',\n    chosen_slot_display: chosenSlot?.display || '',\n    termin_available: chosenSlot !== null\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-if-slot-available",
+      "name": "IF: Slot Available?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4600, 200],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "slot-check",
+              "leftValue": "={{ $json.termin_available }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-no-slot",
+      "name": "Set: No Slot Available",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [4850, 400],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "termin_erstellt",
+              "value": false
+            },
+            {
+              "name": "calendar_event_id",
+              "value": ""
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-gcal-create",
+      "name": "Google Calendar: Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [4850, 100],
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "mode": "id",
+          "value": "primary"
+        },
+        "start": "={{ $json.chosen_slot_start }}",
+        "end": "={{ $json.chosen_slot_end }}",
+        "additionalFields": {
+          "summary": "={{ 'Sales Call: ' + $json.lead_vorname + ' ' + $json.lead_nachname + ' (' + $json.lead_unternehmen + ')' }}",
+          "description": "={{ 'Automatisch erstellt durch Sales Agent.\\nLead: ' + $json.lead_vorname + ' ' + $json.lead_nachname + '\\nUnternehmen: ' + $json.lead_unternehmen + '\\nPosition: ' + $json.lead_position + '\\nTerminnotiz: ' + ($json.terminnotiz || '') }}",
+          "attendees": "={{ [{ email: $json.lead_email }] }}",
+          "reminders": {
+            "useDefault": false,
+            "overrides": [
+              {
+                "method": "email",
+                "minutes": 1440
+              },
+              {
+                "method": "popup",
+                "minutes": 30
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xhweiA0UKiD5rxB8",
+          "name": "Google Calendar mark@mo-casa.com"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-termin-record",
+      "name": "Code: Build Termin Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5100, 100],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const calResponse = $input.first().json;\nconst prevData = $('Code: Find Available Slots').first().json;\n\n// Generate termin_id\nconst terminId = 'TERM-' + Date.now();\nconst now = new Date();\nconst erstelltAm = now.toISOString().split('T')[0];\n\n// Parse chosen slot\nconst slotStart = prevData.chosen_slot_start || '';\nconst datumPart = slotStart ? slotStart.split('T')[0] : '';\nconst uhrPart = slotStart ? slotStart.split('T')[1]?.substring(0, 5) : '';\n\n// Calendar event ID from response\nconst calendarEventId = calResponse.id || '';\n\nconst terminRow = {\n  termin_id: terminId,\n  lead_id: prevData.lead_id,\n  datum: datumPart,\n  uhrzeit: uhrPart,\n  dauer: '60',\n  titel: 'Sales Call: ' + prevData.lead_vorname + ' ' + prevData.lead_nachname + ' (' + prevData.lead_unternehmen + ')',\n  beschreibung: prevData.terminnotiz || '',\n  attendees: prevData.lead_email,\n  calendar_event_id: calendarEventId,\n  erstellt_am: erstelltAm,\n  status: 'geplant',\n  vorbereitung_erstellt: 'FALSE',\n  agenda: '',\n  notizen: '',\n  gespraechsziel: ''\n};\n\n// WF6 update for lead\nconst leadUpdates = JSON.stringify({\n  termin_vereinbart: true,\n  letzter_kontakt: erstelltAm\n});\n\nconst logEintrag = JSON.stringify({\n  aktion: 'termin_erstellt',\n  inhalt: 'Termin am ' + datumPart + ' um ' + uhrPart + ' Uhr. Calendar ID: ' + calendarEventId,\n  status: 'ok'\n});\n\nreturn [{\n  json: {\n    ...prevData,\n    termin_erstellt: true,\n    calendar_event_id: calendarEventId,\n    termin_id: terminId,\n    termin_datum: datumPart,\n    termin_uhrzeit: uhrPart,\n    termin_row: terminRow,\n    wf6_lead_updates: leadUpdates,\n    wf6_log_eintrag: logEintrag\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-sheets-append-termin",
+      "name": "Google Sheets: Append Termine Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [5350, 100],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Termine"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "termin_id": "={{ $json.termin_row.termin_id }}",
+            "lead_id": "={{ $json.termin_row.lead_id }}",
+            "datum": "={{ $json.termin_row.datum }}",
+            "uhrzeit": "={{ $json.termin_row.uhrzeit }}",
+            "dauer": "={{ $json.termin_row.dauer }}",
+            "titel": "={{ $json.termin_row.titel }}",
+            "beschreibung": "={{ $json.termin_row.beschreibung }}",
+            "attendees": "={{ $json.termin_row.attendees }}",
+            "calendar_event_id": "={{ $json.termin_row.calendar_event_id }}",
+            "erstellt_am": "={{ $json.termin_row.erstellt_am }}",
+            "status": "={{ $json.termin_row.status }}",
+            "vorbereitung_erstellt": "={{ $json.termin_row.vorbereitung_erstellt }}",
+            "agenda": "={{ $json.termin_row.agenda }}",
+            "notizen": "={{ $json.termin_row.notizen }}",
+            "gespraechsziel": "={{ $json.termin_row.gespraechsziel }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-set-wf6-termin-inputs",
+      "name": "Set: Map WF6 Termin Inputs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [5600, 100],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "stringValue",
+              "stringValue": "={{ $json.lead_id }}"
+            },
+            {
+              "name": "updates",
+              "type": "stringValue",
+              "stringValue": "={{ $json.wf6_lead_updates }}"
+            },
+            {
+              "name": "log_eintrag",
+              "type": "stringValue",
+              "stringValue": "={{ $json.wf6_log_eintrag }}"
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-exec-wf6-termin",
+      "name": "Execute WF6: Update Lead Termin",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [5850, 100],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 300000
+    },
+    {
+      "id": "wf7-set-termin-done",
+      "name": "Set: Termin Path Done",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [6100, 100],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "termin_erstellt",
+              "value": true
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-merge-termin",
+      "name": "Merge: Termin Paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [6350, 350],
+      "parameters": {
+        "mode": "passThrough",
+        "output": "input1"
+      }
+    },
+    {
+      "id": "wf7-llm-draft",
+      "name": "LLM: Draft Generation",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [6600, 350],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Erstelle einen E-Mail-Entwurf als Antwort auf diese E-Mail.\\n\\nLEAD-KONTEXT:\\nName: ' + $json.lead_vorname + ' ' + $json.lead_nachname + '\\nUnternehmen: ' + $json.lead_unternehmen + '\\nPosition: ' + $json.lead_position + '\\nBranche: ' + $json.lead_branche + '\\nHauptschmerz: ' + ($json.lead_hauptschmerz || 'unbekannt') + '\\nScore: ' + $json.lead_score + ' (' + $json.lead_score_klassifikation + ')\\n\\nTERMIN-STATUS:\\n' + ($json.termin_erstellt === true ? 'Termin wurde ERSTELLT am ' + $json.termin_datum + ' um ' + $json.termin_uhrzeit + ' Uhr. Bestaetigung des Termins in der Antwort erwaehnen.' : 'Kein Termin erstellt. Falls ein Terminwunsch vorlag aber kein Slot verfuegbar war: Alternativtermine anbieten.') + '\\n\\nE-MAIL-THREAD (zur Kontextualisierung):\\n' + $json.thread_context + '\\n\\nANFORDERUNGEN:\\n- Beantworte die letzte E-Mail direkt und authentisch\\n- Max. 150 Woerter\\n- Kein generisches Blabla\\n- Professionell aber persoenlich\\n- Wenn Termin bestaetigt: Datum/Uhrzeit explizit nennen\\n- Wenn kein Termin: Proaktiv Verfuegbarkeit anbieten\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\"betreff\": \"Re: Ursprungsbetreff\", \"text\": \"E-Mail-Text hier\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein B2B-Sales-Experte im DACH-Markt und schreibst Antwort-E-Mails im Namen des Absenders.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nRegeln:\n- Schreibe aus der Ich-Perspektive des Absenders (nicht als KI)\n- Authentisch, menschlich, keine Floskeln\n- Klarer CTA am Ende (Termin bestaetigen ODER Terminvorschlag)\n- Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf7-anthropic-b",
+      "name": "Anthropic Chat Model B",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [6600, 550],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.7
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "id": "wf7-code-build-draft",
+      "name": "Code: Build Draft + WF6 Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6850, 350],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const llmOutput = $input.first().json;\nconst ctxData = $('Merge: Termin Paths').first().json;\n\nconst rawText = llmOutput.text || '';\nconst cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed = { betreff: 'Re: ' + (ctxData.subject || 'Ihre Nachricht'), text: '' };\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parsed.text = rawText.trim();\n}\n\nconst draftBetreff = parsed.betreff || ('Re: ' + (ctxData.subject || 'Ihre Nachricht'));\nconst draftText = parsed.text || '';\n\n// WF6 updates for lead\nconst updates = {\n  antwort_erhalten: true,\n  draft_erstellt: true,\n  letzter_kontakt: new Date().toISOString().split('T')[0]\n};\n\nconst wf6Updates = JSON.stringify(updates);\nconst wf6LogEintrag = JSON.stringify({\n  aktion: 'draft_erstellt',\n  inhalt: 'Draft erstellt fuer messageId: ' + ctxData.message_id + ' | Betreff: ' + draftBetreff,\n  status: 'ok'\n});\n\nreturn [{\n  json: {\n    ...ctxData,\n    draft_betreff: draftBetreff,\n    draft_text: draftText,\n    wf6_updates: wf6Updates,\n    wf6_log_eintrag: wf6LogEintrag\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-gmail-create-draft",
+      "name": "Gmail: Create Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [7100, 350],
+      "parameters": {
+        "operation": "createDraft",
+        "sendTo": "={{ $json.lead_email }}",
+        "subject": "={{ $json.draft_betreff }}",
+        "emailType": "text",
+        "message": "={{ $json.draft_text }}",
+        "options": {
+          "threadId": "={{ $json.thread_id }}",
+          "senderName": "Mark"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-exec-wf6-draft",
+      "name": "Execute WF6: Update Lead Draft",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [7350, 350],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "updates": "={{ $json.wf6_updates }}",
+            "log_eintrag": "={{ $json.wf6_log_eintrag }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 300000
+    },
+    {
+      "id": "wf7-gmail-mark-read",
+      "name": "Gmail: Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [7600, 350],
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.message_id }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yv1FhLRO54A8dyzi",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-set-email-done",
+      "name": "Set: Email Processed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [7850, 350],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "processed",
+              "value": true
+            },
+            {
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}"
+            },
+            {
+              "name": "draft_created",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-cron-vorbereitung",
+      "name": "Cron: Daily 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 800],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wf7-sheets-get-termine",
+      "name": "Google Sheets: Get All Termine",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [350, 800],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Termine"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-filter-tomorrow",
+      "name": "Code: Filter Termine Tomorrow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 800],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const allTermine = $input.all().map(item => item.json);\n\n// Calculate tomorrow's date in Berlin time\nconst tomorrow = DateTime.now().setZone('Europe/Berlin').plus({ days: 1 }).toFormat('yyyy-MM-dd');\n\nconst filtered = allTermine.filter(termin => {\n  // datum field must equal tomorrow\n  if (!termin.datum) return false;\n\n  // Normalize date format (sheet may store as yyyy-MM-dd or dd.MM.yyyy)\n  let datumNorm = termin.datum;\n  if (datumNorm.includes('.')) {\n    // Convert dd.MM.yyyy to yyyy-MM-dd\n    const parts = datumNorm.split('.');\n    if (parts.length === 3) {\n      datumNorm = parts[2] + '-' + parts[1] + '-' + parts[0];\n    }\n  }\n\n  const isTomorrow = datumNorm === tomorrow;\n  const notYetPrepared = !termin.vorbereitung_erstellt ||\n                          termin.vorbereitung_erstellt === 'FALSE' ||\n                          termin.vorbereitung_erstellt === false ||\n                          termin.vorbereitung_erstellt === '';\n\n  return isTomorrow && notYetPrepared;\n});\n\nreturn filtered.map(termin => ({ json: termin }));"
+      }
+    },
+    {
+      "id": "wf7-if-termine",
+      "name": "IF: Termine for Tomorrow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [850, 800],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "termine-count-check",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-no-termine",
+      "name": "Set: No Termine Tomorrow",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 950],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "status",
+              "value": "no_termine_tomorrow"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-split-termine",
+      "name": "SplitInBatches: Per Termin",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1100, 800],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-set-path-b-done",
+      "name": "Set: Path B Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 650],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "path",
+              "value": "termin_vorbereitung"
+            },
+            {
+              "name": "status",
+              "value": "complete"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf7-sheets-get-lead-for-termin",
+      "name": "Google Sheets: Get Lead for Termin",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1350, 800],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-code-termin-lead-ctx",
+      "name": "Code: Build Termin+Lead Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 800],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const terminData = $('SplitInBatches: Per Termin').first().json;\nconst leadRows = $input.all();\nconst lead = leadRows.length > 0 ? leadRows[0].json : {};\n\nreturn [{\n  json: {\n    // Termin data\n    termin_id: terminData.termin_id,\n    lead_id: terminData.lead_id,\n    termin_datum: terminData.datum,\n    termin_uhrzeit: terminData.uhrzeit,\n    termin_dauer: terminData.dauer,\n    termin_titel: terminData.titel,\n    termin_beschreibung: terminData.beschreibung,\n    termin_gespraechsziel: terminData.gespraechsziel || '',\n    // Lead data\n    lead_vorname: lead.vorname || '',\n    lead_nachname: lead.nachname || '',\n    lead_email: lead.email || '',\n    lead_unternehmen: lead.unternehmen || '',\n    lead_position: lead.position || '',\n    lead_branche: lead.branche || '',\n    lead_hauptschmerz: lead.hauptschmerz || '',\n    lead_kaufmotiv: lead.kaufmotiv || '',\n    lead_score: lead.score || 0,\n    lead_score_klassifikation: lead.score_klassifikation || '',\n    // Enrichment if available\n    unternehmens_beschreibung: lead.angereichert_unternehmens_beschreibung || '',\n    aktuelle_herausforderungen: lead.angereichert_aktuelle_herausforderungen || '',\n    linkedin_headline: lead.angereichert_linkedin_headline || ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-set-termin-ctx",
+      "name": "Set: Store Termin Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1850, 800],
+      "parameters": {
+        "fields": {
+          "values": []
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf7-llm-vorbereitung",
+      "name": "LLM: Gesprächsvorbereitung",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [2100, 800],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Erstelle eine Gespraecharsvorbereitung fuer dieses B2B-Gespraech.\\n\\nTERMIN-DETAILS:\\nDatum: ' + $json.termin_datum + ' um ' + $json.termin_uhrzeit + ' Uhr\\nDauer: ' + $json.termin_dauer + ' Minuten\\n\\nLEAD:\\nName: ' + $json.lead_vorname + ' ' + $json.lead_nachname + '\\nPosition: ' + $json.lead_position + ' bei ' + $json.lead_unternehmen + '\\nBranche: ' + $json.lead_branche + '\\nHauptschmerz: ' + ($json.lead_hauptschmerz || 'unbekannt') + '\\nKaufmotiv: ' + ($json.lead_kaufmotiv || 'unbekannt') + '\\nScore: ' + $json.lead_score + ' (' + $json.lead_score_klassifikation + ')\\n\\nUNTERNEHMENS-KONTEXT:\\n' + ($json.unternehmens_beschreibung || 'nicht verfuegbar') + '\\n\\nHERAUSFORDERUNGEN:\\n' + ($json.aktuelle_herausforderungen || 'nicht verfuegbar') + '\\n\\nErstelle eine strukturierte Gespraecharsvorbereitung mit maximal 300 Woertern.\\n\\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown:\\n{\"gespraechsziel\": \"konkretes Ziel\", \"einstiegssatz\": \"erster Satz des Calls\", \"spin_fragen\": {\"situation\": [\"Frage 1\", \"Frage 2\"], \"problem\": [\"Frage 1\", \"Frage 2\"], \"implication\": [\"Frage 1\"], \"need_payoff\": [\"Frage 1\"]}, \"moegliche_einwaende\": [{\"einwand\": \"Einwand 1\", \"antwort\": \"Antwort darauf\"}], \"wichtige_hinweise\": \"kurze Stichpunkte\"}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Sales-Coach im DACH-Markt. Du bereitest Verkaeufer auf wichtige Kundengespaeche vor.\n\nDu kennst das 5-Schichten Sales Framework:\nSCHICHT 1 - PSYCHOLOGIE: Empfaenger-Offenheit, Schmerzen, Kaufmotive ansprechen\nSCHICHT 2 - METHODIK: BANT-Qualifikation implizit signalisieren\nSCHICHT 3 - PITCH-BEREITSCHAFT: Konkreten Gespraechsanlass schaffen\nSCHICHT 4 - POSITIONIERUNG: DACH-B2B-Relevanz deutlich machen\nSCHICHT 5 - POTENZIAL: Langfristige Partnerschaft andeuten\n\nDeine SPIN-Fragen sind konkret und auf den Lead zugeschnitten — keine generischen Fragen.\nDie Einwaende sind realistisch fuer die Branche und Position des Leads.\n\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblocks. Max. 300 Woerter Gesamtinhalt."
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf7-anthropic-c",
+      "name": "Anthropic Chat Model C",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [2100, 1000],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.6
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "5LmibcuA2kdHKaqB",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "id": "wf7-code-agenda-payload",
+      "name": "Code: Build Agenda Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2350, 800],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const llmOutput = $input.first().json;\nconst ctxData = $('Set: Store Termin Context').first().json;\n\nconst rawText = llmOutput.text || '';\nconst cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed = {\n  gespraechsziel: '',\n  einstiegssatz: '',\n  spin_fragen: { situation: [], problem: [], implication: [], need_payoff: [] },\n  moegliche_einwaende: [],\n  wichtige_hinweise: ''\n};\n\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  // Keep defaults, store raw text as agenda\n  return [{\n    json: {\n      ...ctxData,\n      agenda_text: rawText.trim().substring(0, 2000),\n      gespraechsziel_text: ''\n    }\n  }];\n}\n\n// Format agenda as readable text for the sheet cell\nconst agendaLines = [\n  '=== GESPRÄCHSZIEL ===',\n  parsed.gespraechsziel || '',\n  '',\n  '=== EINSTIEGSSATZ ===',\n  parsed.einstiegssatz || '',\n  '',\n  '=== SPIN-FRAGEN ===',\n  'SITUATION:',\n  ...(parsed.spin_fragen?.situation || []).map((q, i) => `  ${i+1}. ${q}`),\n  'PROBLEM:',\n  ...(parsed.spin_fragen?.problem || []).map((q, i) => `  ${i+1}. ${q}`),\n  'IMPLICATION:',\n  ...(parsed.spin_fragen?.implication || []).map((q, i) => `  ${i+1}. ${q}`),\n  'NEED-PAYOFF:',\n  ...(parsed.spin_fragen?.need_payoff || []).map((q, i) => `  ${i+1}. ${q}`),\n  '',\n  '=== MÖGLICHE EINWÄNDE ===',\n  ...(parsed.moegliche_einwaende || []).map(e => `E: ${e.einwand}\\nA: ${e.antwort}`),\n  '',\n  '=== WICHTIGE HINWEISE ===',\n  parsed.wichtige_hinweise || ''\n];\n\nconst agendaText = agendaLines.join('\\n').trim().substring(0, 3000);\n\nreturn [{\n  json: {\n    ...ctxData,\n    agenda_text: agendaText,\n    gespraechsziel_text: parsed.gespraechsziel || ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf7-sheets-update-agenda",
+      "name": "Google Sheets: Update Termine Agenda",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2600, 800],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Termine"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "termin_id": "={{ $json.termin_id }}",
+            "agenda": "={{ $json.agenda_text }}",
+            "vorbereitung_erstellt": "TRUE",
+            "gespraechsziel": "={{ $json.gespraechsziel_text }}"
+          }
+        },
+        "options": {
+          "handlingExtraData": "ignoreIt"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf7-set-vorbereitung-done",
+      "name": "Set: Vorbereitung Done",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2850, 800],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "vorbereitung_erstellt",
+              "value": true
+            },
+            {
+              "name": "termin_id",
+              "value": "={{ $json.termin_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Cron: Every 15 Min": {
+      "main": [[{ "node": "Gmail: Get Unread Messages", "type": "main", "index": 0 }]]
+    },
+    "Gmail: Get Unread Messages": {
+      "main": [[{ "node": "Google Sheets: Get All Leads", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets: Get All Leads": {
+      "main": [[{ "node": "Code: Filter Known Leads", "type": "main", "index": 0 }]]
+    },
+    "Code: Filter Known Leads": {
+      "main": [[{ "node": "IF: Known Lead Emails Found?", "type": "main", "index": 0 }]]
+    },
+    "IF: Known Lead Emails Found?": {
+      "main": [
+        [{ "node": "SplitInBatches: Per Email", "type": "main", "index": 0 }],
+        [{ "node": "Set: No Known Leads Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "SplitInBatches: Per Email": {
+      "main": [
+        [{ "node": "Set: Path A Complete", "type": "main", "index": 0 }],
+        [{ "node": "Google Sheets: Get Sequenz Log", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Sheets: Get Sequenz Log": {
+      "main": [[{ "node": "Code: Check Duplicate Draft", "type": "main", "index": 0 }]]
+    },
+    "Code: Check Duplicate Draft": {
+      "main": [[{ "node": "IF: Already Processed?", "type": "main", "index": 0 }]]
+    },
+    "IF: Already Processed?": {
+      "main": [
+        [{ "node": "Set: Skip Already Processed", "type": "main", "index": 0 }],
+        [{ "node": "Gmail: Get Thread Messages", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set: Skip Already Processed": {
+      "main": [[{ "node": "SplitInBatches: Per Email", "type": "main", "index": 0 }]]
+    },
+    "Gmail: Get Thread Messages": {
+      "main": [[{ "node": "Code: Build Thread Context", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Thread Context": {
+      "main": [[{ "node": "Set: Store Message Context", "type": "main", "index": 0 }]]
+    },
+    "Set: Store Message Context": {
+      "main": [[{ "node": "LLM: Terminwunsch Erkennung", "type": "main", "index": 0 }]]
+    },
+    "Anthropic Chat Model A": {
+      "ai_languageModel": [[{ "node": "LLM: Terminwunsch Erkennung", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM: Terminwunsch Erkennung": {
+      "main": [[{ "node": "Code: Parse Terminwunsch JSON", "type": "main", "index": 0 }]]
+    },
+    "Code: Parse Terminwunsch JSON": {
+      "main": [[{ "node": "IF: Terminwunsch erkannt?", "type": "main", "index": 0 }]]
+    },
+    "IF: Terminwunsch erkannt?": {
+      "main": [
+        [{ "node": "Code: Build Freebusy Body", "type": "main", "index": 0 }],
+        [{ "node": "Set: No Termin Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Code: Build Freebusy Body": {
+      "main": [[{ "node": "HTTP Request: Freebusy Query", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: Freebusy Query": {
+      "main": [[{ "node": "Code: Find Available Slots", "type": "main", "index": 0 }]]
+    },
+    "Code: Find Available Slots": {
+      "main": [[{ "node": "IF: Slot Available?", "type": "main", "index": 0 }]]
+    },
+    "IF: Slot Available?": {
+      "main": [
+        [{ "node": "Google Calendar: Create Event", "type": "main", "index": 0 }],
+        [{ "node": "Set: No Slot Available", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Calendar: Create Event": {
+      "main": [[{ "node": "Code: Build Termin Record", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Termin Record": {
+      "main": [[{ "node": "Google Sheets: Append Termine Row", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets: Append Termine Row": {
+      "main": [[{ "node": "Set: Map WF6 Termin Inputs", "type": "main", "index": 0 }]]
+    },
+    "Set: Map WF6 Termin Inputs": {
+      "main": [[{ "node": "Execute WF6: Update Lead Termin", "type": "main", "index": 0 }]]
+    },
+    "Execute WF6: Update Lead Termin": {
+      "main": [[{ "node": "Set: Termin Path Done", "type": "main", "index": 0 }]]
+    },
+    "Set: Termin Path Done": {
+      "main": [[{ "node": "Merge: Termin Paths", "type": "main", "index": 0 }]]
+    },
+    "Set: No Termin Found": {
+      "main": [[{ "node": "Merge: Termin Paths", "type": "main", "index": 0 }]]
+    },
+    "Set: No Slot Available": {
+      "main": [[{ "node": "Merge: Termin Paths", "type": "main", "index": 0 }]]
+    },
+    "Merge: Termin Paths": {
+      "main": [[{ "node": "LLM: Draft Generation", "type": "main", "index": 0 }]]
+    },
+    "Anthropic Chat Model B": {
+      "ai_languageModel": [[{ "node": "LLM: Draft Generation", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM: Draft Generation": {
+      "main": [[{ "node": "Code: Build Draft + WF6 Payload", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Draft + WF6 Payload": {
+      "main": [[{ "node": "Gmail: Create Draft", "type": "main", "index": 0 }]]
+    },
+    "Gmail: Create Draft": {
+      "main": [[{ "node": "Execute WF6: Update Lead Draft", "type": "main", "index": 0 }]]
+    },
+    "Execute WF6: Update Lead Draft": {
+      "main": [[{ "node": "Gmail: Mark as Read", "type": "main", "index": 0 }]]
+    },
+    "Gmail: Mark as Read": {
+      "main": [[{ "node": "Set: Email Processed", "type": "main", "index": 0 }]]
+    },
+    "Set: Email Processed": {
+      "main": [[{ "node": "SplitInBatches: Per Email", "type": "main", "index": 0 }]]
+    },
+    "Cron: Daily 07:00": {
+      "main": [[{ "node": "Google Sheets: Get All Termine", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets: Get All Termine": {
+      "main": [[{ "node": "Code: Filter Termine Tomorrow", "type": "main", "index": 0 }]]
+    },
+    "Code: Filter Termine Tomorrow": {
+      "main": [[{ "node": "IF: Termine for Tomorrow?", "type": "main", "index": 0 }]]
+    },
+    "IF: Termine for Tomorrow?": {
+      "main": [
+        [{ "node": "SplitInBatches: Per Termin", "type": "main", "index": 0 }],
+        [{ "node": "Set: No Termine Tomorrow", "type": "main", "index": 0 }]
+      ]
+    },
+    "SplitInBatches: Per Termin": {
+      "main": [
+        [{ "node": "Set: Path B Complete", "type": "main", "index": 0 }],
+        [{ "node": "Google Sheets: Get Lead for Termin", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Sheets: Get Lead for Termin": {
+      "main": [[{ "node": "Code: Build Termin+Lead Context", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Termin+Lead Context": {
+      "main": [[{ "node": "Set: Store Termin Context", "type": "main", "index": 0 }]]
+    },
+    "Set: Store Termin Context": {
+      "main": [[{ "node": "LLM: Gesprächsvorbereitung", "type": "main", "index": 0 }]]
+    },
+    "Anthropic Chat Model C": {
+      "ai_languageModel": [[{ "node": "LLM: Gesprächsvorbereitung", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM: Gesprächsvorbereitung": {
+      "main": [[{ "node": "Code: Build Agenda Payload", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Agenda Payload": {
+      "main": [[{ "node": "Google Sheets: Update Termine Agenda", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets: Update Termine Agenda": {
+      "main": [[{ "node": "Set: Vorbereitung Done", "type": "main", "index": 0 }]]
+    },
+    "Set: Vorbereitung Done": {
+      "main": [[{ "node": "SplitInBatches: Per Termin", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": []
+}

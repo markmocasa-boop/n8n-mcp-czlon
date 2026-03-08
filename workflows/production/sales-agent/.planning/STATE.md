@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Jeder qualifizierte Lead (Score ≥ 30) erhält automatisch eine personalisierte 4-E-Mail-Sequenz.
-**Current focus:** Phase 4 — LinkedIn Content (WF5) — VERIFIED
+**Current focus:** Phase 5 — Inbox & Calendar Manager (WF7) — DEPLOYED
 
 ## Current Position
 
-Phase: 4 of 5 (LinkedIn Content) — VERIFIED
-Workflow: WF5 LinkedIn Content Generator — deployed and verified PASS
-Status: Phase 4 complete — WF5 (9 nodes) + WF0 (20 nodes) deployed and verified
-Last activity: 2026-03-08 — Phase 4 verified
+Phase: 5 of 5 (Inbox & Calendar Manager) — COMPLETE
+Workflow: WF7 Inbox & Calendar Manager — deployed (54 nodes, 2 trigger paths, n8n ID: wsAy4ROLYtgRfXyY)
+Status: ALL PHASES COMPLETE — project fully deployed
+Last activity: 2026-03-08 — Phase 5 deployed
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Deployed Workflows
 
@@ -26,6 +26,7 @@ Progress: [████████░░] 80%
 | WF3 | Sales Agent — WF3 E-Mail Sequenz Generator | uWkGHyQQ8FBeqErW | Inactive | 2026-03-08 | PASS |
 | WF4 | Sales Agent — WF4 E-Mail Sender | O2RnTBvoLAOV4agj | Inactive | 2026-03-08 | PASS (fixed) |
 | WF5 | Sales Agent — WF5 LinkedIn Content Generator | bQQfeZfngg6AyuwZ | Inactive | 2026-03-08 | PASS |
+| WF7 | Sales Agent — WF7 Inbox & Calendar Manager | wsAy4ROLYtgRfXyY | Inactive | 2026-03-08 | Deployed |
 | WF0 | Sales Agent — WF0 Master Orchestrator | 58ysZ3NLKZfsMfND | Inactive | 2026-03-08 | PASS (updated Phase 4) |
 
 ## Local File Paths
@@ -39,6 +40,7 @@ Progress: [████████░░] 80%
 | `production/sales-agent/WF4-Email-Sender.json` | Email Sender (Phase 3, fixed) |
 | `production/sales-agent/WF5-LinkedIn-Content-Generator.json` | LinkedIn Content Generator (Phase 4, verified) |
 | `production/sales-agent/WF0-Master-Orchestrator.json` | Master Orchestrator (updated Phase 4, verified) |
+| `production/sales-agent/WF7-Inbox-Calendar-Manager.json` | Inbox & Calendar Manager (deployed Phase 5) |
 
 **Placeholders still needed (REQUIRED before live testing):**
 - `SALES_AGENT_SHEET_ID` in WF6 + WF0 — Google Sheet must be created first
@@ -92,5 +94,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Phase 4 verified PASS. WF5 + WF0 bridge node both verified against live n8n API.
-Next step: Phase 5 — Inbox & Calendar Manager (WF7).
+Stopped at: Phase 5 deployed. WF7 (54 nodes, ID: wsAy4ROLYtgRfXyY) deployed via POST to n8n API.
+Next step: SALES_AGENT_SHEET_ID must be replaced in all workflows before live testing. Then activate workflows in order: WF6 → WF1 → WF2 → WF3 → WF4 → WF5 → WF7 → WF0.
