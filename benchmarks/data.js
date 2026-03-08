@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772983907446,
+  "lastUpdate": 1772984303027,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3cb37c7988c0d6acb2c19b45047849ffbc775df6",
-          "message": "Merge pull request #22 from markmocasa-boop/claude/ai-lead-qualifier-Idqjj\n\nAdd Auto-Lead-Closer KI Lead-Qualifier workflow",
-          "timestamp": "2026-02-10T07:13:47+01:00",
-          "tree_id": "2d3202cadf3f9b0c9acfdf65ea9577d0e54dc240",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3cb37c7988c0d6acb2c19b45047849ffbc775df6"
-        },
-        "date": 1770704154137,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/07d98436e9f2225b0913fdd04e7d8c27a1d032d9"
         },
         "date": 1772983906677,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "8ffd222010158f45eb5413a39c14650496189e32",
+          "message": "fix(WF4): correct field name nächster_kontakt in CRM update payload\n\nWF4 Code: Build WF6 Update Payload was writing 'naechster_kontakt'\n(ascii substitute) instead of 'nächster_kontakt' (with umlaut ä).\nWF6 uses autoMapInputData for Google Sheets updates, so the wrong\nfield name would silently fail to update the next-contact date.\n\nFixes requirement OUT-02 (email_X_gesendet, letzter_kontakt,\nnächster_kontakt written to CRM).\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T16:36:13+01:00",
+          "tree_id": "f40940d0f2c8067147693d9faedc13b77163359f",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/8ffd222010158f45eb5413a39c14650496189e32"
+        },
+        "date": 1772984302571,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
