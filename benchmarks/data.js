@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772799574673,
+  "lastUpdate": 1772954275870,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c10133c48dbf673f76044c094ba1117e2325ddc7",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-01T16:19:07+01:00",
-          "tree_id": "c90e62c38e74c6021436b83d57c4af34ef8b7cc0",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c10133c48dbf673f76044c094ba1117e2325ddc7"
-        },
-        "date": 1769959261192,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/04bc985eefa8ee79654ef8814efd73d996795486"
         },
         "date": 1772799574323,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "e5993462caba6e4affab5fdb4049b13e021b3280",
+          "message": "Phase 1: Sales Agent — WF6 CRM Updater + WF0 Master Orchestrator deployed\n\n7 Workflows deployed to meinoffice.app.n8n.cloud:\n- WF6 CRM Updater (HxOD2a8He72tvKmR) — Google Sheets updates + Log\n- WF0 Master Orchestrator (58ysZ3NLKZfsMfND) — Cron 08:00 + Loop\n- WF1-WF5 Stubs (Phase 1 testing)\n\nPending: Google Sheet erstellen + SALES_AGENT_SHEET_ID eintragen\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T08:15:50+01:00",
+          "tree_id": "eb6d13232d5616efc9f53a3a637b3c1552df1c95",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e5993462caba6e4affab5fdb4049b13e021b3280"
+        },
+        "date": 1772954275050,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
