@@ -1,0 +1,273 @@
+{
+  "name": "Sales Agent — WF2 Lead Scoring",
+  "nodes": [
+    {
+      "id": "wf2-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "parameters": {}
+    },
+    {
+      "id": "wf2-set-prompt",
+      "name": "Set: Build Claude Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [350, 300],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "claude_prompt",
+              "value": "={{ 'Lead-Daten:\\n- Name: ' + $json.vorname + ' ' + $json.nachname + '\\n- Position: ' + $json.position + '\\n- Unternehmen: ' + $json.unternehmen + ' (' + $json.mitarbeiter_anzahl + ' Mitarbeiter, Branche: ' + $json.branche + ')\\n- Notizen: ' + ($json.notizen || 'keine') + '\\n- Unternehmens-Beschreibung: ' + ($json.angereichert?.unternehmens_beschreibung || 'nicht verfügbar') + '\\n- Herausforderungen: ' + ($json.angereichert?.aktuelle_herausforderungen || 'nicht verfügbar') + '\\n- LinkedIn Headline: ' + ($json.angereichert?.linkedin_headline || 'nicht verfügbar') + '\\n\\nBewerte diesen Lead.' }}"
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf2-llm-chain",
+      "name": "Basic LLM Chain",
+      "type": "nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [600, 300],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.claude_prompt }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessage",
+              "message": "Du bist ein erfahrener B2B-Vertriebsexperte im DACH-Markt.\nBewerte Leads anhand des folgenden 5-Schichten Sales Frameworks:\n\nSCHICHT 1 – PSYCHOLOGIE: Ist der Lead empfänglich? (Signale für Offenheit, Schmerzen, Kaufmotive)\nSCHICHT 2 – METHODIK: Ist der Lead qualifiziert? (Entscheider, Budget, Bedarf, Zeitrahmen – BANT)\nSCHICHT 3 – PITCH-BEREITSCHAFT: Gibt es einen konkreten Anlass für ein Gespräch?\nSCHICHT 4 – POSITIONIERUNG: Passt der Lead zur Zielgruppe (DACH, B2B, relevante Branche)?\nSCHICHT 5 – POTENZIAL: Langfristiges Relationship-Potenzial (Unternehmensgröße, Wachstum, Netzwerk)\n\nGib einen Score von 0–100 zurück sowie eine kurze Begründung (max. 3 Sätze).\nKlassifiziere zusätzlich: HEISS (80–100) / WARM (50–79) / KALT (0–49)\n\nAntworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblöcke:\n{\"score\": 75, \"klassifikation\": \"WARM\", \"begründung\": \"...\", \"empfohlene_ansprache\": \"direkt\", \"hauptschmerz\": \"...\", \"kaufmotiv\": \"Gewinn\"}"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wf2-anthropic",
+      "name": "Anthropic Chat Model",
+      "type": "nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [600, 500],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
+        "options": {
+          "maxTokensToSample": 1000,
+          "temperature": 0.3
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "id": "wf2-code-parse",
+      "name": "Code: Parse Score JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const trigger = $('Execute Workflow Trigger').first().json;\n\nconst rawOutput = $input.first().json.text || $input.first().json.output || $input.first().json.response || '';\n\nlet parsed = {};\nlet parseError = false;\n\ntry {\n  const cleaned = rawOutput\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parseError = true;\n  parsed = {\n    score: 0,\n    klassifikation: 'KALT',\n    begründung: 'JSON-Parsing fehlgeschlagen: ' + e.message,\n    empfohlene_ansprache: 'direkt',\n    hauptschmerz: '',\n    kaufmotiv: 'Gewinn'\n  };\n}\n\nconst score = parseInt(parsed.score) || 0;\nconst klassifikation = parsed.klassifikation || (score >= 80 ? 'HEISS' : score >= 50 ? 'WARM' : 'KALT');\n\nreturn [{\n  json: {\n    ...trigger,\n    score: score,\n    klassifikation: klassifikation,\n    score_begründung: parsed.begründung || '',\n    empfohlene_ansprache: parsed.empfohlene_ansprache || 'direkt',\n    hauptschmerz: parsed.hauptschmerz || '',\n    kaufmotiv: parsed.kaufmotiv || 'Gewinn',\n    parse_error: parseError,\n    raw_claude_output: rawOutput\n  }\n}];"
+      }
+    },
+    {
+      "id": "wf2-if-kalt",
+      "name": "IF: Score < 30?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "score-kalt-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 30,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-exec-wf6-kalt",
+      "name": "Execute WF6: Set Kalt Status",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 2,
+      "position": [1350, 150],
+      "parameters": {
+        "workflowId": {
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "updates": "={{ JSON.stringify({ status: 'Kalt', score: $json.score, score_begründung: $json.score_begründung }) }}",
+            "log_eintrag": "={{ JSON.stringify({ aktion: 'scoring_abgeschlossen', inhalt: 'Score: ' + $json.score + ' → Kalt', status: 'ok' }) }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wf2-set-output-kalt",
+      "name": "Set: Scoring Output (Kalt)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 150],
+      "parameters": {
+        "fields": {
+          "values": [
+            {"name": "routing", "value": "KALT_STOP"}
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf2-if-heiss",
+      "name": "IF: Score >= 80?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1350, 450],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "score-heiss-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wf2-set-output-heiss",
+      "name": "Set: Scoring Output (Heiss)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 350],
+      "parameters": {
+        "fields": {
+          "values": [
+            {"name": "routing", "value": "HEISS_PREMIUM"}
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
+      "id": "wf2-set-output-warm",
+      "name": "Set: Scoring Output (Warm)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 550],
+      "parameters": {
+        "fields": {
+          "values": [
+            {"name": "routing", "value": "WARM_STANDARD"}
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{"node": "Set: Build Claude Prompt", "type": "main", "index": 0}]
+      ]
+    },
+    "Set: Build Claude Prompt": {
+      "main": [
+        [{"node": "Basic LLM Chain", "type": "main", "index": 0}]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [{"node": "Basic LLM Chain", "type": "ai_languageModel", "index": 0}]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [{"node": "Code: Parse Score JSON", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Parse Score JSON": {
+      "main": [
+        [{"node": "IF: Score < 30?", "type": "main", "index": 0}]
+      ]
+    },
+    "IF: Score < 30?": {
+      "main": [
+        [{"node": "Execute WF6: Set Kalt Status", "type": "main", "index": 0}],
+        [{"node": "IF: Score >= 80?", "type": "main", "index": 0}]
+      ]
+    },
+    "Execute WF6: Set Kalt Status": {
+      "main": [
+        [{"node": "Set: Scoring Output (Kalt)", "type": "main", "index": 0}]
+      ]
+    },
+    "IF: Score >= 80?": {
+      "main": [
+        [{"node": "Set: Scoring Output (Heiss)", "type": "main", "index": 0}],
+        [{"node": "Set: Scoring Output (Warm)", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null
+}
