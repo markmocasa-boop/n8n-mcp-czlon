@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772954275870,
+  "lastUpdate": 1772965468281,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "be96b1855ffdf7fde5066ebb5c28a0fc7c17edcc",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-04T15:16:04+01:00",
-          "tree_id": "f4e9ee4e43c132289f4338e7280708c05bd82b7a",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/be96b1855ffdf7fde5066ebb5c28a0fc7c17edcc"
-        },
-        "date": 1770214689250,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e5993462caba6e4affab5fdb4049b13e021b3280"
         },
         "date": 1772954275050,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "1a799318930cbb7f68eecccf76e1d9f7e53c642b",
+          "message": "fix(sales-agent): align WF2 score classification thresholds with requirements\n\nSystem prompt and fallback code in Code: Parse Score JSON both used\nKALT (0-49) / WARM (50-79) thresholds, inconsistent with DATA-03 requirement\n(<30 = Kalt, 30-79 = Standard, >=80 = Premium). Fixed to KALT (0-29) /\nWARM (30-79) / HEISS (80-100) so Claude labels and routing agree.\nRedeployed to n8n (GAqEpcFUuLrKGYFH).\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T11:22:09+01:00",
+          "tree_id": "a39b844d50bdcf32ea9c96bb8f135a0a6db6c033",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/1a799318930cbb7f68eecccf76e1d9f7e53c642b"
+        },
+        "date": 1772965467703,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
