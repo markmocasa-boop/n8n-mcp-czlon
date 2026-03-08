@@ -333,12 +333,44 @@
       }
     },
     {
+      "id": "set-wf5-lead-context",
+      "name": "Set: Lead Context for WF5",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3100,
+        100
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {"name": "lead_id", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.lead_id }}"},
+            {"name": "vorname", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.vorname }}"},
+            {"name": "nachname", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.nachname }}"},
+            {"name": "position", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.position }}"},
+            {"name": "unternehmen", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.unternehmen }}"},
+            {"name": "branche", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.branche }}"},
+            {"name": "mitarbeiter_anzahl", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.mitarbeiter_anzahl }}"},
+            {"name": "score", "type": "numberValue", "numberValue": "={{ $('Execute: WF2 Lead Scoring').first().json.score }}"},
+            {"name": "klassifikation", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.klassifikation }}"},
+            {"name": "hauptschmerz", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.hauptschmerz }}"},
+            {"name": "kaufmotiv", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.kaufmotiv }}"},
+            {"name": "empfohlene_ansprache", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.empfohlene_ansprache }}"},
+            {"name": "angereichert", "type": "objectValue", "objectValue": "={{ $('Execute: WF1 Lead Enrichment').first().json.angereichert }}"},
+            {"name": "notizen", "type": "stringValue", "stringValue": "={{ $('Execute: WF2 Lead Scoring').first().json.notizen }}"}
+          ]
+        },
+        "include": "selected",
+        "options": {}
+      }
+    },
+    {
       "id": "exec-wf5-linkedin",
       "name": "Execute: WF5 LinkedIn Generator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        3100,
+        3350,
         100
       ],
       "parameters": {
@@ -604,6 +636,17 @@
       ]
     },
     "Execute: WF4 Email Sender (Neu)": {
+      "main": [
+        [
+          {
+            "node": "Set: Lead Context for WF5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Lead Context for WF5": {
       "main": [
         [
           {
