@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772986049412,
+  "lastUpdate": 1772987688876,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "9090a0446cb0f6c975d1baa192e6668e60a05395",
-          "message": "Merge pull request #25 from markmocasa-boop/claude/classify-bundesliga-regions-yoQpI\n\nAdd Bundesliga Region Classifier workflow",
-          "timestamp": "2026-02-10T15:25:13+01:00",
-          "tree_id": "59ea793a3f355ba966886f3015e8b5e14ea28fd3",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9090a0446cb0f6c975d1baa192e6668e60a05395"
-        },
-        "date": 1770733627870,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b510e56e3314a104eb48c2656c8bf489d958cbd8"
         },
         "date": 1772986049093,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "ea00a66c264a68ec7afb8dca7192b0f80d43cca6",
+          "message": "Phase 5: Deploy WF7 Inbox & Calendar Manager (54 nodes)\n\n- WF7 (54 nodes, ID: wsAy4ROLYtgRfXyY): two independent Cron paths\n  - Path A (15min): Gmail unread → lead matching → dedup → thread context → terminwunsch LLM → Calendar event → draft LLM → Gmail draft → mark read\n  - Path B (07:00): Termine tab → filter tomorrow → lead lookup → SPIN prep LLM → agenda update\n- All 5 phases of Sales Agent now deployed\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T17:32:48+01:00",
+          "tree_id": "9a6267c12602407af0ed1d04e41ca735208062ad",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/ea00a66c264a68ec7afb8dca7192b0f80d43cca6"
+        },
+        "date": 1772987688568,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
