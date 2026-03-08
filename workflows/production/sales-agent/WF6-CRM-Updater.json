@@ -1,0 +1,239 @@
+{
+  "name": "Sales Agent — WF6 CRM Updater",
+  "nodes": [
+    {
+      "id": "wf6-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "parameters": {}
+    },
+    {
+      "id": "sheets-find-lead",
+      "name": "Sheets: Find Lead Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [350, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {
+          "returnAllMatches": false
+        }
+      }
+    },
+    {
+      "id": "code-build-update",
+      "name": "Code: Build Update Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Get the incoming payload from the trigger\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst foundRow = $input.item.json;\n\n// Validate that we found a row\nif (!foundRow.row_number) {\n  throw new Error(`Lead not found in Sheets: ${trigger.lead_id}`);\n}\n\nconst updates = trigger.updates || {};\nconst logEintrag = trigger.log_eintrag || null;\n\n// Build the update object — all update fields are spread flat\nconst updatePayload = {\n  row_number: foundRow.row_number,\n  lead_id: trigger.lead_id,\n  log_eintrag: logEintrag,\n  has_log: logEintrag !== null && logEintrag !== undefined,\n  // Spread all update fields so they are available as $json.fieldName\n  ...updates\n};\n\nreturn { json: updatePayload };"
+      }
+    },
+    {
+      "id": "sheets-update-lead",
+      "name": "Sheets: Update Lead Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [850, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["row_number"]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "if-has-log",
+      "name": "IF: Has Log Entry",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-log",
+              "leftValue": "={{ $json.has_log }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      }
+    },
+    {
+      "id": "sheets-append-log",
+      "name": "Sheets: Append Log Entry",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1350, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sequenz_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.toISO() }}",
+            "lead_id": "={{ $json.lead_id }}",
+            "aktion": "={{ $json.log_eintrag.aktion }}",
+            "inhalt": "={{ $json.log_eintrag.inhalt }}",
+            "status": "={{ $json.status ?? 'ok' }}"
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "set-success-response",
+      "name": "Set: Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1600, 300],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "success",
+              "type": "booleanValue",
+              "booleanValue": true
+            },
+            {
+              "name": "lead_id",
+              "type": "stringValue",
+              "stringValue": "={{ $('Execute Workflow Trigger').first().json.lead_id }}"
+            },
+            {
+              "name": "updated_at",
+              "type": "stringValue",
+              "stringValue": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {},
+        "include": "selected"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Sheets: Find Lead Row", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sheets: Find Lead Row": {
+      "main": [
+        [{ "node": "Code: Build Update Payload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Code: Build Update Payload": {
+      "main": [
+        [{ "node": "Sheets: Update Lead Row", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sheets: Update Lead Row": {
+      "main": [
+        [{ "node": "IF: Has Log Entry", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF: Has Log Entry": {
+      "main": [
+        [{ "node": "Sheets: Append Log Entry", "type": "main", "index": 0 }],
+        [{ "node": "Set: Success Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sheets: Append Log Entry": {
+      "main": [
+        [{ "node": "Set: Success Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

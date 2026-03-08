@@ -1,0 +1,49 @@
+{
+  "name": "Sales Agent — WF2 Stub (Phase 1)",
+  "nodes": [
+    {
+      "id": "wf2-stub-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "parameters": {}
+    },
+    {
+      "id": "wf2-stub-score",
+      "name": "Set: Add Test Score",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [350, 300],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "score",
+              "type": "numberValue",
+              "numberValue": 75
+            },
+            {
+              "name": "klassifikation",
+              "type": "stringValue",
+              "stringValue": "WARM"
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Set: Add Test Score", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

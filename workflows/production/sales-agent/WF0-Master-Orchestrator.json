@@ -1,0 +1,668 @@
+{
+  "name": "Sales Agent — WF0 Master Orchestrator",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "manual-trigger",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        400
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "merge-triggers",
+      "name": "Merge: Both Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        350,
+        300
+      ],
+      "parameters": {
+        "mode": "passThrough",
+        "output": "input1",
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-get-leads",
+      "name": "Sheets: Get All Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        600,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SALES_AGENT_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "returnAll": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "filter-status",
+      "name": "IF: Filter by Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        850,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-neu",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Neu",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "check-in-sequenz",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "In Sequenz",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combineOperation": "any"
+        }
+      }
+    },
+    {
+      "id": "split-leads",
+      "name": "SplitInBatches: Loop Leads",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "wait-rate-limit",
+      "name": "Wait: Rate Limit",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1350,
+        300
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "exec-wf1-enrichment",
+      "name": "Execute: WF1 Lead Enrichment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "mPtLL7QxoW1lJKu2"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "exec-wf2-scoring",
+      "name": "Execute: WF2 Lead Scoring",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1850,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "GAqEpcFUuLrKGYFH"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "if-score-check",
+      "name": "IF: Score >= 30?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2100,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-score",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 30,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      }
+    },
+    {
+      "id": "if-status-new",
+      "name": "IF: Status = Neu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2350,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-status-neu",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Neu",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      }
+    },
+    {
+      "id": "set-kalt-payload",
+      "name": "Set: Kalt Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2350,
+        450
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "stringValue",
+              "stringValue": "={{ $json.lead_id }}"
+            },
+            {
+              "name": "updates",
+              "type": "objectValue",
+              "objectValue": "={{ { \"status\": \"Kalt\", \"score\": $json.score } }}"
+            },
+            {
+              "name": "log_eintrag",
+              "type": "objectValue",
+              "objectValue": "={{ { \"aktion\": \"score_zu_niedrig\", \"inhalt\": \"Score: \" + $json.score + \" (unter 30)\" } }}"
+            }
+          ]
+        },
+        "include": "selected",
+        "options": {}
+      }
+    },
+    {
+      "id": "exec-wf3-emails",
+      "name": "Execute: WF3 Email Generator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2600,
+        100
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "uWkGHyQQ8FBeqErW"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "exec-wf4-neu",
+      "name": "Execute: WF4 Email Sender (Neu)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2850,
+        100
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "O2RnTBvoLAOV4agj"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "exec-wf5-linkedin",
+      "name": "Execute: WF5 LinkedIn Generator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3100,
+        100
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "bQQfeZfngg6AyuwZ"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "exec-wf4-sequenz",
+      "name": "Execute: WF4 Email Sender (In Sequenz)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2600,
+        350
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "O2RnTBvoLAOV4agj"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "merge-after-sequence",
+      "name": "Merge: After Sequence",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        3350,
+        200
+      ],
+      "parameters": {
+        "mode": "passThrough",
+        "output": "input1",
+        "options": {}
+      }
+    },
+    {
+      "id": "exec-wf6-kalt",
+      "name": "Execute: WF6 CRM — Set Kalt",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2600,
+        450
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "exec-wf6-final",
+      "name": "Execute: WF6 CRM — Final Update",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3600,
+        200
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "HxOD2a8He72tvKmR"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge: Both Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Merge: Both Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge: Both Triggers": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Get All Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Get All Leads": {
+      "main": [
+        [
+          {
+            "node": "IF: Filter by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Filter by Status": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches: Loop Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "SplitInBatches: Loop Leads": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait: Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF1 Lead Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF1 Lead Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF2 Lead Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF2 Lead Scoring": {
+      "main": [
+        [
+          {
+            "node": "IF: Score >= 30?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Score >= 30?": {
+      "main": [
+        [
+          {
+            "node": "IF: Status = Neu?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set: Kalt Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Status = Neu?": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF3 Email Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute: WF4 Email Sender (In Sequenz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Kalt Payload": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF6 CRM — Set Kalt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF6 CRM — Set Kalt": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches: Loop Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF3 Email Generator": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF4 Email Sender (Neu)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF4 Email Sender (Neu)": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF5 LinkedIn Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF5 LinkedIn Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge: After Sequence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF4 Email Sender (In Sequenz)": {
+      "main": [
+        [
+          {
+            "node": "Merge: After Sequence",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge: After Sequence": {
+      "main": [
+        [
+          {
+            "node": "Execute: WF6 CRM — Final Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WF6 CRM — Final Update": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches: Loop Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
