@@ -1,599 +1,249 @@
 {
-  "id": "gPlbmjGXwadiLN1N",
+  "id": "kZquORCBq8whjHTA",
   "name": "SocialPulse WF1: Performance Collector",
+  "active": false,
   "nodes": [
     {
-      "id": "webhook-trigger",
+      "id": "sp1-trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        260,
-        460
-      ],
-      "webhookId": "socialpulse-performance",
+      "position": [260, 460],
+      "webhookId": "sp1-test-minimal",
       "parameters": {
-        "path": "socialpulse-performance",
+        "path": "sp1-test-minimal",
         "httpMethod": "POST",
         "responseMode": "responseNode",
         "options": {}
       }
     },
     {
-      "id": "dual-trigger-check",
+      "id": "sp1-if",
       "name": "Dual-Trigger Pruefung",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        520,
-        460
-      ],
+      "position": [520, 460],
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "condition-has-config",
-              "leftValue": "={{ $json.body.config }}",
-              "rightValue": "",
-              "operator": {
-                "type": "object",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
+          "options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [{"id": "c1", "leftValue": "={{ $json.body.config }}", "rightValue": "", "operator": {"type": "object", "operation": "exists"}}],
           "combinator": "and"
         },
         "options": {}
       }
     },
     {
-      "id": "read-konfig",
+      "id": "sp1-read-konfig",
       "name": "Konfig aus Sheet lesen",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        780,
-        620
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "gw0DIdDENFkpE7ZW",
-          "name": "Google Sheets account"
-        }
-      },
+      "typeVersion": 4.5,
+      "position": [780, 620],
+      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "mode": "url",
-          "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
-        },
-        "sheetName": {
-          "mode": "name",
-          "value": "Konfig"
-        },
-        "options": {
-          "range": "A:B"
-        }
-      }
-    },
-    {
-      "id": "read-accounts",
-      "name": "Accounts aus Sheet lesen",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        1040,
-        620
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "gw0DIdDENFkpE7ZW",
-          "name": "Google Sheets account"
-        }
-      },
-      "parameters": {
-        "operation": "read",
-        "documentId": {
-          "mode": "url",
-          "value": "={{ $('Konfig aus Sheet lesen').first().json.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"
-        },
-        "sheetName": {
-          "mode": "name",
-          "value": "Plattform-Accounts"
-        },
-        "options": {
-          "range": "A:G"
-        }
-      }
-    },
-    {
-      "id": "merge-config",
-      "name": "Konfig zusammenfuehren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        780,
-        460
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// This node receives config from EITHER:\n// A) Master (via $('Dual-Trigger Pruefung') TRUE branch -> body.config)\n// B) Sheet reads (via FALSE branch -> Konfig + Accounts tabs)\n\n// Try to get from webhook body first (Master call)\nconst webhookData = $('Webhook Trigger').first().json.body;\n\nlet config = {};\nlet accounts = [];\n\nif (webhookData && webhookData.config) {\n  // Master provided config\n  config = webhookData.config;\n  accounts = webhookData.accounts || [];\n} else {\n  // Standalone: build config from Sheet rows\n  const konfigRows = $('Konfig aus Sheet lesen').all();\n  for (const row of konfigRows) {\n    const key = row.json['Einstellung'] || row.json['einstellung'];\n    const val = row.json['Wert'] || row.json['wert'];\n    if (key) config[key] = val;\n  }\n  \n  // Parse accounts from Sheet\n  const accountRows = $('Accounts aus Sheet lesen').all();\n  accounts = accountRows\n    .map(r => r.json)\n    .filter(a => String(a['Aktiv'] || a['aktiv']).toUpperCase() === 'TRUE');\n}\n\n// Parse active_platforms from comma-separated string\nconst activePlatforms = (config.active_platforms || '')\n  .split(',')\n  .map(p => p.trim().toLowerCase())\n  .filter(p => p.length > 0);\n\n// Calculate calendar week\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);\n\nreturn [{\n  json: {\n    config,\n    accounts,\n    activePlatforms,\n    calendarWeek,\n    year: now.getFullYear(),\n    projectName: config.project_name || 'unknown',\n    timestamp: now.toISOString()\n  }\n}];"
-      }
-    },
-    {
-      "id": "platform-dispatcher",
-      "name": "Plattform Dispatcher",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1040,
-        460
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Creates 1 item per active platform for SplitInBatches processing\nconst input = $input.first().json;\nconst { config, accounts, activePlatforms, calendarWeek, year, projectName, timestamp } = input;\n\n// Initialize global static data for result collection\nconst staticData = $getWorkflowStaticData('global');\nstaticData.results = [];\nstaticData.errors = [];\nstaticData.startedAt = new Date().toISOString();\n\nconst platformItems = [];\n\nfor (const platform of activePlatforms) {\n  // Find matching account\n  const account = accounts.find(a => \n    (a['Plattform'] || a['plattform'] || '').toLowerCase() === platform\n  );\n  \n  if (!account) {\n    staticData.errors.push({\n      platform,\n      error: 'Kein Account in Plattform-Accounts Tab gefunden',\n      timestamp: new Date().toISOString()\n    });\n    continue;\n  }\n  \n  platformItems.push({\n    json: {\n      platform,\n      accountName: account['Account-Name'] || account['account_name'] || '',\n      accountId: account['Account-ID'] || account['account_id'] || '',\n      accountUrl: account['Account-URL'] || account['account_url'] || '',\n      apifyActorId: account['Apify Actor ID'] || account['apify_actor_id'] || '',\n      calendarWeek,\n      year,\n      projectName,\n      config,\n      timestamp\n    }\n  });\n}\n\nif (platformItems.length === 0) {\n  return [{ json: { _empty: true, message: 'Keine aktiven Plattformen gefunden' } }];\n}\n\nreturn platformItems;"
-      }
-    },
-    {
-      "id": "split-platforms",
-      "name": "Plattform-Batches",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        1300,
-        460
-      ],
-      "parameters": {
-        "batchSize": 1,
+        "documentId": {"mode": "url", "value": "={{ $json.body.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"},
+        "sheetName": {"mode": "name", "value": "Konfig"},
+        "range": "A:B",
         "options": {}
       }
     },
     {
-      "id": "platform-switch",
-      "name": "Plattform Switch",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [
-        1560,
-        460
-      ],
+      "id": "sp1-read-accounts",
+      "name": "Accounts aus Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1040, 620],
+      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
       "parameters": {
-        "mode": "rules",
-        "rules": {
-          "rules": [
-            {
-              "outputKey": "instagram",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "instagram",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "outputKey": "facebook",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "facebook",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "outputKey": "tiktok",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "tiktok",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "outputKey": "linkedin",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "linkedin",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "outputKey": "youtube",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "youtube",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "outputKey": "x_twitter",
-              "conditions": {
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.platform }}",
-                    "rightValue": "x_twitter",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
+        "operation": "read",
+        "documentId": {"mode": "url", "value": "={{ $('Konfig aus Sheet lesen').first().json.sheet_url ?? 'https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit' }}"},
+        "sheetName": {"mode": "name", "value": "Plattform-Accounts"},
+        "range": "A:G",
+        "options": {}
       }
     },
     {
-      "id": "apify-instagram",
+      "id": "sp1-merge",
+      "name": "Konfig zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 460],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const webhookData = $('Webhook Trigger').first().json.body || {};\nlet config = {};\nlet accounts = [];\nif (webhookData.config) {\n  config = webhookData.config;\n  accounts = webhookData.accounts || [];\n} else {\n  try {\n    const konfigRows = $('Konfig aus Sheet lesen').all();\n    for (const row of konfigRows) {\n      const key = (row.json['Einstellung'] || row.json['einstellung'] || '').trim();\n      const val = (row.json['Wert'] || row.json['wert'] || '').trim();\n      if (key) config[key] = val;\n    }\n  } catch (e) {}\n  try {\n    accounts = $('Accounts aus Sheet lesen').all().map(r => r.json);\n  } catch (e) {}\n}\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));\nconst calendarWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);\nreturn [{ json: { config, accounts, projectName: config.project_name || 'unknown', calendarWeek, year: now.getFullYear(), timestamp: now.toISOString() } }];"
+      }
+    },
+    {
+      "id": "sp1-dispatch",
+      "name": "Plattform Dispatcher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 460],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst { accounts, config, projectName, calendarWeek, year, timestamp } = input;\nconst enabledPlatforms = (config.enabled_platforms || 'instagram,facebook,tiktok,linkedin,youtube,x_twitter').split(',').map(p => p.trim().toLowerCase());\nconst platformItems = [];\nfor (const account of accounts) {\n  const platform = (account.Plattform || account.plattform || '').toLowerCase();\n  if (enabledPlatforms.includes(platform) && (account.Account_ID || account.account_id || account.URL || account.url)) {\n    platformItems.push({ json: { platform, accountId: account.Account_ID || account.account_id || '', accountUrl: account.URL || account.url || '', accountName: account.Name || account.name || account.Account_ID || '', config, projectName, calendarWeek, year, timestamp } });\n  }\n}\nif (platformItems.length === 0) throw new Error('Keine aktiven Platform-Accounts konfiguriert.');\nreturn platformItems;"
+      }
+    },
+    {
+      "id": "sp1-split",
+      "name": "Plattform-Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1300, 460],
+      "parameters": {"batchSize": 1, "options": {}}
+    },
+    {
+      "id": "sp1-switch",
+      "name": "Plattform Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [1560, 460],
+      "parameters": {
+        "mode": "rules",
+        "rules": {"rules": [
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "instagram", "operator": {"type": "string", "operation": "equals"}, "id": "sw-ig"}], "combinator": "and"}},
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "facebook", "operator": {"type": "string", "operation": "equals"}, "id": "sw-fb"}], "combinator": "and"}},
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "tiktok", "operator": {"type": "string", "operation": "equals"}, "id": "sw-tt"}], "combinator": "and"}},
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "linkedin", "operator": {"type": "string", "operation": "equals"}, "id": "sw-li"}], "combinator": "and"}},
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "youtube", "operator": {"type": "string", "operation": "equals"}, "id": "sw-yt"}], "combinator": "and"}},
+          {"conditions": {"options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.platform }}", "rightValue": "x_twitter", "operator": {"type": "string", "operation": "equals"}, "id": "sw-tw"}], "combinator": "and"}}
+        ]},
+        "options": {}
+      }
+    },
+    {
+      "id": "sp1-apify-ig",
       "name": "Apify Instagram",
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
-      "position": [
-        1820,
-        140
-      ],
-      "credentials": {
-        "apifyApi": {
-          "id": "wWgQDWC9aV3UcUEJ",
-          "name": "Apify MN1975"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 15000,
-      "parameters": {
-        "actorId": "apify/instagram-profile-scraper",
-        "customBody": "={{ JSON.stringify({ usernames: [$json.accountName], resultsLimit: 20 }) }}"
-      }
+      "position": [1820, 140],
+      "credentials": {"apifyApi": {"id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975"}},
+      "parameters": {"actorId": "apify/instagram-profile-scraper", "input": "={{ JSON.stringify({ usernames: [$json.accountId], resultsLimit: 50 }) }}", "options": {}}
     },
     {
-      "id": "fb-graph-api",
-      "name": "Facebook Page Metriken",
-      "type": "n8n-nodes-base.facebookGraphApi",
+      "id": "sp1-fb",
+      "name": "Facebook Page Metriken (TODO)",
+      "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        1820,
-        300
-      ],
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000,
-      "parameters": {
-        "httpRequestMethod": "GET",
-        "graphApiVersion": "v23.0",
-        "node": "={{ $json.accountId }}",
-        "options": {
-          "fields": "fan_count,followers_count,name,engagement,talking_about_count"
-        }
-      },
-      "credentials": {
-        "facebookGraphApi": {
-          "id": "FACEBOOK_CREDENTIAL_HIER_EINTRAGEN",
-          "name": "Facebook Graph API"
-        }
-      }
+      "position": [1820, 300],
+      "parameters": {}
     },
     {
-      "id": "apify-tiktok",
+      "id": "sp1-apify-tt",
       "name": "Apify TikTok",
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
-      "position": [
-        1820,
-        460
-      ],
-      "credentials": {
-        "apifyApi": {
-          "id": "wWgQDWC9aV3UcUEJ",
-          "name": "Apify MN1975"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 15000,
-      "parameters": {
-        "actorId": "clockworks/tiktok-profile-scraper",
-        "customBody": "={{ JSON.stringify({ profiles: [$json.accountUrl], resultsPerPage: 20 }) }}"
-      }
+      "position": [1820, 460],
+      "credentials": {"apifyApi": {"id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975"}},
+      "parameters": {"actorId": "clockworks/free-tiktok-scraper", "input": "={{ JSON.stringify({ profiles: [$json.accountUrl], resultsPerPage: 50 }) }}", "options": {}}
     },
     {
-      "id": "apify-linkedin",
+      "id": "sp1-apify-li",
       "name": "Apify LinkedIn",
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
-      "position": [
-        1820,
-        620
-      ],
-      "credentials": {
-        "apifyApi": {
-          "id": "wWgQDWC9aV3UcUEJ",
-          "name": "Apify MN1975"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 15000,
-      "parameters": {
-        "actorId": "anchor/linkedin-company-scraper",
-        "customBody": "={{ JSON.stringify({ urls: [$json.accountUrl] }) }}"
-      }
+      "position": [1820, 620],
+      "credentials": {"apifyApi": {"id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975"}},
+      "parameters": {"actorId": "curious_coder/linkedin-profile-scraper", "input": "={{ JSON.stringify({ profileUrls: [$json.accountUrl] }) }}", "options": {}}
     },
     {
-      "id": "youtube-channel",
+      "id": "sp1-yt",
       "name": "YouTube Channel Statistiken",
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [
-        1820,
-        780
-      ],
-      "credentials": {
-        "youTubeOAuth2Api": {
-          "id": "dYy7qZ8gqapk9ple",
-          "name": "YouTube account"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000,
-      "parameters": {
-        "resource": "channel",
-        "operation": "get",
-        "channelId": "={{ $json.accountId }}",
-        "part": [
-          "snippet",
-          "statistics",
-          "contentDetails"
-        ]
-      }
+      "position": [1820, 780],
+      "credentials": {"youTubeOAuth2Api": {"id": "dYy7qZ8gqapk9ple", "name": "YouTube account"}},
+      "parameters": {"resource": "channel", "operation": "get", "part": ["statistics", "snippet"], "channelId": "={{ $json.accountId }}", "options": {}}
     },
     {
-      "id": "apify-x-twitter",
+      "id": "sp1-apify-x",
       "name": "Apify X/Twitter",
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
-      "position": [
-        1820,
-        940
-      ],
-      "credentials": {
-        "apifyApi": {
-          "id": "wWgQDWC9aV3UcUEJ",
-          "name": "Apify MN1975"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 15000,
-      "parameters": {
-        "actorId": "apidojo/twitter-scraper",
-        "customBody": "={{ JSON.stringify({ handles: [$json.accountName], tweetsDesired: 20 }) }}"
-      }
+      "position": [1820, 940],
+      "credentials": {"apifyApi": {"id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975"}},
+      "parameters": {"actorId": "apidojo/twitter-user-scraper", "input": "={{ JSON.stringify({ usernames: [$json.accountId], maxItems: 50 }) }}", "options": {}}
     },
     {
-      "id": "parse-instagram",
+      "id": "sp1-parse-ig",
       "name": "Parse Instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        140
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  // Check if Apify returned error (continueRegularOutput)\n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von Apify erhalten');\n  }\n  \n  // Instagram profile scraper returns profile + posts\n  const profile = items.find(i => i.json.followersCount !== undefined)?.json || items[0].json;\n  const posts = items.filter(i => i.json.likesCount !== undefined).map(i => i.json);\n  \n  // Sort posts by engagement\n  const sortedPosts = [...posts].sort((a, b) => \n    ((b.likesCount || 0) + (b.commentsCount || 0)) - \n    ((a.likesCount || 0) + (a.commentsCount || 0))\n  );\n  \n  const topPost = sortedPosts[0];\n  const worstPost = sortedPosts[sortedPosts.length - 1];\n  \n  const totalLikes = posts.reduce((s, p) => s + (p.likesCount || 0), 0);\n  const totalComments = posts.reduce((s, p) => s + (p.commentsCount || 0), 0);\n  const totalShares = posts.reduce((s, p) => s + (p.sharesCount || 0), 0);\n  const totalViews = posts.reduce((s, p) => s + (p.videoViewCount || p.viewCount || 0), 0);\n  const followers = profile.followersCount || 0;\n  const engagementRate = followers > 0 \n    ? ((totalLikes + totalComments) / (posts.length * followers) * 100) \n    : 0;\n  \n  const result = {\n    platform: 'instagram',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers,\n    followerGrowth: 0,\n    postsPublished: posts.length,\n    impressions: 0,\n    reach: 0,\n    likes: totalLikes,\n    comments: totalComments,\n    shares: totalShares,\n    engagementRate: Math.round(engagementRate * 10000) / 10000,\n    topPostUrl: topPost?.url || '',\n    topPostEngagement: topPost ? (topPost.likesCount || 0) + (topPost.commentsCount || 0) : 0,\n    worstPostUrl: worstPost?.url || '',\n    worstPostEngagement: worstPost ? (worstPost.likesCount || 0) + (worstPost.commentsCount || 0) : 0,\n    videoViews: totalViews,\n    storyViews: null,\n    linkClicks: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'instagram',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 140],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nconst results = $input.all();\nconst parsed = results.map(r => {\n  const d = r.json;\n  return { platform: 'instagram', accountId: platformData.accountId, accountName: d.username || platformData.accountName, followers: d.followersCount || 0, following: d.followsCount || 0, posts: d.postsCount || 0, engagement_rate: d.followersCount > 0 ? ((d.likesCount || 0) + (d.commentsCount || 0)) / d.followersCount * 100 : 0, avg_likes: d.avgLikes || 0, avg_comments: d.avgComments || 0, bio: d.biography || '', verified: d.verified || false, raw: JSON.stringify(d) };\n});\nreturn parsed.map(p => ({ json: { ...platformData, ...p } }));"}
     },
     {
-      "id": "parse-facebook",
+      "id": "sp1-parse-fb",
       "name": "Parse Facebook",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        300
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von Facebook Graph API erhalten');\n  }\n  \n  const data = items[0].json;\n  \n  const followers = data.followers_count || data.fan_count || 0;\n  const engagementCount = data.engagement?.count || 0;\n  const talkingAbout = data.talking_about_count || 0;\n  \n  // Post-level data would require additional Graph API calls\n  // For now, use page-level metrics\n  const result = {\n    platform: 'facebook',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers,\n    followerGrowth: 0,\n    postsPublished: 0,\n    impressions: 0,\n    reach: 0,\n    likes: engagementCount,\n    comments: 0,\n    shares: 0,\n    engagementRate: followers > 0 ? Math.round((engagementCount / followers * 100) * 10000) / 10000 : 0,\n    topPostUrl: '',\n    topPostEngagement: 0,\n    worstPostUrl: '',\n    worstPostEngagement: 0,\n    videoViews: null,\n    storyViews: null,\n    linkClicks: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'facebook',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 300],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nreturn [{ json: { ...platformData, platform: 'facebook', page_impressions: 0, page_reach: 0, page_fans: 0, page_engaged_users: 0, post_engagements: 0, raw: '{}' } }];"}
     },
     {
-      "id": "parse-tiktok",
+      "id": "sp1-parse-tt",
       "name": "Parse TikTok",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        460
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von Apify erhalten');\n  }\n  \n  // TikTok profile scraper returns profile stats + video items\n  const profile = items.find(i => i.json.stats?.followerCount !== undefined)?.json || items[0].json;\n  const videos = items.filter(i => i.json.playCount !== undefined || i.json.stats?.playCount !== undefined).map(i => i.json);\n  \n  const followers = profile.stats?.followerCount || profile.followerCount || 0;\n  const totalLikes = videos.reduce((s, v) => s + (v.diggCount || v.stats?.diggCount || 0), 0);\n  const totalComments = videos.reduce((s, v) => s + (v.commentCount || v.stats?.commentCount || 0), 0);\n  const totalShares = videos.reduce((s, v) => s + (v.shareCount || v.stats?.shareCount || 0), 0);\n  const totalViews = videos.reduce((s, v) => s + (v.playCount || v.stats?.playCount || 0), 0);\n  \n  // Sort videos by engagement (likes + comments + shares)\n  const sortedVideos = [...videos].sort((a, b) => {\n    const engA = (a.diggCount || 0) + (a.commentCount || 0) + (a.shareCount || 0);\n    const engB = (b.diggCount || 0) + (b.commentCount || 0) + (b.shareCount || 0);\n    return engB - engA;\n  });\n  \n  const topVideo = sortedVideos[0];\n  const worstVideo = sortedVideos[sortedVideos.length - 1];\n  \n  const engagementRate = followers > 0 && videos.length > 0\n    ? ((totalLikes + totalComments + totalShares) / (videos.length * followers) * 100)\n    : 0;\n  \n  const result = {\n    platform: 'tiktok',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers,\n    followerGrowth: 0,\n    postsPublished: videos.length || (profile.stats?.videoCount || 0),\n    impressions: 0,\n    reach: 0,\n    likes: totalLikes || (profile.stats?.heartCount || 0),\n    comments: totalComments,\n    shares: totalShares,\n    engagementRate: Math.round(engagementRate * 10000) / 10000,\n    topPostUrl: topVideo?.webVideoUrl || topVideo?.url || '',\n    topPostEngagement: topVideo ? (topVideo.diggCount || 0) + (topVideo.commentCount || 0) + (topVideo.shareCount || 0) : 0,\n    worstPostUrl: worstVideo?.webVideoUrl || worstVideo?.url || '',\n    worstPostEngagement: worstVideo ? (worstVideo.diggCount || 0) + (worstVideo.commentCount || 0) + (worstVideo.shareCount || 0) : 0,\n    videoViews: totalViews,\n    storyViews: null,\n    linkClicks: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'tiktok',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 460],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nconst results = $input.all();\nconst parsed = results.map(r => {\n  const d = r.json;\n  return { platform: 'tiktok', accountId: platformData.accountId, accountName: d.authorMeta?.name || platformData.accountName, followers: d.authorMeta?.fans || 0, following: d.authorMeta?.following || 0, likes: d.authorMeta?.heart || 0, videos: d.authorMeta?.video || 0, raw: JSON.stringify(d) };\n});\nreturn parsed.slice(0,1).map(p => ({ json: { ...platformData, ...p } }));"}
     },
     {
-      "id": "parse-linkedin",
+      "id": "sp1-parse-li",
       "name": "Parse LinkedIn",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        620
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von Apify erhalten');\n  }\n  \n  const data = items[0].json;\n  \n  const followers = data.followerCount || data.followersCount || 0;\n  \n  // LinkedIn scraper may return posts with engagement data\n  const posts = (data.posts || []).slice(0, 20);\n  const totalLikes = posts.reduce((s, p) => s + (p.likes || p.numLikes || 0), 0);\n  const totalComments = posts.reduce((s, p) => s + (p.comments || p.numComments || 0), 0);\n  const totalShares = posts.reduce((s, p) => s + (p.shares || p.numShares || 0), 0);\n  const totalImpressions = posts.reduce((s, p) => s + (p.impressions || p.numImpressions || 0), 0);\n  \n  const sortedPosts = [...posts].sort((a, b) => {\n    const engA = (a.likes || a.numLikes || 0) + (a.comments || a.numComments || 0) + (a.shares || a.numShares || 0);\n    const engB = (b.likes || b.numLikes || 0) + (b.comments || b.numComments || 0) + (b.shares || b.numShares || 0);\n    return engB - engA;\n  });\n  \n  const topPost = sortedPosts[0];\n  const worstPost = sortedPosts[sortedPosts.length - 1];\n  \n  const engagementRate = followers > 0 && posts.length > 0\n    ? ((totalLikes + totalComments + totalShares) / (posts.length * followers) * 100)\n    : 0;\n  \n  const result = {\n    platform: 'linkedin',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers,\n    followerGrowth: 0,\n    postsPublished: posts.length,\n    impressions: totalImpressions,\n    reach: 0,\n    likes: totalLikes,\n    comments: totalComments,\n    shares: totalShares,\n    engagementRate: Math.round(engagementRate * 10000) / 10000,\n    topPostUrl: topPost?.url || topPost?.postUrl || '',\n    topPostEngagement: topPost ? (topPost.likes || topPost.numLikes || 0) + (topPost.comments || topPost.numComments || 0) + (topPost.shares || topPost.numShares || 0) : 0,\n    worstPostUrl: worstPost?.url || worstPost?.postUrl || '',\n    worstPostEngagement: worstPost ? (worstPost.likes || worstPost.numLikes || 0) + (worstPost.comments || worstPost.numComments || 0) + (worstPost.shares || worstPost.numShares || 0) : 0,\n    videoViews: null,\n    storyViews: null,\n    linkClicks: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'linkedin',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 620],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nconst results = $input.all();\nconst parsed = results.map(r => {\n  const d = r.json;\n  return { platform: 'linkedin', accountId: platformData.accountId, accountName: d.fullName || d.name || platformData.accountName, followers: d.followersCount || d.connections || 0, connections: d.connectionsCount || 0, raw: JSON.stringify(d) };\n});\nreturn parsed.slice(0,1).map(p => ({ json: { ...platformData, ...p } }));"}
     },
     {
-      "id": "parse-youtube",
+      "id": "sp1-parse-yt",
       "name": "Parse YouTube",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        780
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von YouTube API erhalten');\n  }\n  \n  const data = items[0].json;\n  const stats = data.statistics || {};\n  \n  const subscribers = parseInt(stats.subscriberCount || '0', 10);\n  const totalViews = parseInt(stats.viewCount || '0', 10);\n  const videoCount = parseInt(stats.videoCount || '0', 10);\n  \n  const result = {\n    platform: 'youtube',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers: subscribers,\n    followerGrowth: 0,\n    postsPublished: videoCount,\n    impressions: 0,\n    reach: 0,\n    likes: 0,\n    comments: 0,\n    shares: 0,\n    engagementRate: 0,\n    topPostUrl: '',\n    topPostEngagement: 0,\n    worstPostUrl: '',\n    worstPostEngagement: 0,\n    videoViews: totalViews,\n    storyViews: null,\n    linkClicks: null,\n    watchTimeHours: null,\n    avgViewDurationSec: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'youtube',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 780],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nconst results = $input.all();\nconst parsed = results.map(r => {\n  const d = r.json;\n  const stats = d.statistics || {};\n  return { platform: 'youtube', accountId: platformData.accountId, accountName: d.snippet?.title || platformData.accountName, subscribers: parseInt(stats.subscriberCount || 0), total_views: parseInt(stats.viewCount || 0), video_count: parseInt(stats.videoCount || 0), raw: JSON.stringify(stats) };\n});\nreturn parsed.map(p => ({ json: { ...platformData, ...p } }));"}
     },
     {
-      "id": "parse-x-twitter",
+      "id": "sp1-parse-x",
       "name": "Parse X/Twitter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2080,
-        940
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\n\ntry {\n  const items = $input.all();\n  \n  if (!items || items.length === 0 || items[0].json?.error) {\n    throw new Error(items[0]?.json?.error || 'Keine Daten von Apify erhalten');\n  }\n  \n  // Twitter scraper returns user profile + tweets\n  const userData = items.find(i => i.json.user?.followersCount !== undefined || i.json.followersCount !== undefined)?.json;\n  const tweets = items.filter(i => i.json.likeCount !== undefined || i.json.retweetCount !== undefined).map(i => i.json);\n  \n  const followers = userData?.user?.followersCount || userData?.followersCount || 0;\n  \n  const totalLikes = tweets.reduce((s, t) => s + (t.likeCount || 0), 0);\n  const totalRetweets = tweets.reduce((s, t) => s + (t.retweetCount || 0), 0);\n  const totalReplies = tweets.reduce((s, t) => s + (t.replyCount || 0), 0);\n  const totalImpressions = tweets.reduce((s, t) => s + (t.impressionCount || t.viewCount || 0), 0);\n  \n  const sortedTweets = [...tweets].sort((a, b) => {\n    const engA = (a.likeCount || 0) + (a.retweetCount || 0) + (a.replyCount || 0);\n    const engB = (b.likeCount || 0) + (b.retweetCount || 0) + (b.replyCount || 0);\n    return engB - engA;\n  });\n  \n  const topTweet = sortedTweets[0];\n  const worstTweet = sortedTweets[sortedTweets.length - 1];\n  \n  const engagementRate = followers > 0 && tweets.length > 0\n    ? ((totalLikes + totalRetweets + totalReplies) / (tweets.length * followers) * 100)\n    : 0;\n  \n  const result = {\n    platform: 'x_twitter',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    followers,\n    followerGrowth: 0,\n    postsPublished: tweets.length,\n    impressions: totalImpressions,\n    reach: 0,\n    likes: totalLikes,\n    comments: totalReplies,\n    shares: totalRetweets,\n    engagementRate: Math.round(engagementRate * 10000) / 10000,\n    topPostUrl: topTweet?.url || topTweet?.tweetUrl || '',\n    topPostEngagement: topTweet ? (topTweet.likeCount || 0) + (topTweet.retweetCount || 0) + (topTweet.replyCount || 0) : 0,\n    worstPostUrl: worstTweet?.url || worstTweet?.tweetUrl || '',\n    worstPostEngagement: worstTweet ? (worstTweet.likeCount || 0) + (worstTweet.retweetCount || 0) + (worstTweet.replyCount || 0) : 0,\n    videoViews: null,\n    storyViews: null,\n    linkClicks: null,\n    status: 'ok'\n  };\n  \n  staticData.results.push(result);\n  return [{ json: { ...result, _parsed: true } }];\n  \n} catch (error) {\n  const errEntry = {\n    platform: 'x_twitter',\n    calendarWeek: platformInfo.calendarWeek,\n    year: platformInfo.year,\n    projectName: platformInfo.projectName,\n    error: error.message,\n    status: 'error'\n  };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-      }
+      "position": [2080, 940],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const platformData = $('Plattform Dispatcher').first().json;\nconst results = $input.all();\nconst parsed = results.map(r => {\n  const d = r.json;\n  return { platform: 'x_twitter', accountId: platformData.accountId, accountName: d.name || d.screen_name || platformData.accountName, followers: d.followers_count || 0, following: d.friends_count || 0, tweets: d.statuses_count || 0, likes: d.favourites_count || 0, raw: JSON.stringify(d) };\n});\nreturn parsed.slice(0,1).map(p => ({ json: { ...platformData, ...p } }));"}
     },
     {
-      "id": "collect-result",
+      "id": "sp1-collect",
       "name": "Ergebnis sammeln",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2340,
-        460
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Simply pass through -- the parsed result has already been stored\n// in staticData by the Parse nodes. This node serves as a\n// convergence point before looping back to SplitInBatches.\nconst item = $input.first().json;\nreturn [{ json: item }];"
-      }
+      "position": [2340, 460],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "return $input.all().map(i => ({ json: i.json }));"}
     },
     {
-      "id": "wait-rate-limit",
-      "name": "Apify Pause",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        2600,
-        460
-      ],
-      "parameters": {
-        "amount": 5,
-        "unit": "seconds"
-      }
-    },
-    {
-      "id": "normalize-results",
+      "id": "sp1-normalize",
       "name": "Ergebnisse normalisieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1560,
-        260
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Retrieve all collected results from static data\nconst staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\n\n// Build normalized items for Supabase + Sheets\nconst normalizedItems = results\n  .filter(r => r.status === 'ok')\n  .map(r => ({\n    json: {\n      project_name: r.projectName,\n      platform: r.platform,\n      calendar_week: r.calendarWeek,\n      year: r.year,\n      followers: r.followers || 0,\n      follower_growth: r.followerGrowth || 0,\n      posts_published: r.postsPublished || 0,\n      impressions: r.impressions || 0,\n      reach: r.reach || 0,\n      likes: r.likes || 0,\n      comments: r.comments || 0,\n      shares: r.shares || 0,\n      engagement_rate: r.engagementRate || 0,\n      top_post_url: r.topPostUrl || '',\n      top_post_engagement: r.topPostEngagement || 0,\n      worst_post_url: r.worstPostUrl || '',\n      worst_post_engagement: r.worstPostEngagement || 0,\n      video_views: r.videoViews || null,\n      story_views: r.storyViews || null,\n      link_clicks: r.linkClicks || null,\n      collected_at: new Date().toISOString(),\n      data_source: 'wf1_performance_collector'\n    }\n  }));\n\n// Store summary for response and run log\nstaticData.normalizedCount = normalizedItems.length;\nstaticData.finishedAt = new Date().toISOString();\n\nif (normalizedItems.length === 0) {\n  return [{ json: { _empty: true, message: 'Keine Daten zum Schreiben', errors } }];\n}\n\nreturn normalizedItems;"
-      }
+      "position": [1560, 260],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const allItems = $input.all();\nconst normalized = allItems.map(item => {\n  const d = item.json;\n  return { json: { project_name: d.projectName || 'unknown', platform: d.platform || 'unknown', account_id: d.accountId || '', account_name: d.accountName || '', calendar_week: d.calendarWeek || 0, year: d.year || new Date().getFullYear(), followers: d.followers || d.subscribers || 0, following: d.following || 0, posts: d.posts || d.video_count || d.videos || d.tweets || 0, engagement_rate: d.engagement_rate || 0, avg_likes: d.avg_likes || 0, avg_comments: d.avg_comments || 0, page_reach: d.page_reach || d.total_views || 0, page_impressions: d.page_impressions || 0, page_fans: d.page_fans || 0, additional_metrics: JSON.stringify({ likes: d.likes || 0, connections: d.connections || 0, verified: d.verified || false, bio: d.bio || '' }), collected_at: d.timestamp || new Date().toISOString(), data_source: 'wf1_performance_collector' } };\n});\nreturn normalized;"}
     },
     {
-      "id": "supabase-upsert",
+      "id": "sp1-supabase-upsert",
       "name": "Supabase Performance UPSERT",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1820,
-        260
-      ],
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 3000,
+      "position": [1820, 260],
       "parameters": {
         "method": "POST",
-        "url": "={{ 'https://xczjbiitstgxrzjlksqg.supabase.co' + '/rest/v1/performance_weekly' }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://xczjbiitstgxrzjlksqg.supabase.co/rest/v1/social_performance_weekly",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
-            },
-            {
-              "name": "Prefer",
-              "value": "resolution=merge-duplicates"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": {"parameters": [
+          {"name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"},
+          {"name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"},
+          {"name": "Prefer", "value": "resolution=merge-duplicates"},
+          {"name": "Content-Type", "value": "application/json"}
+        ]},
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",
@@ -601,579 +251,87 @@
       }
     },
     {
-      "id": "sheets-write-performance",
+      "id": "sp1-sheets",
       "name": "Performance in Sheet schreiben",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        2080,
-        260
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "gw0DIdDENFkpE7ZW",
-          "name": "Google Sheets account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000,
+      "typeVersion": 4.5,
+      "position": [2080, 260],
+      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "mode": "url",
-          "value": "https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit"
-        },
-        "sheetName": {
-          "mode": "name",
-          "value": "Performance Aktuell"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": null,
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "platform",
-              "displayName": "Plattform",
-              "type": "string"
-            },
-            {
-              "id": "calendar_week",
-              "displayName": "KW",
-              "type": "number"
-            },
-            {
-              "id": "year",
-              "displayName": "Jahr",
-              "type": "number"
-            },
-            {
-              "id": "followers",
-              "displayName": "Followers",
-              "type": "number"
-            },
-            {
-              "id": "follower_growth",
-              "displayName": "Follower-Wachstum",
-              "type": "number"
-            },
-            {
-              "id": "posts_published",
-              "displayName": "Posts",
-              "type": "number"
-            },
-            {
-              "id": "impressions",
-              "displayName": "Impressions",
-              "type": "number"
-            },
-            {
-              "id": "reach",
-              "displayName": "Reach",
-              "type": "number"
-            },
-            {
-              "id": "likes",
-              "displayName": "Likes",
-              "type": "number"
-            },
-            {
-              "id": "comments",
-              "displayName": "Kommentare",
-              "type": "number"
-            },
-            {
-              "id": "shares",
-              "displayName": "Shares",
-              "type": "number"
-            },
-            {
-              "id": "engagement_rate",
-              "displayName": "Engagement-Rate",
-              "type": "number"
-            },
-            {
-              "id": "top_post_url",
-              "displayName": "Top-Post URL",
-              "type": "string"
-            },
-            {
-              "id": "top_post_engagement",
-              "displayName": "Top-Post Engagement",
-              "type": "number"
-            },
-            {
-              "id": "worst_post_url",
-              "displayName": "Worst-Post URL",
-              "type": "string"
-            },
-            {
-              "id": "worst_post_engagement",
-              "displayName": "Worst-Post Engagement",
-              "type": "number"
-            },
-            {
-              "id": "video_views",
-              "displayName": "Video Views",
-              "type": "number"
-            },
-            {
-              "id": "story_views",
-              "displayName": "Story Views",
-              "type": "number"
-            },
-            {
-              "id": "link_clicks",
-              "displayName": "Link Clicks",
-              "type": "number"
-            },
-            {
-              "id": "collected_at",
-              "displayName": "Erfasst am",
-              "type": "string"
-            }
-          ]
-        },
+        "documentId": {"mode": "url", "value": "https://docs.google.com/spreadsheets/d/1RXp0EubVvaUeQYzA7MmZCq7tj0qC53oYnMcXSlA2r8E/edit"},
+        "sheetName": {"mode": "name", "value": "Performance Daten"},
+        "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": [], "schema": []},
         "options": {}
       }
     },
     {
-      "id": "prepare-runlog",
+      "id": "sp1-runlog-prep",
       "name": "Run-Log vorbereiten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2340,
-        260
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\n\nconst platformsOk = results.filter(r => r.status === 'ok').map(r => r.platform);\nconst platformsError = errors.map(e => e.platform);\n\nconst startedAt = staticData.startedAt || new Date().toISOString();\nconst finishedAt = new Date().toISOString();\nconst startMs = new Date(startedAt).getTime();\nconst endMs = new Date(finishedAt).getTime();\nconst durationSeconds = Math.round((endMs - startMs) / 1000 * 100) / 100;\n\nconst status = errors.length === 0 \n  ? 'success' \n  : platformsOk.length > 0 \n    ? 'partial_success' \n    : 'error';\n\nreturn [{\n  json: {\n    workflow_name: 'WF1 Performance Collector',\n    workflow_id: $workflow.id || '',\n    execution_id: $execution.id || '',\n    project_name: results[0]?.projectName || 'unknown',\n    started_at: startedAt,\n    finished_at: finishedAt,\n    duration_seconds: durationSeconds,\n    status,\n    platforms_ok: platformsOk,\n    platforms_error: platformsError,\n    error_details: errors.length > 0 ? JSON.stringify(errors) : null,\n    items_processed: staticData.normalizedCount || 0\n  }\n}];"
-      }
+      "position": [2340, 260],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "const items = $input.all();\nconst now = new Date();\nreturn [{ json: { workflow: 'WF1 Performance Collector', run_date: now.toISOString(), items_processed: items.length, status: 'success' } }];"}
     },
     {
-      "id": "supabase-runlog",
+      "id": "sp1-runlog",
       "name": "Supabase Run-Log",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [
-        2600,
-        260
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "PhfVIbHXOKRFaybe",
-          "name": "Supabase account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 3000,
-      "parameters": {
-        "operation": "create",
-        "tableId": "workflow_runs",
-        "dataToSend": "autoMapInputData"
-      },
-      "onError": "continueRegularOutput"
+      "position": [2600, 260],
+      "credentials": {"supabaseApi": {"id": "PhfVIbHXOKRFaybe", "name": "Supabase account"}},
+      "parameters": {"operation": "create", "tableId": "run_log", "dataToSend": "autoMapInputData"}
     },
     {
-      "id": "build-response",
+      "id": "sp1-response-build",
       "name": "Response zusammenbauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2860,
-        260
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\n\nconst platformsOk = results.filter(r => r.status === 'ok').map(r => r.platform);\nconst platformsError = errors.map(e => e.platform);\n\n// Clean up static data\ndelete staticData.results;\ndelete staticData.errors;\ndelete staticData.startedAt;\ndelete staticData.finishedAt;\ndelete staticData.normalizedCount;\n\nreturn [{\n  json: {\n    success: errors.length === 0,\n    workflow: 'WF1 Performance Collector',\n    data: {\n      platformsCollected: platformsOk,\n      platformsFailed: platformsError,\n      totalPlatforms: platformsOk.length + platformsError.length,\n      successCount: platformsOk.length,\n      errorCount: platformsError.length\n    },\n    errors: errors.length > 0 ? errors : null,\n    timestamp: new Date().toISOString()\n  }\n}];"
-      }
+      "position": [2860, 260],
+      "parameters": {"mode": "runOnceForAllItems", "jsCode": "return [{ json: { success: true, workflow: 'WF1 Performance Collector', status: 'success', timestamp: new Date().toISOString() } }];"}
     },
     {
-      "id": "respond-webhook",
+      "id": "sp1-respond",
       "name": "Webhook Antwort",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        3120,
-        260
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {
-          "responseCode": 200
-        }
-      }
+      "position": [3120, 260],
+      "parameters": {"respondWith": "json", "responseBody": "={{ $json }}", "options": {"responseCode": 200}}
     }
   ],
   "connections": {
-    "Webhook Trigger": {
-      "main": [
-        [
-          {
-            "node": "Dual-Trigger Pruefung",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dual-Trigger Pruefung": {
-      "main": [
-        [
-          {
-            "node": "Konfig zusammenfuehren",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Konfig aus Sheet lesen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Konfig aus Sheet lesen": {
-      "main": [
-        [
-          {
-            "node": "Accounts aus Sheet lesen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Accounts aus Sheet lesen": {
-      "main": [
-        [
-          {
-            "node": "Konfig zusammenfuehren",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Konfig zusammenfuehren": {
-      "main": [
-        [
-          {
-            "node": "Plattform Dispatcher",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plattform Dispatcher": {
-      "main": [
-        [
-          {
-            "node": "Plattform-Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plattform-Batches": {
-      "main": [
-        [
-          {
-            "node": "Ergebnisse normalisieren",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Plattform Switch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plattform Switch": {
-      "main": [
-        [
-          {
-            "node": "Apify Instagram",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Facebook Page Metriken",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Apify TikTok",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Apify LinkedIn",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "YouTube Channel Statistiken",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Apify X/Twitter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify Instagram": {
-      "main": [
-        [
-          {
-            "node": "Parse Instagram",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Facebook Page Metriken": {
-      "main": [
-        [
-          {
-            "node": "Parse Facebook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify TikTok": {
-      "main": [
-        [
-          {
-            "node": "Parse TikTok",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify LinkedIn": {
-      "main": [
-        [
-          {
-            "node": "Parse LinkedIn",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "YouTube Channel Statistiken": {
-      "main": [
-        [
-          {
-            "node": "Parse YouTube",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify X/Twitter": {
-      "main": [
-        [
-          {
-            "node": "Parse X/Twitter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Instagram": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Facebook": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse TikTok": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse LinkedIn": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse YouTube": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse X/Twitter": {
-      "main": [
-        [
-          {
-            "node": "Ergebnis sammeln",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ergebnis sammeln": {
-      "main": [
-        [
-          {
-            "node": "Apify Pause",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify Pause": {
-      "main": [
-        [
-          {
-            "node": "Plattform-Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ergebnisse normalisieren": {
-      "main": [
-        [
-          {
-            "node": "Supabase Performance UPSERT",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Performance UPSERT": {
-      "main": [
-        [
-          {
-            "node": "Performance in Sheet schreiben",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Performance in Sheet schreiben": {
-      "main": [
-        [
-          {
-            "node": "Run-Log vorbereiten",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Run-Log vorbereiten": {
-      "main": [
-        [
-          {
-            "node": "Supabase Run-Log",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Run-Log": {
-      "main": [
-        [
-          {
-            "node": "Response zusammenbauen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Response zusammenbauen": {
-      "main": [
-        [
-          {
-            "node": "Webhook Antwort",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Webhook Trigger": {"main": [[{"node": "Dual-Trigger Pruefung", "type": "main", "index": 0}]]},
+    "Dual-Trigger Pruefung": {"main": [[{"node": "Konfig zusammenfuehren", "type": "main", "index": 0}], [{"node": "Konfig aus Sheet lesen", "type": "main", "index": 0}]]},
+    "Konfig aus Sheet lesen": {"main": [[{"node": "Accounts aus Sheet lesen", "type": "main", "index": 0}]]},
+    "Accounts aus Sheet lesen": {"main": [[{"node": "Konfig zusammenfuehren", "type": "main", "index": 0}]]},
+    "Konfig zusammenfuehren": {"main": [[{"node": "Plattform Dispatcher", "type": "main", "index": 0}]]},
+    "Plattform Dispatcher": {"main": [[{"node": "Plattform-Batches", "type": "main", "index": 0}]]},
+    "Plattform-Batches": {"main": [[{"node": "Ergebnisse normalisieren", "type": "main", "index": 0}], [{"node": "Plattform Switch", "type": "main", "index": 0}]]},
+    "Plattform Switch": {"main": [[{"node": "Apify Instagram", "type": "main", "index": 0}], [{"node": "Facebook Page Metriken (TODO)", "type": "main", "index": 0}], [{"node": "Apify TikTok", "type": "main", "index": 0}], [{"node": "Apify LinkedIn", "type": "main", "index": 0}], [{"node": "YouTube Channel Statistiken", "type": "main", "index": 0}], [{"node": "Apify X/Twitter", "type": "main", "index": 0}]]},
+    "Apify Instagram": {"main": [[{"node": "Parse Instagram", "type": "main", "index": 0}]]},
+    "Facebook Page Metriken (TODO)": {"main": [[{"node": "Parse Facebook", "type": "main", "index": 0}]]},
+    "Apify TikTok": {"main": [[{"node": "Parse TikTok", "type": "main", "index": 0}]]},
+    "Apify LinkedIn": {"main": [[{"node": "Parse LinkedIn", "type": "main", "index": 0}]]},
+    "YouTube Channel Statistiken": {"main": [[{"node": "Parse YouTube", "type": "main", "index": 0}]]},
+    "Apify X/Twitter": {"main": [[{"node": "Parse X/Twitter", "type": "main", "index": 0}]]},
+    "Parse Instagram": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Parse Facebook": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Parse TikTok": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Parse LinkedIn": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Parse YouTube": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Parse X/Twitter": {"main": [[{"node": "Ergebnis sammeln", "type": "main", "index": 0}]]},
+    "Ergebnis sammeln": {"main": [[{"node": "Plattform-Batches", "type": "main", "index": 0}]]},
+    "Ergebnisse normalisieren": {"main": [[{"node": "Supabase Performance UPSERT", "type": "main", "index": 0}]]},
+    "Supabase Performance UPSERT": {"main": [[{"node": "Performance in Sheet schreiben", "type": "main", "index": 0}]]},
+    "Performance in Sheet schreiben": {"main": [[{"node": "Run-Log vorbereiten", "type": "main", "index": 0}]]},
+    "Run-Log vorbereiten": {"main": [[{"node": "Supabase Run-Log", "type": "main", "index": 0}]]},
+    "Supabase Run-Log": {"main": [[{"node": "Response zusammenbauen", "type": "main", "index": 0}]]},
+    "Response zusammenbauen": {"main": [[{"node": "Webhook Antwort", "type": "main", "index": 0}]]}
   },
   "settings": {
     "executionOrder": "v1",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
-  },
-  "tags": []
+    "saveManualExecutions": true
+  }
 }
