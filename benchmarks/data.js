@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772993936688,
+  "lastUpdate": 1773042940001,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "90ff92e4cbf06d2fcb2d3a75046782705a4f71cb",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-12T15:54:48+01:00",
-          "tree_id": "f833ff27931796592eeeb54ba86118d9db45817c",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/90ff92e4cbf06d2fcb2d3a75046782705a4f71cb"
-        },
-        "date": 1770908203826,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/683ee26544a4383d03e0e12cac7d4f7bcafafd33"
         },
         "date": 1772993936370,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "cdb14daf481af750a18fb073d771955838dee5bb",
+          "message": "Social Pulse WF1+WF2: Fix Facebook credential placeholder (canvas crash fix)\n\nNodes without any credential object crash the n8n canvas on open.\nAdded facebookGraphApi placeholder credential to:\n- WF1: Facebook Page Metriken\n- WF2: Kampagnen abrufen, Anzeigengruppen abrufen, Anzeigen abrufen\n\nUser must replace FACEBOOK_CREDENTIAL_HIER_EINTRAGEN with real credential ID.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-09T08:53:37+01:00",
+          "tree_id": "f690633a6073575a8b19b8d417a1cd30b152372b",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/cdb14daf481af750a18fb073d771955838dee5bb"
+        },
+        "date": 1773042939654,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
