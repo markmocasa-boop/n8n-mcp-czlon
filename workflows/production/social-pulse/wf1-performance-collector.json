@@ -320,6 +320,12 @@
         "options": {
           "fields": "fan_count,followers_count,name,engagement,talking_about_count"
         }
+      },
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "FACEBOOK_CREDENTIAL_HIER_EINTRAGEN",
+          "name": "Facebook Graph API"
+        }
       }
     },
     {

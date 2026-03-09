@@ -225,6 +225,12 @@
         "options": {
           "queryParametersJson": "={{ JSON.stringify({ fields: $json.campaignFields, time_range: $json.timeRange, level: 'campaign', limit: '100' }) }}"
         }
+      },
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "FACEBOOK_CREDENTIAL_HIER_EINTRAGEN",
+          "name": "Facebook Graph API"
+        }
       }
     },
     {
@@ -249,6 +255,12 @@
         "options": {
           "queryParametersJson": "={{ JSON.stringify({ fields: $('API-Parameter vorbereiten').first().json.adsetFields, time_range: $('API-Parameter vorbereiten').first().json.timeRange, level: 'adset', limit: '200' }) }}"
         }
+      },
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "FACEBOOK_CREDENTIAL_HIER_EINTRAGEN",
+          "name": "Facebook Graph API"
+        }
       }
     },
     {
@@ -272,6 +284,12 @@
         "edge": "insights",
         "options": {
           "queryParametersJson": "={{ JSON.stringify({ fields: $('API-Parameter vorbereiten').first().json.adFields, time_range: $('API-Parameter vorbereiten').first().json.timeRange, level: 'ad', limit: '500', breakdowns: 'publisher_platform' }) }}"
+        }
+      },
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "FACEBOOK_CREDENTIAL_HIER_EINTRAGEN",
+          "name": "Facebook Graph API"
         }
       }
     },
