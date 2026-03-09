@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773042940001,
+  "lastUpdate": 1773054097024,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "0611b0a8dec902d9aed93c24be05569f174d20e9",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-13T04:20:35+01:00",
-          "tree_id": "d4b69910a5952bf9635d26724476863ea41fd0a5",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/0611b0a8dec902d9aed93c24be05569f174d20e9"
-        },
-        "date": 1770952947447,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/cdb14daf481af750a18fb073d771955838dee5bb"
         },
         "date": 1773042939654,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "9cad9d843de5653b36a131349982aa04dd8635a5",
+          "message": "SocialPulse WF1: Fix canvas crash — Switch typeVersion 3->2\n\nRoot cause found after binary search: Switch node typeVersion 3/3.2\nwith fallbackOutput crashes the n8n canvas renderer. Downgraded to\ntypeVersion 2. New workflow ID: kZquORCBq8whjHTA.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-09T11:59:26+01:00",
+          "tree_id": "8b5422bfc2330d60e7a4545b4faf3f5adefa10d5",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9cad9d843de5653b36a131349982aa04dd8635a5"
+        },
+        "date": 1773054096226,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
