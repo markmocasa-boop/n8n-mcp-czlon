@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-03-11T09:12:19.570Z",
+    "updatedAt":  "2026-03-11T09:30:59.315Z",
     "createdAt":  "2026-03-11T09:12:19.570Z",
     "id":  "3PzYNtBxeRTv6ks3",
     "name":  "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -78,7 +78,7 @@
                                                           "values":  [
                                                                          {
                                                                              "role":  "user",
-                                                                             "content":  "={{ \nconst d = $json.detected;\nconst lines = d.map(function(x) { return \u0027- Eingabe: \"\u0027 + x.input + \u0027\" → erkannte Plattform: \u0027 + x.platform + \u0027, Handle: \u0027 + x.handle; }).join(\u0027\\n\u0027);\nreturn \u0027Du bist ein Social-Media-Experte. Für jedes der folgenden Profile:\\n\u0027 + lines + \u0027\\n\\nBitte:\\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\\n2. Ermittle den wahrscheinlichen Account-Handle/Namen für alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind Schätzungen\\n3. Baue die Account-URL auf\\n\\nAntworte NUR als JSON-Array ohne Markdown:\\n[\\n  {\\n    \"input\": \"original Eingabe\",\\n    \"platform\": \"erkannte Plattform\",\\n    \"handle\": \"handle\",\\n    \"accounts\": {\\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\\n    }\\n  }\\n]\u0027;\n }}"
+                                                                             "content":  "={{ \nconst d = $json.detected;\nconst lines = d.map(function(x) { return \u0027- Eingabe: \"\u0027 + x.input + \u0027\" â†’ erkannte Plattform: \u0027 + x.platform + \u0027, Handle: \u0027 + x.handle; }).join(\u0027\\n\u0027);\nreturn \u0027Du bist ein Social-Media-Experte. FÃ¼r jedes der folgenden Profile:\\n\u0027 + lines + \u0027\\n\\nBitte:\\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\\n2. Ermittle den wahrscheinlichen Account-Handle/Namen fÃ¼r alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind SchÃ¤tzungen\\n3. Baue die Account-URL auf\\n\\nAntworte NUR als JSON-Array ohne Markdown:\\n[\\n  {\\n    \"input\": \"original Eingabe\",\\n    \"platform\": \"erkannte Plattform\",\\n    \"handle\": \"handle\",\\n    \"accounts\": {\\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\\n    }\\n  }\\n]\u0027;\n }}"
                                                                          }
                                                                      ]
                                                       },
@@ -149,119 +149,28 @@
                                        464
                                    ],
                       "parameters":  {
-                                         "mode":  "rules",
+                                         "dataType":  "string",
+                                         "value1":  "={{ $json.platform }}",
                                          "rules":  {
-                                                       "values":  [
-                                                                      {
-                                                                          "conditions":  {
-                                                                                             "options":  {
-                                                                                                             "caseSensitive":  false,
-                                                                                                             "leftValue":  "",
-                                                                                                             "typeValidation":  "strict",
-                                                                                                             "version":  2
-                                                                                                         },
-                                                                                             "combinator":  "and",
-                                                                                             "conditions":  [
-                                                                                                                {
-                                                                                                                    "leftValue":  "={{ $json.platform }}",
-                                                                                                                    "rightValue":  "instagram",
-                                                                                                                    "operator":  {
-                                                                                                                                     "type":  "string",
-                                                                                                                                     "operation":  "equals"
-                                                                                                                                 }
-                                                                                                                }
-                                                                                                            ]
-                                                                                         }
-                                                                      },
-                                                                      {
-                                                                          "conditions":  {
-                                                                                             "options":  {
-                                                                                                             "caseSensitive":  false,
-                                                                                                             "leftValue":  "",
-                                                                                                             "typeValidation":  "strict",
-                                                                                                             "version":  2
-                                                                                                         },
-                                                                                             "combinator":  "and",
-                                                                                             "conditions":  [
-                                                                                                                {
-                                                                                                                    "leftValue":  "={{ $json.platform }}",
-                                                                                                                    "rightValue":  "facebook",
-                                                                                                                    "operator":  {
-                                                                                                                                     "type":  "string",
-                                                                                                                                     "operation":  "equals"
-                                                                                                                                 }
-                                                                                                                }
-                                                                                                            ]
-                                                                                         }
-                                                                      },
-                                                                      {
-                                                                          "conditions":  {
-                                                                                             "options":  {
-                                                                                                             "caseSensitive":  false,
-                                                                                                             "leftValue":  "",
-                                                                                                             "typeValidation":  "strict",
-                                                                                                             "version":  2
-                                                                                                         },
-                                                                                             "combinator":  "and",
-                                                                                             "conditions":  [
-                                                                                                                {
-                                                                                                                    "leftValue":  "={{ $json.platform }}",
-                                                                                                                    "rightValue":  "tiktok",
-                                                                                                                    "operator":  {
-                                                                                                                                     "type":  "string",
-                                                                                                                                     "operation":  "equals"
-                                                                                                                                 }
-                                                                                                                }
-                                                                                                            ]
-                                                                                         }
-                                                                      },
-                                                                      {
-                                                                          "conditions":  {
-                                                                                             "options":  {
-                                                                                                             "caseSensitive":  false,
-                                                                                                             "leftValue":  "",
-                                                                                                             "typeValidation":  "strict",
-                                                                                                             "version":  2
-                                                                                                         },
-                                                                                             "combinator":  "and",
-                                                                                             "conditions":  [
-                                                                                                                {
-                                                                                                                    "leftValue":  "={{ $json.platform }}",
-                                                                                                                    "rightValue":  "linkedin",
-                                                                                                                    "operator":  {
-                                                                                                                                     "type":  "string",
-                                                                                                                                     "operation":  "equals"
-                                                                                                                                 }
-                                                                                                                }
-                                                                                                            ]
-                                                                                         }
-                                                                      },
-                                                                      {
-                                                                          "conditions":  {
-                                                                                             "options":  {
-                                                                                                             "caseSensitive":  false,
-                                                                                                             "leftValue":  "",
-                                                                                                             "typeValidation":  "strict",
-                                                                                                             "version":  2
-                                                                                                         },
-                                                                                             "combinator":  "and",
-                                                                                             "conditions":  [
-                                                                                                                {
-                                                                                                                    "leftValue":  "={{ $json.platform }}",
-                                                                                                                    "rightValue":  "youtube",
-                                                                                                                    "operator":  {
-                                                                                                                                     "type":  "string",
-                                                                                                                                     "operation":  "equals"
-                                                                                                                                 }
-                                                                                                                }
-                                                                                                            ]
-                                                                                         }
-                                                                      }
-                                                                  ]
+                                                       "rules":  [
+                                                                     {
+                                                                         "value2":  "instagram"
+                                                                     },
+                                                                     {
+                                                                         "value2":  "facebook"
+                                                                     },
+                                                                     {
+                                                                         "value2":  "tiktok"
+                                                                     },
+                                                                     {
+                                                                         "value2":  "linkedin"
+                                                                     },
+                                                                     {
+                                                                         "value2":  "youtube"
+                                                                     }
+                                                                 ]
                                                    },
-                                         "options":  {
-
-                                                     }
+                                         "fallbackOutput":  "none"
                                      }
                   },
                   {
@@ -499,10 +408,10 @@
                       "parameters":  {
                                          "conditions":  {
                                                             "options":  {
-                                                                            "caseSensitive":  false,
+                                                                            "version":  2,
                                                                             "leftValue":  "",
-                                                                            "typeValidation":  "loose",
-                                                                            "version":  2
+                                                                            "caseSensitive":  false,
+                                                                            "typeValidation":  "loose"
                                                                         },
                                                             "combinator":  "or",
                                                             "conditions":  [
@@ -512,7 +421,8 @@
                                                                                    "operator":  {
                                                                                                     "type":  "string",
                                                                                                     "operation":  "equals"
-                                                                                                }
+                                                                                                },
+                                                                                   "id":  "condition-1773221458725-82w49sjhl"
                                                                                },
                                                                                {
                                                                                    "leftValue":  "={{ $json.status }}",
@@ -520,7 +430,8 @@
                                                                                    "operator":  {
                                                                                                     "type":  "string",
                                                                                                     "operation":  "equals"
-                                                                                                }
+                                                                                                },
+                                                                                   "id":  "condition-1773221458725-z5lx1sr8t"
                                                                                }
                                                                            ]
                                                         },
@@ -1085,9 +996,9 @@
     "staticData":  null,
     "meta":  null,
     "pinData":  null,
-    "versionId":  "7e878f7f-4484-4828-90bf-a4fb56eaa7cd",
+    "versionId":  "bf7de43c-0f36-4b36-a7c6-50c1ed768f79",
     "activeVersionId":  null,
-    "versionCounter":  1,
+    "versionCounter":  2,
     "triggerCount":  0,
     "shared":  [
                    {
