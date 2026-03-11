@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773222338495,
+  "lastUpdate": 1773231048198,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "f6ab8410e19244558373e0ac1b113101530ff3d9",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-17T07:09:24+01:00",
-          "tree_id": "d484750b8701c29b3f726eb9f2dc95838710b26e",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f6ab8410e19244558373e0ac1b113101530ff3d9"
-        },
-        "date": 1771308684744,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a68c76bf3575eddb80fa544e10ca73dbe39f5e34"
         },
         "date": 1773222337708,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "3bd5ca577f7b742fdeb29040ac1b7586fc578062",
+          "message": "fix: Update Apify actor IDs for LinkedIn and YouTube in competitor-profilname workflow\n\n- Replace anchor/linkedin-post-scraper → supreme_coder/linkedin-post (verified working)\n- Replace bernardo/youtube-scraper → streamers/youtube-scraper (verified working)\n- Update Parse LI to use correct field names: numLikes, numComments, numShares, postedAtISO, authorName\n- Update Parse YT to use correct field names: likes, commentsCount, viewCount, date, numberOfSubscribers, channelName\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T13:08:33+01:00",
+          "tree_id": "f1660c14bbbb4c4e78ba6522f2dc4671cfd807ba",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3bd5ca577f7b742fdeb29040ac1b7586fc578062"
+        },
+        "date": 1773231047879,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
