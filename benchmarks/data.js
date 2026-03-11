@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773054097024,
+  "lastUpdate": 1773220665836,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "b52bfda2f9a2126b1c3b0f201a12684bf9a215d4",
-          "message": "Merge pull request #27 from markmocasa-boop/claude/comment-analysis-workflow-Ppl2a\n\nClaude/comment analysis workflow ppl2a",
-          "timestamp": "2026-02-16T08:12:51+01:00",
-          "tree_id": "d348698788719cfbb78d3faa9f29d253e9af5e94",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/b52bfda2f9a2126b1c3b0f201a12684bf9a215d4"
-        },
-        "date": 1771226083496,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9cad9d843de5653b36a131349982aa04dd8635a5"
         },
         "date": 1773054096226,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "c8616a480bdb84ccaf1bc394b7840e02aca6bd6f",
+          "message": "feat: Wettbewerbsanalyse Social Media Eingabe per Profilname\n\nNeuer Workflow (ID: 3PzYNtBxeRTv6ks3) — Kopie von WF3 Competitor Monitor\nmit Form-Trigger statt Webhook:\n- n8n Form-Trigger: 3 Profilnamen eingeben (1 Pflicht, 2 optional)\n- Regex-basierte Plattform-Erkennung (IG/FB/YT/LI/TT/X)\n- Claude Haiku ermittelt Cross-Platform-Namen und Account-URLs\n- Danach identischer Flow wie WF3: Apify-Scraping, Parse-Nodes,\n  Claude Wettbewerber-Analyse, Supabase UPSERT + Run-Log\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T10:13:28+01:00",
+          "tree_id": "8c4326d9611d2d627d8fab31922e18042c2da6be",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c8616a480bdb84ccaf1bc394b7840e02aca6bd6f"
+        },
+        "date": 1773220664996,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
