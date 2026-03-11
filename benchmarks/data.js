@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773231048198,
+  "lastUpdate": 1773232634392,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "45029cba8d1ac00eb11b28b0f2e0716d2a035f80",
-          "message": "Merge pull request #29 from markmocasa-boop/claude/gmail-workflow-automation-8CUzc\n\nAdd Gmail classification and forwarding workflow",
-          "timestamp": "2026-02-17T10:06:28+01:00",
-          "tree_id": "dc660563b56fce93c88ac0c695e3a47b3f8552dd",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/45029cba8d1ac00eb11b28b0f2e0716d2a035f80"
-        },
-        "date": 1771319304374,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3bd5ca577f7b742fdeb29040ac1b7586fc578062"
         },
         "date": 1773231047879,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "e7744715071a4e2b299fd9ef51ab87588b090b42",
+          "message": "feat(competitor-profilname): add per-platform URL validation before Apify scraping\n\nInserts two new nodes between Competitor-Batches and Plattform Switch:\n- 'URL validieren' (Code node): fetches each profile URL with fetch() to check HTTP status\n  - confidence=high: skip validation (user entered URL directly)\n  - linkedin: format-only check (blocks bots)\n  - IG/FB/TT/YT: HTTP GET, 404 = invalid, 200/429/5xx = valid, timeout = valid\n- 'URL gültig?' (IF node): routes valid → Plattform Switch, invalid → 'URL ungueltig - Fehler'\n- 'URL ungueltig - Fehler' (Code node): logs error to staticData and sends directly to Ergebnis sammeln\n\nAlso fixes:\n- IF node 'Claude ueberspringen?' now uses boolean comparison (type:boolean, rightValue:true)\n- Supabase Run-Log tableId: removed erroneous leading '=' (was '=workflow_runs')\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T13:35:04+01:00",
+          "tree_id": "87bf5414efacfe3c1350704617ea00e1d47871cb",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e7744715071a4e2b299fd9ef51ab87588b090b42"
+        },
+        "date": 1773232634099,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
