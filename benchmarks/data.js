@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773235014836,
+  "lastUpdate": 1773235212668,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "3a0db0741b46abb13f86c354f3a04c3043fc73d4",
-          "message": "Merge pull request #32 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nfeat: add interactive Telegram voice workflow for Abteilungsleiter Agent",
-          "timestamp": "2026-02-20T10:12:44+01:00",
-          "tree_id": "4d34600be236c538bbd206c6d241b0bab2234fa8",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/3a0db0741b46abb13f86c354f3a04c3043fc73d4"
-        },
-        "date": 1771578883320,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/667af99a9fccd57325f513451af90ed2eee7f384"
         },
         "date": 1773235014323,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "74ef7a9d4f6d0a3862b34d1cff9a266b6e70918d",
+          "message": "Phase 1: Deploy LinkedIn Outreach Generator (WF1)\n\n- n8n Form Trigger → Google Sheets Filter → Apify Profil-Scraping → OpenAI DM-Generierung → Google Sheets Output\n- 18 Nodes, n8n ID: BaGtkUOzmbsC2pvF\n- API-Token-Platzhalter in JSON und PLAN.md\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T14:17:58+01:00",
+          "tree_id": "f14f4ce311822e43734f8bc521fc3b1a5d964427",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/74ef7a9d4f6d0a3862b34d1cff9a266b6e70918d"
+        },
+        "date": 1773235212362,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
