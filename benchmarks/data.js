@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773221663589,
+  "lastUpdate": 1773222026473,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "f792945bd82fd9479a0d0408498b789a7777ed29",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-16T10:42:19+01:00",
-          "tree_id": "95f3b4957ba8e73982f6315d086b98418c106efb",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f792945bd82fd9479a0d0408498b789a7777ed29"
-        },
-        "date": 1771235053034,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/5787a8c2e5201917400e52c931a6389fff46055f"
         },
         "date": 1773221663252,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "a3e076761bfeafa3bec2e9a5f031354f58c6d523",
+          "message": "feat: HTML Report + Gmail-Versand nach Wettbewerbsanalyse\n\n- Form-Trigger: 4. Pflichtfeld \"E-Mail-Empfänger\" (type: email) hinzugefügt\n- Neuer Code-Node \"HTML Report erstellen\": generiert responsiven HTML-Report\n  mit Status-Kacheln, Profil-Badges und Content-Ideen-Tabelle (Format-Badges)\n- Neuer Gmail-Node \"Report per Gmail senden\" (v2.1, Credential Kh7cApAx6TAe4Hpy)\n  sendet Report an die im Formular eingetragene Adresse\n- Flow: Response zusammenbauen → HTML Report erstellen → Report per Gmail senden\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T10:38:22+01:00",
+          "tree_id": "deaa5ec4076f3d7bb0eb9a724f77efeff9311dad",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a3e076761bfeafa3bec2e9a5f031354f58c6d523"
+        },
+        "date": 1773222025931,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
