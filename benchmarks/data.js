@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773232634392,
+  "lastUpdate": 1773233399211,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "6fd8c9ec3f5a483f0a9fcae5682273d932b6867b",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-17T12:00:47+01:00",
-          "tree_id": "59f31de51bc49ec7f204b6683e067f599d93f69b",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/6fd8c9ec3f5a483f0a9fcae5682273d932b6867b"
-        },
-        "date": 1771326162931,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/e7744715071a4e2b299fd9ef51ab87588b090b42"
         },
         "date": 1773232634099,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "f283db424d4d5e96922c2077075378dddaab3ecc",
+          "message": "fix: URL validation boolean→string fix for competitor profile workflow\n\nChanged _urlValid from boolean true/false to string \"true\"/\"false\" in\nURL validieren Code node, and updated IF node operator to string equals\ncomparison with typeValidation strict to fix routing bug where valid\nInstagram profiles were incorrectly flagged as invalid.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T13:47:47+01:00",
+          "tree_id": "897daf7db4d688ecea57e9aa2db46d9ced1511cb",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f283db424d4d5e96922c2077075378dddaab3ecc"
+        },
+        "date": 1773233398676,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
