@@ -1,6 +1,11 @@
 {
+  "updatedAt": "2026-03-11T12:45:41.779Z",
+  "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
+  "description": null,
+  "active": false,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -132,7 +137,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// URL-Validierung pro Plattform\n// Prueft ob das Profil unter der generierten URL erreichbar ist.\n// Gibt Output 0 (valid) oder Output 1 (invalid) zurueck via _urlValid flag.\n\nconst item = $input.first().json;\nconst platform = item.platform || '';\nconst accountUrl = item.accountUrl || '';\nconst handle = item.accountId || '';\nconst confidence = item._confidence || 'medium';\n\n// Bei high confidence und direkter URL-Eingabe ueberspringen wir die Validierung\nif (confidence === 'high') {\n  return [{ json: Object.assign({}, item, { _urlValid: true, _validationSkipped: true, _validationReason: 'confidence=high, URL direkt eingegeben' }) }];\n}\n\n// LinkedIn blockiert HTTP-Requests zuverlaessig, daher Handle-Format-Pruefung\nif (platform === 'linkedin') {\n  const isValidHandle = handle && /^[a-zA-Z0-9\\-\\.]+$/.test(handle) && handle.length >= 2 && handle.length <= 100;\n  if (!isValidHandle) {\n    return [{ json: Object.assign({}, item, { _urlValid: false, _validationReason: 'LinkedIn Handle hat ungueltiges Format: ' + handle }) }];\n  }\n  return [{ json: Object.assign({}, item, { _urlValid: true, _validationSkipped: true, _validationReason: 'LinkedIn: Handle-Format gueltig, HTTP-Pruefung nicht moeglich' }) }];\n}\n\n// Fuer IG/FB/TT/YT: HTTP-Request zur Profilseite\ntry {\n  const controller = new AbortController();\n  const timeout = setTimeout(() => controller.abort(), 8000);\n  \n  let finalUrl = accountUrl;\n  if (platform === 'youtube' && handle && !accountUrl.includes('@')) {\n    finalUrl = 'https://www.youtube.com/@' + handle;\n  }\n  if (platform === 'tiktok' && handle && !accountUrl.includes('@')) {\n    finalUrl = 'https://www.tiktok.com/@' + handle;\n  }\n  if (platform === 'instagram') {\n    finalUrl = 'https://www.instagram.com/' + handle + '/';\n  }\n  if (platform === 'facebook') {\n    finalUrl = 'https://www.facebook.com/' + handle;\n  }\n  \n  const response = await fetch(finalUrl, {\n    method: 'GET',\n    signal: controller.signal,\n    redirect: 'follow',\n    headers: {\n      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',\n      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',\n      'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7'\n    }\n  });\n  clearTimeout(timeout);\n  \n  const status = response.status;\n  const redirectedUrl = response.url;\n  \n  let isValid = false;\n  let reason = '';\n  \n  if (status === 404) {\n    isValid = false;\n    reason = 'HTTP 404 - Profil nicht gefunden: ' + finalUrl;\n  } else if (status === 200) {\n    const redirectedToLogin = redirectedUrl && (\n      redirectedUrl.includes('/login') ||\n      redirectedUrl.includes('/signin') ||\n      redirectedUrl.includes('/accounts/login') ||\n      redirectedUrl.includes('challenge') ||\n      redirectedUrl.includes('checkpoint')\n    );\n    if (redirectedToLogin) {\n      isValid = true;\n      reason = 'HTTP 200 (Login-Redirect, Profil existiert wahrscheinlich)';\n    } else {\n      isValid = true;\n      reason = 'HTTP 200 - Profil gefunden';\n    }\n  } else if (status >= 400 && status !== 429) {\n    isValid = false;\n    reason = 'HTTP ' + status + ' - Profil vermutlich nicht vorhanden';\n  } else {\n    isValid = true;\n    reason = 'HTTP ' + status + ' - unklar, als gueltig angenommen';\n  }\n  \n  return [{ json: Object.assign({}, item, {\n    _urlValid: isValid,\n    _validationStatus: status,\n    _validationUrl: finalUrl,\n    _validationReason: reason\n  }) }];\n  \n} catch(err) {\n  const isTimeout = err.name === 'AbortError';\n  return [{ json: Object.assign({}, item, {\n    _urlValid: true,\n    _validationSkipped: true,\n    _validationReason: isTimeout ? 'Timeout (8s) - als gueltig angenommen' : 'Fehler: ' + err.message + ' - als gueltig angenommen'\n  }) }];\n}"
+        "jsCode": "// URL-Validierung pro Plattform\n// Setzt _urlValid als String 'true'/'false' fuer zuverlaessigen IF-Vergleich\n\nconst item = $input.first().json;\nconst platform = item.platform || '';\nconst accountUrl = item.accountUrl || '';\nconst handle = item.accountId || '';\nconst confidence = item._confidence || 'medium';\n\n// Bei high confidence: Validierung ueberspringen, URL als gueltig annehmen\nif (confidence === 'high') {\n  return [{ json: Object.assign({}, item, { _urlValid: 'true', _validationSkipped: true, _validationReason: 'confidence=high, URL direkt eingegeben' }) }];\n}\n\n// LinkedIn blockiert HTTP-Requests zuverlaessig, daher Handle-Format-Pruefung\nif (platform === 'linkedin') {\n  const isValidHandle = handle && /^[a-zA-Z0-9\\-\\.]+$/.test(handle) && handle.length >= 2 && handle.length <= 100;\n  if (!isValidHandle) {\n    return [{ json: Object.assign({}, item, { _urlValid: 'false', _validationReason: 'LinkedIn Handle hat ungueltiges Format: ' + handle }) }];\n  }\n  return [{ json: Object.assign({}, item, { _urlValid: 'true', _validationSkipped: true, _validationReason: 'LinkedIn: Handle-Format gueltig, HTTP-Pruefung nicht moeglich' }) }];\n}\n\n// Fuer IG/FB/TT/YT: HTTP-Request zur Profilseite\ntry {\n  const controller = new AbortController();\n  const timeout = setTimeout(() => controller.abort(), 8000);\n  \n  let finalUrl = accountUrl;\n  if (platform === 'youtube' && handle && !accountUrl.includes('@')) {\n    finalUrl = 'https://www.youtube.com/@' + handle;\n  }\n  if (platform === 'tiktok' && handle && !accountUrl.includes('@')) {\n    finalUrl = 'https://www.tiktok.com/@' + handle;\n  }\n  if (platform === 'instagram') {\n    finalUrl = 'https://www.instagram.com/' + handle + '/';\n  }\n  if (platform === 'facebook') {\n    finalUrl = 'https://www.facebook.com/' + handle;\n  }\n  \n  const response = await fetch(finalUrl, {\n    method: 'GET',\n    signal: controller.signal,\n    redirect: 'follow',\n    headers: {\n      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',\n      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',\n      'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7'\n    }\n  });\n  clearTimeout(timeout);\n  \n  const status = response.status;\n  const redirectedUrl = response.url;\n  \n  let isValid = 'false';\n  let reason = '';\n  \n  if (status === 404) {\n    isValid = 'false';\n    reason = 'HTTP 404 - Profil nicht gefunden: ' + finalUrl;\n  } else if (status === 200) {\n    const redirectedToLogin = redirectedUrl && (\n      redirectedUrl.includes('/login') ||\n      redirectedUrl.includes('/signin') ||\n      redirectedUrl.includes('/accounts/login') ||\n      redirectedUrl.includes('challenge') ||\n      redirectedUrl.includes('checkpoint')\n    );\n    if (redirectedToLogin) {\n      isValid = 'true';\n      reason = 'HTTP 200 (Login-Redirect, Profil existiert wahrscheinlich)';\n    } else {\n      isValid = 'true';\n      reason = 'HTTP 200 - Profil gefunden';\n    }\n  } else if (status >= 400 && status !== 429) {\n    isValid = 'false';\n    reason = 'HTTP ' + status + ' - Profil vermutlich nicht vorhanden';\n  } else {\n    isValid = 'true';\n    reason = 'HTTP ' + status + ' - unklar, als gueltig angenommen';\n  }\n  \n  return [{ json: Object.assign({}, item, {\n    _urlValid: isValid,\n    _validationStatus: status,\n    _validationUrl: finalUrl,\n    _validationReason: reason\n  }) }];\n  \n} catch(err) {\n  const isTimeout = err.name === 'AbortError';\n  return [{ json: Object.assign({}, item, {\n    _urlValid: 'true',\n    _validationSkipped: true,\n    _validationReason: isTimeout ? 'Timeout (8s) - als gueltig angenommen' : 'Fehler: ' + err.message + ' - als gueltig angenommen'\n  }) }];\n}"
       },
       "id": "wf-url-validation",
       "name": "URL validieren",
@@ -150,15 +155,15 @@
             "version": 2,
             "leftValue": "",
             "caseSensitive": true,
-            "typeValidation": "loose"
+            "typeValidation": "strict"
           },
           "conditions": [
             {
               "leftValue": "={{ $json._urlValid }}",
-              "rightValue": true,
+              "rightValue": "true",
               "operator": {
-                "type": "boolean",
-                "operation": "equal"
+                "type": "string",
+                "operation": "equals"
               },
               "id": "url-valid-condition"
             }
@@ -512,7 +517,7 @@
       "typeVersion": 1,
       "position": [
         3344,
-        500
+        512
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -535,7 +540,7 @@
       "typeVersion": 2,
       "position": [
         3632,
-        500
+        512
       ]
     },
     {
@@ -638,8 +643,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2112,
-        272
+        2064,
+        -16
       ]
     },
     {
@@ -652,8 +657,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        2352,
-        272
+        2336,
+        -80
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -675,8 +680,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2608,
-        272
+        2592,
+        -112
       ]
     },
     {
@@ -1150,5 +1155,29 @@
       }
     ]
   },
-  "versionId": "18570f48-0fa0-4c20-8ed4-e25abfd48553"
+  "versionId": "9a8037c2-a847-4bef-982e-f5b5315e4560",
+  "activeVersionId": null,
+  "versionCounter": 21,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-11T09:12:19.573Z",
+      "createdAt": "2026-03-11T09:12:19.573Z",
+      "role": "workflow:owner",
+      "workflowId": "3PzYNtBxeRTv6ks3",
+      "projectId": "A3xoYVAJ1hf6LsPx",
+      "project": {
+        "updatedAt": "2025-07-28T11:25:25.006Z",
+        "createdAt": "2025-07-28T11:25:22.410Z",
+        "id": "A3xoYVAJ1hf6LsPx",
+        "name": "Mark Niemann <mark@mo-casa.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
 }
