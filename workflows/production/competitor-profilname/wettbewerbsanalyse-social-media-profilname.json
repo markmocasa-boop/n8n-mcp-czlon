@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-11T12:45:41.779Z",
+  "updatedAt": "2026-03-11T13:04:56.030Z",
   "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -183,24 +183,118 @@
     },
     {
       "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.platform }}",
+        "mode": "rules",
         "rules": {
-          "rules": [
+          "values": [
             {
-              "value2": "instagram"
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": false,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "instagram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "instagram"
             },
             {
-              "value2": "facebook"
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": false,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "facebook",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "facebook"
             },
             {
-              "value2": "tiktok"
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": false,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "tiktok",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "tiktok"
             },
             {
-              "value2": "linkedin"
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": false,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "linkedin",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "linkedin"
             },
             {
-              "value2": "youtube"
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": false,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "youtube",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "youtube"
             }
           ]
         },
@@ -1155,9 +1249,9 @@
       }
     ]
   },
-  "versionId": "9a8037c2-a847-4bef-982e-f5b5315e4560",
+  "versionId": "7d858535-b212-40c2-a600-dd9b16a1c4c6",
   "activeVersionId": null,
-  "versionCounter": 21,
+  "versionCounter": 23,
   "triggerCount": 0,
   "shared": [
     {
