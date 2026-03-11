@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773234796191,
+  "lastUpdate": 1773235014836,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "2fdf9b72876af45a87c905cd0cf0880a4a5a31d4",
-          "message": "Merge pull request #31 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nfix: rewrite sub-workflow modifications as valid importable n8n workflow",
-          "timestamp": "2026-02-20T09:13:01+01:00",
-          "tree_id": "41596f58c4f5cbaf50d03e85df4bf2a604188c92",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/2fdf9b72876af45a87c905cd0cf0880a4a5a31d4"
-        },
-        "date": 1771575304061,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/60f3f02be76e0e3d6ab5ffbdd398dbd368f44f3b"
         },
         "date": 1773234795885,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "667af99a9fccd57325f513451af90ed2eee7f384",
+          "message": "fix: restore actorId on Apify TT Posts node\n\nPrevious partial update overwrote parameters object and dropped\nactorId. Restored clockworks/tiktok-scraper with correct customBody.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T14:14:47+01:00",
+          "tree_id": "eb49f0578a843ceca830294355cba0531440c334",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/667af99a9fccd57325f513451af90ed2eee7f384"
+        },
+        "date": 1773235014323,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
