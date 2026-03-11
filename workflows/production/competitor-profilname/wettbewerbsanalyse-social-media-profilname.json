@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-11T13:04:56.030Z",
+  "updatedAt": "2026-03-11T13:10:31.776Z",
   "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -205,8 +205,7 @@
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "instagram"
+              "renameOutput": false
             },
             {
               "conditions": {
@@ -227,8 +226,7 @@
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "facebook"
+              "renameOutput": false
             },
             {
               "conditions": {
@@ -249,8 +247,7 @@
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "tiktok"
+              "renameOutput": false
             },
             {
               "conditions": {
@@ -271,8 +268,7 @@
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "linkedin"
+              "renameOutput": false
             },
             {
               "conditions": {
@@ -293,8 +289,7 @@
                 ],
                 "combinator": "and"
               },
-              "renameOutput": true,
-              "outputKey": "youtube"
+              "renameOutput": false
             }
           ]
         },
@@ -369,13 +364,7 @@
     },
     {
       "parameters": {
-        "operation": "Run actor and get dataset",
-        "actorId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "clockworks/tiktok-scraper"
-        },
-        "customBody": "={{ JSON.stringify({ profiles: [$json.accountUrl], resultsPerPage: 20, shouldDownloadVideos: false }) }}"
+        "customBody": "={{ JSON.stringify({ profiles: ['@' + $json.accountId], resultsPerPage: 20, shouldDownloadVideos: false }) }}"
       },
       "id": "wf3-apify-tt",
       "name": "Apify TT Posts",
@@ -1249,9 +1238,9 @@
       }
     ]
   },
-  "versionId": "7d858535-b212-40c2-a600-dd9b16a1c4c6",
+  "versionId": "73814600-d89f-4369-bceb-16e37a2778b4",
   "activeVersionId": null,
-  "versionCounter": 23,
+  "versionCounter": 25,
   "triggerCount": 0,
   "shared": [
     {
