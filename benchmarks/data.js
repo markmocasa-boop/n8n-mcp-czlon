@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773235212668,
+  "lastUpdate": 1773237208767,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "9cb45ec359f2adf1177bd27482fba0589e063ece",
-          "message": "Merge pull request #33 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nfix: make dept-leader-telegram-interactive.json importable in n8n",
-          "timestamp": "2026-02-20T10:39:15+01:00",
-          "tree_id": "04e0df879f8d92e9bee5b0f7bfd1bda68da3b9cc",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/9cb45ec359f2adf1177bd27482fba0589e063ece"
-        },
-        "date": 1771580471609,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/74ef7a9d4f6d0a3862b34d1cff9a266b6e70918d"
         },
         "date": 1773235212362,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "committer": {
+            "email": "markmocasa@gmail.com",
+            "name": "markmocasa-boop",
+            "username": "markmocasa-boop"
+          },
+          "distinct": true,
+          "id": "01cf45262ee56cb5acb13f49f3cfb8ddcc840039",
+          "message": "fix(linkedin-outreach): update column names, native Apify node, Claude credentials\n\n- Fix column refs to match actual LinkedIn CSV: First Name, Last Name, URL, Company, Position\n- Replace httpRequest Apify node with native @apify/n8n-nodes-apify.apify (credential wWgQDWC9aV3UcUEJ)\n- Replace OpenAI lmChatOpenAi nodes with Anthropic lmChatAnthropic (credential nv6YXj42KhaG3WMp, claude-haiku-4-5-20251001)\n- Deployed to n8n ID BaGtkUOzmbsC2pvF",
+          "timestamp": "2026-03-11T14:51:03+01:00",
+          "tree_id": "99e4afa13687a5a562e581e0ab01f6723c99378a",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/01cf45262ee56cb5acb13f49f3cfb8ddcc840039"
+        },
+        "date": 1773237208037,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
