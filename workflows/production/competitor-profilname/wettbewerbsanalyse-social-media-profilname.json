@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-11T09:37:31.960Z",
+  "updatedAt": "2026-03-11T09:42:54.187Z",
   "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -15,27 +15,22 @@
           "values": [
             {
               "fieldLabel": "Profilname 1 (Pflicht)",
-              "fieldType": "text",
-              "requiredField": true,
-              "placeholder": "z.B. @nike oder https://instagram.com/nike"
+              "placeholder": "z.B. @nike oder https://instagram.com/nike",
+              "requiredField": true
             },
             {
               "fieldLabel": "Profilname 2 (optional)",
-              "fieldType": "text",
-              "requiredField": false,
               "placeholder": "z.B. @adidas oder youtube.com/@adidas"
             },
             {
               "fieldLabel": "Profilname 3 (optional)",
-              "fieldType": "text",
-              "requiredField": false,
               "placeholder": "z.B. tiktok.com/@puma"
             },
             {
               "fieldLabel": "E-Mail-Empfänger",
               "fieldType": "email",
-              "requiredField": true,
-              "placeholder": "deine@email.de"
+              "placeholder": "deine@email.de",
+              "requiredField": true
             }
           ]
         },
@@ -70,14 +65,15 @@
           "mode": "id",
           "value": "claude-haiku-4-5-20251001"
         },
+        "simplify": false,
         "messages": {
           "values": [
             {
-              "content": "={{ \nconst d = $json.detected;\nconst lines = d.map(function(x) { return '- Eingabe: \"' + x.input + '\" → erkannte Plattform: ' + x.platform + ', Handle: ' + x.handle; }).join('\\n');\nreturn 'Du bist ein Social-Media-Experte. Für jedes der folgenden Profile:\\n' + lines + '\\n\\nBitte:\\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\\n2. Ermittle den wahrscheinlichen Account-Handle/Namen für alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind Schätzungen\\n3. Baue die Account-URL auf\\n\\nAntworte NUR als JSON-Array ohne Markdown:\\n[\\n  {\\n    \"input\": \"original Eingabe\",\\n    \"platform\": \"erkannte Plattform\",\\n    \"handle\": \"handle\",\\n    \"accounts\": {\\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\\n    }\\n  }\\n]';\n }}"
+              "role": "user",
+              "content": "=Du bist ein Social-Media-Experte. Für jedes der folgenden Profile:\n{{ $json.detected.map(function(x) { return '- Eingabe: \"' + x.input + '\" → erkannte Plattform: ' + x.platform + ', Handle: ' + x.handle; }).join('\\n') }}\n\nBitte:\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\n2. Ermittle den wahrscheinlichen Account-Handle für alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind Schätzungen\n3. Baue die Account-URL auf\n\nAntworte NUR als JSON-Array ohne Markdown:\n[\n  {\n    \"input\": \"original Eingabe\",\n    \"platform\": \"erkannte Plattform\",\n    \"handle\": \"handle\",\n    \"accounts\": {\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\n    }\n  }\n]"
             }
           ]
         },
-        "simplify": false,
         "options": {
           "maxTokens": 1500,
           "temperature": 0.1
@@ -633,44 +629,44 @@
       ]
     },
     {
+      "parameters": {
+        "jsCode": "const data = $('Response zusammenbauen').first().json;\nconst emailEmpfaenger = $('Profilnamen eingeben').first().json['E-Mail-Empf\\u00e4nger'] || '';\n\nconst results = data.data || {};\nconst analyzed = results.competitorsAnalyzed || [];\nconst failed = results.competitorsFailed || [];\nconst ideas = results.contentIdeas || [];\nconst now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });\n\nconst ideasByCompetitor = {};\nfor (const idea of ideas) {\n  const key = idea.competitor + ' (' + idea.platform + ')';\n  if (!ideasByCompetitor[key]) ideasByCompetitor[key] = [];\n  ideasByCompetitor[key].push(idea);\n}\n\nconst formatBadge = function(f) {\n  const colors = { reel: '#e91e8c', video: '#ff0000', carousel: '#f59e0b', post: '#3b82f6', story: '#8b5cf6' };\n  const c = colors[f] || '#6b7280';\n  return '<span style=\"background:' + c + ';color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;\">' + f + '</span>';\n};\n\nconst successRate = results.totalCompetitors > 0 ? Math.round(results.successCount / results.totalCompetitors * 100) : 0;\nconst statusColor = successRate === 100 ? '#10b981' : successRate >= 60 ? '#f59e0b' : '#ef4444';\n\nlet ideasHtml = '';\nconst competitorKeys = Object.keys(ideasByCompetitor);\nfor (let ci = 0; ci < competitorKeys.length; ci++) {\n  const competitor = competitorKeys[ci];\n  const cIdeas = ideasByCompetitor[competitor];\n  ideasHtml += '<tr><td colspan=\"4\" style=\"background:#f1f5f9;padding:8px 12px;font-weight:700;color:#1e293b;border-top:2px solid #e2e8f0;\">' + competitor + '</td></tr>';\n  for (let ii = 0; ii < cIdeas.length; ii++) {\n    const idea = cIdeas[ii];\n    ideasHtml += '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#1e293b;\">' + (idea.titel || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;\">' + (idea.beschreibung || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;\">' + formatBadge(idea.format || 'post') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8;font-size:12px;\">' + (idea.inspiration || '') + '</td></tr>';\n  }\n}\n\nlet failedHtml = '';\nfor (let fi = 0; fi < failed.length; fi++) {\n  failedHtml += '<li style=\"color:#ef4444;margin-bottom:4px;\">' + failed[fi] + '</li>';\n}\n\nlet analyzedBadges = '';\nfor (let ai = 0; ai < analyzed.length; ai++) {\n  analyzedBadges += '<span style=\"background:#f0fdf4;color:#16a34a;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #bbf7d0;\">' + analyzed[ai] + '</span> ';\n}\nif (analyzed.length === 0) analyzedBadges = '<span style=\"color:#94a3b8;font-size:13px;\">Keine</span>';\n\nconst ideasSection = ideas.length > 0 ? '<div style=\"background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n  '<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#128161; Content-Ideen (' + ideas.length + ')</h2>' +\n  '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">' +\n  '<thead><tr style=\"background:#f8fafc;\">' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:22%;\">Titel</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;\">Beschreibung</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:10%;\">Format</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:20%;\">Inspiration</th>' +\n  '</tr></thead><tbody>' + ideasHtml + '</tbody></table></div>' : '';\n\nconst failedSection = failed.length > 0 ? '<h3 style=\"margin:16px 0 8px;font-size:14px;color:#ef4444;\">&#10060; Fehlgeschlagen</h3><ul style=\"margin:0;padding-left:20px;\">' + failedHtml + '</ul>' : '';\n\nconst html = '<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Wettbewerbsanalyse Report</title></head>' +\n'<body style=\"margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;\">' +\n'<div style=\"max-width:800px;margin:0 auto;padding:32px 16px;\">' +\n'<div style=\"background:linear-gradient(135deg,#1e293b 0%,#334155 100%);border-radius:16px;padding:32px;margin-bottom:24px;\">' +\n'<h1 style=\"margin:0 0 8px;color:#fff;font-size:24px;font-weight:700;\">&#128202; Wettbewerbsanalyse</h1>' +\n'<p style=\"margin:0;color:#94a3b8;font-size:14px;\">Erstellt am ' + now + ' &middot; ' + (results.totalCompetitors || 0) + ' Profile analysiert</p>' +\n'</div>' +\n'<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;\">' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid ' + statusColor + ';box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:' + statusColor + ';\">' + (results.successCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Erfolgreich</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #ef4444;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#ef4444;\">' + (results.errorCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Fehlgeschlagen</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #8b5cf6;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#8b5cf6;\">' + (results.contentIdeasGenerated || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Content-Ideen</div></div>' +\n'</div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n'<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#9989; Analysierte Profile</h2>' +\n'<div style=\"display:flex;flex-wrap:wrap;gap:8px;\">' + analyzedBadges + '</div>' + failedSection +\n'</div>' +\n ideasSection +\n'<div style=\"text-align:center;margin-top:24px;color:#94a3b8;font-size:12px;\">Automatisch erstellt von n8n &middot; Wettbewerbsanalyse Social Media</div>' +\n'</div></body></html>';\n\nreturn [{ json: { html: html, emailEmpfaenger: emailEmpfaenger, subject: 'Wettbewerbsanalyse Report ' + now + ' - ' + (results.totalCompetitors || 0) + ' Profile analysiert' } }];"
+      },
       "id": "wf-html-report",
       "name": "HTML Report erstellen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2850,
+        2864,
         32
-      ],
-      "parameters": {
-        "jsCode": "const data = $('Response zusammenbauen').first().json;\nconst emailEmpfaenger = $('Profilnamen eingeben').first().json['E-Mail-Empf\\u00e4nger'] || '';\n\nconst results = data.data || {};\nconst analyzed = results.competitorsAnalyzed || [];\nconst failed = results.competitorsFailed || [];\nconst ideas = results.contentIdeas || [];\nconst now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });\n\nconst ideasByCompetitor = {};\nfor (const idea of ideas) {\n  const key = idea.competitor + ' (' + idea.platform + ')';\n  if (!ideasByCompetitor[key]) ideasByCompetitor[key] = [];\n  ideasByCompetitor[key].push(idea);\n}\n\nconst formatBadge = function(f) {\n  const colors = { reel: '#e91e8c', video: '#ff0000', carousel: '#f59e0b', post: '#3b82f6', story: '#8b5cf6' };\n  const c = colors[f] || '#6b7280';\n  return '<span style=\"background:' + c + ';color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;\">' + f + '</span>';\n};\n\nconst successRate = results.totalCompetitors > 0 ? Math.round(results.successCount / results.totalCompetitors * 100) : 0;\nconst statusColor = successRate === 100 ? '#10b981' : successRate >= 60 ? '#f59e0b' : '#ef4444';\n\nlet ideasHtml = '';\nconst competitorKeys = Object.keys(ideasByCompetitor);\nfor (let ci = 0; ci < competitorKeys.length; ci++) {\n  const competitor = competitorKeys[ci];\n  const cIdeas = ideasByCompetitor[competitor];\n  ideasHtml += '<tr><td colspan=\"4\" style=\"background:#f1f5f9;padding:8px 12px;font-weight:700;color:#1e293b;border-top:2px solid #e2e8f0;\">' + competitor + '</td></tr>';\n  for (let ii = 0; ii < cIdeas.length; ii++) {\n    const idea = cIdeas[ii];\n    ideasHtml += '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#1e293b;\">' + (idea.titel || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;\">' + (idea.beschreibung || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;\">' + formatBadge(idea.format || 'post') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8;font-size:12px;\">' + (idea.inspiration || '') + '</td></tr>';\n  }\n}\n\nlet failedHtml = '';\nfor (let fi = 0; fi < failed.length; fi++) {\n  failedHtml += '<li style=\"color:#ef4444;margin-bottom:4px;\">' + failed[fi] + '</li>';\n}\n\nlet analyzedBadges = '';\nfor (let ai = 0; ai < analyzed.length; ai++) {\n  analyzedBadges += '<span style=\"background:#f0fdf4;color:#16a34a;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #bbf7d0;\">' + analyzed[ai] + '</span> ';\n}\nif (analyzed.length === 0) analyzedBadges = '<span style=\"color:#94a3b8;font-size:13px;\">Keine</span>';\n\nconst ideasSection = ideas.length > 0 ? '<div style=\"background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n  '<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#128161; Content-Ideen (' + ideas.length + ')</h2>' +\n  '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">' +\n  '<thead><tr style=\"background:#f8fafc;\">' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:22%;\">Titel</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;\">Beschreibung</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:10%;\">Format</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:20%;\">Inspiration</th>' +\n  '</tr></thead><tbody>' + ideasHtml + '</tbody></table></div>' : '';\n\nconst failedSection = failed.length > 0 ? '<h3 style=\"margin:16px 0 8px;font-size:14px;color:#ef4444;\">&#10060; Fehlgeschlagen</h3><ul style=\"margin:0;padding-left:20px;\">' + failedHtml + '</ul>' : '';\n\nconst html = '<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Wettbewerbsanalyse Report</title></head>' +\n'<body style=\"margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;\">' +\n'<div style=\"max-width:800px;margin:0 auto;padding:32px 16px;\">' +\n'<div style=\"background:linear-gradient(135deg,#1e293b 0%,#334155 100%);border-radius:16px;padding:32px;margin-bottom:24px;\">' +\n'<h1 style=\"margin:0 0 8px;color:#fff;font-size:24px;font-weight:700;\">&#128202; Wettbewerbsanalyse</h1>' +\n'<p style=\"margin:0;color:#94a3b8;font-size:14px;\">Erstellt am ' + now + ' &middot; ' + (results.totalCompetitors || 0) + ' Profile analysiert</p>' +\n'</div>' +\n'<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;\">' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid ' + statusColor + ';box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:' + statusColor + ';\">' + (results.successCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Erfolgreich</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #ef4444;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#ef4444;\">' + (results.errorCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Fehlgeschlagen</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #8b5cf6;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#8b5cf6;\">' + (results.contentIdeasGenerated || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Content-Ideen</div></div>' +\n'</div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n'<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#9989; Analysierte Profile</h2>' +\n'<div style=\"display:flex;flex-wrap:wrap;gap:8px;\">' + analyzedBadges + '</div>' + failedSection +\n'</div>' +\n ideasSection +\n'<div style=\"text-align:center;margin-top:24px;color:#94a3b8;font-size:12px;\">Automatisch erstellt von n8n &middot; Wettbewerbsanalyse Social Media</div>' +\n'</div></body></html>';\n\nreturn [{ json: { html: html, emailEmpfaenger: emailEmpfaenger, subject: 'Wettbewerbsanalyse Report ' + now + ' - ' + (results.totalCompetitors || 0) + ' Profile analysiert' } }];"
-      }
+      ]
     },
     {
+      "parameters": {
+        "sendTo": "={{ $json.emailEmpfaenger }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
       "id": "wf-gmail-send",
       "name": "Report per Gmail senden",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3100,
+        3104,
         32
       ],
-      "parameters": {
-        "sendTo": "={{ $json.emailEmpfaenger }}",
-        "subject": "={{ $json.subject }}",
-        "emailType": "html",
-        "message": "={{ $json.html }}",
-        "options": {}
-      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "webhookId": "cbb24031-3337-453b-b0bd-855aa4904521",
       "credentials": {
         "gmailOAuth2": {
           "id": "Kh7cApAx6TAe4Hpy",
           "name": "Gmail account"
         }
       },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -1046,10 +1042,26 @@
   },
   "staticData": null,
   "meta": null,
-  "pinData": {},
-  "versionId": "28e337fc-b5f8-4bd2-b58d-93f1e19982cf",
+  "pinData": {
+    "Profilnamen eingeben": [
+      {
+        "json": {
+          "Profilname 1 (Pflicht)": "blume2000",
+          "Profilname 2 (optional)": "Baldurgarten",
+          "Profilname 3 (optional)": "Plantura",
+          "E-Mail-Empfänger": "mark@mo-casa.com",
+          "submittedAt": "2026-03-11T10:41:43.284+01:00",
+          "formMode": "test"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "8cb87940-8a4c-4cb6-99db-e2205ce187e5",
   "activeVersionId": null,
-  "versionCounter": 9,
+  "versionCounter": 11,
   "triggerCount": 0,
   "shared": [
     {
