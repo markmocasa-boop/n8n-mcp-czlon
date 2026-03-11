@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773234594058,
+  "lastUpdate": 1773234796191,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "c51c621efed09fd8d933db75d900790b1bfe6f7c",
-          "message": "Merge pull request #30 from markmocasa-boop/claude/dept-leader-agent-workflow-YRule\n\nfeat: add Abteilungsleiter Agent weekly consolidated report workflow",
-          "timestamp": "2026-02-20T08:52:38+01:00",
-          "tree_id": "8e754667b44c82eada9535ad488d7ff5ef3d263e",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c51c621efed09fd8d933db75d900790b1bfe6f7c"
-        },
-        "date": 1771574076841,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/59b453b8090ee139770eba9d9289d1b204ab28d8"
         },
         "date": 1773234593276,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "60f3f02be76e0e3d6ab5ffbdd398dbd368f44f3b",
+          "message": "fix: Switch routing (renameOutput=false) + TikTok scraper input format\n\n- Switch: removed renameOutput to keep output indices in rule order\n  (instagram=0, facebook=1, tiktok=2, linkedin=3, youtube=4)\n  renameOutput:true caused alphabetical reordering breaking all routes\n- TikTok: changed profiles input from accountUrl to '@'+accountId\n  clockworks/tiktok-scraper expects handles (@plantura), not URLs\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T14:11:09+01:00",
+          "tree_id": "76d50565d50f6ce679e0ff26195a88df78329b7c",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/60f3f02be76e0e3d6ab5ffbdd398dbd368f44f3b"
+        },
+        "date": 1773234795885,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
