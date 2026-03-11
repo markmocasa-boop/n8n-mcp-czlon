@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-11T09:42:54.187Z",
+  "updatedAt": "2026-03-11T12:08:06.338Z",
   "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -65,15 +65,14 @@
           "mode": "id",
           "value": "claude-haiku-4-5-20251001"
         },
-        "simplify": false,
         "messages": {
           "values": [
             {
-              "role": "user",
               "content": "=Du bist ein Social-Media-Experte. Für jedes der folgenden Profile:\n{{ $json.detected.map(function(x) { return '- Eingabe: \"' + x.input + '\" → erkannte Plattform: ' + x.platform + ', Handle: ' + x.handle; }).join('\\n') }}\n\nBitte:\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\n2. Ermittle den wahrscheinlichen Account-Handle für alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind Schätzungen\n3. Baue die Account-URL auf\n\nAntworte NUR als JSON-Array ohne Markdown:\n[\n  {\n    \"input\": \"original Eingabe\",\n    \"platform\": \"erkannte Plattform\",\n    \"handle\": \"handle\",\n    \"accounts\": {\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\n    }\n  }\n]"
             }
           ]
         },
+        "simplify": false,
         "options": {
           "maxTokens": 1500,
           "temperature": 0.1
@@ -259,11 +258,10 @@
     },
     {
       "parameters": {
-        "operation": "Run actor and get dataset",
         "actorId": {
           "__rl": true,
           "mode": "list",
-          "value": "anchor/linkedin-post-scraper"
+          "value": "supreme_coder/linkedin-post"
         },
         "customBody": "={{ JSON.stringify({ urls: [$json.accountUrl], maxResults: 20 }) }}"
       },
@@ -288,11 +286,10 @@
     },
     {
       "parameters": {
-        "operation": "Run actor and get dataset",
         "actorId": {
           "__rl": true,
           "mode": "list",
-          "value": "bernardo/youtube-scraper"
+          "value": "streamers/youtube-scraper"
         },
         "customBody": "={{ JSON.stringify({ startUrls: [{ url: $json.accountUrl }], maxResults: 20 }) }}"
       },
@@ -356,7 +353,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && p.url; });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likesCount||b.likeCount||0)+(b.commentsCount||b.commentCount||0)) - ((a.likesCount||a.likeCount||0)+(a.commentsCount||a.commentCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||'', text: (p.text||p.commentary||'').substring(0,500), likes: p.likesCount||p.likeCount||0, comments: p.commentsCount||p.commentCount||0, shares: p.sharesCount||0, engagement: (p.likesCount||p.likeCount||0)+(p.commentsCount||p.commentCount||0), date: p.postedAt||p.date||'', type: p.type||'post' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likesCount||p.likeCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentsCount||p.commentCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].followersCount) || (posts[0] && posts[0].followers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && p.url; });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.numLikes||0)+(b.numComments||0)) - ((a.numLikes||0)+(a.numComments||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||'', text: (p.text||'').substring(0,500), likes: p.numLikes||0, comments: p.numComments||0, shares: p.numShares||0, engagement: (p.numLikes||0)+(p.numComments||0), date: p.postedAtISO||p.date||'', author: p.authorName||'', type: p.type||'post' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.numLikes||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.numComments||0); },0)/posts.length : 0;\n  const avgShares = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.numShares||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].followersCount) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: Math.round(avgShares*100)/100, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors = staticData.errors || [];\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
       },
       "id": "wf3-parse-li",
       "name": "Parse LI",
@@ -369,7 +366,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && (p.viewCount !== undefined || p.views !== undefined); });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likeCount||b.likes||0)+(b.commentCount||b.comments||0)) - ((a.likeCount||a.likes||0)+(a.commentCount||a.comments||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url || ('https://youtube.com/watch?v=' + (p.id||'')), text: (p.title||p.description||'').substring(0,500), likes: p.likeCount||p.likes||0, comments: p.commentCount||p.comments||0, shares: 0, views: p.viewCount||p.views||0, engagement: (p.likeCount||p.likes||0)+(p.commentCount||p.comments||0), date: p.uploadedAt||p.publishedAt||'', type: 'video' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likeCount||p.likes||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentCount||p.comments||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].channelSubscriberCount) || (posts[0] && posts[0].subscribers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && (p.viewCount !== undefined || p.url); });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likes||0)+(b.commentsCount||0)) - ((a.likes||0)+(a.commentsCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||('https://youtube.com/watch?v='+(p.id||'')), text: (p.title||'').substring(0,500), likes: p.likes||0, comments: p.commentsCount||0, shares: 0, views: p.viewCount||0, engagement: (p.likes||0)+(p.commentsCount||0), date: p.date||'', channel: p.channelName||'', type: 'video' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likes||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentsCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].numberOfSubscribers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors = staticData.errors || [];\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
       },
       "id": "wf3-parse-yt",
       "name": "Parse YT",
@@ -399,10 +396,9 @@
           "options": {
             "version": 2,
             "leftValue": "",
-            "caseSensitive": false,
-            "typeValidation": "loose"
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
-          "combinator": "or",
           "conditions": [
             {
               "leftValue": "={{ $json._skipClaude }}",
@@ -422,7 +418,8 @@
               },
               "id": "condition-1773221458725-z5lx1sr8t"
             }
-          ]
+          ],
+          "combinator": "or"
         },
         "options": {}
       },
@@ -1059,9 +1056,9 @@
       }
     ]
   },
-  "versionId": "8cb87940-8a4c-4cb6-99db-e2205ce187e5",
+  "versionId": "3179e8d3-330a-44d2-a66d-1a50775cd2db",
   "activeVersionId": null,
-  "versionCounter": 11,
+  "versionCounter": 15,
   "triggerCount": 0,
   "shared": [
     {
