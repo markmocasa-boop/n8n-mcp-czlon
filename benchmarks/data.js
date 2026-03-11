@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773220665836,
+  "lastUpdate": 1773221663589,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "62425e4d60b9d27fc0f9f40448ef5cc114707e36",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-16T08:41:37+01:00",
-          "tree_id": "a9171aef9bd7b566d85f452f51d777ce9d6f3819",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/62425e4d60b9d27fc0f9f40448ef5cc114707e36"
-        },
-        "date": 1771227809832,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/c8616a480bdb84ccaf1bc394b7840e02aca6bd6f"
         },
         "date": 1773220664996,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "5787a8c2e5201917400e52c931a6389fff46055f",
+          "message": "fix: Switch Node v2 Format-Fix — Canvas-Crash behoben\n\nSwitch Node hatte v3-Syntax (conditions-Objekte) mit typeVersion: 2 gesetzt\n→ n8n Canvas-Renderer konnte Workflow nicht laden (leerer Canvas).\n\nFix: Korrektes v2-Format mit dataType/value1/rules.rules verwendet.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T10:32:13+01:00",
+          "tree_id": "3aaa007a1bb3b9e454f0a9b4ef3be4e77300271c",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/5787a8c2e5201917400e52c931a6389fff46055f"
+        },
+        "date": 1773221663252,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
