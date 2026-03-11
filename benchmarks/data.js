@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773233399211,
+  "lastUpdate": 1773234594058,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "da6aa1bfd8a57c2df02872b91c4fc3c668eb1c4d",
-          "message": "Add files via upload",
-          "timestamp": "2026-02-17T15:23:39+01:00",
-          "tree_id": "b159534ff22d7057a5a8c28cbd773b4b2c6d90f1",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/da6aa1bfd8a57c2df02872b91c4fc3c668eb1c4d"
-        },
-        "date": 1771338331819,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/f283db424d4d5e96922c2077075378dddaab3ecc"
         },
         "date": 1773233398676,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "59b453b8090ee139770eba9d9289d1b204ab28d8",
+          "message": "fix: Switch node typeVersion 2 rules format for platform routing\n\nReplaced old typeVersion-1-style rules.rules format with correct\nrules.values/conditions format for typeVersion 2. TikTok, LinkedIn,\nYouTube now route correctly instead of all landing in IG scraper.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-11T14:07:37+01:00",
+          "tree_id": "56be56cec6fd07529b3a200280486b4b10bce8d5",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/59b453b8090ee139770eba9d9289d1b204ab28d8"
+        },
+        "date": 1773234593276,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
