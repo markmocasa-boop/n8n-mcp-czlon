@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773222026473,
+  "lastUpdate": 1773222338495,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "719e260044f09c44c5f3611f16f367b74f6202bf",
-          "message": "Merge pull request #28 from markmocasa-boop/claude/comment-analysis-workflow-Ppl2a\n\nReplace HTTP-Requests with native n8n nodes where possible",
-          "timestamp": "2026-02-16T16:13:58+01:00",
-          "tree_id": "e798e1c879a433a6d9de78c0eb0968ba1d054341",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/719e260044f09c44c5f3611f16f367b74f6202bf"
-        },
-        "date": 1771254956626,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a3e076761bfeafa3bec2e9a5f031354f58c6d523"
         },
         "date": 1773222025931,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "a68c76bf3575eddb80fa544e10ca73dbe39f5e34",
+          "message": "fix: Claude Prompt - invalid syntax behoben (return in Expression entfernt)",
+          "timestamp": "2026-03-11T10:43:22+01:00",
+          "tree_id": "8f2317161c96ff7994e105226843bb90d9d2d9b3",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/a68c76bf3575eddb80fa544e10ca73dbe39f5e34"
+        },
+        "date": 1773222337708,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
