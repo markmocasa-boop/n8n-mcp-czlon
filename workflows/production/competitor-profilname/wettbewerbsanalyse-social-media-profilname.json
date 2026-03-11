@@ -1,1026 +1,1075 @@
-﻿{
-    "updatedAt":  "2026-03-11T09:30:59.315Z",
-    "createdAt":  "2026-03-11T09:12:19.570Z",
-    "id":  "3PzYNtBxeRTv6ks3",
-    "name":  "Wettbewerbsanalyse Social Media Eingabe per Profilname",
-    "description":  null,
-    "active":  false,
-    "isArchived":  false,
-    "nodes":  [
-                  {
-                      "id":  "wf-form-trigger",
-                      "name":  "Profilnamen eingeben",
-                      "type":  "n8n-nodes-base.formTrigger",
-                      "typeVersion":  2.5,
-                      "position":  [
-                                       100,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "formTitle":  "Wettbewerbsanalyse starten",
-                                         "formDescription":  "Gib bis zu 3 Profilnamen oder Profil-URLs ein. Mindestens 1 Pflichtfeld.",
-                                         "formFields":  {
-                                                            "values":  [
-                                                                           {
-                                                                               "fieldLabel":  "Profilname 1 (Pflicht)",
-                                                                               "fieldType":  "text",
-                                                                               "requiredField":  true,
-                                                                               "placeholder":  "z.B. @nike oder https://instagram.com/nike"
-                                                                           },
-                                                                           {
-                                                                               "fieldLabel":  "Profilname 2 (optional)",
-                                                                               "fieldType":  "text",
-                                                                               "requiredField":  false,
-                                                                               "placeholder":  "z.B. @adidas oder youtube.com/@adidas"
-                                                                           },
-                                                                           {
-                                                                               "fieldLabel":  "Profilname 3 (optional)",
-                                                                               "fieldType":  "text",
-                                                                               "requiredField":  false,
-                                                                               "placeholder":  "z.B. tiktok.com/@puma"
-                                                                           }
-                                                                       ]
-                                                        },
-                                         "options":  {
-
-                                                     }
-                                     }
-                  },
-                  {
-                      "id":  "wf-platform-detect",
-                      "name":  "Plattform erkennen",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       350,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const input = $input.first().json;\n\nconst p1 = input[\u0027Profilname 1 (Pflicht)\u0027] || \u0027\u0027;\nconst p2 = input[\u0027Profilname 2 (optional)\u0027] || \u0027\u0027;\nconst p3 = input[\u0027Profilname 3 (optional)\u0027] || \u0027\u0027;\n\nconst profiles = [p1, p2, p3].filter(function(p) { return p.trim() !== \u0027\u0027; });\n\nfunction detectPlatform(s) {\n  const lower = s.toLowerCase();\n  if (lower.indexOf(\u0027instagram.com\u0027) !== -1 || lower.indexOf(\u0027instagr.am\u0027) !== -1) return \u0027instagram\u0027;\n  if (lower.indexOf(\u0027facebook.com\u0027) !== -1 || lower.indexOf(\u0027fb.com\u0027) !== -1) return \u0027facebook\u0027;\n  if (lower.indexOf(\u0027youtube.com\u0027) !== -1 || lower.indexOf(\u0027youtu.be\u0027) !== -1) return \u0027youtube\u0027;\n  if (lower.indexOf(\u0027linkedin.com\u0027) !== -1) return \u0027linkedin\u0027;\n  if (lower.indexOf(\u0027tiktok.com\u0027) !== -1) return \u0027tiktok\u0027;\n  if (lower.indexOf(\u0027twitter.com\u0027) !== -1 || lower.indexOf(\u0027x.com\u0027) !== -1) return \u0027x_twitter\u0027;\n  return \u0027unknown\u0027;\n}\n\nfunction extractHandle(s) {\n  const trimmed = s.trim();\n  const match = trimmed.match(/\\/([^\\/\\?#]+)\\/?$/);\n  if (match) return match[1].replace(/^@/, \u0027\u0027);\n  return trimmed.replace(/^@/, \u0027\u0027);\n}\n\nconst detected = [];\nfor (let i = 0; i \u003c profiles.length; i++) {\n  detected.push({ input: profiles[i], platform: detectPlatform(profiles[i]), handle: extractHandle(profiles[i]) });\n}\n\nreturn [{ json: { detected: detected, rawProfiles: profiles } }];"
-                                     }
-                  },
-                  {
-                      "id":  "wf-claude-platform",
-                      "name":  "Claude Plattform \u0026 Namen ermitteln",
-                      "type":  "@n8n/n8n-nodes-langchain.anthropic",
-                      "typeVersion":  1,
-                      "position":  [
-                                       600,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "modelId":  {
-                                                         "mode":  "id",
-                                                         "value":  "claude-haiku-4-5-20251001"
-                                                     },
-                                         "simplify":  false,
-                                         "messages":  {
-                                                          "values":  [
-                                                                         {
-                                                                             "role":  "user",
-                                                                             "content":  "={{ \nconst d = $json.detected;\nconst lines = d.map(function(x) { return \u0027- Eingabe: \"\u0027 + x.input + \u0027\" â†’ erkannte Plattform: \u0027 + x.platform + \u0027, Handle: \u0027 + x.handle; }).join(\u0027\\n\u0027);\nreturn \u0027Du bist ein Social-Media-Experte. FÃ¼r jedes der folgenden Profile:\\n\u0027 + lines + \u0027\\n\\nBitte:\\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\\n2. Ermittle den wahrscheinlichen Account-Handle/Namen fÃ¼r alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind SchÃ¤tzungen\\n3. Baue die Account-URL auf\\n\\nAntworte NUR als JSON-Array ohne Markdown:\\n[\\n  {\\n    \"input\": \"original Eingabe\",\\n    \"platform\": \"erkannte Plattform\",\\n    \"handle\": \"handle\",\\n    \"accounts\": {\\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\\n    }\\n  }\\n]\u0027;\n }}"
-                                                                         }
-                                                                     ]
-                                                      },
-                                         "options":  {
-                                                         "maxTokens":  1500,
-                                                         "temperature":  0.1
-                                                     }
-                                     },
-                      "credentials":  {
-                                          "anthropicApi":  {
-                                                               "id":  "nv6YXj42KhaG3WMp",
-                                                               "name":  "n8n-20260309"
-                                                           }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  3000
-                  },
-                  {
-                      "id":  "wf-parse-claude-profiles",
-                      "name":  "Profile parsen",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       850,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const claudeResponse = $input.first().json.content;\nlet profiles;\ntry {\n  const contentArr = claudeResponse;\n  const text = Array.isArray(contentArr) ? contentArr[0].text : ((claudeResponse \u0026\u0026 claudeResponse.text) ? claudeResponse.text : String(claudeResponse || \u0027\u0027));\n  const cleaned = text.replace(/```json\\n?/g, \u0027\u0027).replace(/```\\n?/g, \u0027\u0027).trim();\n  profiles = JSON.parse(cleaned);\n} catch(e) {\n  const detected = $(\u0027Plattform erkennen\u0027).first().json.detected;\n  profiles = [];\n  for (let i = 0; i \u003c detected.length; i++) {\n    const d = detected[i];\n    profiles.push({\n      input: d.input,\n      platform: d.platform,\n      handle: d.handle,\n      accounts: {\n        instagram: { handle: d.handle, url: \u0027https://instagram.com/\u0027 + d.handle, confidence: \u0027low\u0027 },\n        facebook: { handle: d.handle, url: \u0027https://facebook.com/\u0027 + d.handle, confidence: \u0027low\u0027 },\n        youtube: { handle: d.handle, url: \u0027https://youtube.com/@\u0027 + d.handle, confidence: \u0027low\u0027 },\n        linkedin: { handle: d.handle, url: \u0027https://linkedin.com/company/\u0027 + d.handle, confidence: \u0027low\u0027 },\n        tiktok: { handle: d.handle, url: \u0027https://tiktok.com/@\u0027 + d.handle, confidence: \u0027low\u0027 }\n      }\n    });\n  }\n}\n\nconst competitors = [];\nconst activePlatforms = [\u0027instagram\u0027, \u0027facebook\u0027, \u0027youtube\u0027, \u0027linkedin\u0027, \u0027tiktok\u0027];\n\nfor (let pi = 0; pi \u003c profiles.length; pi++) {\n  const profile = profiles[pi];\n  const accountEntries = Object.keys(profile.accounts || {});\n  for (let ai = 0; ai \u003c accountEntries.length; ai++) {\n    const plat = accountEntries[ai];\n    const acct = profile.accounts[plat];\n    if (activePlatforms.indexOf(plat) === -1) continue;\n    const name = profile.handle || profile.input;\n    competitors.push({\n      \u0027Name\u0027: name + \u0027 (\u0027 + plat + \u0027)\u0027,\n      \u0027Plattform\u0027: plat,\n      \u0027Account-URL\u0027: acct.url,\n      \u0027Account-ID\u0027: acct.handle,\n      \u0027_confidence\u0027: acct.confidence,\n      \u0027_sourceProfile\u0027: profile.input,\n      \u0027_detectedPlatform\u0027: profile.platform\n    });\n  }\n}\n\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst dayOfYear = Math.floor((now - startOfYear) / 86400000);\nconst calendarWeek = Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);\n\nreturn [{\n  json: {\n    competitors: competitors,\n    activePlatforms: activePlatforms,\n    calendarWeek: calendarWeek,\n    year: now.getFullYear(),\n    projectName: \u0027Manuell per Profilname\u0027,\n    brandName: \u0027Eigene Marke\u0027,\n    brandDescription: \u0027Per Formular gestartete Wettbewerbsanalyse\u0027,\n    branche: \u0027Allgemein\u0027,\n    config: { skipClaude: false, maxPostsPerCompetitor: 20 },\n    timestamp: now.toISOString(),\n    profiles: profiles\n  }\n}];"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-competitor-dispatcher",
-                      "name":  "Competitor Dispatcher",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       1100,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const input = $input.first().json;\nconst config = input.config;\nconst competitors = input.competitors;\nconst activePlatforms = input.activePlatforms;\nconst calendarWeek = input.calendarWeek;\nconst year = input.year;\nconst projectName = input.projectName;\nconst brandName = input.brandName;\nconst brandDescription = input.brandDescription;\nconst branche = input.branche;\nconst timestamp = input.timestamp;\n\nconst staticData = $getWorkflowStaticData(\u0027global\u0027);\nstaticData.results = [];\nstaticData.errors = [];\nstaticData.analyses = [];\nstaticData.startedAt = new Date().toISOString();\n\nconst items = [];\n\nfor (let i = 0; i \u003c competitors.length; i++) {\n  const comp = competitors[i];\n  const platform = (comp[\u0027Plattform\u0027] || \u0027\u0027).toLowerCase();\n  const name = comp[\u0027Name\u0027] || \u0027\u0027;\n  const url = comp[\u0027Account-URL\u0027] || \u0027\u0027;\n  const accountId = comp[\u0027Account-ID\u0027] || \u0027\u0027;\n\n  if (activePlatforms.indexOf(platform) === -1) continue;\n  if (!name || !url) {\n    staticData.errors.push({ competitor: name || \u0027unbekannt\u0027, platform: platform, error: \u0027Name oder Account-URL fehlt\u0027, timestamp: new Date().toISOString() });\n    continue;\n  }\n\n  items.push({\n    json: { competitorName: name, platform: platform, accountUrl: url, accountId: accountId, calendarWeek: calendarWeek, year: year, projectName: projectName, brandName: brandName, brandDescription: brandDescription, branche: branche, config: config, timestamp: timestamp }\n  });\n}\n\nif (items.length === 0) {\n  return [{ json: { _empty: true, _skip: true, message: \u0027Keine aktiven Wettbewerber gefunden\u0027, calendarWeek: calendarWeek, year: year, projectName: projectName, timestamp: timestamp } }];\n}\n\nreturn items;"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-split-batches",
-                      "name":  "Competitor-Batches",
-                      "type":  "n8n-nodes-base.splitInBatches",
-                      "typeVersion":  3,
-                      "position":  [
-                                       1350,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "batchSize":  1,
-                                         "options":  {
-
-                                                     }
-                                     }
-                  },
-                  {
-                      "id":  "wf3-platform-switch",
-                      "name":  "Plattform Switch",
-                      "type":  "n8n-nodes-base.switch",
-                      "typeVersion":  2,
-                      "position":  [
-                                       1600,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "dataType":  "string",
-                                         "value1":  "={{ $json.platform }}",
-                                         "rules":  {
-                                                       "rules":  [
-                                                                     {
-                                                                         "value2":  "instagram"
-                                                                     },
-                                                                     {
-                                                                         "value2":  "facebook"
-                                                                     },
-                                                                     {
-                                                                         "value2":  "tiktok"
-                                                                     },
-                                                                     {
-                                                                         "value2":  "linkedin"
-                                                                     },
-                                                                     {
-                                                                         "value2":  "youtube"
-                                                                     }
-                                                                 ]
-                                                   },
-                                         "fallbackOutput":  "none"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-apify-ig",
-                      "name":  "Apify IG Posts",
-                      "type":  "@apify/n8n-nodes-apify.apify",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1850,
-                                       144
-                                   ],
-                      "parameters":  {
-                                         "operation":  "Run actor and get dataset",
-                                         "actorId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "apify/instagram-post-scraper"
-                                                     },
-                                         "customBody":  "={{ JSON.stringify({ directUrls: [$json.accountUrl], resultsLimit: 20, addParentData: true }) }}"
-                                     },
-                      "credentials":  {
-                                          "apifyApi":  {
-                                                           "id":  "wWgQDWC9aV3UcUEJ",
-                                                           "name":  "Apify MN1975"
-                                                       }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-apify-fb",
-                      "name":  "Apify FB Posts",
-                      "type":  "@apify/n8n-nodes-apify.apify",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1850,
-                                       304
-                                   ],
-                      "parameters":  {
-                                         "operation":  "Run actor and get dataset",
-                                         "actorId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "apify/facebook-posts-scraper"
-                                                     },
-                                         "customBody":  "={{ JSON.stringify({ startUrls: [{ url: $json.accountUrl }], resultsLimit: 20 }) }}"
-                                     },
-                      "credentials":  {
-                                          "apifyApi":  {
-                                                           "id":  "wWgQDWC9aV3UcUEJ",
-                                                           "name":  "Apify MN1975"
-                                                       }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-apify-tt",
-                      "name":  "Apify TT Posts",
-                      "type":  "@apify/n8n-nodes-apify.apify",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1850,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "operation":  "Run actor and get dataset",
-                                         "actorId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "clockworks/tiktok-scraper"
-                                                     },
-                                         "customBody":  "={{ JSON.stringify({ profiles: [$json.accountUrl], resultsPerPage: 20, shouldDownloadVideos: false }) }}"
-                                     },
-                      "credentials":  {
-                                          "apifyApi":  {
-                                                           "id":  "wWgQDWC9aV3UcUEJ",
-                                                           "name":  "Apify MN1975"
-                                                       }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-apify-li",
-                      "name":  "Apify LI Posts",
-                      "type":  "@apify/n8n-nodes-apify.apify",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1850,
-                                       624
-                                   ],
-                      "parameters":  {
-                                         "operation":  "Run actor and get dataset",
-                                         "actorId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "anchor/linkedin-post-scraper"
-                                                     },
-                                         "customBody":  "={{ JSON.stringify({ urls: [$json.accountUrl], maxResults: 20 }) }}"
-                                     },
-                      "credentials":  {
-                                          "apifyApi":  {
-                                                           "id":  "wWgQDWC9aV3UcUEJ",
-                                                           "name":  "Apify MN1975"
-                                                       }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-apify-yt",
-                      "name":  "Apify YT Posts",
-                      "type":  "@apify/n8n-nodes-apify.apify",
-                      "typeVersion":  1,
-                      "position":  [
-                                       1850,
-                                       784
-                                   ],
-                      "parameters":  {
-                                         "operation":  "Run actor and get dataset",
-                                         "actorId":  {
-                                                         "__rl":  true,
-                                                         "mode":  "list",
-                                                         "value":  "bernardo/youtube-scraper"
-                                                     },
-                                         "customBody":  "={{ JSON.stringify({ startUrls: [{ url: $json.accountUrl }], maxResults: 20 }) }}"
-                                     },
-                      "credentials":  {
-                                          "apifyApi":  {
-                                                           "id":  "wWgQDWC9aV3UcUEJ",
-                                                           "name":  "Apify MN1975"
-                                                       }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-parse-ig",
-                      "name":  "Parse IG",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       144
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\n\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0 || (items[0].json \u0026\u0026 items[0].json.error)) throw new Error((items[0] \u0026\u0026 items[0].json \u0026\u0026 items[0].json.error) || \u0027Keine Daten von Apify\u0027);\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p.likesCount !== undefined || p.likes !== undefined; });\n  if (posts.length === 0) throw new Error(\u0027Keine Posts gefunden\u0027);\n  const followers = posts[0].ownerFollowerCount || posts[0].followersCount || 0;\n  const sorted = posts.slice().sort(function(a, b) { return ((b.likesCount||b.likes||0)+(b.commentsCount||b.comments||0)) - ((a.likesCount||a.likes||0)+(a.commentsCount||a.comments||0)); });\n  const top3 = sorted.slice(0, 3).map(function(p) { return { url: p.url || (p.shortCode ? \u0027https://instagram.com/p/\u0027 + p.shortCode : \u0027\u0027), text: (p.caption || \u0027\u0027).substring(0, 500), likes: p.likesCount||p.likes||0, comments: p.commentsCount||p.comments||0, shares: 0, engagement: (p.likesCount||p.likes||0)+(p.commentsCount||p.comments||0), date: p.timestamp||p.takenAtTimestamp||\u0027\u0027, type: p.videoViewCount ? \u0027video\u0027 : p.carouselMediaCount ? \u0027carousel\u0027 : \u0027image\u0027 }; });\n  const topComments = [];\n  for (let i = 0; i \u003c Math.min(3, sorted.length); i++) { const p = sorted[i]; const comments = p.latestComments || p.comments_list || []; for (let j = 0; j \u003c Math.min(7, comments.length); j++) { const c = comments[j]; topComments.push({ text: c.text||c.comment||\u0027\u0027, likes: c.likesCount||c.likes||0, postUrl: p.url||\u0027\u0027 }); } }\n  const totalLikes = posts.reduce(function(s,p) { return s+(p.likesCount||p.likes||0); }, 0);\n  const totalComments = posts.reduce(function(s,p) { return s+(p.commentsCount||p.comments||0); }, 0);\n  const avgLikes = posts.length \u003e 0 ? totalLikes/posts.length : 0;\n  const avgComments = posts.length \u003e 0 ? totalComments/posts.length : 0;\n  const engagementRate = followers \u003e 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: topComments.slice(0,20), calendarWeek: calendarWeek, year: year, projectName: projectName, status: \u0027ok\u0027 } }];\n} catch (error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: \u0027error\u0027 };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-parse-fb",
-                      "name":  "Parse FB",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       304
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error(\u0027Keine Daten von Apify\u0027);\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p \u0026\u0026 (p.likes !== undefined || p.likesCount !== undefined); });\n  if (posts.length === 0) throw new Error(\u0027Keine Posts gefunden\u0027);\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likes||b.likesCount||0)+(b.comments||b.commentsCount||0)) - ((a.likes||a.likesCount||0)+(a.comments||a.commentsCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||p.postUrl||\u0027\u0027, text: (p.text||p.message||p.caption||\u0027\u0027).substring(0,500), likes: p.likes||p.likesCount||0, comments: p.comments||p.commentsCount||0, shares: p.shares||0, engagement: (p.likes||p.likesCount||0)+(p.comments||p.commentsCount||0), date: p.date||p.timestamp||\u0027\u0027, type: p.type||\u0027post\u0027 }; });\n  const avgLikes = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.likes||p.likesCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.comments||p.commentsCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] \u0026\u0026 posts[0].followers) || (posts[0] \u0026\u0026 posts[0].pageFollowers) || 0;\n  const engagementRate = followers \u003e 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: \u0027ok\u0027 } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: \u0027error\u0027 };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-parse-tt",
-                      "name":  "Parse TT",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error(\u0027Keine Daten von Apify\u0027);\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p \u0026\u0026 (p.diggCount !== undefined || p.playCount !== undefined); });\n  if (posts.length === 0) throw new Error(\u0027Keine Posts gefunden\u0027);\n  const sorted = posts.slice().sort(function(a,b) { return ((b.diggCount||0)+(b.commentCount||0)) - ((a.diggCount||0)+(a.commentCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.webVideoUrl||p.url||\u0027\u0027, text: (p.desc||p.text||\u0027\u0027).substring(0,500), likes: p.diggCount||0, comments: p.commentCount||0, shares: p.shareCount||0, engagement: (p.diggCount||0)+(p.commentCount||0)+(p.shareCount||0), date: p.createTime ? new Date(p.createTime*1000).toISOString() : \u0027\u0027, type: \u0027video\u0027 }; });\n  const avgLikes = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.diggCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.commentCount||0); },0)/posts.length : 0;\n  const authorMeta = posts[0] \u0026\u0026 posts[0].authorMeta ? posts[0].authorMeta : null;\n  const followers = (authorMeta \u0026\u0026 authorMeta.fans) || (posts[0] \u0026\u0026 posts[0].followers) || 0;\n  const engagementRate = followers \u003e 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: \u0027ok\u0027 } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: \u0027error\u0027 };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-parse-li",
-                      "name":  "Parse LI",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       624
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error(\u0027Keine Daten von Apify\u0027);\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p \u0026\u0026 p.url; });\n  if (posts.length === 0) throw new Error(\u0027Keine Posts gefunden\u0027);\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likesCount||b.likeCount||0)+(b.commentsCount||b.commentCount||0)) - ((a.likesCount||a.likeCount||0)+(a.commentsCount||a.commentCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||\u0027\u0027, text: (p.text||p.commentary||\u0027\u0027).substring(0,500), likes: p.likesCount||p.likeCount||0, comments: p.commentsCount||p.commentCount||0, shares: p.sharesCount||0, engagement: (p.likesCount||p.likeCount||0)+(p.commentsCount||p.commentCount||0), date: p.postedAt||p.date||\u0027\u0027, type: p.type||\u0027post\u0027 }; });\n  const avgLikes = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.likesCount||p.likeCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.commentsCount||p.commentCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] \u0026\u0026 posts[0].followersCount) || (posts[0] \u0026\u0026 posts[0].followers) || 0;\n  const engagementRate = followers \u003e 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: \u0027ok\u0027 } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: \u0027error\u0027 };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-parse-yt",
-                      "name":  "Parse YT",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       784
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error(\u0027Keine Daten von Apify\u0027);\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p \u0026\u0026 (p.viewCount !== undefined || p.views !== undefined); });\n  if (posts.length === 0) throw new Error(\u0027Keine Posts gefunden\u0027);\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likeCount||b.likes||0)+(b.commentCount||b.comments||0)) - ((a.likeCount||a.likes||0)+(a.commentCount||a.comments||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url || (\u0027https://youtube.com/watch?v=\u0027 + (p.id||\u0027\u0027)), text: (p.title||p.description||\u0027\u0027).substring(0,500), likes: p.likeCount||p.likes||0, comments: p.commentCount||p.comments||0, shares: 0, views: p.viewCount||p.views||0, engagement: (p.likeCount||p.likes||0)+(p.commentCount||p.comments||0), date: p.uploadedAt||p.publishedAt||\u0027\u0027, type: \u0027video\u0027 }; });\n  const avgLikes = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.likeCount||p.likes||0); },0)/posts.length : 0;\n  const avgComments = posts.length \u003e 0 ? posts.reduce(function(s,p) { return s+(p.commentCount||p.comments||0); },0)/posts.length : 0;\n  const followers = (posts[0] \u0026\u0026 posts[0].channelSubscriberCount) || (posts[0] \u0026\u0026 posts[0].subscribers) || 0;\n  const engagementRate = followers \u003e 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: \u0027ok\u0027 } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: \u0027error\u0027 };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-claude-prep",
-                      "name":  "Claude Prompt vorbereiten",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2400,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const item = $input.first().json;\nif (item.status === \u0027error\u0027) return [{ json: { competitorName: item.competitorName, platform: item.platform, calendarWeek: item.calendarWeek, year: item.year, projectName: item.projectName, error: item.error, analysis: null, contentIdeas: null, status: \u0027error\u0027, _skipClaude: true } }];\nconst platformInfo = $(\u0027Plattform Switch\u0027).first().json;\nconst brandName = platformInfo.brandName || \u0027Eigene Marke\u0027;\nconst brandDescription = platformInfo.brandDescription || \u0027\u0027;\nconst branche = platformInfo.branche || \u0027Allgemein\u0027;\nconst topPostsJson = JSON.stringify(item.topPosts, null, 2);\nconst commentsJson = JSON.stringify(item.topComments, null, 2);\nconst systemPrompt = \u0027Du bist ein erfahrener Social Media Stratege fuer den DACH-Markt. Du analysierst Wettbewerber-Daten und leitest daraus konkrete, umsetzbare Content-Ideen ab. Antworte immer auf Deutsch. Formatiere deine Antwort als valides JSON.\u0027;\nconst userPrompt = \u0027Analysiere die Top-Posts und Kommentare dieses Wettbewerbers.\\n\\nWettbewerber: \u0027 + item.competitorName + \u0027\\nPlattform: \u0027 + item.platform + \u0027\\nBranche: \u0027 + branche + \u0027\\nUnsere Marke: \u0027 + brandName + \u0027 - \u0027 + brandDescription + \u0027\\n\\nWettbewerber-Metriken:\\n- Followers: \u0027 + item.followers + \u0027\\n- Posts analysiert: \u0027 + item.postsScraped + \u0027\\n- Durchschn. Likes: \u0027 + item.avgLikes + \u0027\\n- Durchschn. Kommentare: \u0027 + item.avgComments + \u0027\\n- Engagement-Rate: \u0027 + item.engagementRate + \u0027%\\n\\nTop-Posts:\\n\u0027 + topPostsJson + \u0027\\n\\nKommentare:\\n\u0027 + commentsJson + \u0027\\n\\nErstelle auf Deutsch ein JSON-Objekt. Gib 3-5 Content-Ideen zurueck. Antworte NUR mit dem JSON-Objekt, ohne Markdown-Codeblock. Felder: staerken, engagement_treiber, community_sentiment, content_ideen (Array mit titel/beschreibung/plattform/format/inspiration), nicht_kopieren.\u0027;\nreturn [{ json: { competitorName: item.competitorName, platform: item.platform, accountUrl: item.accountUrl, followers: item.followers, postsScraped: item.postsScraped, avgLikes: item.avgLikes, avgComments: item.avgComments, avgShares: item.avgShares, engagementRate: item.engagementRate, topPosts: item.topPosts, topComments: item.topComments, calendarWeek: item.calendarWeek, year: item.year, projectName: item.projectName, status: item.status, systemPrompt: systemPrompt, userPrompt: userPrompt, _skipClaude: false } }];"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-skip-claude-check",
-                      "name":  "Claude ueberspringen?",
-                      "type":  "n8n-nodes-base.if",
-                      "typeVersion":  2.2,
-                      "position":  [
-                                       2650,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "conditions":  {
-                                                            "options":  {
-                                                                            "version":  2,
-                                                                            "leftValue":  "",
-                                                                            "caseSensitive":  false,
-                                                                            "typeValidation":  "loose"
-                                                                        },
-                                                            "combinator":  "or",
-                                                            "conditions":  [
-                                                                               {
-                                                                                   "leftValue":  "={{ $json._skipClaude }}",
-                                                                                   "rightValue":  "true",
-                                                                                   "operator":  {
-                                                                                                    "type":  "string",
-                                                                                                    "operation":  "equals"
-                                                                                                },
-                                                                                   "id":  "condition-1773221458725-82w49sjhl"
-                                                                               },
-                                                                               {
-                                                                                   "leftValue":  "={{ $json.status }}",
-                                                                                   "rightValue":  "error",
-                                                                                   "operator":  {
-                                                                                                    "type":  "string",
-                                                                                                    "operation":  "equals"
-                                                                                                },
-                                                                                   "id":  "condition-1773221458725-z5lx1sr8t"
-                                                                               }
-                                                                           ]
-                                                        },
-                                         "options":  {
-
-                                                     }
-                                     }
-                  },
-                  {
-                      "id":  "wf3-claude-analysis",
-                      "name":  "Claude Wettbewerber-Analyse",
-                      "type":  "@n8n/n8n-nodes-langchain.anthropic",
-                      "typeVersion":  1,
-                      "position":  [
-                                       2900,
-                                       560
-                                   ],
-                      "parameters":  {
-                                         "modelId":  {
-                                                         "mode":  "id",
-                                                         "value":  "claude-sonnet-4-6"
-                                                     },
-                                         "simplify":  false,
-                                         "messages":  {
-                                                          "values":  [
-                                                                         {
-                                                                             "role":  "user",
-                                                                             "content":  "={{ $json.userPrompt }}"
-                                                                         }
-                                                                     ]
-                                                      },
-                                         "options":  {
-                                                         "system":  "={{ $json.systemPrompt }}",
-                                                         "maxTokens":  2000,
-                                                         "temperature":  0.3
-                                                     }
-                                     },
-                      "credentials":  {
-                                          "anthropicApi":  {
-                                                               "id":  "nv6YXj42KhaG3WMp",
-                                                               "name":  "n8n-20260309"
-                                                           }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  3,
-                      "waitBetweenTries":  5000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-parse-claude",
-                      "name":  "Claude Ergebnis parsen",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       3150,
-                                       560
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const claudeOut = $input.first().json;\nconst prevData = $(\u0027Claude Prompt vorbereiten\u0027).first().json;\nlet analysis = null;\nlet contentIdeas = [];\ntry {\n  const contentArr = claudeOut.content;\n  const text = Array.isArray(contentArr) ? contentArr[0].text : ((claudeOut.content \u0026\u0026 claudeOut.content.text) ? claudeOut.content.text : (claudeOut.text || \u0027\u0027));\n  const cleaned = text.replace(/```json\\n?/g, \u0027\u0027).replace(/```\\n?/g, \u0027\u0027).trim();\n  const parsed = JSON.parse(cleaned);\n  analysis = { staerken: parsed.staerken || \u0027\u0027, engagement_treiber: parsed.engagement_treiber || \u0027\u0027, community_sentiment: parsed.community_sentiment || \u0027\u0027, nicht_kopieren: parsed.nicht_kopieren || \u0027\u0027 };\n  contentIdeas = parsed.content_ideen || [];\n} catch(e) {\n  analysis = { error: \u0027Parse-Fehler: \u0027 + e.message };\n}\nreturn [{ json: { competitorName: prevData.competitorName, platform: prevData.platform, accountUrl: prevData.accountUrl, followers: prevData.followers, postsScraped: prevData.postsScraped, avgLikes: prevData.avgLikes, avgComments: prevData.avgComments, avgShares: prevData.avgShares, engagementRate: prevData.engagementRate, topPosts: prevData.topPosts, topComments: prevData.topComments, calendarWeek: prevData.calendarWeek, year: prevData.year, projectName: prevData.projectName, analysis: analysis, contentIdeas: contentIdeas, status: (analysis \u0026\u0026 analysis.error) ? \u0027partial\u0027 : \u0027ok\u0027 } }];"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-collect-result",
-                      "name":  "Ergebnis sammeln",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       3400,
-                                       464
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst item = $input.first().json;\nif (item.status === \u0027ok\u0027 || item.status === \u0027partial\u0027) {\n  staticData.results.push(item);\n  if (item.analysis) staticData.analyses.push({ competitor: item.competitorName, platform: item.platform, analysis: item.analysis, contentIdeas: item.contentIdeas || [] });\n} else {\n  staticData.errors.push({ competitor: item.competitorName || \u0027unbekannt\u0027, platform: item.platform || \u0027unbekannt\u0027, error: item.error || \u0027Unbekannter Fehler\u0027, timestamp: new Date().toISOString() });\n}\nreturn [{ json: { _collected: true, competitor: item.competitorName, platform: item.platform, status: item.status } }];"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-wait-rate-limit",
-                      "name":  "Apify Pause",
-                      "type":  "n8n-nodes-base.wait",
-                      "typeVersion":  1.1,
-                      "position":  [
-                                       3400,
-                                       624
-                                   ],
-                      "parameters":  {
-                                         "unit":  "seconds",
-                                         "amount":  3
-                                     }
-                  },
-                  {
-                      "id":  "wf3-prepare-output",
-                      "name":  "Ergebnisse aufbereiten",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       1600,
-                                       272
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst results = staticData.results || [];\nconst supabaseItems = results.filter(function(r) { return r.status === \u0027ok\u0027 || r.status === \u0027partial\u0027; }).map(function(r) { return { json: { project_name: r.projectName, calendar_week: r.calendarWeek, year: r.year, competitor_name: r.competitorName, platform: r.platform, account_url: r.accountUrl || \u0027\u0027, followers: r.followers || 0, posts_scraped: r.postsScraped || 0, avg_likes: r.avgLikes || 0, avg_comments: r.avgComments || 0, avg_shares: r.avgShares || 0, engagement_rate: r.engagementRate || 0, top_posts: JSON.stringify(r.topPosts || []), top_comments: JSON.stringify(r.topComments || []), analysis: JSON.stringify(r.analysis || null), content_ideas: JSON.stringify(r.contentIdeas || []), collected_at: new Date().toISOString(), data_source: \u0027wf_competitor_profilname\u0027 } }; });\nstaticData.outputCount = supabaseItems.length;\nstaticData.finishedAt = new Date().toISOString();\nif (supabaseItems.length === 0) return [{ json: { _empty: true, message: \u0027Keine Daten zum Schreiben\u0027, errors: staticData.errors || [] } }];\nreturn supabaseItems;"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-supabase-upsert",
-                      "name":  "Supabase Competitor UPSERT",
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.4,
-                      "position":  [
-                                       1850,
-                                       32
-                                   ],
-                      "parameters":  {
-                                         "method":  "POST",
-                                         "url":  "https://xczjbiitstgxrzjlksqg.supabase.co/rest/v1/competitor_weekly",
-                                         "authentication":  "genericCredentialType",
-                                         "genericAuthType":  "httpHeaderAuth",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "apikey",
-                                                                                         "value":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
-                                                                                     },
-                                                                                     {
-                                                                                         "name":  "Authorization",
-                                                                                         "value":  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
-                                                                                     },
-                                                                                     {
-                                                                                         "name":  "Prefer",
-                                                                                         "value":  "resolution=merge-duplicates"
-                                                                                     },
-                                                                                     {
-                                                                                         "name":  "Content-Type",
-                                                                                         "value":  "application/json"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={{ JSON.stringify($json) }}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "credentials":  {
-                                          "httpHeaderAuth":  {
-                                                                 "id":  "R6LLeI3G74Ju62Jv",
-                                                                 "name":  "VoyageAI"
-                                                             }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  2,
-                      "waitBetweenTries":  3000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-prepare-runlog",
-                      "name":  "Run-Log vorbereiten",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2100,
-                                       32
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst item = $input.first().json;\nreturn [{ json: { workflow_name: \u0027Wettbewerbsanalyse Social Media Eingabe per Profilname\u0027, project_name: item.project_name || \u0027\u0027, calendar_week: item.calendar_week || 0, year: item.year || new Date().getFullYear(), status: \u0027completed\u0027, output_count: staticData.outputCount || 0, error_count: (staticData.errors || []).length, started_at: staticData.startedAt || new Date().toISOString(), finished_at: staticData.finishedAt || new Date().toISOString(), trigger_type: \u0027form\u0027, executed_at: new Date().toISOString() } }];"
-                                     }
-                  },
-                  {
-                      "id":  "wf3-supabase-runlog",
-                      "name":  "Supabase Run-Log",
-                      "type":  "n8n-nodes-base.supabase",
-                      "typeVersion":  1,
-                      "position":  [
-                                       2350,
-                                       32
-                                   ],
-                      "parameters":  {
-                                         "tableId":  "=workflow_runs",
-                                         "dataToSend":  "autoMapInputData"
-                                     },
-                      "credentials":  {
-                                          "supabaseApi":  {
-                                                              "id":  "l5M1nWRN9gzVviRE",
-                                                              "name":  "Supabase 20260310"
-                                                          }
-                                      },
-                      "retryOnFail":  true,
-                      "maxTries":  2,
-                      "waitBetweenTries":  3000,
-                      "onError":  "continueRegularOutput"
-                  },
-                  {
-                      "id":  "wf3-build-response",
-                      "name":  "Response zusammenbauen",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       2600,
-                                       32
-                                   ],
-                      "parameters":  {
-                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\nconst analyses = staticData.analyses || [];\nconst competitorsOk = results.filter(function(r) { return r.status === \u0027ok\u0027; }).map(function(r) { return r.competitorName + \u0027 (\u0027 + r.platform + \u0027)\u0027; });\nconst competitorsError = errors.map(function(e) { return (e.competitor||\u0027unbekannt\u0027) + \u0027 (\u0027 + (e.platform||\u0027?\u0027) + \u0027)\u0027; });\nconst allContentIdeas = [];\nfor (let i = 0; i \u003c analyses.length; i++) { const a = analyses[i]; const ideas = a.contentIdeas || []; for (let j = 0; j \u003c ideas.length; j++) { const idea = ideas[j]; allContentIdeas.push({ titel: idea.titel, beschreibung: idea.beschreibung, plattform: idea.plattform, format: idea.format, inspiration: idea.inspiration, competitor: a.competitor, platform: a.platform }); } }\ndelete staticData.results; delete staticData.errors; delete staticData.analyses; delete staticData.startedAt; delete staticData.finishedAt; delete staticData.outputCount;\nreturn [{ json: { success: errors.length === 0, workflow: \u0027Wettbewerbsanalyse Social Media Eingabe per Profilname\u0027, data: { competitorsAnalyzed: competitorsOk, competitorsFailed: competitorsError, totalCompetitors: competitorsOk.length + competitorsError.length, successCount: competitorsOk.length, errorCount: competitorsError.length, contentIdeasGenerated: allContentIdeas.length, contentIdeas: allContentIdeas }, errors: errors.length \u003e 0 ? errors : null, timestamp: new Date().toISOString() } }];"
-                                     }
-                  }
-              ],
-    "connections":  {
-                        "Profilnamen eingeben":  {
-                                                     "main":  [
-                                                                  [
-                                                                      {
-                                                                          "node":  "Plattform erkennen",
-                                                                          "type":  "main",
-                                                                          "index":  0
-                                                                      }
-                                                                  ]
-                                                              ]
-                                                 },
-                        "Plattform erkennen":  {
-                                                   "main":  [
-                                                                [
-                                                                    {
-                                                                        "node":  "Claude Plattform \u0026 Namen ermitteln",
-                                                                        "type":  "main",
-                                                                        "index":  0
-                                                                    }
-                                                                ]
-                                                            ]
-                                               },
-                        "Claude Plattform \u0026 Namen ermitteln":  {
-                                                                        "main":  [
-                                                                                     [
-                                                                                         {
-                                                                                             "node":  "Profile parsen",
-                                                                                             "type":  "main",
-                                                                                             "index":  0
-                                                                                         }
-                                                                                     ]
-                                                                                 ]
-                                                                    },
-                        "Profile parsen":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Competitor Dispatcher",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Competitor Dispatcher":  {
-                                                      "main":  [
-                                                                   [
-                                                                       {
-                                                                           "node":  "Competitor-Batches",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ]
-                                                               ]
-                                                  },
-                        "Competitor-Batches":  {
-                                                   "main":  [
-                                                                [
-                                                                    {
-                                                                        "node":  "Ergebnisse aufbereiten",
-                                                                        "type":  "main",
-                                                                        "index":  0
-                                                                    }
-                                                                ],
-                                                                [
-                                                                    {
-                                                                        "node":  "Plattform Switch",
-                                                                        "type":  "main",
-                                                                        "index":  0
-                                                                    }
-                                                                ]
-                                                            ]
-                                               },
-                        "Plattform Switch":  {
-                                                 "main":  [
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify IG Posts",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ],
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify FB Posts",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ],
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify TT Posts",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ],
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify LI Posts",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ],
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify YT Posts",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ]
-                                                          ]
-                                             },
-                        "Apify IG Posts":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Parse IG",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Apify FB Posts":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Parse FB",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Apify TT Posts":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Parse TT",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Apify LI Posts":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Parse LI",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Apify YT Posts":  {
-                                               "main":  [
-                                                            [
-                                                                {
-                                                                    "node":  "Parse YT",
-                                                                    "type":  "main",
-                                                                    "index":  0
-                                                                }
-                                                            ]
-                                                        ]
-                                           },
-                        "Parse IG":  {
-                                         "main":  [
-                                                      [
-                                                          {
-                                                              "node":  "Claude Prompt vorbereiten",
-                                                              "type":  "main",
-                                                              "index":  0
-                                                          }
-                                                      ]
-                                                  ]
-                                     },
-                        "Parse FB":  {
-                                         "main":  [
-                                                      [
-                                                          {
-                                                              "node":  "Claude Prompt vorbereiten",
-                                                              "type":  "main",
-                                                              "index":  0
-                                                          }
-                                                      ]
-                                                  ]
-                                     },
-                        "Parse TT":  {
-                                         "main":  [
-                                                      [
-                                                          {
-                                                              "node":  "Claude Prompt vorbereiten",
-                                                              "type":  "main",
-                                                              "index":  0
-                                                          }
-                                                      ]
-                                                  ]
-                                     },
-                        "Parse LI":  {
-                                         "main":  [
-                                                      [
-                                                          {
-                                                              "node":  "Claude Prompt vorbereiten",
-                                                              "type":  "main",
-                                                              "index":  0
-                                                          }
-                                                      ]
-                                                  ]
-                                     },
-                        "Parse YT":  {
-                                         "main":  [
-                                                      [
-                                                          {
-                                                              "node":  "Claude Prompt vorbereiten",
-                                                              "type":  "main",
-                                                              "index":  0
-                                                          }
-                                                      ]
-                                                  ]
-                                     },
-                        "Claude Prompt vorbereiten":  {
-                                                          "main":  [
-                                                                       [
-                                                                           {
-                                                                               "node":  "Claude ueberspringen?",
-                                                                               "type":  "main",
-                                                                               "index":  0
-                                                                           }
-                                                                       ]
-                                                                   ]
-                                                      },
-                        "Claude ueberspringen?":  {
-                                                      "main":  [
-                                                                   [
-                                                                       {
-                                                                           "node":  "Ergebnis sammeln",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ],
-                                                                   [
-                                                                       {
-                                                                           "node":  "Claude Wettbewerber-Analyse",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ]
-                                                               ]
-                                                  },
-                        "Claude Wettbewerber-Analyse":  {
-                                                            "main":  [
-                                                                         [
-                                                                             {
-                                                                                 "node":  "Claude Ergebnis parsen",
-                                                                                 "type":  "main",
-                                                                                 "index":  0
-                                                                             }
-                                                                         ]
-                                                                     ]
-                                                        },
-                        "Claude Ergebnis parsen":  {
-                                                       "main":  [
-                                                                    [
-                                                                        {
-                                                                            "node":  "Ergebnis sammeln",
-                                                                            "type":  "main",
-                                                                            "index":  0
-                                                                        }
-                                                                    ]
-                                                                ]
-                                                   },
-                        "Ergebnis sammeln":  {
-                                                 "main":  [
-                                                              [
-                                                                  {
-                                                                      "node":  "Apify Pause",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ]
-                                                          ]
-                                             },
-                        "Apify Pause":  {
-                                            "main":  [
-                                                         [
-                                                             {
-                                                                 "node":  "Competitor-Batches",
-                                                                 "type":  "main",
-                                                                 "index":  0
-                                                             }
-                                                         ]
-                                                     ]
-                                        },
-                        "Ergebnisse aufbereiten":  {
-                                                       "main":  [
-                                                                    [
-                                                                        {
-                                                                            "node":  "Supabase Competitor UPSERT",
-                                                                            "type":  "main",
-                                                                            "index":  0
-                                                                        }
-                                                                    ]
-                                                                ]
-                                                   },
-                        "Supabase Competitor UPSERT":  {
-                                                           "main":  [
-                                                                        [
-                                                                            {
-                                                                                "node":  "Run-Log vorbereiten",
-                                                                                "type":  "main",
-                                                                                "index":  0
-                                                                            }
-                                                                        ]
-                                                                    ]
-                                                       },
-                        "Run-Log vorbereiten":  {
-                                                    "main":  [
-                                                                 [
-                                                                     {
-                                                                         "node":  "Supabase Run-Log",
-                                                                         "type":  "main",
-                                                                         "index":  0
-                                                                     }
-                                                                 ]
-                                                             ]
-                                                },
-                        "Supabase Run-Log":  {
-                                                 "main":  [
-                                                              [
-                                                                  {
-                                                                      "node":  "Response zusammenbauen",
-                                                                      "type":  "main",
-                                                                      "index":  0
-                                                                  }
-                                                              ]
-                                                          ]
-                                             },
-                        "Response zusammenbauen":  {
-                                                       "main":  [
-                                                                    [
-
-                                                                    ]
-                                                                ]
-                                                   }
-                    },
-    "settings":  {
-                     "executionOrder":  "v1",
-                     "saveDataErrorExecution":  "all",
-                     "saveDataSuccessExecution":  "all",
-                     "saveManualExecutions":  true,
-                     "callerPolicy":  "workflowsFromSameOwner",
-                     "availableInMCP":  false
-                 },
-    "staticData":  null,
-    "meta":  null,
-    "pinData":  null,
-    "versionId":  "bf7de43c-0f36-4b36-a7c6-50c1ed768f79",
-    "activeVersionId":  null,
-    "versionCounter":  2,
-    "triggerCount":  0,
-    "shared":  [
-                   {
-                       "updatedAt":  "2026-03-11T09:12:19.573Z",
-                       "createdAt":  "2026-03-11T09:12:19.573Z",
-                       "role":  "workflow:owner",
-                       "workflowId":  "3PzYNtBxeRTv6ks3",
-                       "projectId":  "A3xoYVAJ1hf6LsPx",
-                       "project":  {
-                                       "updatedAt":  "2025-07-28T11:25:25.006Z",
-                                       "createdAt":  "2025-07-28T11:25:22.410Z",
-                                       "id":  "A3xoYVAJ1hf6LsPx",
-                                       "name":  "Mark Niemann \u003cmark@mo-casa.com\u003e",
-                                       "type":  "personal",
-                                       "icon":  null,
-                                       "description":  null,
-                                       "creatorId":  "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
-                                   }
-                   }
-               ],
-    "tags":  [
-
-             ],
-    "activeVersion":  null
+{
+  "updatedAt": "2026-03-11T09:37:31.960Z",
+  "createdAt": "2026-03-11T09:12:19.570Z",
+  "id": "3PzYNtBxeRTv6ks3",
+  "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Wettbewerbsanalyse starten",
+        "formDescription": "Gib bis zu 3 Profilnamen oder Profil-URLs ein. Mindestens 1 Pflichtfeld.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Profilname 1 (Pflicht)",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "z.B. @nike oder https://instagram.com/nike"
+            },
+            {
+              "fieldLabel": "Profilname 2 (optional)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "z.B. @adidas oder youtube.com/@adidas"
+            },
+            {
+              "fieldLabel": "Profilname 3 (optional)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "z.B. tiktok.com/@puma"
+            },
+            {
+              "fieldLabel": "E-Mail-Empfänger",
+              "fieldType": "email",
+              "requiredField": true,
+              "placeholder": "deine@email.de"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf-form-trigger",
+      "name": "Profilnamen eingeben",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        112,
+        464
+      ],
+      "webhookId": "2f6283a6-b064-4a32-b15c-b50cddea4120"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst p1 = input['Profilname 1 (Pflicht)'] || '';\nconst p2 = input['Profilname 2 (optional)'] || '';\nconst p3 = input['Profilname 3 (optional)'] || '';\n\nconst profiles = [p1, p2, p3].filter(function(p) { return p.trim() !== ''; });\n\nfunction detectPlatform(s) {\n  const lower = s.toLowerCase();\n  if (lower.indexOf('instagram.com') !== -1 || lower.indexOf('instagr.am') !== -1) return 'instagram';\n  if (lower.indexOf('facebook.com') !== -1 || lower.indexOf('fb.com') !== -1) return 'facebook';\n  if (lower.indexOf('youtube.com') !== -1 || lower.indexOf('youtu.be') !== -1) return 'youtube';\n  if (lower.indexOf('linkedin.com') !== -1) return 'linkedin';\n  if (lower.indexOf('tiktok.com') !== -1) return 'tiktok';\n  if (lower.indexOf('twitter.com') !== -1 || lower.indexOf('x.com') !== -1) return 'x_twitter';\n  return 'unknown';\n}\n\nfunction extractHandle(s) {\n  const trimmed = s.trim();\n  const match = trimmed.match(/\\/([^\\/\\?#]+)\\/?$/);\n  if (match) return match[1].replace(/^@/, '');\n  return trimmed.replace(/^@/, '');\n}\n\nconst detected = [];\nfor (let i = 0; i < profiles.length; i++) {\n  detected.push({ input: profiles[i], platform: detectPlatform(profiles[i]), handle: extractHandle(profiles[i]) });\n}\n\nreturn [{ json: { detected: detected, rawProfiles: profiles } }];"
+      },
+      "id": "wf-platform-detect",
+      "name": "Plattform erkennen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ \nconst d = $json.detected;\nconst lines = d.map(function(x) { return '- Eingabe: \"' + x.input + '\" → erkannte Plattform: ' + x.platform + ', Handle: ' + x.handle; }).join('\\n');\nreturn 'Du bist ein Social-Media-Experte. Für jedes der folgenden Profile:\\n' + lines + '\\n\\nBitte:\\n1. Bestimme die Plattform wenn noch unknown (Instagram, Facebook, YouTube, LinkedIn, TikTok, X/Twitter)\\n2. Ermittle den wahrscheinlichen Account-Handle/Namen für alle 5 Plattformen (Instagram, Facebook, YouTube, LinkedIn, TikTok) - nutze das bekannte Handle als Basis, die anderen sind Schätzungen\\n3. Baue die Account-URL auf\\n\\nAntworte NUR als JSON-Array ohne Markdown:\\n[\\n  {\\n    \"input\": \"original Eingabe\",\\n    \"platform\": \"erkannte Plattform\",\\n    \"handle\": \"handle\",\\n    \"accounts\": {\\n      \"instagram\": {\"handle\": \"...\", \"url\": \"https://instagram.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"facebook\": {\"handle\": \"...\", \"url\": \"https://facebook.com/...\", \"confidence\": \"high|medium|low\"},\\n      \"youtube\": {\"handle\": \"...\", \"url\": \"https://youtube.com/@...\", \"confidence\": \"high|medium|low\"},\\n      \"linkedin\": {\"handle\": \"...\", \"url\": \"https://linkedin.com/company/...\", \"confidence\": \"high|medium|low\"},\\n      \"tiktok\": {\"handle\": \"...\", \"url\": \"https://tiktok.com/@...\", \"confidence\": \"high|medium|low\"}\\n    }\\n  }\\n]';\n }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "maxTokens": 1500,
+          "temperature": 0.1
+        }
+      },
+      "id": "wf-claude-platform",
+      "name": "Claude Plattform & Namen ermitteln",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        560,
+        464
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "nv6YXj42KhaG3WMp",
+          "name": "n8n-20260309"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const claudeResponse = $input.first().json.content;\nlet profiles;\ntry {\n  const contentArr = claudeResponse;\n  const text = Array.isArray(contentArr) ? contentArr[0].text : ((claudeResponse && claudeResponse.text) ? claudeResponse.text : String(claudeResponse || ''));\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  profiles = JSON.parse(cleaned);\n} catch(e) {\n  const detected = $('Plattform erkennen').first().json.detected;\n  profiles = [];\n  for (let i = 0; i < detected.length; i++) {\n    const d = detected[i];\n    profiles.push({\n      input: d.input,\n      platform: d.platform,\n      handle: d.handle,\n      accounts: {\n        instagram: { handle: d.handle, url: 'https://instagram.com/' + d.handle, confidence: 'low' },\n        facebook: { handle: d.handle, url: 'https://facebook.com/' + d.handle, confidence: 'low' },\n        youtube: { handle: d.handle, url: 'https://youtube.com/@' + d.handle, confidence: 'low' },\n        linkedin: { handle: d.handle, url: 'https://linkedin.com/company/' + d.handle, confidence: 'low' },\n        tiktok: { handle: d.handle, url: 'https://tiktok.com/@' + d.handle, confidence: 'low' }\n      }\n    });\n  }\n}\n\nconst competitors = [];\nconst activePlatforms = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'];\n\nfor (let pi = 0; pi < profiles.length; pi++) {\n  const profile = profiles[pi];\n  const accountEntries = Object.keys(profile.accounts || {});\n  for (let ai = 0; ai < accountEntries.length; ai++) {\n    const plat = accountEntries[ai];\n    const acct = profile.accounts[plat];\n    if (activePlatforms.indexOf(plat) === -1) continue;\n    const name = profile.handle || profile.input;\n    competitors.push({\n      'Name': name + ' (' + plat + ')',\n      'Plattform': plat,\n      'Account-URL': acct.url,\n      'Account-ID': acct.handle,\n      '_confidence': acct.confidence,\n      '_sourceProfile': profile.input,\n      '_detectedPlatform': profile.platform\n    });\n  }\n}\n\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst dayOfYear = Math.floor((now - startOfYear) / 86400000);\nconst calendarWeek = Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);\n\nreturn [{\n  json: {\n    competitors: competitors,\n    activePlatforms: activePlatforms,\n    calendarWeek: calendarWeek,\n    year: now.getFullYear(),\n    projectName: 'Manuell per Profilname',\n    brandName: 'Eigene Marke',\n    brandDescription: 'Per Formular gestartete Wettbewerbsanalyse',\n    branche: 'Allgemein',\n    config: { skipClaude: false, maxPostsPerCompetitor: 20 },\n    timestamp: now.toISOString(),\n    profiles: profiles\n  }\n}];"
+      },
+      "id": "wf-parse-claude-profiles",
+      "name": "Profile parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst config = input.config;\nconst competitors = input.competitors;\nconst activePlatforms = input.activePlatforms;\nconst calendarWeek = input.calendarWeek;\nconst year = input.year;\nconst projectName = input.projectName;\nconst brandName = input.brandName;\nconst brandDescription = input.brandDescription;\nconst branche = input.branche;\nconst timestamp = input.timestamp;\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.results = [];\nstaticData.errors = [];\nstaticData.analyses = [];\nstaticData.startedAt = new Date().toISOString();\n\nconst items = [];\n\nfor (let i = 0; i < competitors.length; i++) {\n  const comp = competitors[i];\n  const platform = (comp['Plattform'] || '').toLowerCase();\n  const name = comp['Name'] || '';\n  const url = comp['Account-URL'] || '';\n  const accountId = comp['Account-ID'] || '';\n\n  if (activePlatforms.indexOf(platform) === -1) continue;\n  if (!name || !url) {\n    staticData.errors.push({ competitor: name || 'unbekannt', platform: platform, error: 'Name oder Account-URL fehlt', timestamp: new Date().toISOString() });\n    continue;\n  }\n\n  items.push({\n    json: { competitorName: name, platform: platform, accountUrl: url, accountId: accountId, calendarWeek: calendarWeek, year: year, projectName: projectName, brandName: brandName, brandDescription: brandDescription, branche: branche, config: config, timestamp: timestamp }\n  });\n}\n\nif (items.length === 0) {\n  return [{ json: { _empty: true, _skip: true, message: 'Keine aktiven Wettbewerber gefunden', calendarWeek: calendarWeek, year: year, projectName: projectName, timestamp: timestamp } }];\n}\n\nreturn items;"
+      },
+      "id": "wf3-competitor-dispatcher",
+      "name": "Competitor Dispatcher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "wf3-split-batches",
+      "name": "Competitor-Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1360,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.platform }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "instagram"
+            },
+            {
+              "value2": "facebook"
+            },
+            {
+              "value2": "tiktok"
+            },
+            {
+              "value2": "linkedin"
+            },
+            {
+              "value2": "youtube"
+            }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "id": "wf3-platform-switch",
+      "name": "Plattform Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "apify/instagram-post-scraper"
+        },
+        "customBody": "={{ JSON.stringify({ directUrls: [$json.accountUrl], resultsLimit: 20, addParentData: true }) }}"
+      },
+      "id": "wf3-apify-ig",
+      "name": "Apify IG Posts",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        144
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "apify/facebook-posts-scraper"
+        },
+        "customBody": "={{ JSON.stringify({ startUrls: [{ url: $json.accountUrl }], resultsLimit: 20 }) }}"
+      },
+      "id": "wf3-apify-fb",
+      "name": "Apify FB Posts",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        304
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "clockworks/tiktok-scraper"
+        },
+        "customBody": "={{ JSON.stringify({ profiles: [$json.accountUrl], resultsPerPage: 20, shouldDownloadVideos: false }) }}"
+      },
+      "id": "wf3-apify-tt",
+      "name": "Apify TT Posts",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        464
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "anchor/linkedin-post-scraper"
+        },
+        "customBody": "={{ JSON.stringify({ urls: [$json.accountUrl], maxResults: 20 }) }}"
+      },
+      "id": "wf3-apify-li",
+      "name": "Apify LI Posts",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        624
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "bernardo/youtube-scraper"
+        },
+        "customBody": "={{ JSON.stringify({ startUrls: [{ url: $json.accountUrl }], maxResults: 20 }) }}"
+      },
+      "id": "wf3-apify-yt",
+      "name": "Apify YT Posts",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        784
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\n\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0 || (items[0].json && items[0].json.error)) throw new Error((items[0] && items[0].json && items[0].json.error) || 'Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p.likesCount !== undefined || p.likes !== undefined; });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const followers = posts[0].ownerFollowerCount || posts[0].followersCount || 0;\n  const sorted = posts.slice().sort(function(a, b) { return ((b.likesCount||b.likes||0)+(b.commentsCount||b.comments||0)) - ((a.likesCount||a.likes||0)+(a.commentsCount||a.comments||0)); });\n  const top3 = sorted.slice(0, 3).map(function(p) { return { url: p.url || (p.shortCode ? 'https://instagram.com/p/' + p.shortCode : ''), text: (p.caption || '').substring(0, 500), likes: p.likesCount||p.likes||0, comments: p.commentsCount||p.comments||0, shares: 0, engagement: (p.likesCount||p.likes||0)+(p.commentsCount||p.comments||0), date: p.timestamp||p.takenAtTimestamp||'', type: p.videoViewCount ? 'video' : p.carouselMediaCount ? 'carousel' : 'image' }; });\n  const topComments = [];\n  for (let i = 0; i < Math.min(3, sorted.length); i++) { const p = sorted[i]; const comments = p.latestComments || p.comments_list || []; for (let j = 0; j < Math.min(7, comments.length); j++) { const c = comments[j]; topComments.push({ text: c.text||c.comment||'', likes: c.likesCount||c.likes||0, postUrl: p.url||'' }); } }\n  const totalLikes = posts.reduce(function(s,p) { return s+(p.likesCount||p.likes||0); }, 0);\n  const totalComments = posts.reduce(function(s,p) { return s+(p.commentsCount||p.comments||0); }, 0);\n  const avgLikes = posts.length > 0 ? totalLikes/posts.length : 0;\n  const avgComments = posts.length > 0 ? totalComments/posts.length : 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: topComments.slice(0,20), calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch (error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+      },
+      "id": "wf3-parse-ig",
+      "name": "Parse IG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && (p.likes !== undefined || p.likesCount !== undefined); });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likes||b.likesCount||0)+(b.comments||b.commentsCount||0)) - ((a.likes||a.likesCount||0)+(a.comments||a.commentsCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||p.postUrl||'', text: (p.text||p.message||p.caption||'').substring(0,500), likes: p.likes||p.likesCount||0, comments: p.comments||p.commentsCount||0, shares: p.shares||0, engagement: (p.likes||p.likesCount||0)+(p.comments||p.commentsCount||0), date: p.date||p.timestamp||'', type: p.type||'post' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likes||p.likesCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.comments||p.commentsCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].followers) || (posts[0] && posts[0].pageFollowers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+      },
+      "id": "wf3-parse-fb",
+      "name": "Parse FB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && (p.diggCount !== undefined || p.playCount !== undefined); });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.diggCount||0)+(b.commentCount||0)) - ((a.diggCount||0)+(a.commentCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.webVideoUrl||p.url||'', text: (p.desc||p.text||'').substring(0,500), likes: p.diggCount||0, comments: p.commentCount||0, shares: p.shareCount||0, engagement: (p.diggCount||0)+(p.commentCount||0)+(p.shareCount||0), date: p.createTime ? new Date(p.createTime*1000).toISOString() : '', type: 'video' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.diggCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentCount||0); },0)/posts.length : 0;\n  const authorMeta = posts[0] && posts[0].authorMeta ? posts[0].authorMeta : null;\n  const followers = (authorMeta && authorMeta.fans) || (posts[0] && posts[0].followers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+      },
+      "id": "wf3-parse-tt",
+      "name": "Parse TT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && p.url; });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likesCount||b.likeCount||0)+(b.commentsCount||b.commentCount||0)) - ((a.likesCount||a.likeCount||0)+(a.commentsCount||a.commentCount||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url||'', text: (p.text||p.commentary||'').substring(0,500), likes: p.likesCount||p.likeCount||0, comments: p.commentsCount||p.commentCount||0, shares: p.sharesCount||0, engagement: (p.likesCount||p.likeCount||0)+(p.commentsCount||p.commentCount||0), date: p.postedAt||p.date||'', type: p.type||'post' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likesCount||p.likeCount||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentsCount||p.commentCount||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].followersCount) || (posts[0] && posts[0].followers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+      },
+      "id": "wf3-parse-li",
+      "name": "Parse LI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst platformInfo = $('Plattform Switch').first().json;\nconst competitorName = platformInfo.competitorName;\nconst platform = platformInfo.platform;\nconst accountUrl = platformInfo.accountUrl;\nconst calendarWeek = platformInfo.calendarWeek;\nconst year = platformInfo.year;\nconst projectName = platformInfo.projectName;\ntry {\n  const items = $input.all();\n  if (!items || items.length === 0) throw new Error('Keine Daten von Apify');\n  const posts = items.map(function(i) { return i.json; }).filter(function(p) { return p && (p.viewCount !== undefined || p.views !== undefined); });\n  if (posts.length === 0) throw new Error('Keine Posts gefunden');\n  const sorted = posts.slice().sort(function(a,b) { return ((b.likeCount||b.likes||0)+(b.commentCount||b.comments||0)) - ((a.likeCount||a.likes||0)+(a.commentCount||a.comments||0)); });\n  const top3 = sorted.slice(0,3).map(function(p) { return { url: p.url || ('https://youtube.com/watch?v=' + (p.id||'')), text: (p.title||p.description||'').substring(0,500), likes: p.likeCount||p.likes||0, comments: p.commentCount||p.comments||0, shares: 0, views: p.viewCount||p.views||0, engagement: (p.likeCount||p.likes||0)+(p.commentCount||p.comments||0), date: p.uploadedAt||p.publishedAt||'', type: 'video' }; });\n  const avgLikes = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.likeCount||p.likes||0); },0)/posts.length : 0;\n  const avgComments = posts.length > 0 ? posts.reduce(function(s,p) { return s+(p.commentCount||p.comments||0); },0)/posts.length : 0;\n  const followers = (posts[0] && posts[0].channelSubscriberCount) || (posts[0] && posts[0].subscribers) || 0;\n  const engagementRate = followers > 0 ? ((avgLikes+avgComments)/followers*100) : 0;\n  return [{ json: { competitorName: competitorName, platform: platform, accountUrl: accountUrl, followers: followers, postsScraped: posts.length, avgLikes: Math.round(avgLikes*100)/100, avgComments: Math.round(avgComments*100)/100, avgShares: 0, engagementRate: Math.round(engagementRate*10000)/10000, topPosts: top3, topComments: [], calendarWeek: calendarWeek, year: year, projectName: projectName, status: 'ok' } }];\n} catch(error) {\n  const errEntry = { competitorName: competitorName, platform: platform, calendarWeek: calendarWeek, year: year, projectName: projectName, error: error.message, status: 'error' };\n  staticData.errors.push(errEntry);\n  return [{ json: errEntry }];\n}"
+      },
+      "id": "wf3-parse-yt",
+      "name": "Parse YT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (item.status === 'error') return [{ json: { competitorName: item.competitorName, platform: item.platform, calendarWeek: item.calendarWeek, year: item.year, projectName: item.projectName, error: item.error, analysis: null, contentIdeas: null, status: 'error', _skipClaude: true } }];\nconst platformInfo = $('Plattform Switch').first().json;\nconst brandName = platformInfo.brandName || 'Eigene Marke';\nconst brandDescription = platformInfo.brandDescription || '';\nconst branche = platformInfo.branche || 'Allgemein';\nconst topPostsJson = JSON.stringify(item.topPosts, null, 2);\nconst commentsJson = JSON.stringify(item.topComments, null, 2);\nconst systemPrompt = 'Du bist ein erfahrener Social Media Stratege fuer den DACH-Markt. Du analysierst Wettbewerber-Daten und leitest daraus konkrete, umsetzbare Content-Ideen ab. Antworte immer auf Deutsch. Formatiere deine Antwort als valides JSON.';\nconst userPrompt = 'Analysiere die Top-Posts und Kommentare dieses Wettbewerbers.\\n\\nWettbewerber: ' + item.competitorName + '\\nPlattform: ' + item.platform + '\\nBranche: ' + branche + '\\nUnsere Marke: ' + brandName + ' - ' + brandDescription + '\\n\\nWettbewerber-Metriken:\\n- Followers: ' + item.followers + '\\n- Posts analysiert: ' + item.postsScraped + '\\n- Durchschn. Likes: ' + item.avgLikes + '\\n- Durchschn. Kommentare: ' + item.avgComments + '\\n- Engagement-Rate: ' + item.engagementRate + '%\\n\\nTop-Posts:\\n' + topPostsJson + '\\n\\nKommentare:\\n' + commentsJson + '\\n\\nErstelle auf Deutsch ein JSON-Objekt. Gib 3-5 Content-Ideen zurueck. Antworte NUR mit dem JSON-Objekt, ohne Markdown-Codeblock. Felder: staerken, engagement_treiber, community_sentiment, content_ideen (Array mit titel/beschreibung/plattform/format/inspiration), nicht_kopieren.';\nreturn [{ json: { competitorName: item.competitorName, platform: item.platform, accountUrl: item.accountUrl, followers: item.followers, postsScraped: item.postsScraped, avgLikes: item.avgLikes, avgComments: item.avgComments, avgShares: item.avgShares, engagementRate: item.engagementRate, topPosts: item.topPosts, topComments: item.topComments, calendarWeek: item.calendarWeek, year: item.year, projectName: item.projectName, status: item.status, systemPrompt: systemPrompt, userPrompt: userPrompt, _skipClaude: false } }];"
+      },
+      "id": "wf3-claude-prep",
+      "name": "Claude Prompt vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skipClaude }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "condition-1773221458725-82w49sjhl"
+            },
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "condition-1773221458725-z5lx1sr8t"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf3-skip-claude-check",
+      "name": "Claude ueberspringen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2656,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "mode": "id",
+          "value": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.userPrompt }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "={{ $json.systemPrompt }}",
+          "maxTokens": 2000,
+          "temperature": 0.3
+        }
+      },
+      "id": "wf3-claude-analysis",
+      "name": "Claude Wettbewerber-Analyse",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        560
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "nv6YXj42KhaG3WMp",
+          "name": "n8n-20260309"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const claudeOut = $input.first().json;\nconst prevData = $('Claude Prompt vorbereiten').first().json;\nlet analysis = null;\nlet contentIdeas = [];\ntry {\n  const contentArr = claudeOut.content;\n  const text = Array.isArray(contentArr) ? contentArr[0].text : ((claudeOut.content && claudeOut.content.text) ? claudeOut.content.text : (claudeOut.text || ''));\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const parsed = JSON.parse(cleaned);\n  analysis = { staerken: parsed.staerken || '', engagement_treiber: parsed.engagement_treiber || '', community_sentiment: parsed.community_sentiment || '', nicht_kopieren: parsed.nicht_kopieren || '' };\n  contentIdeas = parsed.content_ideen || [];\n} catch(e) {\n  analysis = { error: 'Parse-Fehler: ' + e.message };\n}\nreturn [{ json: { competitorName: prevData.competitorName, platform: prevData.platform, accountUrl: prevData.accountUrl, followers: prevData.followers, postsScraped: prevData.postsScraped, avgLikes: prevData.avgLikes, avgComments: prevData.avgComments, avgShares: prevData.avgShares, engagementRate: prevData.engagementRate, topPosts: prevData.topPosts, topComments: prevData.topComments, calendarWeek: prevData.calendarWeek, year: prevData.year, projectName: prevData.projectName, analysis: analysis, contentIdeas: contentIdeas, status: (analysis && analysis.error) ? 'partial' : 'ok' } }];"
+      },
+      "id": "wf3-parse-claude",
+      "name": "Claude Ergebnis parsen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nif (item.status === 'ok' || item.status === 'partial') {\n  staticData.results.push(item);\n  if (item.analysis) staticData.analyses.push({ competitor: item.competitorName, platform: item.platform, analysis: item.analysis, contentIdeas: item.contentIdeas || [] });\n} else {\n  staticData.errors.push({ competitor: item.competitorName || 'unbekannt', platform: item.platform || 'unbekannt', error: item.error || 'Unbekannter Fehler', timestamp: new Date().toISOString() });\n}\nreturn [{ json: { _collected: true, competitor: item.competitorName, platform: item.platform, status: item.status } }];"
+      },
+      "id": "wf3-collect-result",
+      "name": "Ergebnis sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "wf3-wait-rate-limit",
+      "name": "Apify Pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3408,
+        624
+      ],
+      "webhookId": "36801f09-a67f-4717-b973-9130b852c1b6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst supabaseItems = results.filter(function(r) { return r.status === 'ok' || r.status === 'partial'; }).map(function(r) { return { json: { project_name: r.projectName, calendar_week: r.calendarWeek, year: r.year, competitor_name: r.competitorName, platform: r.platform, account_url: r.accountUrl || '', followers: r.followers || 0, posts_scraped: r.postsScraped || 0, avg_likes: r.avgLikes || 0, avg_comments: r.avgComments || 0, avg_shares: r.avgShares || 0, engagement_rate: r.engagementRate || 0, top_posts: JSON.stringify(r.topPosts || []), top_comments: JSON.stringify(r.topComments || []), analysis: JSON.stringify(r.analysis || null), content_ideas: JSON.stringify(r.contentIdeas || []), collected_at: new Date().toISOString(), data_source: 'wf_competitor_profilname' } }; });\nstaticData.outputCount = supabaseItems.length;\nstaticData.finishedAt = new Date().toISOString();\nif (supabaseItems.length === 0) return [{ json: { _empty: true, message: 'Keine Daten zum Schreiben', errors: staticData.errors || [] } }];\nreturn supabaseItems;"
+      },
+      "id": "wf3-prepare-output",
+      "name": "Ergebnisse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://xczjbiitstgxrzjlksqg.supabase.co/rest/v1/competitor_weekly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjempiaWl0c3RneHJ6amxrc3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODkwMjksImV4cCI6MjA4ODM2NTAyOX0.jseXf_1XxmR2i-XtRURDdu2o1wqKyva_jtxjjtfZIyY"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "wf3-supabase-upsert",
+      "name": "Supabase Competitor UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1856,
+        -48
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "R6LLeI3G74Ju62Jv",
+          "name": "VoyageAI"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nreturn [{ json: { workflow_name: 'Wettbewerbsanalyse Social Media Eingabe per Profilname', project_name: item.project_name || '', calendar_week: item.calendar_week || 0, year: item.year || new Date().getFullYear(), status: 'completed', output_count: staticData.outputCount || 0, error_count: (staticData.errors || []).length, started_at: staticData.startedAt || new Date().toISOString(), finished_at: staticData.finishedAt || new Date().toISOString(), trigger_type: 'form', executed_at: new Date().toISOString() } }];"
+      },
+      "id": "wf3-prepare-runlog",
+      "name": "Run-Log vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "=workflow_runs",
+        "dataToSend": "autoMapInputData"
+      },
+      "id": "wf3-supabase-runlog",
+      "name": "Supabase Run-Log",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        -48
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "l5M1nWRN9gzVviRE",
+          "name": "Supabase 20260310"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst results = staticData.results || [];\nconst errors = staticData.errors || [];\nconst analyses = staticData.analyses || [];\nconst competitorsOk = results.filter(function(r) { return r.status === 'ok'; }).map(function(r) { return r.competitorName + ' (' + r.platform + ')'; });\nconst competitorsError = errors.map(function(e) { return (e.competitor||'unbekannt') + ' (' + (e.platform||'?') + ')'; });\nconst allContentIdeas = [];\nfor (let i = 0; i < analyses.length; i++) { const a = analyses[i]; const ideas = a.contentIdeas || []; for (let j = 0; j < ideas.length; j++) { const idea = ideas[j]; allContentIdeas.push({ titel: idea.titel, beschreibung: idea.beschreibung, plattform: idea.plattform, format: idea.format, inspiration: idea.inspiration, competitor: a.competitor, platform: a.platform }); } }\ndelete staticData.results; delete staticData.errors; delete staticData.analyses; delete staticData.startedAt; delete staticData.finishedAt; delete staticData.outputCount;\nreturn [{ json: { success: errors.length === 0, workflow: 'Wettbewerbsanalyse Social Media Eingabe per Profilname', data: { competitorsAnalyzed: competitorsOk, competitorsFailed: competitorsError, totalCompetitors: competitorsOk.length + competitorsError.length, successCount: competitorsOk.length, errorCount: competitorsError.length, contentIdeasGenerated: allContentIdeas.length, contentIdeas: allContentIdeas }, errors: errors.length > 0 ? errors : null, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "wf3-build-response",
+      "name": "Response zusammenbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2608,
+        -48
+      ]
+    },
+    {
+      "id": "wf-html-report",
+      "name": "HTML Report erstellen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        32
+      ],
+      "parameters": {
+        "jsCode": "const data = $('Response zusammenbauen').first().json;\nconst emailEmpfaenger = $('Profilnamen eingeben').first().json['E-Mail-Empf\\u00e4nger'] || '';\n\nconst results = data.data || {};\nconst analyzed = results.competitorsAnalyzed || [];\nconst failed = results.competitorsFailed || [];\nconst ideas = results.contentIdeas || [];\nconst now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });\n\nconst ideasByCompetitor = {};\nfor (const idea of ideas) {\n  const key = idea.competitor + ' (' + idea.platform + ')';\n  if (!ideasByCompetitor[key]) ideasByCompetitor[key] = [];\n  ideasByCompetitor[key].push(idea);\n}\n\nconst formatBadge = function(f) {\n  const colors = { reel: '#e91e8c', video: '#ff0000', carousel: '#f59e0b', post: '#3b82f6', story: '#8b5cf6' };\n  const c = colors[f] || '#6b7280';\n  return '<span style=\"background:' + c + ';color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;\">' + f + '</span>';\n};\n\nconst successRate = results.totalCompetitors > 0 ? Math.round(results.successCount / results.totalCompetitors * 100) : 0;\nconst statusColor = successRate === 100 ? '#10b981' : successRate >= 60 ? '#f59e0b' : '#ef4444';\n\nlet ideasHtml = '';\nconst competitorKeys = Object.keys(ideasByCompetitor);\nfor (let ci = 0; ci < competitorKeys.length; ci++) {\n  const competitor = competitorKeys[ci];\n  const cIdeas = ideasByCompetitor[competitor];\n  ideasHtml += '<tr><td colspan=\"4\" style=\"background:#f1f5f9;padding:8px 12px;font-weight:700;color:#1e293b;border-top:2px solid #e2e8f0;\">' + competitor + '</td></tr>';\n  for (let ii = 0; ii < cIdeas.length; ii++) {\n    const idea = cIdeas[ii];\n    ideasHtml += '<tr><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#1e293b;\">' + (idea.titel || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;\">' + (idea.beschreibung || '') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;\">' + formatBadge(idea.format || 'post') + '</td><td style=\"padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8;font-size:12px;\">' + (idea.inspiration || '') + '</td></tr>';\n  }\n}\n\nlet failedHtml = '';\nfor (let fi = 0; fi < failed.length; fi++) {\n  failedHtml += '<li style=\"color:#ef4444;margin-bottom:4px;\">' + failed[fi] + '</li>';\n}\n\nlet analyzedBadges = '';\nfor (let ai = 0; ai < analyzed.length; ai++) {\n  analyzedBadges += '<span style=\"background:#f0fdf4;color:#16a34a;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #bbf7d0;\">' + analyzed[ai] + '</span> ';\n}\nif (analyzed.length === 0) analyzedBadges = '<span style=\"color:#94a3b8;font-size:13px;\">Keine</span>';\n\nconst ideasSection = ideas.length > 0 ? '<div style=\"background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n  '<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#128161; Content-Ideen (' + ideas.length + ')</h2>' +\n  '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">' +\n  '<thead><tr style=\"background:#f8fafc;\">' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:22%;\">Titel</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;\">Beschreibung</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:10%;\">Format</th>' +\n  '<th style=\"padding:10px 12px;text-align:left;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;width:20%;\">Inspiration</th>' +\n  '</tr></thead><tbody>' + ideasHtml + '</tbody></table></div>' : '';\n\nconst failedSection = failed.length > 0 ? '<h3 style=\"margin:16px 0 8px;font-size:14px;color:#ef4444;\">&#10060; Fehlgeschlagen</h3><ul style=\"margin:0;padding-left:20px;\">' + failedHtml + '</ul>' : '';\n\nconst html = '<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Wettbewerbsanalyse Report</title></head>' +\n'<body style=\"margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;\">' +\n'<div style=\"max-width:800px;margin:0 auto;padding:32px 16px;\">' +\n'<div style=\"background:linear-gradient(135deg,#1e293b 0%,#334155 100%);border-radius:16px;padding:32px;margin-bottom:24px;\">' +\n'<h1 style=\"margin:0 0 8px;color:#fff;font-size:24px;font-weight:700;\">&#128202; Wettbewerbsanalyse</h1>' +\n'<p style=\"margin:0;color:#94a3b8;font-size:14px;\">Erstellt am ' + now + ' &middot; ' + (results.totalCompetitors || 0) + ' Profile analysiert</p>' +\n'</div>' +\n'<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;\">' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid ' + statusColor + ';box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:' + statusColor + ';\">' + (results.successCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Erfolgreich</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #ef4444;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#ef4444;\">' + (results.errorCount || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Fehlgeschlagen</div></div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:20px;border-left:4px solid #8b5cf6;box-shadow:0 1px 3px rgba(0,0,0,.08);\"><div style=\"font-size:28px;font-weight:700;color:#8b5cf6;\">' + (results.contentIdeasGenerated || 0) + '</div><div style=\"font-size:13px;color:#64748b;margin-top:4px;\">Content-Ideen</div></div>' +\n'</div>' +\n'<div style=\"background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">' +\n'<h2 style=\"margin:0 0 16px;font-size:16px;color:#1e293b;\">&#9989; Analysierte Profile</h2>' +\n'<div style=\"display:flex;flex-wrap:wrap;gap:8px;\">' + analyzedBadges + '</div>' + failedSection +\n'</div>' +\n ideasSection +\n'<div style=\"text-align:center;margin-top:24px;color:#94a3b8;font-size:12px;\">Automatisch erstellt von n8n &middot; Wettbewerbsanalyse Social Media</div>' +\n'</div></body></html>';\n\nreturn [{ json: { html: html, emailEmpfaenger: emailEmpfaenger, subject: 'Wettbewerbsanalyse Report ' + now + ' - ' + (results.totalCompetitors || 0) + ' Profile analysiert' } }];"
+      }
+    },
+    {
+      "id": "wf-gmail-send",
+      "name": "Report per Gmail senden",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3100,
+        32
+      ],
+      "parameters": {
+        "sendTo": "={{ $json.emailEmpfaenger }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Kh7cApAx6TAe4Hpy",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Profilnamen eingeben": {
+      "main": [
+        [
+          {
+            "node": "Plattform erkennen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plattform erkennen": {
+      "main": [
+        [
+          {
+            "node": "Claude Plattform & Namen ermitteln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Plattform & Namen ermitteln": {
+      "main": [
+        [
+          {
+            "node": "Profile parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile parsen": {
+      "main": [
+        [
+          {
+            "node": "Competitor Dispatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitor Dispatcher": {
+      "main": [
+        [
+          {
+            "node": "Competitor-Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitor-Batches": {
+      "main": [
+        [
+          {
+            "node": "Ergebnisse aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Plattform Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plattform Switch": {
+      "main": [
+        [
+          {
+            "node": "Apify IG Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify FB Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify TT Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify LI Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify YT Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify IG Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify FB Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse FB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify TT Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse TT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify LI Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse LI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify YT Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse YT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse IG": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse FB": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse TT": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LI": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse YT": {
+      "main": [
+        [
+          {
+            "node": "Claude Prompt vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Prompt vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Claude ueberspringen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude ueberspringen?": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude Wettbewerber-Analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Wettbewerber-Analyse": {
+      "main": [
+        [
+          {
+            "node": "Claude Ergebnis parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Ergebnis parsen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis sammeln": {
+      "main": [
+        [
+          {
+            "node": "Apify Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Pause": {
+      "main": [
+        [
+          {
+            "node": "Competitor-Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnisse aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "Supabase Competitor UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Competitor UPSERT": {
+      "main": [
+        [
+          {
+            "node": "Run-Log vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run-Log vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Supabase Run-Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Run-Log": {
+      "main": [
+        [
+          {
+            "node": "Response zusammenbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response zusammenbauen": {
+      "main": [
+        [
+          {
+            "node": "HTML Report erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Report erstellen": {
+      "main": [
+        [
+          {
+            "node": "Report per Gmail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "28e337fc-b5f8-4bd2-b58d-93f1e19982cf",
+  "activeVersionId": null,
+  "versionCounter": 9,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-11T09:12:19.573Z",
+      "createdAt": "2026-03-11T09:12:19.573Z",
+      "role": "workflow:owner",
+      "workflowId": "3PzYNtBxeRTv6ks3",
+      "projectId": "A3xoYVAJ1hf6LsPx",
+      "project": {
+        "updatedAt": "2025-07-28T11:25:25.006Z",
+        "createdAt": "2025-07-28T11:25:22.410Z",
+        "id": "A3xoYVAJ1hf6LsPx",
+        "name": "Mark Niemann <mark@mo-casa.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
 }
