@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-11T13:10:31.776Z",
+  "updatedAt": "2026-03-11T13:13:58.865Z",
   "createdAt": "2026-03-11T09:12:19.570Z",
   "id": "3PzYNtBxeRTv6ks3",
   "name": "Wettbewerbsanalyse Social Media Eingabe per Profilname",
@@ -364,6 +364,11 @@
     },
     {
       "parameters": {
+        "actorId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "clockworks/tiktok-scraper"
+        },
         "customBody": "={{ JSON.stringify({ profiles: ['@' + $json.accountId], resultsPerPage: 20, shouldDownloadVideos: false }) }}"
       },
       "id": "wf3-apify-tt",
@@ -1238,9 +1243,9 @@
       }
     ]
   },
-  "versionId": "73814600-d89f-4369-bceb-16e37a2778b4",
+  "versionId": "98a5324e-810f-4b49-9dae-e9c73e611eec",
   "activeVersionId": null,
-  "versionCounter": 25,
+  "versionCounter": 26,
   "triggerCount": 0,
   "shared": [
     {
