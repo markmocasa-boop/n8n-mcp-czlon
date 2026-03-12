@@ -1,39 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773237208767,
+  "lastUpdate": 1773298371621,
   "repoUrl": "https://github.com/markmocasa-boop/n8n-mcp-czlon",
   "entries": {
     "n8n-mcp Benchmarks": [
-      {
-        "commit": {
-          "author": {
-            "email": "markmocasa@gmail.com",
-            "name": "markmocasa-boop",
-            "username": "markmocasa-boop"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "bdf279839d23fe2bb0fd6682d0cd0fffebb05868",
-          "message": "Merge pull request #34 from markmocasa-boop/claude/fix-directory-search-iAPNZ\n\nfix: directory search, services extraction, and Gemini prompt in GBP …",
-          "timestamp": "2026-02-21T12:10:04+01:00",
-          "tree_id": "b50e46d51fd491b42f3445996df2fc882854fdd6",
-          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/bdf279839d23fe2bb0fd6682d0cd0fffebb05868"
-        },
-        "date": 1771672322532,
-        "tool": "customSmallerIsBetter",
-        "benches": [
-          {
-            "name": "sample - array sorting - small",
-            "value": 0.0136,
-            "range": "0.3096",
-            "unit": "ms",
-            "extra": "73341 ops/sec"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -1542,6 +1511,37 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/01cf45262ee56cb5acb13f49f3cfb8ddcc840039"
         },
         "date": 1773237208037,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0136,
+            "range": "0.3096",
+            "unit": "ms",
+            "extra": "73341 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "committer": {
+            "email": "mark@mo-casa.com",
+            "name": "Mark Niemann",
+            "username": "Dennishwd"
+          },
+          "distinct": true,
+          "id": "5c8f8735c08e78a76a88ee36576c9c6654bca353",
+          "message": "fix: switch node back to rules.rules format to prevent canvas crash\n\nrules.values with conditions objects crashes n8n 2.36.1 canvas renderer.\nOnly rules.rules format with dataType/value1 works in this version.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-12T07:48:46+01:00",
+          "tree_id": "96797cdc36c4778a85606203e5ac07f7bf8f84dd",
+          "url": "https://github.com/markmocasa-boop/n8n-mcp-czlon/commit/5c8f8735c08e78a76a88ee36576c9c6654bca353"
+        },
+        "date": 1773298371128,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
