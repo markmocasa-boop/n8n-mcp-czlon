@@ -1,1 +1,2816 @@
-{"updatedAt":"2026-03-05T06:11:24.938Z","createdAt":"2026-03-05T06:11:24.938Z","id":"kkzX4OzH4SbIjJ2x","name":"SEO Content Audit — Autopilot","description":null,"active":false,"isArchived":false,"nodes":[{"id":"ap-trigger","name":"Autopilot Trigger","type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[100,300],"parameters":{"workflowInputs":{"values":[{"name":"url"},{"name":"keyword"},{"name":"original_content"},{"name":"email_empfaenger"},{"name":"zielsprache"}]}}},{"id":"ap-vars","name":"Variablen setzen","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[340,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"thema","name":"thema","value":"={{ $json.keyword }}","type":"string"},{"id":"zielsprache","name":"zielsprache","value":"={{ $json.zielsprache || 'DE' }}","type":"string"},{"id":"url_slug","name":"url_slug","value":"={{ ($json.keyword || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') }}","type":"string"},{"id":"notizen","name":"notizen","value":"={{ 'Automatischer Content-Audit fuer URL: ' + $json.url }}","type":"string"},{"id":"url","name":"url","value":"={{ $json.url }}","type":"string"},{"id":"keyword","name":"keyword","value":"={{ $json.keyword }}","type":"string"},{"id":"original_content","name":"original_content","value":"={{ $json.original_content }}","type":"string"},{"id":"email_empfaenger","name":"email_empfaenger","value":"={{ $json.email_empfaenger }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf1","name":"WF1 — Projekt-Setup & Keywords","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[580,300],"parameters":{"source":"database","workflowId":"G9cuUnS2bu2vCZGF","options":{"waitForSubWorkflow":true}}},{"id":"ap-extract-id","name":"Spreadsheet-ID extrahieren","type":"n8n-nodes-base.code","typeVersion":2,"position":[820,300],"parameters":{"jsCode":"const items = $input.all();\nlet spreadsheet_id = '';\nlet spreadsheet_url = '';\n\nfor (const item of items) {\n  // Direktes spreadsheetId aus Google Sheets Create Response\n  if (item.json.spreadsheetId) {\n    spreadsheet_id = item.json.spreadsheetId;\n    spreadsheet_url = item.json.spreadsheetUrl || '';\n    break;\n  }\n  // Gesetzte spreadsheet_id\n  if (item.json.spreadsheet_id && item.json.spreadsheet_id.length > 20) {\n    spreadsheet_id = item.json.spreadsheet_id;\n    break;\n  }\n  // Aus URL extrahieren\n  if (item.json.spreadsheet_url) {\n    spreadsheet_url = item.json.spreadsheet_url;\n    const match = item.json.spreadsheet_url.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]+)/);\n    if (match) {\n      spreadsheet_id = match[1];\n      break;\n    }\n  }\n}\n\nif (!spreadsheet_id) {\n  throw new Error('Spreadsheet-ID konnte nicht aus WF1-Output extrahiert werden. Items: ' + JSON.stringify(items.map(i => Object.keys(i.json))));\n}\n\nreturn [{\n  json: {\n    spreadsheet_id,\n    spreadsheet_url: spreadsheet_url || `https://docs.google.com/spreadsheets/d/${spreadsheet_id}/edit`,\n    status: 'wf1_complete'\n  }\n}];"}},{"id":"ap-wf2-input","name":"WF2-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1060,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $json.spreadsheet_id }}","type":"string"},{"id":"selected_keywords","name":"selected_keywords","value":"={{ $('Variablen setzen').first().json.keyword }}","type":"string"},{"id":"custom_keywords","name":"custom_keywords","value":"","type":"string"},{"id":"notizen","name":"notizen","value":"","type":"string"}]},"options":{}}},{"id":"ap-exec-wf2","name":"WF2 — SERP-Scraping","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[1300,300],"parameters":{"source":"database","workflowId":"cBzjPNPpFJC8zMtK","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf3-input","name":"WF3-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1540,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf3","name":"WF3 — Deep Analyse (Semantik)","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[1780,300],"parameters":{"source":"database","workflowId":"mE8ufIF5H0Z6Ap8l","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf4-input","name":"WF4-Input vorbereiten (Auto)","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[2020,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"},{"id":"expertenwissen","name":"expertenwissen","value":"","type":"string"},{"id":"zitate","name":"zitate","value":"","type":"string"},{"id":"unique_angle","name":"unique_angle","value":"","type":"string"},{"id":"referenz_links","name":"referenz_links","value":"","type":"string"}]},"options":{}}},{"id":"ap-exec-wf4","name":"WF4 — User Insight Mining","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[2260,300],"parameters":{"source":"database","workflowId":"8eWElY86rh30qqrY","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf5-input","name":"WF5-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[2500,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf5","name":"WF5 — Gliederung & Freigabe","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[2740,300],"parameters":{"source":"database","workflowId":"C7eK32G9cfcnFJ78","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf6-input","name":"WF6-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[2980,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf6","name":"WF6 — Content-Erstellung","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[3220,300],"parameters":{"source":"database","workflowId":"1E2YBYz9UUB5wb2q","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf7-input","name":"WF7-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[3460,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf7","name":"WF7 — QA & Sub-Agenten","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[3700,300],"parameters":{"source":"database","workflowId":"WVnoKVXGqjhcAlM4","options":{"waitForSubWorkflow":true}}},{"id":"ap-wf8-input","name":"WF8-Input vorbereiten","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[3940,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"spreadsheet_id","name":"spreadsheet_id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}","type":"string"}]},"options":{}}},{"id":"ap-exec-wf8","name":"WF8 — Finalisierung & Export","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[4180,300],"parameters":{"source":"database","workflowId":"KDVCn8cTXdijyGAP","options":{"waitForSubWorkflow":true}}},{"id":"ap-read-content","name":"SEO Content aus Sheet lesen","type":"n8n-nodes-base.googleSheets","typeVersion":4.7,"position":[4420,300],"parameters":{"operation":"read","documentId":{"__rl":true,"mode":"id","value":"={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}"},"sheetName":{"__rl":true,"mode":"name","value":"Content_Draft"},"range":"A:Z","options":{}},"credentials":{"googleSheetsOAuth2Api":{"id":"gw0DIdDENFkpE7ZW","name":"Google Sheets account"}},"onError":"continueRegularOutput"},{"id":"ap-build-seo-content","name":"SEO Content aufbereiten","type":"n8n-nodes-base.code","typeVersion":2,"position":[4660,300],"parameters":{"jsCode":"const contentItems = $input.all();\nlet seoContent = '';\n\nfor (const item of contentItems) {\n  const text = item.json.content_final || item.json.content_humanized || item.json.content_raw || '';\n  if (text && text.trim()) {\n    seoContent += text + '\\n\\n';\n  }\n}\n\n// Auf max 12000 Zeichen begrenzen\nif (seoContent.length > 12000) {\n  seoContent = seoContent.slice(0, 12000) + '\\n...[gekuerzt]';\n}\n\nconst originalContent = ($('Variablen setzen').first().json.original_content || '').slice(0, 6000);\nconst keyword = $('Variablen setzen').first().json.keyword || '';\nconst url = $('Variablen setzen').first().json.url || '';\nconst spreadsheetData = $('Spreadsheet-ID extrahieren').first().json;\n\nreturn [{\n  json: {\n    seo_content: seoContent || '[Kein SEO-Content gefunden]',\n    original_content: originalContent,\n    keyword,\n    url,\n    spreadsheet_id: spreadsheetData.spreadsheet_id,\n    spreadsheet_url: spreadsheetData.spreadsheet_url\n  }\n}];"}},{"id":"ap-openai-compare","name":"KI-Vergleich (OpenAI GPT-4o)","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[4900,300],"parameters":{"method":"POST","url":"https://api.openai.com/v1/chat/completions","authentication":"predefinedCredentialType","nodeCredentialType":"openAiApi","sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({\n  model: 'gpt-4o',\n  messages: [\n    {\n      role: 'system',\n      content: 'Du bist ein erfahrener SEO-Content-Experte. Vergleiche zwei Texte nach: 1) Ueberschriftenstruktur (H1/H2/H3-Themen), 2) Themenabdeckung, 3) inhaltliche Tiefe und Vollstaendigkeit. Sei praezise und konstruktiv. Antworte NUR als valides JSON ohne Markdown-Codeblocks.'\n    },\n    {\n      role: 'user',\n      content: 'Keyword: ' + $json.keyword + '\\n\\nBESTEHENDER URL-CONTENT (zu pruefen):\\n' + $json.original_content + '\\n\\n---\\n\\nKI-GENERIERTER SEO-OPTIMIERTER CONTENT (Referenz):\\n' + $json.seo_content.slice(0, 5000) + '\\n\\n---\\n\\nAnalysiere und antworte als JSON:\\n{\"aehnlichkeit_prozent\": 75, \"status\": \"verbesserbar\", \"fehlende_ueberschriften\": [\"H2: Beispiel-Ueberschrift\"], \"inhaltliche_luecken\": [\"Abschnitt ueber X fehlt komplett\"], \"staerken_bestehender_content\": [\"Gut erklaert: Y\"], \"zusammenfassung\": \"2-3 Saetze Gesamteinschaetzung\"}\\n\\nRegeln:\\n- aehnlichkeit_prozent: 0-100 (semantische Aehnlichkeit)\\n- status: \"identisch\" wenn >= 90%, sonst \"verbesserbar\"\\n- fehlende_ueberschriften: leeres Array wenn identisch\\n- inhaltliche_luecken: leeres Array wenn identisch'\n    }\n  ],\n  response_format: { type: 'json_object' },\n  temperature: 0.2,\n  max_tokens: 2000\n}) }}","options":{"timeout":90000}},"credentials":{"openAiApi":{"id":"OPENAI_CREDENTIAL_ID_HIER_EINTRAGEN","name":"OpenAI account"}}},{"id":"ap-parse-result","name":"Ergebnis auswerten & Email aufbauen","type":"n8n-nodes-base.code","typeVersion":2,"position":[5140,300],"parameters":{"jsCode":"const aiResponse = $input.first().json;\nconst contentData = $('SEO Content aufbereiten').first().json;\nconst vars = $('Variablen setzen').first().json;\n\nconst keyword = contentData.keyword || vars.keyword || '';\nconst url = contentData.url || vars.url || '';\nconst spreadsheet_id = contentData.spreadsheet_id || '';\nconst spreadsheet_url = contentData.spreadsheet_url || '';\nconst email_empfaenger = vars.email_empfaenger || '';\n\n// KI-Antwort parsen\nlet analysisResult = {};\ntry {\n  const raw = aiResponse.choices?.[0]?.message?.content || '{}';\n  analysisResult = JSON.parse(raw);\n} catch (e) {\n  analysisResult = {\n    aehnlichkeit_prozent: 0,\n    status: 'fehler',\n    fehlende_ueberschriften: [],\n    inhaltliche_luecken: [`Analyse-Fehler: ${e.message}`],\n    staerken_bestehender_content: [],\n    zusammenfassung: 'Die automatische Analyse konnte nicht abgeschlossen werden.'\n  };\n}\n\nconst aehnlichkeit = Number(analysisResult.aehnlichkeit_prozent) || 0;\nconst istIdentisch = aehnlichkeit >= 90;\nconst status = istIdentisch ? 'identisch' : 'verbesserbar';\n\nconst fehlende_ueberschriften = (analysisResult.fehlende_ueberschriften || []);\nconst inhaltliche_luecken = (analysisResult.inhaltliche_luecken || []);\nconst staerken = (analysisResult.staerken_bestehender_content || []);\nconst zusammenfassung = analysisResult.zusammenfassung || '';\n\n// ---- EMAIL HTML aufbauen ----\nconst statusColor = istIdentisch ? '#22c55e' : '#f59e0b';\nconst statusIcon = istIdentisch ? '✓' : '⚠';\nconst statusLabel = istIdentisch ? 'Identisch — Kein Handlungsbedarf' : 'Verbesserbar — Optimierungen empfohlen';\n\nconst listItems = (arr) => arr.length > 0\n  ? '<ul style=\"margin:8px 0;padding-left:20px;\">' + arr.map(i => `<li style=\"margin-bottom:6px;\">${i}</li>`).join('') + '</ul>'\n  : '<p style=\"color:#6b7280;\">—</p>';\n\nlet emailBody = `<!DOCTYPE html><html><body style=\"font-family:system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:32px 24px;color:#1f2937;background:#ffffff;\">\n<div style=\"border-bottom:3px solid ${statusColor};padding-bottom:16px;margin-bottom:24px;\">\n  <h1 style=\"margin:0;font-size:22px;color:#111827;\">SEO Content Audit Report</h1>\n  <p style=\"margin:4px 0 0;color:#6b7280;font-size:14px;\">Automatisch generiert — ${new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'long',year:'numeric'})}</p>\n</div>\n\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:28px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;\">\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;width:160px;\">Keyword</td><td style=\"padding:12px 16px;font-size:15px;font-weight:600;\">${keyword}</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;\">Analysierte URL</td><td style=\"padding:12px 16px;\"><a href=\"${url}\" style=\"color:#2563eb;word-break:break-all;\">${url}</a></td></tr>\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;\">Ähnlichkeit</td><td style=\"padding:12px 16px;font-size:24px;font-weight:700;color:${statusColor};\">${aehnlichkeit}%</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;\">Bewertung</td><td style=\"padding:12px 16px;\"><span style=\"background:${statusColor};color:white;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;\">${statusIcon} ${statusLabel}</span></td></tr>\n</table>\n\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">Einschätzung</h2>\n<p style=\"background:#f9fafb;border-left:4px solid ${statusColor};padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 24px;line-height:1.6;\">${zusammenfassung || 'Keine Zusammenfassung verfügbar.'}</p>\n`;\n\nif (!istIdentisch) {\n  emailBody += `<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">📝 Vorschläge: Fehlende/anzupassende Überschriften</h2>${listItems(fehlende_ueberschriften)}<h2 style=\"font-size:16px;color:#374151;margin-top:24px;margin-bottom:8px;\">📋 Inhaltliche Ergänzungen</h2>${listItems(inhaltliche_luecken)}`;\n} else {\n  emailBody += `<div style=\"background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px;\"><p style=\"margin:0;color:#15803d;font-weight:600;\">✓ Der bestehende Content deckt das Keyword bereits optimal ab.</p><p style=\"margin:8px 0 0;color:#166534;\">Keine Änderungen oder Ergänzungen empfohlen.</p></div>`;\n}\n\nif (staerken.length > 0) {\n  emailBody += `<h2 style=\"font-size:16px;color:#374151;margin-top:24px;margin-bottom:8px;\">💪 Stärken des bestehenden Contents</h2>${listItems(staerken)}`;\n}\n\nif (spreadsheet_url) {\n  emailBody += `<div style=\"margin-top:32px;padding-top:20px;border-top:1px solid #e5e7eb;\"><a href=\"${spreadsheet_url}\" style=\"display:inline-block;background:#2563eb;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;\">📊 Vollständiges SEO-Report Google Sheet öffnen →</a></div>`;\n}\n\nemailBody += `<p style=\"margin-top:32px;color:#9ca3af;font-size:12px;\">SEO Content Audit | Automatisch generiert vom SEO Content Agent</p></body></html>`;\n\nreturn [{\n  json: {\n    keyword,\n    url,\n    spreadsheet_id,\n    spreadsheet_url,\n    email_empfaenger,\n    aehnlichkeit_prozent: aehnlichkeit,\n    status,\n    fehlende_ueberschriften: fehlende_ueberschriften.join('\\n'),\n    inhaltliche_luecken: inhaltliche_luecken.join('\\n'),\n    staerken: staerken.join('\\n'),\n    zusammenfassung,\n    email_body: emailBody,\n    email_subject: `SEO Audit: \"${keyword}\" — ${aehnlichkeit}% Ähnlichkeit (${status})`\n  }\n}];"}},{"id":"ap-add-audit-tab","name":"Content-Audit Tab erstellen","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[5380,300],"parameters":{"method":"POST","url":"={{ 'https://sheets.googleapis.com/v4/spreadsheets/' + $json.spreadsheet_id + ':batchUpdate' }}","authentication":"predefinedCredentialType","nodeCredentialType":"googleSheetsOAuth2Api","sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({requests: [{addSheet: {properties: {title: 'Content_Audit', gridProperties: {rowCount: 1000, columnCount: 10}}}}]}) }}","options":{}},"credentials":{"googleSheetsOAuth2Api":{"id":"gw0DIdDENFkpE7ZW","name":"Google Sheets account"}},"onError":"continueRegularOutput"},{"id":"ap-write-audit","name":"Audit-Ergebnisse ins Sheet schreiben","type":"n8n-nodes-base.googleSheets","typeVersion":4.7,"position":[5620,300],"parameters":{"operation":"append","documentId":{"__rl":true,"mode":"id","value":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_id }}"},"sheetName":{"__rl":true,"mode":"name","value":"Content_Audit"},"columns":{"mappingMode":"defineBelow","value":{"url":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.url }}","keyword":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}","aehnlichkeit_prozent":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}","status":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}","zusammenfassung":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.zusammenfassung }}","vorschlaege_ueberschriften":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.fehlende_ueberschriften }}","vorschlaege_content":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.inhaltliche_luecken }}","staerken":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.staerken }}","erstellt_am":"={{ new Date().toISOString() }}"},"schema":[{"id":"url","type":"string","display":true,"displayName":"url"},{"id":"keyword","type":"string","display":true,"displayName":"keyword"},{"id":"aehnlichkeit_prozent","type":"number","display":true,"displayName":"aehnlichkeit_prozent"},{"id":"status","type":"string","display":true,"displayName":"status"},{"id":"zusammenfassung","type":"string","display":true,"displayName":"zusammenfassung"},{"id":"vorschlaege_ueberschriften","type":"string","display":true,"displayName":"vorschlaege_ueberschriften"},{"id":"vorschlaege_content","type":"string","display":true,"displayName":"vorschlaege_content"},{"id":"staerken","type":"string","display":true,"displayName":"staerken"},{"id":"erstellt_am","type":"string","display":true,"displayName":"erstellt_am"}]},"options":{}},"credentials":{"googleSheetsOAuth2Api":{"id":"gw0DIdDENFkpE7ZW","name":"Google Sheets account"}},"onError":"continueRegularOutput"},{"id":"ap-send-email","name":"Email Report senden (Gmail)","type":"n8n-nodes-base.gmail","typeVersion":2.1,"position":[5860,300],"parameters":{"operation":"send","to":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_empfaenger }}","subject":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_subject }}","emailType":"html","message":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_body }}","options":{}},"credentials":{"gmailOAuth2":{"id":"Kh7cApAx6TAe4Hpy","name":"Gmail account"}}},{"id":"ap-final","name":"Autopilot abgeschlossen","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[6100,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"status","name":"status","value":"completed","type":"string"},{"id":"keyword","name":"keyword","value":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}","type":"string"},{"id":"aehnlichkeit_prozent","name":"aehnlichkeit_prozent","value":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}","type":"number"},{"id":"audit_status","name":"audit_status","value":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}","type":"string"},{"id":"spreadsheet_url","name":"spreadsheet_url","value":"={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_url }}","type":"string"}]},"options":{}}},{"id":"sticky-overview","name":"Architektur-Uebersicht","type":"n8n-nodes-base.stickyNote","typeVersion":1,"position":[-200,-20],"parameters":{"content":"## SEO Content Audit — Autopilot\n\n**Wird vom Batch Master aufgerufen (1x pro URL/Keyword)**\n\n### Ablauf:\n1. **Trigger** — empfängt: url, keyword, original_content, email\n2. **WF1** — erstellt Google Sheet + Keyword-Recherche\n3. **WF2** — SERP-Scraping für das Keyword\n4. **WF3** — Semantische Analyse\n5. **WF4** — User Insight Mining (ohne Expert-Input)\n6. **WF5** — Gliederungserstellung\n7. **WF6** — Content-Erstellung\n8. **WF7** — QA-Prüfung\n9. **WF8** — Finalisierung & Export\n10. **Content lesen** — liest generierten SEO-Content aus Sheet\n11. **KI-Vergleich** — GPT-4o vergleicht Original vs. SEO-Content\n12. **Auswertung** — Ähnlichkeitsscore + Vorschläge\n13. **Sheet-Update** — Audit-Tab im Keyword-Sheet\n14. **Email** — Report per Gmail\n\n### Setup (einmalig):\n- OpenAI Credential ID im KI-Vergleich-Node eintragen\n- Gmail Credential ID im Email-Node eintragen","color":5}}],"connections":{"Autopilot Trigger":{"main":[[{"node":"Variablen setzen","type":"main","index":0}]]},"Variablen setzen":{"main":[[{"node":"WF1 — Projekt-Setup & Keywords","type":"main","index":0}]]},"WF1 — Projekt-Setup & Keywords":{"main":[[{"node":"Spreadsheet-ID extrahieren","type":"main","index":0}]]},"Spreadsheet-ID extrahieren":{"main":[[{"node":"WF2-Input vorbereiten","type":"main","index":0}]]},"WF2-Input vorbereiten":{"main":[[{"node":"WF2 — SERP-Scraping","type":"main","index":0}]]},"WF2 — SERP-Scraping":{"main":[[{"node":"WF3-Input vorbereiten","type":"main","index":0}]]},"WF3-Input vorbereiten":{"main":[[{"node":"WF3 — Deep Analyse (Semantik)","type":"main","index":0}]]},"WF3 — Deep Analyse (Semantik)":{"main":[[{"node":"WF4-Input vorbereiten (Auto)","type":"main","index":0}]]},"WF4-Input vorbereiten (Auto)":{"main":[[{"node":"WF4 — User Insight Mining","type":"main","index":0}]]},"WF4 — User Insight Mining":{"main":[[{"node":"WF5-Input vorbereiten","type":"main","index":0}]]},"WF5-Input vorbereiten":{"main":[[{"node":"WF5 — Gliederung & Freigabe","type":"main","index":0}]]},"WF5 — Gliederung & Freigabe":{"main":[[{"node":"WF6-Input vorbereiten","type":"main","index":0}]]},"WF6-Input vorbereiten":{"main":[[{"node":"WF6 — Content-Erstellung","type":"main","index":0}]]},"WF6 — Content-Erstellung":{"main":[[{"node":"WF7-Input vorbereiten","type":"main","index":0}]]},"WF7-Input vorbereiten":{"main":[[{"node":"WF7 — QA & Sub-Agenten","type":"main","index":0}]]},"WF7 — QA & Sub-Agenten":{"main":[[{"node":"WF8-Input vorbereiten","type":"main","index":0}]]},"WF8-Input vorbereiten":{"main":[[{"node":"WF8 — Finalisierung & Export","type":"main","index":0}]]},"WF8 — Finalisierung & Export":{"main":[[{"node":"SEO Content aus Sheet lesen","type":"main","index":0}]]},"SEO Content aus Sheet lesen":{"main":[[{"node":"SEO Content aufbereiten","type":"main","index":0}]]},"SEO Content aufbereiten":{"main":[[{"node":"KI-Vergleich (OpenAI GPT-4o)","type":"main","index":0}]]},"KI-Vergleich (OpenAI GPT-4o)":{"main":[[{"node":"Ergebnis auswerten & Email aufbauen","type":"main","index":0}]]},"Ergebnis auswerten & Email aufbauen":{"main":[[{"node":"Content-Audit Tab erstellen","type":"main","index":0}]]},"Content-Audit Tab erstellen":{"main":[[{"node":"Audit-Ergebnisse ins Sheet schreiben","type":"main","index":0}]]},"Audit-Ergebnisse ins Sheet schreiben":{"main":[[{"node":"Email Report senden (Gmail)","type":"main","index":0}]]},"Email Report senden (Gmail)":{"main":[[{"node":"Autopilot abgeschlossen","type":"main","index":0}]]}},"settings":{"executionOrder":"v1","timezone":"Europe/Berlin","saveDataErrorExecution":"all","saveDataSuccessExecution":"all","callerPolicy":"workflowsFromSameOwner","availableInMCP":false},"staticData":null,"meta":null,"pinData":null,"versionId":"61ac9ea3-cdcf-462b-bfae-819da9518a77","activeVersionId":null,"versionCounter":1,"triggerCount":0,"shared":[{"updatedAt":"2026-03-05T06:11:24.940Z","createdAt":"2026-03-05T06:11:24.940Z","role":"workflow:owner","workflowId":"kkzX4OzH4SbIjJ2x","projectId":"A3xoYVAJ1hf6LsPx","project":{"updatedAt":"2025-07-28T11:25:25.006Z","createdAt":"2025-07-28T11:25:22.410Z","id":"A3xoYVAJ1hf6LsPx","name":"Mark Niemann <mark@mo-casa.com>","type":"personal","icon":null,"description":null,"creatorId":"2d660193-6a6f-4adc-a8a9-5485fa23cfce"}}],"tags":[],"activeVersion":null}
+{
+  "updatedAt": "2026-03-09T19:12:55.137Z",
+  "createdAt": "2026-03-05T06:11:24.938Z",
+  "id": "kkzX4OzH4SbIjJ2x",
+  "name": "SEO Content Audit Alfons KI— Autopilot",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "url"
+            },
+            {
+              "name": "keyword"
+            },
+            {
+              "name": "landescode"
+            },
+            {
+              "name": "original_content"
+            },
+            {
+              "name": "email_empfaenger"
+            },
+            {
+              "name": "zielsprache"
+            },
+            {
+              "name": "headings_structure"
+            },
+            {
+              "name": "page_title"
+            }
+          ]
+        }
+      },
+      "id": "ap-trigger",
+      "name": "Autopilot Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "thema",
+              "name": "thema",
+              "value": "={{ $json.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "zielsprache",
+              "name": "zielsprache",
+              "value": "={{ $json.zielsprache || 'DE' }}",
+              "type": "string"
+            },
+            {
+              "id": "landescode",
+              "name": "landescode",
+              "value": "={{ ($json.landescode || $json.zielsprache || 'DE').toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "report_sprache",
+              "name": "report_sprache",
+              "value": "={{ ['US','GB'].includes(($json.landescode || $json.zielsprache || 'DE').toUpperCase()) ? 'EN' : 'NATIVE' }}",
+              "type": "string"
+            },
+            {
+              "id": "content_sprache",
+              "name": "content_sprache",
+              "value": "={{ {'DE':'Deutsch','AT':'Deutsch','CH':'Deutsch','US':'English','GB':'English','FR':'Français','ES':'Español','SE':'Svenska','NO':'Norsk','DK':'Dansk'}[($json.landescode || $json.zielsprache || 'DE').toUpperCase()] || 'Deutsch' }}",
+              "type": "string"
+            },
+            {
+              "id": "url_slug",
+              "name": "url_slug",
+              "value": "={{ ($json.keyword || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "notizen",
+              "name": "notizen",
+              "value": "={{ 'Automatischer Content-Audit fuer URL: ' + $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "keyword",
+              "name": "keyword",
+              "value": "={{ $json.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "original_content",
+              "name": "original_content",
+              "value": "={{ $json.original_content }}",
+              "type": "string"
+            },
+            {
+              "id": "email_empfaenger",
+              "name": "email_empfaenger",
+              "value": "={{ $json.email_empfaenger }}",
+              "type": "string"
+            },
+            {
+              "id": "headings_structure",
+              "name": "headings_structure",
+              "value": "={{ $json.headings_structure || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "page_title",
+              "name": "page_title",
+              "value": "={{ $json.page_title || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-vars",
+      "name": "Variablen setzen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        352,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "G9cuUnS2bu2vCZGF",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "thema": "={{ $json.thema }}",
+            "zielsprache": "={{ $json.zielsprache }}",
+            "landescode": "={{ $json.landescode }}",
+            "url_slug": "={{ $json.url_slug }}",
+            "notizen": "={{ $json.notizen }}"
+          },
+          "schema": [
+            {
+              "id": "thema",
+              "displayName": "thema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "zielsprache",
+              "displayName": "zielsprache",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "landescode",
+              "displayName": "landescode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url_slug",
+              "displayName": "url_slug",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notizen",
+              "displayName": "notizen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf1",
+      "name": "WF1 — Projekt-Setup & Keywords",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet spreadsheet_id = '';\nlet spreadsheet_url = '';\n\nfor (const item of items) {\n  if (item.json.spreadsheetId) {\n    spreadsheet_id = item.json.spreadsheetId;\n    spreadsheet_url = item.json.spreadsheetUrl || '';\n    break;\n  }\n  if (item.json.spreadsheet_id && item.json.spreadsheet_id.length > 20) {\n    spreadsheet_id = item.json.spreadsheet_id;\n    break;\n  }\n  if (item.json.spreadsheet_url) {\n    spreadsheet_url = item.json.spreadsheet_url;\n    const match = item.json.spreadsheet_url.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]+)/);\n    if (match) {\n      spreadsheet_id = match[1];\n      break;\n    }\n  }\n}\n\nif (!spreadsheet_id) {\n  throw new Error('Spreadsheet-ID konnte nicht aus WF1-Output extrahiert werden. Items: ' + JSON.stringify(items.map(i => Object.keys(i.json))));\n}\n\n// Keyword aus Variablen setzen Node holen\nconst keyword = $('Variablen setzen').first().json.keyword || '';\n\nreturn [{\n  json: {\n    spreadsheet_id,\n    spreadsheet_url: spreadsheet_url || `https://docs.google.com/spreadsheets/d/${spreadsheet_id}/edit`,\n    keyword,\n    status: 'wf1_complete'\n  }\n}];"
+      },
+      "id": "ap-extract-id",
+      "name": "Spreadsheet-ID extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "selected_keywords",
+              "name": "selected_keywords",
+              "value": "={{ $json.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "landescode",
+              "name": "landescode",
+              "value": "={{ $('Variablen setzen').first().json.landescode }}",
+              "type": "string"
+            },
+            {
+              "id": "custom_keywords",
+              "name": "custom_keywords",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "notizen",
+              "name": "notizen",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "ap-wf2-input",
+      "name": "WF2-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "cBzjPNPpFJC8zMtK",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+            "selected_keywords": "={{ $json.selected_keywords }}",
+            "custom_keywords": "={{ $json.custom_keywords || '' }}",
+            "notizen": "={{ $json.notizen || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "selected_keywords",
+              "displayName": "selected_keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "custom_keywords",
+              "displayName": "custom_keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notizen",
+              "displayName": "notizen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf2",
+      "name": "WF2 — SERP-Scraping",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "content_sprache",
+              "name": "content_sprache",
+              "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf3-input",
+      "name": "WF3-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1552,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "mE8ufIF5H0Z6Ap8l",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+            "content_sprache": "={{ $json.content_sprache }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content_sprache",
+              "displayName": "content_sprache",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf3",
+      "name": "WF3 — Deep Analyse (Semantik)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "expertenwissen",
+              "name": "expertenwissen",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "zitate",
+              "name": "zitate",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "unique_angle",
+              "name": "unique_angle",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "referenz_links",
+              "name": "referenz_links",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf4-input",
+      "name": "WF4-Input vorbereiten (Auto)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "8eWElY86rh30qqrY",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf4",
+      "name": "WF4 — User Insight Mining",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2272,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "content_sprache",
+              "name": "content_sprache",
+              "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf5-input",
+      "name": "WF5-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "C7eK32G9cfcnFJ78",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+            "content_sprache": "={{ $json.content_sprache }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content_sprache",
+              "displayName": "content_sprache",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf5",
+      "name": "WF5 — Gliederung & Freigabe",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2752,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "content_sprache",
+              "name": "content_sprache",
+              "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf6-input",
+      "name": "WF6-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2992,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "1E2YBYz9UUB5wb2q",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+            "content_sprache": "={{ $json.content_sprache }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content_sprache",
+              "displayName": "content_sprache",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf6",
+      "name": "WF6 — Content-Erstellung",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3232,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf7-input",
+      "name": "WF7-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3472,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WVnoKVXGqjhcAlM4",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf7",
+      "name": "WF7 — QA & Sub-Agenten",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3712,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "spreadsheet_id",
+              "name": "spreadsheet_id",
+              "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-wf8-input",
+      "name": "WF8-Input vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3952,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "KDVCn8cTXdijyGAP",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+          },
+          "schema": [
+            {
+              "id": "spreadsheet_id",
+              "displayName": "spreadsheet_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ap-exec-wf8",
+      "name": "WF8 — Finalisierung & Export",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4192,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Content Draft"
+        },
+        "options": {}
+      },
+      "id": "ap-read-content",
+      "name": "SEO Content aus Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4432,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const contentItems = $input.all();\nlet seoContent = '';\n\nfor (const item of contentItems) {\n  const j = item.json;\n  let text = j.content_final || j.content_humanized || j.content_raw || j.content || '';\n  if (!text || text.trim().length < 50) {\n    let maxLen = 0;\n    for (const [key, val] of Object.entries(j)) {\n      if (key === 'row_number') continue;\n      if (typeof val === 'string' && val.length > maxLen) {\n        maxLen = val.length;\n        text = val;\n      }\n    }\n  }\n  if (text && text.trim()) {\n    seoContent += text + String.fromCharCode(10) + String.fromCharCode(10);\n  }\n}\n\nif (seoContent.length > 12000) {\n  seoContent = seoContent.slice(0, 12000) + String.fromCharCode(10) + '...[gekuerzt]';\n}\n\nconst originalContent = ($('Variablen setzen').first().json.original_content || '').slice(0, 6000);\nconst keyword = $('Variablen setzen').first().json.keyword || '';\nconst url = $('Variablen setzen').first().json.url || '';\nconst spreadsheetData = $('Spreadsheet-ID extrahieren').first().json;\n\nreturn [{\n  json: {\n    seo_content: seoContent || '[Kein SEO-Content gefunden]',\n    original_content: originalContent,\n    keyword,\n    url,\n    spreadsheet_id: spreadsheetData.spreadsheet_id,\n    spreadsheet_url: spreadsheetData.spreadsheet_url\n  }\n}];"
+      },
+      "id": "ap-build-seo-content",
+      "name": "SEO Content aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4672,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Keyword: ' + $json.keyword + String.fromCharCode(10) + 'Seiten-Titel (IST): ' + ($json.page_title || 'unbekannt') + String.fromCharCode(10) + String.fromCharCode(10) + 'UEBERSCHRIFTEN-STRUKTUR DER BESTEHENDEN SEITE (IST):' + String.fromCharCode(10) + ($json.headings_structure || '[keine Ueberschriften gefunden]') + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'BESTEHENDER URL-CONTENT (IST, zu pruefen):' + String.fromCharCode(10) + $json.original_content + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'KI-GENERIERTER SEO-OPTIMIERTER CONTENT (SOLL, Referenz):' + String.fromCharCode(10) + ($json.seo_content || '').slice(0, 5000) + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'Analysiere und antworte als JSON (alle Texte in ' + ($('Variablen setzen').first().json.content_sprache || 'Deutsch') + '):' + String.fromCharCode(10) + '{\"aehnlichkeit_prozent\": 75, \"status\": \"verbesserbar\", \"fehlende_ueberschriften\": [\"H2: Beispiel\"], \"inhaltliche_luecken\": [\"Abschnitt ueber X fehlt\"], \"staerken_bestehender_content\": [\"Gut erklaert: Y\"], \"zusammenfassung\": \"2-3 Saetze Gesamteinschaetzung\"}' + String.fromCharCode(10) + String.fromCharCode(10) + 'Regeln: aehnlichkeit_prozent 0-100 (semantische Aehnlichkeit). status: identisch wenn >= 90%, sonst verbesserbar. Vergleiche insbesondere die Ueberschriften-Struktur des IST-Zustands mit dem SOLL-Content.' }}"
+            }
+          ]
+        },
+        "options": {
+          "system": "={{ 'Du bist ein erfahrener SEO-Content-Experte. Vergleiche zwei Texte nach: 1) Ueberschriftenstruktur (H1/H2/H3-Themen), 2) Themenabdeckung, 3) inhaltliche Tiefe und Vollstaendigkeit. Sei praezise und konstruktiv. Antworte NUR als valides JSON ohne Markdown-Codeblocks. Alle Texte in deiner Antwort (fehlende_ueberschriften, inhaltliche_luecken, staerken_bestehender_content, zusammenfassung) auf ' + ($('Variablen setzen').first().json.content_sprache || 'Deutsch') + ' verfassen.' }}",
+          "maxTokens": 2000
+        }
+      },
+      "id": "ap-claude-compare",
+      "name": "KI-Vergleich (Claude Sonnet)",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        4864,
+        304
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "xJGzDv9YCgZEHb2E",
+          "name": "Claude - 20260127"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nconst contentData = $('SEO Content aufbereiten').first().json;\nconst vars = $('Variablen setzen').first().json;\n\nconst keyword = contentData.keyword || vars.keyword || '';\nconst url = contentData.url || vars.url || '';\nconst spreadsheet_id = contentData.spreadsheet_id || '';\nconst spreadsheet_url = contentData.spreadsheet_url || '';\nconst email_empfaenger = vars.email_empfaenger || '';\nconst report_sprache = vars.report_sprache || 'NATIVE';\nconst content_sprache = vars.content_sprache || 'Deutsch';\nconst isEN = report_sprache === 'EN';\n\n// KI-Antwort parsen\nlet analysisResult = {};\ntry {\n  let raw = aiResponse.content?.[0]?.text || (typeof aiResponse.content === 'string' ? aiResponse.content : '{}');\n  raw = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```\\s*$/i, '').trim();\n  analysisResult = JSON.parse(raw);\n} catch (e) {\n  analysisResult = {\n    aehnlichkeit_prozent: 0,\n    status: 'fehler',\n    fehlende_ueberschriften: [],\n    inhaltliche_luecken: [isEN ? `Analysis error: ${e.message}` : `Analyse-Fehler: ${e.message}`],\n    staerken_bestehender_content: [],\n    zusammenfassung: isEN ? 'The automatic analysis could not be completed.' : 'Die automatische Analyse konnte nicht abgeschlossen werden.'\n  };\n}\n\nconst aehnlichkeit = Number(analysisResult.aehnlichkeit_prozent) || 0;\nconst istIdentisch = aehnlichkeit >= 90;\nconst status = istIdentisch ? 'identisch' : 'verbesserbar';\n\nconst fehlende_ueberschriften = (analysisResult.fehlende_ueberschriften || []);\nconst inhaltliche_luecken = (analysisResult.inhaltliche_luecken || []);\nconst staerken = (analysisResult.staerken_bestehender_content || []);\nconst zusammenfassung = analysisResult.zusammenfassung || '';\n\nconst statusColor = istIdentisch ? '#22c55e' : '#f59e0b';\nconst statusIcon = istIdentisch ? '\\u2713' : '\\u26a0';\n\n// Labels: EN für US/GB, sonst immer Landessprache via content_sprache\n// Für native Sprachen nutzen wir einen mehrsprachigen Label-Map\nconst nativeLabels = {\n  'Deutsch':    { title: 'SEO Content Audit Report', generated: 'Automatisch generiert', keyword: 'Keyword', url: 'Analysierte URL', similarity: 'Ähnlichkeit', rating: 'Bewertung', identisch: 'Identisch — Kein Handlungsbedarf', verbesserbar: 'Verbesserbar — Optimierungen empfohlen', assessment: 'Einschätzung', missingH: 'Vorschläge: Fehlende/anzupassende Überschriften', gaps: 'Inhaltliche Ergänzungen', strengths: 'Stärken des bestehenden Contents', openReport: 'Vollständiges SEO-Report Google Sheet öffnen →', footer: 'SEO Content Audit | Automatisch generiert', noSummary: 'Keine Zusammenfassung verfügbar.', none: '—' },\n  'English':    { title: 'SEO Content Audit Report', generated: 'Auto-generated', keyword: 'Keyword', url: 'Analyzed URL', similarity: 'Similarity', rating: 'Rating', identisch: 'Identical — No Action Required', verbesserbar: 'Improvable — Optimizations Recommended', assessment: 'Assessment', missingH: 'Suggestions: Missing / Adjusted Headings', gaps: 'Content Gaps', strengths: 'Strengths of Existing Content', openReport: 'Open Full SEO Report in Google Sheets →', footer: 'SEO Content Audit | Auto-generated', noSummary: 'No summary available.', none: '—' },\n  'Svenska':    { title: 'SEO Content Audit-rapport', generated: 'Automatiskt genererad', keyword: 'Sökord', url: 'Analyserad URL', similarity: 'Likhet', rating: 'Bedömning', identisch: 'Identisk — Ingen åtgärd krävs', verbesserbar: 'Förbättringsbar — Optimeringar rekommenderas', assessment: 'Bedömning', missingH: 'Förslag: Saknade/justerade rubriker', gaps: 'Innehållsluckor', strengths: 'Styrkor i befintligt innehåll', openReport: 'Öppna fullständig SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatiskt genererad', noSummary: 'Ingen sammanfattning tillgänglig.', none: '—' },\n  'Norsk':      { title: 'SEO Content Audit-rapport', generated: 'Automatisk generert', keyword: 'Søkeord', url: 'Analysert URL', similarity: 'Likhet', rating: 'Vurdering', identisch: 'Identisk — Ingen tiltak nødvendig', verbesserbar: 'Kan forbedres — Optimaliseringer anbefalt', assessment: 'Vurdering', missingH: 'Forslag: Manglende/justerte overskrifter', gaps: 'Innholdsgap', strengths: 'Styrker ved eksisterende innhold', openReport: 'Åpne fullstendig SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatisk generert', noSummary: 'Ingen sammendrag tilgjengelig.', none: '—' },\n  'Dansk':      { title: 'SEO Content Audit-rapport', generated: 'Automatisk genereret', keyword: 'Søgeord', url: 'Analyseret URL', similarity: 'Lighed', rating: 'Vurdering', identisch: 'Identisk — Ingen handling nødvendig', verbesserbar: 'Kan forbedres — Optimeringer anbefalet', assessment: 'Vurdering', missingH: 'Forslag: Manglende/justerede overskrifter', gaps: 'Indholdsgab', strengths: 'Styrker ved eksisterende indhold', openReport: 'Åbn fuld SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatisk genereret', noSummary: 'Ingen opsummering tilgængelig.', none: '—' },\n  'Français':   { title: 'Rapport d\\'audit SEO', generated: 'Généré automatiquement', keyword: 'Mot-clé', url: 'URL analysée', similarity: 'Similarité', rating: 'Évaluation', identisch: 'Identique — Aucune action requise', verbesserbar: 'Améliorable — Optimisations recommandées', assessment: 'Évaluation', missingH: 'Suggestions : Titres manquants/à ajuster', gaps: 'Lacunes de contenu', strengths: 'Points forts du contenu existant', openReport: 'Ouvrir le rapport SEO complet dans Google Sheets →', footer: 'SEO Content Audit | Généré automatiquement', noSummary: 'Aucun résumé disponible.', none: '—' },\n  'Español':    { title: 'Informe de auditoría SEO', generated: 'Generado automáticamente', keyword: 'Palabra clave', url: 'URL analizada', similarity: 'Similitud', rating: 'Valoración', identisch: 'Idéntico — No se requiere acción', verbesserbar: 'Mejorable — Se recomiendan optimizaciones', assessment: 'Evaluación', missingH: 'Sugerencias: Encabezados faltantes/a ajustar', gaps: 'Lagunas de contenido', strengths: 'Fortalezas del contenido existente', openReport: 'Abrir informe SEO completo en Google Sheets →', footer: 'SEO Content Audit | Generado automáticamente', noSummary: 'No hay resumen disponible.', none: '—' }\n};\n\nconst t = isEN ? nativeLabels['English'] : (nativeLabels[content_sprache] || nativeLabels['Deutsch']);\nconst statusLabel = istIdentisch ? t.identisch : t.verbesserbar;\n\n// Date locale\nconst dateLocaleMap = { 'Deutsch': 'de-DE', 'English': 'en-GB', 'Svenska': 'sv-SE', 'Norsk': 'nb-NO', 'Dansk': 'da-DK', 'Français': 'fr-FR', 'Español': 'es-ES' };\nconst dateLocale = isEN ? 'en-GB' : (dateLocaleMap[content_sprache] || 'de-DE');\nconst dateStr = new Date().toLocaleDateString(dateLocale, {day: '2-digit', month: 'long', year: 'numeric'});\n\nconst listItems = (arr) => arr.length > 0\n  ? '<ul style=\"margin:8px 0;padding-left:20px;\">' + arr.map(i => `<li style=\"margin-bottom:6px;\">${i}</li>`).join('') + '</ul>'\n  : `<p style=\"color:#6b7280;\">${t.none}</p>`;\n\nconst emailBody = `<!DOCTYPE html><html><body style=\"font-family:system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:32px 24px;color:#1f2937;background:#ffffff;\">\n<div style=\"border-bottom:3px solid ${statusColor};padding-bottom:16px;margin-bottom:24px;\">\n  <h1 style=\"margin:0;font-size:22px;color:#111827;\">${t.title}</h1>\n  <p style=\"margin:4px 0 0;color:#6b7280;font-size:14px;\">${t.generated} — ${dateStr}</p>\n</div>\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e5e7eb;\">\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;width:160px;\">${t.keyword}</td><td style=\"padding:12px 16px;font-size:15px;font-weight:600;\">${keyword}</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.url}</td><td style=\"padding:12px 16px;\"><a href=\"${url}\" style=\"color:#3b82f6;\">${url}</a></td></tr>\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.similarity}</td><td style=\"padding:12px 16px;font-size:20px;font-weight:700;color:${statusColor};\">${aehnlichkeit}%</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.rating}</td><td style=\"padding:12px 16px;\"><span style=\"background:${statusColor};color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;\">${statusIcon} ${statusLabel}</span></td></tr>\n</table>\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">${t.assessment}</h2>\n<div style=\"background:#f9fafb;border-left:4px solid ${statusColor};padding:12px 16px;margin-bottom:24px;border-radius:0 6px 6px 0;\">\n  <p style=\"margin:0;\">${zusammenfassung || t.noSummary}</p>\n</div>\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">📝 ${t.missingH}</h2>\n${listItems(fehlende_ueberschriften)}\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">📌 ${t.gaps}</h2>\n${listItems(inhaltliche_luecken)}\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">✅ ${t.strengths}</h2>\n${listItems(staerken)}\n${spreadsheet_url ? `<div style=\"text-align:center;margin-top:32px;\"><a href=\"${spreadsheet_url}\" style=\"background:#3b82f6;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;\">📊 ${t.openReport}</a></div>` : ''}\n<p style=\"text-align:center;margin-top:32px;color:#9ca3af;font-size:12px;\">${t.footer}</p>\n</body></html>`;\n\n// Subject line in content_sprache (EN for US/GB)\nconst subjectSimilarityLabel = isEN ? 'Similarity' : t.similarity;\nconst email_subject = `SEO Audit: ${keyword} | ${aehnlichkeit}% ${subjectSimilarityLabel}`;\n\nreturn [{\n  json: {\n    email_empfaenger,\n    email_subject,\n    email_body: emailBody,\n    aehnlichkeit,\n    status,\n    keyword,\n    url,\n    spreadsheet_id,\n    spreadsheet_url\n  }\n}];"
+      },
+      "id": "ap-parse-result",
+      "name": "Ergebnis auswerten & Email aufbauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5152,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://sheets.googleapis.com/v4/spreadsheets/' + $json.spreadsheet_id + ':batchUpdate' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({requests: [{addSheet: {properties: {title: 'Content_Audit', gridProperties: {rowCount: 1000, columnCount: 10}}}}]}) }}",
+        "options": {}
+      },
+      "id": "ap-add-audit-tab",
+      "name": "Content-Audit Tab erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5392,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Content_Audit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.url }}",
+            "keyword": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}",
+            "aehnlichkeit_prozent": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}",
+            "status": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}",
+            "zusammenfassung": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.zusammenfassung }}",
+            "vorschlaege_ueberschriften": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.fehlende_ueberschriften }}",
+            "vorschlaege_content": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.inhaltliche_luecken }}",
+            "staerken": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.staerken }}",
+            "erstellt_am": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            {
+              "id": "url",
+              "type": "string",
+              "display": true,
+              "displayName": "url"
+            },
+            {
+              "id": "keyword",
+              "type": "string",
+              "display": true,
+              "displayName": "keyword"
+            },
+            {
+              "id": "aehnlichkeit_prozent",
+              "type": "number",
+              "display": true,
+              "displayName": "aehnlichkeit_prozent"
+            },
+            {
+              "id": "status",
+              "type": "string",
+              "display": true,
+              "displayName": "status"
+            },
+            {
+              "id": "zusammenfassung",
+              "type": "string",
+              "display": true,
+              "displayName": "zusammenfassung"
+            },
+            {
+              "id": "vorschlaege_ueberschriften",
+              "type": "string",
+              "display": true,
+              "displayName": "vorschlaege_ueberschriften"
+            },
+            {
+              "id": "vorschlaege_content",
+              "type": "string",
+              "display": true,
+              "displayName": "vorschlaege_content"
+            },
+            {
+              "id": "staerken",
+              "type": "string",
+              "display": true,
+              "displayName": "staerken"
+            },
+            {
+              "id": "erstellt_am",
+              "type": "string",
+              "display": true,
+              "displayName": "erstellt_am"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-write-audit",
+      "name": "Audit-Ergebnisse ins Sheet schreiben",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5632,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "mark@mo-casa.com",
+        "subject": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_subject }}",
+        "message": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_body }}",
+        "options": {}
+      },
+      "id": "ap-send-email",
+      "name": "Email Report senden (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        5872,
+        304
+      ],
+      "webhookId": "a47c0e50-0915-462c-9ae2-a23bf5ce6418",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Kh7cApAx6TAe4Hpy",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "completed",
+              "type": "string"
+            },
+            {
+              "id": "keyword",
+              "name": "keyword",
+              "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "aehnlichkeit_prozent",
+              "name": "aehnlichkeit_prozent",
+              "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}",
+              "type": "number"
+            },
+            {
+              "id": "audit_status",
+              "name": "audit_status",
+              "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "spreadsheet_url",
+              "name": "spreadsheet_url",
+              "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ap-final",
+      "name": "Autopilot abgeschlossen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## SEO Content Audit — Autopilot\n\n**Wird vom Batch Master aufgerufen (1x pro URL/Keyword)**\n\n### Ablauf:\n1. **Trigger** — empfängt: url, keyword, original_content, email\n2. **WF1** — erstellt Google Sheet + Keyword-Recherche\n3. **WF2** — SERP-Scraping für das Keyword\n4. **WF3** — Semantische Analyse\n5. **WF4** — User Insight Mining (ohne Expert-Input)\n6. **WF5** — Gliederungserstellung\n7. **WF6** — Content-Erstellung\n8. **WF7** — QA-Prüfung\n9. **WF8** — Finalisierung & Export\n10. **Content lesen** — liest generierten SEO-Content aus Sheet\n11. **KI-Vergleich** — Claude Sonnet vergleicht Original vs. SEO-Content\n12. **Auswertung** — Ähnlichkeitsscore + Vorschläge\n13. **Sheet-Update** — Audit-Tab im Keyword-Sheet\n14. **Email** — Report per Gmail\n\n### Setup (einmalig):\n- Gmail Credential ID im Email-Node eintragen",
+        "color": 5
+      },
+      "id": "sticky-overview",
+      "name": "Architektur-Uebersicht",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -16
+      ]
+    }
+  ],
+  "connections": {
+    "Autopilot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Variablen setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variablen setzen": {
+      "main": [
+        [
+          {
+            "node": "WF1 — Projekt-Setup & Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF1 — Projekt-Setup & Keywords": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet-ID extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet-ID extrahieren": {
+      "main": [
+        [
+          {
+            "node": "WF2-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF2-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF2 — SERP-Scraping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF2 — SERP-Scraping": {
+      "main": [
+        [
+          {
+            "node": "WF3-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF3-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF3 — Deep Analyse (Semantik)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF3 — Deep Analyse (Semantik)": {
+      "main": [
+        [
+          {
+            "node": "WF4-Input vorbereiten (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF4-Input vorbereiten (Auto)": {
+      "main": [
+        [
+          {
+            "node": "WF4 — User Insight Mining",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF4 — User Insight Mining": {
+      "main": [
+        [
+          {
+            "node": "WF5-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF5-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF5 — Gliederung & Freigabe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF5 — Gliederung & Freigabe": {
+      "main": [
+        [
+          {
+            "node": "WF6-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF6-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF6 — Content-Erstellung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF6 — Content-Erstellung": {
+      "main": [
+        [
+          {
+            "node": "WF7-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF7-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF7 — QA & Sub-Agenten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF7 — QA & Sub-Agenten": {
+      "main": [
+        [
+          {
+            "node": "WF8-Input vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF8-Input vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "WF8 — Finalisierung & Export",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF8 — Finalisierung & Export": {
+      "main": [
+        [
+          {
+            "node": "SEO Content aus Sheet lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Content aus Sheet lesen": {
+      "main": [
+        [
+          {
+            "node": "SEO Content aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Content aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "KI-Vergleich (Claude Sonnet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Vergleich (Claude Sonnet)": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten & Email aufbauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten & Email aufbauen": {
+      "main": [
+        [
+          {
+            "node": "Content-Audit Tab erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content-Audit Tab erstellen": {
+      "main": [
+        [
+          {
+            "node": "Audit-Ergebnisse ins Sheet schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit-Ergebnisse ins Sheet schreiben": {
+      "main": [
+        [
+          {
+            "node": "Email Report senden (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Report senden (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Autopilot abgeschlossen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "any",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "a082fb8b-f33b-4ba5-a517-14092caffa44",
+  "activeVersionId": "a082fb8b-f33b-4ba5-a517-14092caffa44",
+  "versionCounter": 64,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-05T06:11:24.940Z",
+      "createdAt": "2026-03-05T06:11:24.940Z",
+      "role": "workflow:owner",
+      "workflowId": "kkzX4OzH4SbIjJ2x",
+      "projectId": "A3xoYVAJ1hf6LsPx",
+      "project": {
+        "updatedAt": "2025-07-28T11:25:25.006Z",
+        "createdAt": "2025-07-28T11:25:22.410Z",
+        "id": "A3xoYVAJ1hf6LsPx",
+        "name": "Mark Niemann <mark@mo-casa.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-09T19:12:55.138Z",
+    "createdAt": "2026-03-09T19:12:55.138Z",
+    "versionId": "a082fb8b-f33b-4ba5-a517-14092caffa44",
+    "workflowId": "kkzX4OzH4SbIjJ2x",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "url"
+              },
+              {
+                "name": "keyword"
+              },
+              {
+                "name": "landescode"
+              },
+              {
+                "name": "original_content"
+              },
+              {
+                "name": "email_empfaenger"
+              },
+              {
+                "name": "zielsprache"
+              },
+              {
+                "name": "headings_structure"
+              },
+              {
+                "name": "page_title"
+              }
+            ]
+          }
+        },
+        "id": "ap-trigger",
+        "name": "Autopilot Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          112,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "thema",
+                "name": "thema",
+                "value": "={{ $json.keyword }}",
+                "type": "string"
+              },
+              {
+                "id": "zielsprache",
+                "name": "zielsprache",
+                "value": "={{ $json.zielsprache || 'DE' }}",
+                "type": "string"
+              },
+              {
+                "id": "landescode",
+                "name": "landescode",
+                "value": "={{ ($json.landescode || $json.zielsprache || 'DE').toUpperCase() }}",
+                "type": "string"
+              },
+              {
+                "id": "report_sprache",
+                "name": "report_sprache",
+                "value": "={{ ['US','GB'].includes(($json.landescode || $json.zielsprache || 'DE').toUpperCase()) ? 'EN' : 'NATIVE' }}",
+                "type": "string"
+              },
+              {
+                "id": "content_sprache",
+                "name": "content_sprache",
+                "value": "={{ {'DE':'Deutsch','AT':'Deutsch','CH':'Deutsch','US':'English','GB':'English','FR':'Français','ES':'Español','SE':'Svenska','NO':'Norsk','DK':'Dansk'}[($json.landescode || $json.zielsprache || 'DE').toUpperCase()] || 'Deutsch' }}",
+                "type": "string"
+              },
+              {
+                "id": "url_slug",
+                "name": "url_slug",
+                "value": "={{ ($json.keyword || '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') }}",
+                "type": "string"
+              },
+              {
+                "id": "notizen",
+                "name": "notizen",
+                "value": "={{ 'Automatischer Content-Audit fuer URL: ' + $json.url }}",
+                "type": "string"
+              },
+              {
+                "id": "url",
+                "name": "url",
+                "value": "={{ $json.url }}",
+                "type": "string"
+              },
+              {
+                "id": "keyword",
+                "name": "keyword",
+                "value": "={{ $json.keyword }}",
+                "type": "string"
+              },
+              {
+                "id": "original_content",
+                "name": "original_content",
+                "value": "={{ $json.original_content }}",
+                "type": "string"
+              },
+              {
+                "id": "email_empfaenger",
+                "name": "email_empfaenger",
+                "value": "={{ $json.email_empfaenger }}",
+                "type": "string"
+              },
+              {
+                "id": "headings_structure",
+                "name": "headings_structure",
+                "value": "={{ $json.headings_structure || '' }}",
+                "type": "string"
+              },
+              {
+                "id": "page_title",
+                "name": "page_title",
+                "value": "={{ $json.page_title || '' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-vars",
+        "name": "Variablen setzen",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          352,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "G9cuUnS2bu2vCZGF",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "thema": "={{ $json.thema }}",
+              "zielsprache": "={{ $json.zielsprache }}",
+              "landescode": "={{ $json.landescode }}",
+              "url_slug": "={{ $json.url_slug }}",
+              "notizen": "={{ $json.notizen }}"
+            },
+            "schema": [
+              {
+                "id": "thema",
+                "displayName": "thema",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "zielsprache",
+                "displayName": "zielsprache",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "landescode",
+                "displayName": "landescode",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "url_slug",
+                "displayName": "url_slug",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "notizen",
+                "displayName": "notizen",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf1",
+        "name": "WF1 — Projekt-Setup & Keywords",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          592,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nlet spreadsheet_id = '';\nlet spreadsheet_url = '';\n\nfor (const item of items) {\n  if (item.json.spreadsheetId) {\n    spreadsheet_id = item.json.spreadsheetId;\n    spreadsheet_url = item.json.spreadsheetUrl || '';\n    break;\n  }\n  if (item.json.spreadsheet_id && item.json.spreadsheet_id.length > 20) {\n    spreadsheet_id = item.json.spreadsheet_id;\n    break;\n  }\n  if (item.json.spreadsheet_url) {\n    spreadsheet_url = item.json.spreadsheet_url;\n    const match = item.json.spreadsheet_url.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]+)/);\n    if (match) {\n      spreadsheet_id = match[1];\n      break;\n    }\n  }\n}\n\nif (!spreadsheet_id) {\n  throw new Error('Spreadsheet-ID konnte nicht aus WF1-Output extrahiert werden. Items: ' + JSON.stringify(items.map(i => Object.keys(i.json))));\n}\n\n// Keyword aus Variablen setzen Node holen\nconst keyword = $('Variablen setzen').first().json.keyword || '';\n\nreturn [{\n  json: {\n    spreadsheet_id,\n    spreadsheet_url: spreadsheet_url || `https://docs.google.com/spreadsheets/d/${spreadsheet_id}/edit`,\n    keyword,\n    status: 'wf1_complete'\n  }\n}];"
+        },
+        "id": "ap-extract-id",
+        "name": "Spreadsheet-ID extrahieren",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          832,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "selected_keywords",
+                "name": "selected_keywords",
+                "value": "={{ $json.keyword }}",
+                "type": "string"
+              },
+              {
+                "id": "landescode",
+                "name": "landescode",
+                "value": "={{ $('Variablen setzen').first().json.landescode }}",
+                "type": "string"
+              },
+              {
+                "id": "custom_keywords",
+                "name": "custom_keywords",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "notizen",
+                "name": "notizen",
+                "value": "",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "id": "ap-wf2-input",
+        "name": "WF2-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1072,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "cBzjPNPpFJC8zMtK",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+              "selected_keywords": "={{ $json.selected_keywords }}",
+              "custom_keywords": "={{ $json.custom_keywords || '' }}",
+              "notizen": "={{ $json.notizen || '' }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "selected_keywords",
+                "displayName": "selected_keywords",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "custom_keywords",
+                "displayName": "custom_keywords",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "notizen",
+                "displayName": "notizen",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf2",
+        "name": "WF2 — SERP-Scraping",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          1312,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "content_sprache",
+                "name": "content_sprache",
+                "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf3-input",
+        "name": "WF3-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1552,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "mE8ufIF5H0Z6Ap8l",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+              "content_sprache": "={{ $json.content_sprache }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "content_sprache",
+                "displayName": "content_sprache",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf3",
+        "name": "WF3 — Deep Analyse (Semantik)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          1792,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "expertenwissen",
+                "name": "expertenwissen",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "zitate",
+                "name": "zitate",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "unique_angle",
+                "name": "unique_angle",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "referenz_links",
+                "name": "referenz_links",
+                "value": "",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf4-input",
+        "name": "WF4-Input vorbereiten (Auto)",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2032,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "8eWElY86rh30qqrY",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf4",
+        "name": "WF4 — User Insight Mining",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          2272,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "content_sprache",
+                "name": "content_sprache",
+                "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf5-input",
+        "name": "WF5-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2512,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "C7eK32G9cfcnFJ78",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+              "content_sprache": "={{ $json.content_sprache }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "content_sprache",
+                "displayName": "content_sprache",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf5",
+        "name": "WF5 — Gliederung & Freigabe",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          2752,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "content_sprache",
+                "name": "content_sprache",
+                "value": "={{ $('Variablen setzen').first().json.content_sprache }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf6-input",
+        "name": "WF6-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2992,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "1E2YBYz9UUB5wb2q",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}",
+              "content_sprache": "={{ $json.content_sprache }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "content_sprache",
+                "displayName": "content_sprache",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf6",
+        "name": "WF6 — Content-Erstellung",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          3232,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf7-input",
+        "name": "WF7-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3472,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "WVnoKVXGqjhcAlM4",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf7",
+        "name": "WF7 — QA & Sub-Agenten",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          3712,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-wf8-input",
+        "name": "WF8-Input vorbereiten",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3952,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "KDVCn8cTXdijyGAP",
+            "mode": "id"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "spreadsheet_id": "={{ $json.spreadsheet_id }}"
+            },
+            "schema": [
+              {
+                "id": "spreadsheet_id",
+                "displayName": "spreadsheet_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {
+            "waitForSubWorkflow": true
+          }
+        },
+        "id": "ap-exec-wf8",
+        "name": "WF8 — Finalisierung & Export",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4192,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Spreadsheet-ID extrahieren').first().json.spreadsheet_id }}"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "Content Draft"
+          },
+          "options": {}
+        },
+        "id": "ap-read-content",
+        "name": "SEO Content aus Sheet lesen",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          4432,
+          304
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const contentItems = $input.all();\nlet seoContent = '';\n\nfor (const item of contentItems) {\n  const j = item.json;\n  let text = j.content_final || j.content_humanized || j.content_raw || j.content || '';\n  if (!text || text.trim().length < 50) {\n    let maxLen = 0;\n    for (const [key, val] of Object.entries(j)) {\n      if (key === 'row_number') continue;\n      if (typeof val === 'string' && val.length > maxLen) {\n        maxLen = val.length;\n        text = val;\n      }\n    }\n  }\n  if (text && text.trim()) {\n    seoContent += text + String.fromCharCode(10) + String.fromCharCode(10);\n  }\n}\n\nif (seoContent.length > 12000) {\n  seoContent = seoContent.slice(0, 12000) + String.fromCharCode(10) + '...[gekuerzt]';\n}\n\nconst originalContent = ($('Variablen setzen').first().json.original_content || '').slice(0, 6000);\nconst keyword = $('Variablen setzen').first().json.keyword || '';\nconst url = $('Variablen setzen').first().json.url || '';\nconst spreadsheetData = $('Spreadsheet-ID extrahieren').first().json;\n\nreturn [{\n  json: {\n    seo_content: seoContent || '[Kein SEO-Content gefunden]',\n    original_content: originalContent,\n    keyword,\n    url,\n    spreadsheet_id: spreadsheetData.spreadsheet_id,\n    spreadsheet_url: spreadsheetData.spreadsheet_url\n  }\n}];"
+        },
+        "id": "ap-build-seo-content",
+        "name": "SEO Content aufbereiten",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4672,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "claude-sonnet-4-5-20250929",
+            "mode": "list",
+            "cachedResultName": "claude-sonnet-4-5-20250929"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={{ 'Keyword: ' + $json.keyword + String.fromCharCode(10) + 'Seiten-Titel (IST): ' + ($json.page_title || 'unbekannt') + String.fromCharCode(10) + String.fromCharCode(10) + 'UEBERSCHRIFTEN-STRUKTUR DER BESTEHENDEN SEITE (IST):' + String.fromCharCode(10) + ($json.headings_structure || '[keine Ueberschriften gefunden]') + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'BESTEHENDER URL-CONTENT (IST, zu pruefen):' + String.fromCharCode(10) + $json.original_content + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'KI-GENERIERTER SEO-OPTIMIERTER CONTENT (SOLL, Referenz):' + String.fromCharCode(10) + ($json.seo_content || '').slice(0, 5000) + String.fromCharCode(10) + String.fromCharCode(10) + '---' + String.fromCharCode(10) + String.fromCharCode(10) + 'Analysiere und antworte als JSON (alle Texte in ' + ($('Variablen setzen').first().json.content_sprache || 'Deutsch') + '):' + String.fromCharCode(10) + '{\"aehnlichkeit_prozent\": 75, \"status\": \"verbesserbar\", \"fehlende_ueberschriften\": [\"H2: Beispiel\"], \"inhaltliche_luecken\": [\"Abschnitt ueber X fehlt\"], \"staerken_bestehender_content\": [\"Gut erklaert: Y\"], \"zusammenfassung\": \"2-3 Saetze Gesamteinschaetzung\"}' + String.fromCharCode(10) + String.fromCharCode(10) + 'Regeln: aehnlichkeit_prozent 0-100 (semantische Aehnlichkeit). status: identisch wenn >= 90%, sonst verbesserbar. Vergleiche insbesondere die Ueberschriften-Struktur des IST-Zustands mit dem SOLL-Content.' }}"
+              }
+            ]
+          },
+          "options": {
+            "system": "={{ 'Du bist ein erfahrener SEO-Content-Experte. Vergleiche zwei Texte nach: 1) Ueberschriftenstruktur (H1/H2/H3-Themen), 2) Themenabdeckung, 3) inhaltliche Tiefe und Vollstaendigkeit. Sei praezise und konstruktiv. Antworte NUR als valides JSON ohne Markdown-Codeblocks. Alle Texte in deiner Antwort (fehlende_ueberschriften, inhaltliche_luecken, staerken_bestehender_content, zusammenfassung) auf ' + ($('Variablen setzen').first().json.content_sprache || 'Deutsch') + ' verfassen.' }}",
+            "maxTokens": 2000
+          }
+        },
+        "id": "ap-claude-compare",
+        "name": "KI-Vergleich (Claude Sonnet)",
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          4864,
+          304
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000,
+        "credentials": {
+          "anthropicApi": {
+            "id": "xJGzDv9YCgZEHb2E",
+            "name": "Claude - 20260127"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const aiResponse = $input.first().json;\nconst contentData = $('SEO Content aufbereiten').first().json;\nconst vars = $('Variablen setzen').first().json;\n\nconst keyword = contentData.keyword || vars.keyword || '';\nconst url = contentData.url || vars.url || '';\nconst spreadsheet_id = contentData.spreadsheet_id || '';\nconst spreadsheet_url = contentData.spreadsheet_url || '';\nconst email_empfaenger = vars.email_empfaenger || '';\nconst report_sprache = vars.report_sprache || 'NATIVE';\nconst content_sprache = vars.content_sprache || 'Deutsch';\nconst isEN = report_sprache === 'EN';\n\n// KI-Antwort parsen\nlet analysisResult = {};\ntry {\n  let raw = aiResponse.content?.[0]?.text || (typeof aiResponse.content === 'string' ? aiResponse.content : '{}');\n  raw = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```\\s*$/i, '').trim();\n  analysisResult = JSON.parse(raw);\n} catch (e) {\n  analysisResult = {\n    aehnlichkeit_prozent: 0,\n    status: 'fehler',\n    fehlende_ueberschriften: [],\n    inhaltliche_luecken: [isEN ? `Analysis error: ${e.message}` : `Analyse-Fehler: ${e.message}`],\n    staerken_bestehender_content: [],\n    zusammenfassung: isEN ? 'The automatic analysis could not be completed.' : 'Die automatische Analyse konnte nicht abgeschlossen werden.'\n  };\n}\n\nconst aehnlichkeit = Number(analysisResult.aehnlichkeit_prozent) || 0;\nconst istIdentisch = aehnlichkeit >= 90;\nconst status = istIdentisch ? 'identisch' : 'verbesserbar';\n\nconst fehlende_ueberschriften = (analysisResult.fehlende_ueberschriften || []);\nconst inhaltliche_luecken = (analysisResult.inhaltliche_luecken || []);\nconst staerken = (analysisResult.staerken_bestehender_content || []);\nconst zusammenfassung = analysisResult.zusammenfassung || '';\n\nconst statusColor = istIdentisch ? '#22c55e' : '#f59e0b';\nconst statusIcon = istIdentisch ? '\\u2713' : '\\u26a0';\n\n// Labels: EN für US/GB, sonst immer Landessprache via content_sprache\n// Für native Sprachen nutzen wir einen mehrsprachigen Label-Map\nconst nativeLabels = {\n  'Deutsch':    { title: 'SEO Content Audit Report', generated: 'Automatisch generiert', keyword: 'Keyword', url: 'Analysierte URL', similarity: 'Ähnlichkeit', rating: 'Bewertung', identisch: 'Identisch — Kein Handlungsbedarf', verbesserbar: 'Verbesserbar — Optimierungen empfohlen', assessment: 'Einschätzung', missingH: 'Vorschläge: Fehlende/anzupassende Überschriften', gaps: 'Inhaltliche Ergänzungen', strengths: 'Stärken des bestehenden Contents', openReport: 'Vollständiges SEO-Report Google Sheet öffnen →', footer: 'SEO Content Audit | Automatisch generiert', noSummary: 'Keine Zusammenfassung verfügbar.', none: '—' },\n  'English':    { title: 'SEO Content Audit Report', generated: 'Auto-generated', keyword: 'Keyword', url: 'Analyzed URL', similarity: 'Similarity', rating: 'Rating', identisch: 'Identical — No Action Required', verbesserbar: 'Improvable — Optimizations Recommended', assessment: 'Assessment', missingH: 'Suggestions: Missing / Adjusted Headings', gaps: 'Content Gaps', strengths: 'Strengths of Existing Content', openReport: 'Open Full SEO Report in Google Sheets →', footer: 'SEO Content Audit | Auto-generated', noSummary: 'No summary available.', none: '—' },\n  'Svenska':    { title: 'SEO Content Audit-rapport', generated: 'Automatiskt genererad', keyword: 'Sökord', url: 'Analyserad URL', similarity: 'Likhet', rating: 'Bedömning', identisch: 'Identisk — Ingen åtgärd krävs', verbesserbar: 'Förbättringsbar — Optimeringar rekommenderas', assessment: 'Bedömning', missingH: 'Förslag: Saknade/justerade rubriker', gaps: 'Innehållsluckor', strengths: 'Styrkor i befintligt innehåll', openReport: 'Öppna fullständig SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatiskt genererad', noSummary: 'Ingen sammanfattning tillgänglig.', none: '—' },\n  'Norsk':      { title: 'SEO Content Audit-rapport', generated: 'Automatisk generert', keyword: 'Søkeord', url: 'Analysert URL', similarity: 'Likhet', rating: 'Vurdering', identisch: 'Identisk — Ingen tiltak nødvendig', verbesserbar: 'Kan forbedres — Optimaliseringer anbefalt', assessment: 'Vurdering', missingH: 'Forslag: Manglende/justerte overskrifter', gaps: 'Innholdsgap', strengths: 'Styrker ved eksisterende innhold', openReport: 'Åpne fullstendig SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatisk generert', noSummary: 'Ingen sammendrag tilgjengelig.', none: '—' },\n  'Dansk':      { title: 'SEO Content Audit-rapport', generated: 'Automatisk genereret', keyword: 'Søgeord', url: 'Analyseret URL', similarity: 'Lighed', rating: 'Vurdering', identisch: 'Identisk — Ingen handling nødvendig', verbesserbar: 'Kan forbedres — Optimeringer anbefalet', assessment: 'Vurdering', missingH: 'Forslag: Manglende/justerede overskrifter', gaps: 'Indholdsgab', strengths: 'Styrker ved eksisterende indhold', openReport: 'Åbn fuld SEO-rapport i Google Sheets →', footer: 'SEO Content Audit | Automatisk genereret', noSummary: 'Ingen opsummering tilgængelig.', none: '—' },\n  'Français':   { title: 'Rapport d\\'audit SEO', generated: 'Généré automatiquement', keyword: 'Mot-clé', url: 'URL analysée', similarity: 'Similarité', rating: 'Évaluation', identisch: 'Identique — Aucune action requise', verbesserbar: 'Améliorable — Optimisations recommandées', assessment: 'Évaluation', missingH: 'Suggestions : Titres manquants/à ajuster', gaps: 'Lacunes de contenu', strengths: 'Points forts du contenu existant', openReport: 'Ouvrir le rapport SEO complet dans Google Sheets →', footer: 'SEO Content Audit | Généré automatiquement', noSummary: 'Aucun résumé disponible.', none: '—' },\n  'Español':    { title: 'Informe de auditoría SEO', generated: 'Generado automáticamente', keyword: 'Palabra clave', url: 'URL analizada', similarity: 'Similitud', rating: 'Valoración', identisch: 'Idéntico — No se requiere acción', verbesserbar: 'Mejorable — Se recomiendan optimizaciones', assessment: 'Evaluación', missingH: 'Sugerencias: Encabezados faltantes/a ajustar', gaps: 'Lagunas de contenido', strengths: 'Fortalezas del contenido existente', openReport: 'Abrir informe SEO completo en Google Sheets →', footer: 'SEO Content Audit | Generado automáticamente', noSummary: 'No hay resumen disponible.', none: '—' }\n};\n\nconst t = isEN ? nativeLabels['English'] : (nativeLabels[content_sprache] || nativeLabels['Deutsch']);\nconst statusLabel = istIdentisch ? t.identisch : t.verbesserbar;\n\n// Date locale\nconst dateLocaleMap = { 'Deutsch': 'de-DE', 'English': 'en-GB', 'Svenska': 'sv-SE', 'Norsk': 'nb-NO', 'Dansk': 'da-DK', 'Français': 'fr-FR', 'Español': 'es-ES' };\nconst dateLocale = isEN ? 'en-GB' : (dateLocaleMap[content_sprache] || 'de-DE');\nconst dateStr = new Date().toLocaleDateString(dateLocale, {day: '2-digit', month: 'long', year: 'numeric'});\n\nconst listItems = (arr) => arr.length > 0\n  ? '<ul style=\"margin:8px 0;padding-left:20px;\">' + arr.map(i => `<li style=\"margin-bottom:6px;\">${i}</li>`).join('') + '</ul>'\n  : `<p style=\"color:#6b7280;\">${t.none}</p>`;\n\nconst emailBody = `<!DOCTYPE html><html><body style=\"font-family:system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:32px 24px;color:#1f2937;background:#ffffff;\">\n<div style=\"border-bottom:3px solid ${statusColor};padding-bottom:16px;margin-bottom:24px;\">\n  <h1 style=\"margin:0;font-size:22px;color:#111827;\">${t.title}</h1>\n  <p style=\"margin:4px 0 0;color:#6b7280;font-size:14px;\">${t.generated} — ${dateStr}</p>\n</div>\n<table style=\"width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e5e7eb;\">\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;width:160px;\">${t.keyword}</td><td style=\"padding:12px 16px;font-size:15px;font-weight:600;\">${keyword}</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.url}</td><td style=\"padding:12px 16px;\"><a href=\"${url}\" style=\"color:#3b82f6;\">${url}</a></td></tr>\n  <tr style=\"background:#f9fafb;\"><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.similarity}</td><td style=\"padding:12px 16px;font-size:20px;font-weight:700;color:${statusColor};\">${aehnlichkeit}%</td></tr>\n  <tr><td style=\"padding:12px 16px;font-weight:600;font-size:13px;color:#6b7280;text-transform:uppercase;\">${t.rating}</td><td style=\"padding:12px 16px;\"><span style=\"background:${statusColor};color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;\">${statusIcon} ${statusLabel}</span></td></tr>\n</table>\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">${t.assessment}</h2>\n<div style=\"background:#f9fafb;border-left:4px solid ${statusColor};padding:12px 16px;margin-bottom:24px;border-radius:0 6px 6px 0;\">\n  <p style=\"margin:0;\">${zusammenfassung || t.noSummary}</p>\n</div>\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">📝 ${t.missingH}</h2>\n${listItems(fehlende_ueberschriften)}\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">📌 ${t.gaps}</h2>\n${listItems(inhaltliche_luecken)}\n<h2 style=\"font-size:16px;color:#374151;margin-bottom:8px;\">✅ ${t.strengths}</h2>\n${listItems(staerken)}\n${spreadsheet_url ? `<div style=\"text-align:center;margin-top:32px;\"><a href=\"${spreadsheet_url}\" style=\"background:#3b82f6;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;\">📊 ${t.openReport}</a></div>` : ''}\n<p style=\"text-align:center;margin-top:32px;color:#9ca3af;font-size:12px;\">${t.footer}</p>\n</body></html>`;\n\n// Subject line in content_sprache (EN for US/GB)\nconst subjectSimilarityLabel = isEN ? 'Similarity' : t.similarity;\nconst email_subject = `SEO Audit: ${keyword} | ${aehnlichkeit}% ${subjectSimilarityLabel}`;\n\nreturn [{\n  json: {\n    email_empfaenger,\n    email_subject,\n    email_body: emailBody,\n    aehnlichkeit,\n    status,\n    keyword,\n    url,\n    spreadsheet_id,\n    spreadsheet_url\n  }\n}];"
+        },
+        "id": "ap-parse-result",
+        "name": "Ergebnis auswerten & Email aufbauen",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5152,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ 'https://sheets.googleapis.com/v4/spreadsheets/' + $json.spreadsheet_id + ':batchUpdate' }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({requests: [{addSheet: {properties: {title: 'Content_Audit', gridProperties: {rowCount: 1000, columnCount: 10}}}}]}) }}",
+          "options": {}
+        },
+        "id": "ap-add-audit-tab",
+        "name": "Content-Audit Tab erstellen",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          5392,
+          304
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_id }}"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "Content_Audit"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "url": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.url }}",
+              "keyword": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}",
+              "aehnlichkeit_prozent": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}",
+              "status": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}",
+              "zusammenfassung": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.zusammenfassung }}",
+              "vorschlaege_ueberschriften": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.fehlende_ueberschriften }}",
+              "vorschlaege_content": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.inhaltliche_luecken }}",
+              "staerken": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.staerken }}",
+              "erstellt_am": "={{ new Date().toISOString() }}"
+            },
+            "schema": [
+              {
+                "id": "url",
+                "type": "string",
+                "display": true,
+                "displayName": "url"
+              },
+              {
+                "id": "keyword",
+                "type": "string",
+                "display": true,
+                "displayName": "keyword"
+              },
+              {
+                "id": "aehnlichkeit_prozent",
+                "type": "number",
+                "display": true,
+                "displayName": "aehnlichkeit_prozent"
+              },
+              {
+                "id": "status",
+                "type": "string",
+                "display": true,
+                "displayName": "status"
+              },
+              {
+                "id": "zusammenfassung",
+                "type": "string",
+                "display": true,
+                "displayName": "zusammenfassung"
+              },
+              {
+                "id": "vorschlaege_ueberschriften",
+                "type": "string",
+                "display": true,
+                "displayName": "vorschlaege_ueberschriften"
+              },
+              {
+                "id": "vorschlaege_content",
+                "type": "string",
+                "display": true,
+                "displayName": "vorschlaege_content"
+              },
+              {
+                "id": "staerken",
+                "type": "string",
+                "display": true,
+                "displayName": "staerken"
+              },
+              {
+                "id": "erstellt_am",
+                "type": "string",
+                "display": true,
+                "displayName": "erstellt_am"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-write-audit",
+        "name": "Audit-Ergebnisse ins Sheet schreiben",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          5632,
+          304
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "sendTo": "mark@mo-casa.com",
+          "subject": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_subject }}",
+          "message": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.email_body }}",
+          "options": {}
+        },
+        "id": "ap-send-email",
+        "name": "Email Report senden (Gmail)",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          5872,
+          304
+        ],
+        "webhookId": "a47c0e50-0915-462c-9ae2-a23bf5ce6418",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "Kh7cApAx6TAe4Hpy",
+            "name": "Gmail account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "status",
+                "name": "status",
+                "value": "completed",
+                "type": "string"
+              },
+              {
+                "id": "keyword",
+                "name": "keyword",
+                "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.keyword }}",
+                "type": "string"
+              },
+              {
+                "id": "aehnlichkeit_prozent",
+                "name": "aehnlichkeit_prozent",
+                "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.aehnlichkeit_prozent }}",
+                "type": "number"
+              },
+              {
+                "id": "audit_status",
+                "name": "audit_status",
+                "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.status }}",
+                "type": "string"
+              },
+              {
+                "id": "spreadsheet_url",
+                "name": "spreadsheet_url",
+                "value": "={{ $('Ergebnis auswerten & Email aufbauen').first().json.spreadsheet_url }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "ap-final",
+        "name": "Autopilot abgeschlossen",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          6112,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## SEO Content Audit — Autopilot\n\n**Wird vom Batch Master aufgerufen (1x pro URL/Keyword)**\n\n### Ablauf:\n1. **Trigger** — empfängt: url, keyword, original_content, email\n2. **WF1** — erstellt Google Sheet + Keyword-Recherche\n3. **WF2** — SERP-Scraping für das Keyword\n4. **WF3** — Semantische Analyse\n5. **WF4** — User Insight Mining (ohne Expert-Input)\n6. **WF5** — Gliederungserstellung\n7. **WF6** — Content-Erstellung\n8. **WF7** — QA-Prüfung\n9. **WF8** — Finalisierung & Export\n10. **Content lesen** — liest generierten SEO-Content aus Sheet\n11. **KI-Vergleich** — Claude Sonnet vergleicht Original vs. SEO-Content\n12. **Auswertung** — Ähnlichkeitsscore + Vorschläge\n13. **Sheet-Update** — Audit-Tab im Keyword-Sheet\n14. **Email** — Report per Gmail\n\n### Setup (einmalig):\n- Gmail Credential ID im Email-Node eintragen",
+          "color": 5
+        },
+        "id": "sticky-overview",
+        "name": "Architektur-Uebersicht",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -208,
+          -16
+        ]
+      }
+    ],
+    "connections": {
+      "Autopilot Trigger": {
+        "main": [
+          [
+            {
+              "node": "Variablen setzen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Variablen setzen": {
+        "main": [
+          [
+            {
+              "node": "WF1 — Projekt-Setup & Keywords",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF1 — Projekt-Setup & Keywords": {
+        "main": [
+          [
+            {
+              "node": "Spreadsheet-ID extrahieren",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Spreadsheet-ID extrahieren": {
+        "main": [
+          [
+            {
+              "node": "WF2-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF2-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF2 — SERP-Scraping",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF2 — SERP-Scraping": {
+        "main": [
+          [
+            {
+              "node": "WF3-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF3-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF3 — Deep Analyse (Semantik)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF3 — Deep Analyse (Semantik)": {
+        "main": [
+          [
+            {
+              "node": "WF4-Input vorbereiten (Auto)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF4-Input vorbereiten (Auto)": {
+        "main": [
+          [
+            {
+              "node": "WF4 — User Insight Mining",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF4 — User Insight Mining": {
+        "main": [
+          [
+            {
+              "node": "WF5-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF5-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF5 — Gliederung & Freigabe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF5 — Gliederung & Freigabe": {
+        "main": [
+          [
+            {
+              "node": "WF6-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF6-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF6 — Content-Erstellung",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF6 — Content-Erstellung": {
+        "main": [
+          [
+            {
+              "node": "WF7-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF7-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF7 — QA & Sub-Agenten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF7 — QA & Sub-Agenten": {
+        "main": [
+          [
+            {
+              "node": "WF8-Input vorbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF8-Input vorbereiten": {
+        "main": [
+          [
+            {
+              "node": "WF8 — Finalisierung & Export",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF8 — Finalisierung & Export": {
+        "main": [
+          [
+            {
+              "node": "SEO Content aus Sheet lesen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SEO Content aus Sheet lesen": {
+        "main": [
+          [
+            {
+              "node": "SEO Content aufbereiten",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SEO Content aufbereiten": {
+        "main": [
+          [
+            {
+              "node": "KI-Vergleich (Claude Sonnet)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "KI-Vergleich (Claude Sonnet)": {
+        "main": [
+          [
+            {
+              "node": "Ergebnis auswerten & Email aufbauen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ergebnis auswerten & Email aufbauen": {
+        "main": [
+          [
+            {
+              "node": "Content-Audit Tab erstellen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Content-Audit Tab erstellen": {
+        "main": [
+          [
+            {
+              "node": "Audit-Ergebnisse ins Sheet schreiben",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit-Ergebnisse ins Sheet schreiben": {
+        "main": [
+          [
+            {
+              "node": "Email Report senden (Gmail)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Report senden (Gmail)": {
+        "main": [
+          [
+            {
+              "node": "Autopilot abgeschlossen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Mark Niemann",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-09T19:12:55.336Z",
+        "id": 347,
+        "workflowId": "kkzX4OzH4SbIjJ2x",
+        "versionId": "a082fb8b-f33b-4ba5-a517-14092caffa44",
+        "event": "activated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      },
+      {
+        "createdAt": "2026-03-09T19:12:55.255Z",
+        "id": 346,
+        "workflowId": "kkzX4OzH4SbIjJ2x",
+        "versionId": "a082fb8b-f33b-4ba5-a517-14092caffa44",
+        "event": "deactivated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    ]
+  }
+}

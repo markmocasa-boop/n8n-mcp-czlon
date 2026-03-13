@@ -43,7 +43,8 @@
               "rightValue": "",
               "operator": {
                 "type": "object",
-                "operation": "exists"
+                "operation": "exists",
+                "singleValue": true
               }
             }
           ],
@@ -79,7 +80,10 @@
         },
         "options": {},
         "range": "A:B"
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "wf5-merge-config",

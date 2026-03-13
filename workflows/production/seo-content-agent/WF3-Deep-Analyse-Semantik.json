@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-26T08:56:16.798Z",
+  "updatedAt": "2026-03-09T19:13:47.280Z",
   "createdAt": "2026-02-25T08:36:21.518Z",
   "id": "mE8ufIF5H0Z6Ap8l",
   "name": "WF3: Deep Analyse (Semantik)",
@@ -9,7 +9,16 @@
   "nodes": [
     {
       "parameters": {
-        "inputSource": "passthrough"
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "spreadsheet_id"
+            },
+            {
+              "name": "content_sprache"
+            }
+          ]
+        }
       },
       "id": "trigger-1",
       "name": "Execute Workflow Trigger",
@@ -207,12 +216,12 @@
         "messages": {
           "values": [
             {
-              "content": "=Hier ist die Similarity-Matrix der semantischen Analyse:\n\nSummary: {{ JSON.stringify($json.summary) }}\n\nCommodity Topics (alle Wettbewerber, Score > 0.7): {{ JSON.stringify($json.commodityTopics) }}\n\nDifferenzierungs-Themen (teilweise Abdeckung): {{ JSON.stringify($json.differentiationTopics) }}\n\nLuecken (keine Abdeckung): {{ JSON.stringify($json.gapTopics) }}\n\nVollstaendige Matrix: {{ JSON.stringify($json.matrix) }}\n\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON."
+              "content": "=Hier ist die Similarity-Matrix der semantischen Analyse:\n\nSummary: {{ JSON.stringify($json.summary) }}\n\nCommodity Topics (alle Wettbewerber, Score > 0.7): {{ JSON.stringify($json.commodityTopics) }}\n\nDifferenzierungs-Themen (teilweise Abdeckung): {{ JSON.stringify($json.differentiationTopics) }}\n\nLuecken (keine Abdeckung): {{ JSON.stringify($json.gapTopics) }}\n\nVollstaendige Matrix: {{ JSON.stringify($json.matrix) }}\n\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON. Alle Texte in {{ $('Execute Workflow Trigger').first().json.content_sprache || 'Deutsch' }}."
             }
           ]
         },
         "options": {
-          "system": "Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}",
+          "system": "=Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}. Alle Inhalte (keyword_oder_thema, details, zusammenfassung) in {{ $('Execute Workflow Trigger').first().json.content_sprache || 'Deutsch' }} verfassen.",
           "maxTokens": 4096
         }
       },
@@ -469,9 +478,531 @@
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
     "saveExecutionProgress": true,
-    "callerPolicy": "workflowsFromSameOwner",
+    "callerPolicy": "any",
     "availableInMCP": false
   },
-  "versionId": "36307954-db7a-4b6a-ae75-beae654f3aa2",
-  "tags": []
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "c990e9df-9124-4235-8bb7-0ea2a76dcf40",
+  "activeVersionId": "c990e9df-9124-4235-8bb7-0ea2a76dcf40",
+  "versionCounter": 36,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-01T05:43:37.004Z",
+      "createdAt": "2026-03-01T05:43:37.004Z",
+      "role": "workflow:owner",
+      "workflowId": "mE8ufIF5H0Z6Ap8l",
+      "projectId": "lJIfhj360iNuoez4",
+      "project": {
+        "updatedAt": "2026-02-25T07:07:46.000Z",
+        "createdAt": "2026-02-25T07:07:31.794Z",
+        "id": "lJIfhj360iNuoez4",
+        "name": "SEO Content Workflow mit 10 WF",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": "",
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-09T19:13:47.281Z",
+    "createdAt": "2026-03-09T19:13:47.281Z",
+    "versionId": "c990e9df-9124-4235-8bb7-0ea2a76dcf40",
+    "workflowId": "mE8ufIF5H0Z6Ap8l",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "spreadsheet_id"
+              },
+              {
+                "name": "content_sprache"
+              }
+            ]
+          }
+        },
+        "id": "trigger-1",
+        "name": "Execute Workflow Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/SERP%20Wettbewerber",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {}
+        },
+        "id": "http-read-serp",
+        "name": "Read SERP Wettbewerber",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          272,
+          208
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/Keywords",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {}
+        },
+        "id": "http-read-keywords",
+        "name": "Read Keywords",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          272,
+          432
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// HTTP Response: { values: [[header1, header2, ...], [row1val1, ...], ...] }\nconst response = $input.first().json;\nconst values = response.values || [];\n\nif (values.length < 2) {\n  throw new Error('Keine SERP Wettbewerber-Daten im Sheet gefunden');\n}\n\nconst headers = values[0].map(h => h.toLowerCase().trim());\nconst urlIdx = headers.indexOf('url');\nconst titleIdx = headers.indexOf('title');\nconst posIdx = headers.indexOf('position');\nconst contentIdx = headers.indexOf('content_text');\n\nconst contentTexts = [];\nconst competitorMeta = [];\n\nfor (let i = 1; i < values.length; i++) {\n  const row = values[i];\n  const contentText = contentIdx >= 0 ? (row[contentIdx] || '') : '';\n  if (contentText.trim() !== '') {\n    contentTexts.push(contentText);\n    competitorMeta.push({\n      url: urlIdx >= 0 ? (row[urlIdx] || '') : '',\n      title: titleIdx >= 0 ? (row[titleIdx] || '') : '',\n      position: posIdx >= 0 ? (row[posIdx] || '') : ''\n    });\n  }\n}\n\nif (contentTexts.length === 0) {\n  throw new Error('Keine content_text Daten in SERP Wettbewerber gefunden');\n}\n\nreturn [{\n  json: {\n    contentTexts,\n    competitorMeta,\n    competitorCount: contentTexts.length\n  }\n}];"
+        },
+        "id": "code-prepare-1",
+        "name": "Prepare Embedding Inputs",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          528,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// HTTP Response: { values: [[header1, header2, ...], [row1val1, ...], ...] }\nconst response = $input.first().json;\nconst values = response.values || [];\n\nif (values.length < 2) {\n  throw new Error('Keine Keywords im Sheet gefunden');\n}\n\nconst headers = values[0].map(h => h.toLowerCase().trim());\nconst kwIdx = headers.indexOf('keyword');\n\nif (kwIdx === -1) {\n  throw new Error('Spalte keyword nicht im Keywords-Sheet gefunden. Headers: ' + headers.join(', '));\n}\n\nconst keywords = [];\nfor (let i = 1; i < values.length; i++) {\n  const kw = (values[i][kwIdx] || '').trim();\n  if (kw !== '' && kw !== 'Keine Ergebnisse') {\n    keywords.push(kw);\n  }\n}\n\nif (keywords.length === 0) {\n  throw new Error('Keine gueltigen Keywords gefunden');\n}\n\nreturn [{\n  json: {\n    keywords,\n    keywordCount: keywords.length\n  }\n}];"
+        },
+        "id": "code-prepare-kw",
+        "name": "Prepare Keyword Queries",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          528,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.voyageai.com/v1/embeddings",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ input: $('Prepare Embedding Inputs').first().json.contentTexts.map(t => t.substring(0, 4000)), model: 'voyage-3-lite', input_type: 'document' }) }}",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "id": "http-voyage-content",
+        "name": "Voyage AI Content Embeddings",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          784,
+          208
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "R6LLeI3G74Ju62Jv",
+            "name": "VoyageAI"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.voyageai.com/v1/embeddings",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ input: $('Prepare Keyword Queries').first().json.keywords, model: 'voyage-3-lite', input_type: 'query' }) }}",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "id": "http-voyage-keywords",
+        "name": "Voyage AI Keyword Embeddings",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          784,
+          432
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "R6LLeI3G74Ju62Jv",
+            "name": "VoyageAI"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "append"
+        },
+        "id": "merge-embeddings",
+        "name": "Merge Embeddings",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1040,
+          320
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Cosine Similarity berechnen\nconst allItems = $input.all();\n\nif (allItems.length < 2) {\n  throw new Error('Merge lieferte nur ' + allItems.length + ' Items. Erwartet: 2 (Content + Keywords). Pruefen ob beide Branches liefen.');\n}\n\n// Content Embeddings (erstes Item von Voyage AI Content)\nconst contentResponse = allItems[0].json;\nconst contentEmbeddings = contentResponse.data ? contentResponse.data.map(d => d.embedding) : [];\n\n// Keyword Embeddings (zweites Item von Voyage AI Keywords)\nconst keywordResponse = allItems[1].json;\nconst keywordEmbeddings = keywordResponse.data ? keywordResponse.data.map(d => d.embedding) : [];\n\n// Metadaten laden\nconst competitorMeta = $('Prepare Embedding Inputs').first().json.competitorMeta;\nconst keywords = $('Prepare Keyword Queries').first().json.keywords;\n\n// Similarity Matrix berechnen: Keywords (Zeilen) x Wettbewerber (Spalten)\nconst matrix = [];\nconst totalCompetitors = contentEmbeddings.length;\n\nfor (let ki = 0; ki < keywordEmbeddings.length; ki++) {\n  const row = {\n    keyword: keywords[ki],\n    scores: {},\n    avgScore: 0,\n    maxScore: 0,\n    minScore: 1,\n    coverageCount: 0\n  };\n  let totalScore = 0;\n  \n  for (let ci = 0; ci < contentEmbeddings.length; ci++) {\n    const vecA = keywordEmbeddings[ki];\n    const vecB = contentEmbeddings[ci];\n    let dotProduct = 0;\n    let normA = 0;\n    let normB = 0;\n    for (let i = 0; i < vecA.length; i++) {\n      dotProduct += vecA[i] * vecB[i];\n      normA += vecA[i] * vecA[i];\n      normB += vecB[i] * vecB[i];\n    }\n    normA = Math.sqrt(normA);\n    normB = Math.sqrt(normB);\n    const score = (normA === 0 || normB === 0) ? 0 : dotProduct / (normA * normB);\n    const roundedScore = Math.round(score * 1000) / 1000;\n    \n    const competitorLabel = competitorMeta[ci] ? (competitorMeta[ci].title || competitorMeta[ci].url || 'Competitor_' + (ci+1)) : 'Competitor_' + (ci+1);\n    row.scores[competitorLabel] = roundedScore;\n    totalScore += roundedScore;\n    if (roundedScore > row.maxScore) row.maxScore = roundedScore;\n    if (roundedScore < row.minScore) row.minScore = roundedScore;\n    if (roundedScore > 0.7) row.coverageCount++;\n  }\n  \n  row.avgScore = contentEmbeddings.length > 0 ? Math.round((totalScore / contentEmbeddings.length) * 1000) / 1000 : 0;\n  matrix.push(row);\n}\n\nconst commodityTopics = matrix.filter(r => r.coverageCount === totalCompetitors && r.avgScore > 0.7);\nconst differentiationTopics = matrix.filter(r => r.coverageCount > 0 && r.coverageCount < totalCompetitors);\nconst gapTopics = matrix.filter(r => r.coverageCount === 0);\n\nreturn [{\n  json: {\n    matrix: matrix,\n    summary: {\n      totalKeywords: keywords.length,\n      totalCompetitors: totalCompetitors,\n      commodityCount: commodityTopics.length,\n      differentiationCount: differentiationTopics.length,\n      gapCount: gapTopics.length\n    },\n    commodityTopics: commodityTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore })),\n    differentiationTopics: differentiationTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore, coverage: r.coverageCount + '/' + totalCompetitors })),\n    gapTopics: gapTopics.map(r => ({ keyword: r.keyword, avgScore: r.avgScore })),\n    competitorMeta: competitorMeta,\n    keywords: keywords\n  }\n}];"
+        },
+        "id": "code-cosine",
+        "name": "Cosine Similarity Matrix",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1264,
+          320
+        ]
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "mode": "id",
+            "value": "claude-sonnet-4-20250514"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Hier ist die Similarity-Matrix der semantischen Analyse:\n\nSummary: {{ JSON.stringify($json.summary) }}\n\nCommodity Topics (alle Wettbewerber, Score > 0.7): {{ JSON.stringify($json.commodityTopics) }}\n\nDifferenzierungs-Themen (teilweise Abdeckung): {{ JSON.stringify($json.differentiationTopics) }}\n\nLuecken (keine Abdeckung): {{ JSON.stringify($json.gapTopics) }}\n\nVollstaendige Matrix: {{ JSON.stringify($json.matrix) }}\n\nBitte analysiere diese Daten und erstelle eine strukturierte SEO-Analyse als JSON. Alle Texte in {{ $('Execute Workflow Trigger').first().json.content_sprache || 'Deutsch' }}."
+              }
+            ]
+          },
+          "options": {
+            "system": "=Du bist ein SEO-Analyst. Analysiere die Similarity-Matrix und identifiziere: 1) Commodity Topics (alle Wettbewerber decken ab, Score > 0.7), 2) Differenzierungs-Themen (nur manche Wettbewerber), 3) Luecken (niemand deckt ab). Antworte IMMER als valides JSON mit dieser Struktur: {\"commodity_topics\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"differenzierung_themen\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\", \"abgedeckt_von\": [\"...\"]}], \"luecken\": [{\"keyword_oder_thema\": \"...\", \"score\": 0.0, \"details\": \"...\"}], \"zusammenfassung\": \"...\"}. Alle Inhalte (keyword_oder_thema, details, zusammenfassung) in {{ $('Execute Workflow Trigger').first().json.content_sprache || 'Deutsch' }} verfassen.",
+            "maxTokens": 4096
+          }
+        },
+        "id": "http-claude",
+        "name": "Claude Semantic Analysis",
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          1520,
+          320
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "anthropicApi": {
+            "id": "xJGzDv9YCgZEHb2E",
+            "name": "Claude - 20260127"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Claude API Response parsen\nconst claudeResponse = $input.first().json;\n\nlet responseText = '';\nif (claudeResponse.content && Array.isArray(claudeResponse.content)) {\n  responseText = claudeResponse.content.filter(c => c.type === 'text').map(c => c.text).join('');\n} else if (typeof claudeResponse.content === 'string') {\n  responseText = claudeResponse.content;\n} else if (claudeResponse.message && claudeResponse.message.content) {\n  const content = claudeResponse.message.content;\n  if (Array.isArray(content)) {\n    responseText = content.filter(c => c.type === 'text').map(c => c.text).join('');\n  } else {\n    responseText = String(content);\n  }\n} else {\n  responseText = claudeResponse.text || claudeResponse.output || JSON.stringify(claudeResponse);\n}\n\nlet analysisData;\ntry {\n  analysisData = JSON.parse(responseText);\n} catch (e) {\n  const jsonMatch = responseText.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    analysisData = JSON.parse(jsonMatch[1].trim());\n  } else {\n    const jsonBlockMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonBlockMatch) {\n      analysisData = JSON.parse(jsonBlockMatch[0]);\n    } else {\n      throw new Error('Konnte kein JSON in der Claude-Antwort finden: ' + responseText.substring(0, 200));\n    }\n  }\n}\n\nconst rows = [];\n\nif (analysisData.commodity_topics) {\n  for (const topic of analysisData.commodity_topics) {\n    rows.push({ analyse_typ: 'commodity', keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '', score: topic.score || 0, details: topic.details || '', kategorie: 'Commodity Topic' });\n  }\n}\n\nif (analysisData.differenzierung_themen) {\n  for (const topic of analysisData.differenzierung_themen) {\n    rows.push({ analyse_typ: 'differenzierung', keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '', score: topic.score || 0, details: (topic.details || '') + (topic.abgedeckt_von ? ' | Abgedeckt von: ' + topic.abgedeckt_von.join(', ') : ''), kategorie: 'Differenzierung' });\n  }\n}\n\nif (analysisData.luecken) {\n  for (const topic of analysisData.luecken) {\n    rows.push({ analyse_typ: 'luecke', keyword_oder_thema: topic.keyword_oder_thema || topic.keyword || '', score: topic.score || 0, details: topic.details || '', kategorie: 'Content-Luecke' });\n  }\n}\n\nif (analysisData.zusammenfassung) {\n  rows.push({ analyse_typ: 'zusammenfassung', keyword_oder_thema: 'Gesamtanalyse', score: 0, details: analysisData.zusammenfassung, kategorie: 'Zusammenfassung' });\n}\n\nif (rows.length === 0) {\n  rows.push({ analyse_typ: 'info', keyword_oder_thema: 'Keine Ergebnisse', score: 0, details: 'Claude hat keine strukturierten Ergebnisse geliefert', kategorie: 'Info' });\n}\n\nreturn rows.map(row => ({ json: row }));"
+        },
+        "id": "code-parse",
+        "name": "Parse Claude Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1776,
+          320
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Alle Items sammeln und als 2D-Array fuer Google Sheets formatieren\nconst items = $input.all();\nconst spreadsheetId = $('Execute Workflow Trigger').first().json.spreadsheet_id;\n\nconst headers = ['analyse_typ', 'keyword_oder_thema', 'score', 'details', 'kategorie'];\nconst rows = [headers];\n\nfor (const item of items) {\n  rows.push([\n    item.json.analyse_typ || '',\n    item.json.keyword_oder_thema || '',\n    String(item.json.score || 0),\n    item.json.details || '',\n    item.json.kategorie || ''\n  ]);\n}\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    values: rows\n  }\n}];"
+        },
+        "id": "code-format-write",
+        "name": "Format fuer Sheets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2032,
+          320
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/Semantische%20Analyse:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ range: 'Semantische Analyse', majorDimension: 'ROWS', values: $json.values }) }}",
+          "options": {}
+        },
+        "id": "http-write-analyse",
+        "name": "Write Semantische Analyse",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2288,
+          320
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "PUT",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Execute Workflow Trigger').first().json.spreadsheet_id }}/values/Projekt!A2:B2?valueInputOption=USER_ENTERED",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ range: 'Projekt!A2:B2', majorDimension: 'ROWS', values: [['semantic_analysis_done', new Date().toISOString()]] }) }}",
+          "options": {}
+        },
+        "id": "http-update-status",
+        "name": "Update Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2544,
+          320
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Execute Workflow Trigger": {
+        "main": [
+          [
+            {
+              "node": "Read SERP Wettbewerber",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Read Keywords",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read SERP Wettbewerber": {
+        "main": [
+          [
+            {
+              "node": "Prepare Embedding Inputs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Keywords": {
+        "main": [
+          [
+            {
+              "node": "Prepare Keyword Queries",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Embedding Inputs": {
+        "main": [
+          [
+            {
+              "node": "Voyage AI Content Embeddings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Keyword Queries": {
+        "main": [
+          [
+            {
+              "node": "Voyage AI Keyword Embeddings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Voyage AI Content Embeddings": {
+        "main": [
+          [
+            {
+              "node": "Merge Embeddings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Voyage AI Keyword Embeddings": {
+        "main": [
+          [
+            {
+              "node": "Merge Embeddings",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge Embeddings": {
+        "main": [
+          [
+            {
+              "node": "Cosine Similarity Matrix",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Cosine Similarity Matrix": {
+        "main": [
+          [
+            {
+              "node": "Claude Semantic Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Semantic Analysis": {
+        "main": [
+          [
+            {
+              "node": "Parse Claude Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Claude Response": {
+        "main": [
+          [
+            {
+              "node": "Format fuer Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format fuer Sheets": {
+        "main": [
+          [
+            {
+              "node": "Write Semantische Analyse",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Semantische Analyse": {
+        "main": [
+          [
+            {
+              "node": "Update Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Mark Niemann",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-09T19:13:47.467Z",
+        "id": 351,
+        "workflowId": "mE8ufIF5H0Z6Ap8l",
+        "versionId": "c990e9df-9124-4235-8bb7-0ea2a76dcf40",
+        "event": "activated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      },
+      {
+        "createdAt": "2026-03-09T19:13:47.382Z",
+        "id": 350,
+        "workflowId": "mE8ufIF5H0Z6Ap8l",
+        "versionId": "c990e9df-9124-4235-8bb7-0ea2a76dcf40",
+        "event": "deactivated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    ]
+  }
 }

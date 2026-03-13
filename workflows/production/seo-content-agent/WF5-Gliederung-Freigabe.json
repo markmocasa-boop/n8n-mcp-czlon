@@ -1,17 +1,31 @@
 {
+  "updatedAt": "2026-03-09T15:01:31.115Z",
+  "createdAt": "2026-02-25T08:36:16.411Z",
   "id": "C7eK32G9cfcnFJ78",
   "name": "SEO Agent — WF5: Gliederung & Freigabe",
+  "description": null,
   "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "id": "wf5-trigger",
       "name": "Gliederungs-Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "parameters": {
         "workflowInputs": {
-          "values": [{"name": "spreadsheet_id"}]
+          "values": [
+            {
+              "name": "spreadsheet_id"
+            },
+            {
+              "name": "content_sprache"
+            }
+          ]
         }
       }
     },
@@ -20,7 +34,10 @@
       "name": "WF5 Variablen",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [250, 0],
+      "position": [
+        250,
+        0
+      ],
       "parameters": {
         "mode": "manual",
         "duplicateItem": false,
@@ -30,6 +47,12 @@
               "id": "spreadsheet_id",
               "name": "spreadsheet_id",
               "value": "={{ $json.spreadsheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "content_sprache",
+              "name": "content_sprache",
+              "value": "={{ $json.content_sprache || 'Deutsch' }}",
               "type": "string"
             }
           ]
@@ -42,63 +65,104 @@
       "name": "Sheets — Keywords lesen",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [500, -200],
-      "onError": "continueRegularOutput",
+      "position": [
+        500,
+        -200
+      ],
       "parameters": {
         "operation": "read",
-        "documentId": {"mode": "id", "value": "={{ $json.spreadsheet_id }}"},
-        "sheetName": {"mode": "name", "value": "Keywords"},
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Keywords"
+        },
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}
-      }
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "read-analyse",
       "name": "Sheets — Semantische Analyse lesen",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [500, 0],
-      "onError": "continueRegularOutput",
+      "position": [
+        500,
+        0
+      ],
       "parameters": {
         "operation": "read",
-        "documentId": {"mode": "id", "value": "={{ $json.spreadsheet_id }}"},
-        "sheetName": {"mode": "name", "value": "Semantische Analyse"},
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Semantische Analyse"
+        },
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}
-      }
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "read-insights",
       "name": "Sheets — User Insights lesen",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [500, 200],
-      "onError": "continueRegularOutput",
+      "position": [
+        500,
+        200
+      ],
       "parameters": {
         "operation": "read",
-        "documentId": {"mode": "id", "value": "={{ $json.spreadsheet_id }}"},
-        "sheetName": {"mode": "name", "value": "User Insights"},
+        "documentId": {
+          "mode": "id",
+          "value": "={{ $json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "User Insights"
+        },
         "range": "A:Z",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}
-      }
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "merge-all-data",
       "name": "Alle Daten zusammenführen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 0],
+      "position": [
+        800,
+        0
+      ],
       "parameters": {
-        "jsCode": "let keywords = [];\ntry { keywords = $('Sheets — Keywords lesen').all().map(i => i.json); } catch(e) { /* sheet missing/empty */ }\n\nlet analyse = [];\ntry { analyse = $('Sheets — Semantische Analyse lesen').all().map(i => i.json); } catch(e) { /* sheet missing/empty */ }\n\nlet insights = [];\ntry { insights = $('Sheets — User Insights lesen').all().map(i => i.json); } catch(e) { /* sheet missing/empty */ }\n\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nconst selectedKeywords = keywords.filter(k => k.ausgewaehlt === 'ja');\nconst commodityTopics = analyse.filter(a => a.kategorie === 'pflicht');\nconst uniqueAngles = insights.filter(i => i.unique_angle === 'ja');\nconst expertInsights = insights.filter(i => i.quelle === 'expert_input');\nconst userQuestions = insights.filter(i => i.typ === 'frage');\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    selected_keywords: JSON.stringify(selectedKeywords),\n    commodity_topics: JSON.stringify(commodityTopics),\n    unique_angles: JSON.stringify(uniqueAngles),\n    expert_insights: JSON.stringify(expertInsights),\n    user_questions: JSON.stringify(userQuestions),\n    all_analyse: JSON.stringify(analyse),\n    keyword_count: selectedKeywords.length,\n    commodity_count: commodityTopics.length,\n    unique_count: uniqueAngles.length\n  }\n}];"
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "let keywords = [];\ntry { keywords = $('Sheets — Keywords lesen').all().map(i => i.json); } catch(e) {}\n\nlet analyse = [];\ntry { analyse = $('Sheets — Semantische Analyse lesen').all().map(i => i.json); } catch(e) {}\n\nlet insights = [];\ntry { insights = $('Sheets — User Insights lesen').all().map(i => i.json); } catch(e) {}\n\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nconst getField = (obj, names) => {\n  for (const name of names) {\n    for (const key of Object.keys(obj)) {\n      if (key.toLowerCase() === name.toLowerCase()) return obj[key];\n    }\n  }\n  return '';\n};\n\n// Normalize analyse entries\nconst normAnalyse = analyse.map(a => {\n  const kategorie = getField(a, ['kategorie', 'Kategorie', 'category']).toString().toLowerCase();\n  const analyseTyp = getField(a, ['analyse_typ', 'Analyse_Typ', 'type', 'typ']).toString().toLowerCase();\n  return {\n    kategorie,\n    analyse_typ: analyseTyp,\n    keyword_oder_thema: getField(a, ['keyword_oder_thema', 'Keyword_oder_Thema', 'keyword', 'thema', 'Thema', 'topic']),\n    details: getField(a, ['details', 'Details', 'beschreibung', 'Beschreibung']),\n    suchintention: getField(a, ['suchintention', 'Suchintention', 'intent'])\n  };\n});\n\n// Category matching\nconst isCommodity = (a) => \n  a.analyse_typ === 'commodity' || \n  a.kategorie.includes('commodity') || \n  a.kategorie.includes('pflicht') || \n  a.kategorie.includes('basis') || \n  a.kategorie.includes('kern');\n\nconst isLuecke = (a) => \n  a.analyse_typ === 'luecke' || \n  a.kategorie.includes('luecke') || \n  a.kategorie.includes('l\\u00fccke') || \n  a.kategorie.includes('gap');\n\nconst isDifferenzierung = (a) => \n  a.analyse_typ === 'differenzierung' || \n  a.kategorie.includes('differenzierung');\n\nlet commodityTopics = normAnalyse.filter(isCommodity);\nconst lueckeTopics = normAnalyse.filter(isLuecke);\nconst diffTopics = normAnalyse.filter(isDifferenzierung);\n\n// === FALLBACK: Wenn 0 Commodity-Themen, Keywords als Commodity verwenden ===\nlet fallbackUsed = false;\nif (commodityTopics.length === 0) {\n  fallbackUsed = true;\n  // Nimm die Top-Keywords (nach Suchvolumen sortiert wenn vorhanden)\n  const kwSorted = [...keywords].sort((a, b) => {\n    const volA = Number(getField(a, ['suchvolumen', 'Suchvolumen', 'volume']) || 0);\n    const volB = Number(getField(b, ['suchvolumen', 'Suchvolumen', 'volume']) || 0);\n    return volB - volA;\n  });\n  // Top 10 Keywords als Commodity-Themen\n  commodityTopics = kwSorted.slice(0, 10).map(k => ({\n    kategorie: 'commodity (fallback)',\n    analyse_typ: 'commodity',\n    keyword_oder_thema: getField(k, ['keyword', 'Keyword', 'term']),\n    details: 'Fallback: Aus Keywords generiert (keine Commodity-Themen in Analyse)',\n    suchintention: getField(k, ['suchintention', 'Suchintention', 'intent'])\n  }));\n}\n\n// Keywords\nconst normKeywords = keywords.map(k => ({\n  keyword: getField(k, ['keyword', 'Keyword', 'term']),\n  suchvolumen: Number(getField(k, ['suchvolumen', 'Suchvolumen', 'volume']) || 0),\n  ausgewaehlt: getField(k, ['ausgewaehlt', 'Ausgewaehlt', 'selected', 'ausgew\\u00e4hlt']).toString().toLowerCase()\n}));\nconst selectedKeywords = normKeywords.filter(k => ['ja', 'true', 'x', '1'].includes(k.ausgewaehlt));\nconst finalKeywords = selectedKeywords.length > 0 ? selectedKeywords : normKeywords.slice(0, 10);\n\nconst uniqueAngles = insights.filter(i => {\n  const ua = getField(i, ['unique_angle', 'Unique_Angle']).toString().toLowerCase();\n  return ua === 'ja' || ua === 'true';\n});\nconst expertInsights = insights.filter(i => {\n  const q = getField(i, ['quelle', 'Quelle', 'source']).toString().toLowerCase();\n  return q.includes('expert');\n});\nconst userQuestions = insights.filter(i => {\n  const t = getField(i, ['typ', 'Typ', 'type']).toString().toLowerCase();\n  return t === 'frage' || t === 'question';\n});\n\nconst allCategories = [...new Set(normAnalyse.map(a => a.kategorie))];\nconst allAnalyseTypen = [...new Set(normAnalyse.map(a => a.analyse_typ))];\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    selected_keywords: JSON.stringify(finalKeywords),\n    commodity_topics: JSON.stringify(commodityTopics),\n    luecke_topics: JSON.stringify(lueckeTopics),\n    diff_topics: JSON.stringify(diffTopics),\n    unique_angles: JSON.stringify(uniqueAngles),\n    expert_insights: JSON.stringify(expertInsights),\n    user_questions: JSON.stringify(userQuestions),\n    all_analyse: JSON.stringify(normAnalyse),\n    keyword_count: finalKeywords.length,\n    commodity_count: commodityTopics.length,\n    luecke_count: lueckeTopics.length,\n    diff_count: diffTopics.length,\n    unique_count: uniqueAngles.length,\n    expert_count: expertInsights.length,\n    fallback_used: fallbackUsed ? 'ja' : 'nein',\n    debug_all_categories: allCategories.join(' | '),\n    debug_all_analyse_typen: allAnalyseTypen.join(' | '),\n    debug_analyse_count: normAnalyse.length\n  }\n}];"
       }
     },
     {
@@ -106,27 +170,36 @@
       "name": "Claude — Gliederung generieren",
       "type": "@n8n/n8n-nodes-langchain.anthropic",
       "typeVersion": 1,
-      "position": [1100, 0],
+      "position": [
+        1100,
+        0
+      ],
       "parameters": {
         "resource": "text",
         "operation": "message",
-        "modelId": {"mode": "id", "value": "claude-sonnet-4-20250514"},
+        "modelId": {
+          "mode": "id",
+          "value": "claude-sonnet-4-20250514"
+        },
         "messages": {
           "values": [
             {
-              "content": "=Erstelle eine Artikel-Gliederung:\n\nKEYWORDS ({{ $json.keyword_count }}): {{ $json.selected_keywords }}\n\nPFLICHTTHEMEN ({{ $json.commodity_count }}): {{ $json.commodity_topics }}\n\nUNIQUE ANGLES ({{ $json.unique_count }}): {{ $json.unique_angles }}\n\nEXPERT INSIGHTS: {{ $json.expert_insights }}\n\nUSER FRAGEN: {{ $json.user_questions }}\n\nANALYSE: {{ $json.all_analyse }}",
+              "content": "=Erstelle eine SEO-Artikel-Gliederung.\n\nSPRACHE: Alle Überschriften und Stichpunkte auf {{ $('WF5 Variablen').first().json.content_sprache }}.\n\nSTRIKTE REGELN:\n- GENAU 1x h1 (Hauptueberschrift des gesamten Artikels)\n- Alle weiteren Sektionen sind h2 oder h3\n- Jede Sektion braucht basiert_auf: commodity, luecke, unique_angle ODER expert_take\n\nVERTEILUNG (PFLICHT):\n1. ALLE folgenden Pflichtthemen als eigene h2/h3 Sektionen mit basiert_auf=commodity:\n{{ $json.commodity_topics }}\n(Anzahl Pflichtthemen: {{ $json.commodity_count }})\n\n2. Waehle GENAU 3 Luecken-Themen aus der Analyse (basiert_auf=luecke):\n{{ $json.all_analyse }}\n\n3. GENAU 2 Unique Angles (basiert_auf=unique_angle):\n{{ $json.unique_angles }}\n\n4. GENAU 2 Expert Takes (basiert_auf=expert_take):\n{{ $json.expert_insights }}\n\n5. User-Fragen als FAQ-Sektion (basiert_auf=commodity):\n{{ $json.user_questions }}\n\nKEYWORDS zum Einbauen: {{ $json.selected_keywords }}\n\nBEISPIEL-OUTPUT:\n[{\"position\":1,\"ebene\":\"h1\",\"ueberschrift\":\"Haupttitel\",\"typ\":\"einleitung\",\"basiert_auf\":\"commodity\",\"stichpunkte\":\"...\"},\n{\"position\":2,\"ebene\":\"h2\",\"ueberschrift\":\"Pflichtthema 1\",\"typ\":\"hauptteil\",\"basiert_auf\":\"commodity\",\"stichpunkte\":\"...\"},\n{\"position\":3,\"ebene\":\"h2\",\"ueberschrift\":\"Luecke 1\",\"typ\":\"hauptteil\",\"basiert_auf\":\"luecke\",\"stichpunkte\":\"...\"}]",
               "role": "user"
             }
           ]
         },
         "simplify": true,
         "options": {
-          "system": "Du bist ein erfahrener SEO-Content-Stratege. Erstelle eine detaillierte Artikel-Gliederung basierend auf den bereitgestellten Daten. Die Gliederung muss:\n1. Alle Commodity Topics abdecken\n2. Unique Angles prominent einbauen\n3. Expert Insights integrieren\n4. User-Fragen als FAQ aufnehmen\n5. Logische H1 > H2 > H3 Hierarchie\n\nAntworte AUSSCHLIESSLICH im JSON-Format (Array von Objekten):\n[{\"position\": 1, \"ebene\": \"h1\", \"ueberschrift\": \"...\", \"typ\": \"einleitung|kerninfo|hauptteil|fehler|faq|fazit\", \"basiert_auf\": \"commodity|unique_angle|expert_take\", \"stichpunkte\": \"Punkt 1; Punkt 2; Punkt 3\"}]",
+          "system": "Du bist ein SEO-Content-Stratege. Erstelle eine Artikel-Gliederung als JSON-Array.\n\nSPRACHE: Verfasse alle Ueberschriften und Stichpunkte in {{ $('WF5 Variablen').first().json.content_sprache }}.\n\nUNVERHANDELBARE REGELN:\n1. GENAU 1x h1 - die Hauptueberschrift des Artikels\n2. Alle anderen Sektionen sind h2 oder h3 (NIEMALS weitere h1!)\n3. JEDE Sektion hat basiert_auf mit EXAKT einem dieser Werte: commodity, luecke, unique_angle, expert_take\n4. Commodity-Themen: ALLE muessen enthalten sein\n5. Luecke: GENAU 3 Sektionen\n6. Unique Angle: GENAU 2 Sektionen\n7. Expert Take: GENAU 2 Sektionen\n\nAntworte NUR mit dem JSON-Array, kein anderer Text:\n[{\"position\": 1, \"ebene\": \"h1|h2|h3\", \"ueberschrift\": \"...\", \"typ\": \"einleitung|kerninfo|hauptteil|fehler|faq|fazit\", \"basiert_auf\": \"commodity|luecke|unique_angle|expert_take\", \"stichpunkte\": \"Punkt 1; Punkt 2; Punkt 3\"}]",
           "maxTokens": 4096
         }
       },
       "credentials": {
-        "anthropicApi": {"id": "xJGzDv9YCgZEHb2E", "name": "Claude - 20260127"}
+        "anthropicApi": {
+          "id": "xJGzDv9YCgZEHb2E",
+          "name": "Claude - 20260127"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -137,9 +210,55 @@
       "name": "Gliederung parsen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1400, 0],
+      "position": [
+        1400,
+        0
+      ],
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nlet content = '';\ntry {\n  content = response.content?.[0]?.text || response.content || '';\n} catch (e) {\n  content = JSON.stringify(response);\n}\n\nlet outline = [];\ntry {\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (jsonMatch) {\n    outline = JSON.parse(jsonMatch[0]);\n  } else {\n    outline = JSON.parse(content);\n  }\n} catch (e) {\n  outline = [{ position: 1, ebene: 'h1', ueberschrift: 'Parsing fehlgeschlagen', typ: 'hauptteil', basiert_auf: 'commodity', stichpunkte: content.slice(0, 500) }];\n}\n\nreturn outline.map(item => ({\n  json: {\n    position: item.position || 0,\n    ebene: item.ebene || 'h2',\n    ueberschrift: item.ueberschrift || '',\n    typ: item.typ || 'hauptteil',\n    basiert_auf: item.basiert_auf || 'commodity',\n    stichpunkte: item.stichpunkte || '',\n    freigabe: 'nein',\n    spreadsheet_id: spreadsheetId\n  }\n}));"
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const response = $input.first().json;\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nlet content = '';\ntry {\n  content = response.content?.[0]?.text || response.content || '';\n} catch (e) {\n  content = JSON.stringify(response);\n}\n\nlet outline = [];\ntry {\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (jsonMatch) {\n    outline = JSON.parse(jsonMatch[0]);\n  } else {\n    outline = JSON.parse(content);\n  }\n} catch (e) {\n  outline = [{ position: 1, ebene: 'h1', ueberschrift: 'Parsing fehlgeschlagen', typ: 'hauptteil', basiert_auf: 'commodity', stichpunkte: content.slice(0, 500) }];\n}\n\n// Rule 1: Exactly ONE h1\nlet h1Found = false;\noutline = outline.map(item => {\n  if (item.ebene === 'h1') {\n    if (!h1Found) {\n      h1Found = true;\n      return item;\n    } else {\n      return { ...item, ebene: 'h2' };\n    }\n  }\n  return item;\n});\n\n// Rule 2: Validate basiert_auf values\nconst validBasis = ['commodity', 'luecke', 'unique_angle', 'expert_take'];\noutline = outline.map(item => {\n  if (!validBasis.includes(item.basiert_auf)) {\n    item.basiert_auf = 'commodity';\n  }\n  return item;\n});\n\n// Rule 3: Enforce distribution limits\nconst byCat = {};\nvalidBasis.forEach(cat => byCat[cat] = []);\noutline.forEach(item => byCat[item.basiert_auf].push(item));\n\nconst limits = { commodity: 999, luecke: 3, unique_angle: 2, expert_take: 2 };\nconst selected = [];\nfor (const cat of validBasis) {\n  const items = byCat[cat] || [];\n  selected.push(...items.slice(0, limits[cat]));\n}\n\nselected.sort((a, b) => Number(a.position) - Number(b.position));\n\nreturn selected.map((item, idx) => ({\n  json: {\n    position: idx + 1,\n    ebene: item.ebene || 'h2',\n    ueberschrift: item.ueberschrift || '',\n    typ: item.typ || 'hauptteil',\n    basiert_auf: item.basiert_auf || 'commodity',\n    stichpunkte: item.stichpunkte || '',\n    freigabe: 'nein',\n    spreadsheet_id: spreadsheetId\n  }\n}));"
+      }
+    },
+    {
+      "id": "collect-outline",
+      "name": "Gliederung sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const items = $input.all();\nconst spreadsheetId = items[0].json.spreadsheet_id;\n\nconst header = ['position', 'ebene', 'ueberschrift', 'typ', 'basiert_auf', 'stichpunkte', 'freigabe'];\nconst rows = items.map(item => [\n  String(item.json.position || ''),\n  item.json.ebene || '',\n  item.json.ueberschrift || '',\n  item.json.typ || '',\n  item.json.basiert_auf || '',\n  item.json.stichpunkte || '',\n  item.json.freigabe || 'nein'\n]);\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    all_values: JSON.stringify({ values: [header, ...rows] }),\n    row_count: rows.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "clear-outline-sheet",
+      "name": "Gliederung Sheet leeren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1650,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/Gliederung:clear",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
       }
     },
     {
@@ -147,60 +266,65 @@
       "name": "Sheets — Gliederung schreiben",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1650, 0],
+      "position": [
+        1800,
+        0
+      ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/Gliederung!A:G:append",
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Gliederung sammeln').first().json.spreadsheet_id }}/values/Gliederung!A1",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "valueInputOption", "value": "USER_ENTERED"},
-            {"name": "insertDataOption", "value": "INSERT_ROWS"}
+            {
+              "name": "valueInputOption",
+              "value": "USER_ENTERED"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ values: [[$json.position, $json.ebene, $json.ueberschrift, $json.typ, $json.basiert_auf, $json.stichpunkte, $json.freigabe]] }) }}",
+        "jsonBody": "={{ $('Gliederung sammeln').first().json.all_values }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleSheetsOAuth2Api",
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
       }
     },
     {
       "id": "form-freigabe",
-      "name": "Gliederungs-Freigabe Formular",
-      "type": "n8n-nodes-base.form",
-      "typeVersion": 1,
-      "position": [1900, 0],
+      "name": "Gliederungs-Freigabe (Auto)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        0
+      ],
       "parameters": {
-        "formTitle": "SEO Content Agent — Gliederungs-Freigabe",
-        "formDescription": "Prüfe die generierte Gliederung und gib sie frei oder passe sie an.",
-        "formFields": {
-          "values": [
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
             {
-              "fieldLabel": "Gesamtfreigabe",
-              "fieldType": "dropdown",
-              "fieldOptions": {"values": [{"option": "Freigegeben"}, {"option": "Anpassung nötig"}]},
-              "requiredField": true
+              "id": "freigabe",
+              "name": "Gesamtfreigabe",
+              "value": "Freigegeben",
+              "type": "string"
             },
             {
-              "fieldLabel": "Korrektur-Kommentar",
-              "placeholder": "Falls Anpassungen nötig: Beschreibe was geändert werden soll",
-              "requiredField": false,
-              "fieldType": "textarea"
-            },
-            {
-              "fieldLabel": "Gesamtkommentar",
-              "placeholder": "Allgemeine Anmerkungen zur Gliederung",
-              "requiredField": false,
-              "fieldType": "textarea"
+              "id": "kommentar",
+              "name": "Gesamtkommentar",
+              "value": "Auto-freigegeben (Sub-Workflow)",
+              "type": "string"
             }
           ]
         },
-        "options": {"buttonLabel": "Gliederung bestätigen"}
+        "options": {}
       }
     },
     {
@@ -208,17 +332,28 @@
       "name": "Freigabe prüfen",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [2150, 0],
+      "position": [
+        2250,
+        0
+      ],
       "parameters": {
         "conditions": {
-          "options": {"version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict"},
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
           "combinator": "and",
           "conditions": [
             {
               "id": "freigabe-check",
               "leftValue": "={{ $json.Gesamtfreigabe }}",
               "rightValue": "Freigegeben",
-              "operator": {"type": "string", "operation": "equals"}
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
           ]
         },
@@ -230,15 +365,24 @@
       "name": "Sheets — Status auf schreiben",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2400, -100],
+      "position": [
+        2500,
+        -100
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('WF5 Variablen').first().json.spreadsheet_id }}/values/Projekt!A:C:append",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "valueInputOption", "value": "USER_ENTERED"},
-            {"name": "insertDataOption", "value": "INSERT_ROWS"}
+            {
+              "name": "valueInputOption",
+              "value": "USER_ENTERED"
+            },
+            {
+              "name": "insertDataOption",
+              "value": "INSERT_ROWS"
+            }
           ]
         },
         "sendBody": true,
@@ -249,7 +393,10 @@
         "options": {}
       },
       "credentials": {
-        "googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
       }
     },
     {
@@ -257,7 +404,10 @@
       "name": "Anpassung nötig — Hinweis",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [2400, 100],
+      "position": [
+        2500,
+        100
+      ],
       "parameters": {
         "mode": "manual",
         "duplicateItem": false,
@@ -279,51 +429,174 @@
       "name": "WF5: Gliederung & Freigabe",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-200, -350],
+      "position": [
+        -200,
+        -350
+      ],
       "parameters": {
-        "content": "## WF5: Gliederung & Freigabe\n\n**Zweck:** Generiere Artikel-Gliederung aus allen gesammelten Daten\n\n**Ablauf:**\n1. Lese Keywords, Semantische Analyse, User Insights\n2. Konsolidiere alle Daten in Claude-Prompt\n3. Claude generiert strukturierte Gliederung (JSON)\n4. Gliederung in Sheets schreiben\n5. User prueft via Freigabe-Formular\n6. Freigabe -> Status 'schreiben' | Ablehnung -> Feedback\n\n**Fixes v3:** onError für Sheets-Reads, try-catch im Merge-Code, HTTP Request statt defineBelow für Writes\n\n**Credentials:** Claude API + Google Sheets OAuth2"
+        "content": "## WF5: Gliederung & Freigabe\n\n**Zweck:** Generiere Artikel-Gliederung aus allen gesammelten Daten\n\n**Ablauf:**\n1. Lese Keywords, Semantische Analyse, User Insights\n2. Konsolidiere alle Daten in Claude-Prompt\n3. Claude generiert strukturierte Gliederung (JSON)\n4. Gliederung sammeln + Sheet leeren + PUT schreiben (mit Header)\n5. Auto-Freigabe (Sub-Workflow Modus)\n6. Status auf 'schreiben' setzen\n\n**Credentials:** Claude API + Google Sheets OAuth2"
       }
     }
   ],
   "connections": {
     "Gliederungs-Trigger": {
-      "main": [[{"node": "WF5 Variablen", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "WF5 Variablen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "WF5 Variablen": {
-      "main": [[
-        {"node": "Sheets — Keywords lesen", "type": "main", "index": 0},
-        {"node": "Sheets — Semantische Analyse lesen", "type": "main", "index": 0},
-        {"node": "Sheets — User Insights lesen", "type": "main", "index": 0}
-      ]]
+      "main": [
+        [
+          {
+            "node": "Sheets — Keywords lesen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets — Semantische Analyse lesen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets — User Insights lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Sheets — Keywords lesen": {
-      "main": [[{"node": "Alle Daten zusammenführen", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Alle Daten zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Sheets — Semantische Analyse lesen": {
-      "main": [[{"node": "Alle Daten zusammenführen", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Alle Daten zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Sheets — User Insights lesen": {
-      "main": [[{"node": "Alle Daten zusammenführen", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Alle Daten zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Alle Daten zusammenführen": {
-      "main": [[{"node": "Claude — Gliederung generieren", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Claude — Gliederung generieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Claude — Gliederung generieren": {
-      "main": [[{"node": "Gliederung parsen", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Gliederung parsen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Gliederung parsen": {
-      "main": [[{"node": "Sheets — Gliederung schreiben", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Gliederung sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gliederung sammeln": {
+      "main": [
+        [
+          {
+            "node": "Gliederung Sheet leeren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gliederung Sheet leeren": {
+      "main": [
+        [
+          {
+            "node": "Sheets — Gliederung schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Sheets — Gliederung schreiben": {
-      "main": [[{"node": "Gliederungs-Freigabe Formular", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Gliederungs-Freigabe (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Gliederungs-Freigabe Formular": {
-      "main": [[{"node": "Freigabe prüfen", "type": "main", "index": 0}]]
+    "Gliederungs-Freigabe (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Freigabe prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Freigabe prüfen": {
       "main": [
-        [{"node": "Sheets — Status auf schreiben", "type": "main", "index": 0}],
-        [{"node": "Anpassung nötig — Hinweis", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Sheets — Status auf schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anpassung nötig — Hinweis",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -332,7 +605,659 @@
     "timezone": "Europe/Berlin",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "callerPolicy": "workflowsFromSameOwner",
+    "callerPolicy": "any",
     "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "65b536e4-8678-46b2-82a4-ee0bf7358d17",
+  "activeVersionId": "65b536e4-8678-46b2-82a4-ee0bf7358d17",
+  "versionCounter": 59,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-01T05:41:43.028Z",
+      "createdAt": "2026-03-01T05:41:43.028Z",
+      "role": "workflow:owner",
+      "workflowId": "C7eK32G9cfcnFJ78",
+      "projectId": "lJIfhj360iNuoez4",
+      "project": {
+        "updatedAt": "2026-02-25T07:07:46.000Z",
+        "createdAt": "2026-02-25T07:07:31.794Z",
+        "id": "lJIfhj360iNuoez4",
+        "name": "SEO Content Workflow mit 10 WF",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": "",
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-09T15:01:31.116Z",
+    "createdAt": "2026-03-09T15:01:31.116Z",
+    "versionId": "65b536e4-8678-46b2-82a4-ee0bf7358d17",
+    "workflowId": "C7eK32G9cfcnFJ78",
+    "nodes": [
+      {
+        "id": "wf5-trigger",
+        "name": "Gliederungs-Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "spreadsheet_id"
+              },
+              {
+                "name": "content_sprache"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "set-wf5-vars",
+        "name": "WF5 Variablen",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          250,
+          0
+        ],
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "spreadsheet_id",
+                "name": "spreadsheet_id",
+                "value": "={{ $json.spreadsheet_id }}",
+                "type": "string"
+              },
+              {
+                "id": "content_sprache",
+                "name": "content_sprache",
+                "value": "={{ $json.content_sprache || 'Deutsch' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "read-keywords",
+        "name": "Sheets — Keywords lesen",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          500,
+          -200
+        ],
+        "parameters": {
+          "operation": "read",
+          "documentId": {
+            "mode": "id",
+            "value": "={{ $json.spreadsheet_id }}"
+          },
+          "sheetName": {
+            "mode": "name",
+            "value": "Keywords"
+          },
+          "range": "A:Z",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "read-analyse",
+        "name": "Sheets — Semantische Analyse lesen",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          500,
+          0
+        ],
+        "parameters": {
+          "operation": "read",
+          "documentId": {
+            "mode": "id",
+            "value": "={{ $json.spreadsheet_id }}"
+          },
+          "sheetName": {
+            "mode": "name",
+            "value": "Semantische Analyse"
+          },
+          "range": "A:Z",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "read-insights",
+        "name": "Sheets — User Insights lesen",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          500,
+          200
+        ],
+        "parameters": {
+          "operation": "read",
+          "documentId": {
+            "mode": "id",
+            "value": "={{ $json.spreadsheet_id }}"
+          },
+          "sheetName": {
+            "mode": "name",
+            "value": "User Insights"
+          },
+          "range": "A:Z",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "merge-all-data",
+        "name": "Alle Daten zusammenführen",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          0
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "let keywords = [];\ntry { keywords = $('Sheets — Keywords lesen').all().map(i => i.json); } catch(e) {}\n\nlet analyse = [];\ntry { analyse = $('Sheets — Semantische Analyse lesen').all().map(i => i.json); } catch(e) {}\n\nlet insights = [];\ntry { insights = $('Sheets — User Insights lesen').all().map(i => i.json); } catch(e) {}\n\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nconst getField = (obj, names) => {\n  for (const name of names) {\n    for (const key of Object.keys(obj)) {\n      if (key.toLowerCase() === name.toLowerCase()) return obj[key];\n    }\n  }\n  return '';\n};\n\n// Normalize analyse entries\nconst normAnalyse = analyse.map(a => {\n  const kategorie = getField(a, ['kategorie', 'Kategorie', 'category']).toString().toLowerCase();\n  const analyseTyp = getField(a, ['analyse_typ', 'Analyse_Typ', 'type', 'typ']).toString().toLowerCase();\n  return {\n    kategorie,\n    analyse_typ: analyseTyp,\n    keyword_oder_thema: getField(a, ['keyword_oder_thema', 'Keyword_oder_Thema', 'keyword', 'thema', 'Thema', 'topic']),\n    details: getField(a, ['details', 'Details', 'beschreibung', 'Beschreibung']),\n    suchintention: getField(a, ['suchintention', 'Suchintention', 'intent'])\n  };\n});\n\n// Category matching\nconst isCommodity = (a) => \n  a.analyse_typ === 'commodity' || \n  a.kategorie.includes('commodity') || \n  a.kategorie.includes('pflicht') || \n  a.kategorie.includes('basis') || \n  a.kategorie.includes('kern');\n\nconst isLuecke = (a) => \n  a.analyse_typ === 'luecke' || \n  a.kategorie.includes('luecke') || \n  a.kategorie.includes('l\\u00fccke') || \n  a.kategorie.includes('gap');\n\nconst isDifferenzierung = (a) => \n  a.analyse_typ === 'differenzierung' || \n  a.kategorie.includes('differenzierung');\n\nlet commodityTopics = normAnalyse.filter(isCommodity);\nconst lueckeTopics = normAnalyse.filter(isLuecke);\nconst diffTopics = normAnalyse.filter(isDifferenzierung);\n\n// === FALLBACK: Wenn 0 Commodity-Themen, Keywords als Commodity verwenden ===\nlet fallbackUsed = false;\nif (commodityTopics.length === 0) {\n  fallbackUsed = true;\n  // Nimm die Top-Keywords (nach Suchvolumen sortiert wenn vorhanden)\n  const kwSorted = [...keywords].sort((a, b) => {\n    const volA = Number(getField(a, ['suchvolumen', 'Suchvolumen', 'volume']) || 0);\n    const volB = Number(getField(b, ['suchvolumen', 'Suchvolumen', 'volume']) || 0);\n    return volB - volA;\n  });\n  // Top 10 Keywords als Commodity-Themen\n  commodityTopics = kwSorted.slice(0, 10).map(k => ({\n    kategorie: 'commodity (fallback)',\n    analyse_typ: 'commodity',\n    keyword_oder_thema: getField(k, ['keyword', 'Keyword', 'term']),\n    details: 'Fallback: Aus Keywords generiert (keine Commodity-Themen in Analyse)',\n    suchintention: getField(k, ['suchintention', 'Suchintention', 'intent'])\n  }));\n}\n\n// Keywords\nconst normKeywords = keywords.map(k => ({\n  keyword: getField(k, ['keyword', 'Keyword', 'term']),\n  suchvolumen: Number(getField(k, ['suchvolumen', 'Suchvolumen', 'volume']) || 0),\n  ausgewaehlt: getField(k, ['ausgewaehlt', 'Ausgewaehlt', 'selected', 'ausgew\\u00e4hlt']).toString().toLowerCase()\n}));\nconst selectedKeywords = normKeywords.filter(k => ['ja', 'true', 'x', '1'].includes(k.ausgewaehlt));\nconst finalKeywords = selectedKeywords.length > 0 ? selectedKeywords : normKeywords.slice(0, 10);\n\nconst uniqueAngles = insights.filter(i => {\n  const ua = getField(i, ['unique_angle', 'Unique_Angle']).toString().toLowerCase();\n  return ua === 'ja' || ua === 'true';\n});\nconst expertInsights = insights.filter(i => {\n  const q = getField(i, ['quelle', 'Quelle', 'source']).toString().toLowerCase();\n  return q.includes('expert');\n});\nconst userQuestions = insights.filter(i => {\n  const t = getField(i, ['typ', 'Typ', 'type']).toString().toLowerCase();\n  return t === 'frage' || t === 'question';\n});\n\nconst allCategories = [...new Set(normAnalyse.map(a => a.kategorie))];\nconst allAnalyseTypen = [...new Set(normAnalyse.map(a => a.analyse_typ))];\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    selected_keywords: JSON.stringify(finalKeywords),\n    commodity_topics: JSON.stringify(commodityTopics),\n    luecke_topics: JSON.stringify(lueckeTopics),\n    diff_topics: JSON.stringify(diffTopics),\n    unique_angles: JSON.stringify(uniqueAngles),\n    expert_insights: JSON.stringify(expertInsights),\n    user_questions: JSON.stringify(userQuestions),\n    all_analyse: JSON.stringify(normAnalyse),\n    keyword_count: finalKeywords.length,\n    commodity_count: commodityTopics.length,\n    luecke_count: lueckeTopics.length,\n    diff_count: diffTopics.length,\n    unique_count: uniqueAngles.length,\n    expert_count: expertInsights.length,\n    fallback_used: fallbackUsed ? 'ja' : 'nein',\n    debug_all_categories: allCategories.join(' | '),\n    debug_all_analyse_typen: allAnalyseTypen.join(' | '),\n    debug_analyse_count: normAnalyse.length\n  }\n}];"
+        }
+      },
+      {
+        "id": "claude-outline",
+        "name": "Claude — Gliederung generieren",
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          1100,
+          0
+        ],
+        "parameters": {
+          "resource": "text",
+          "operation": "message",
+          "modelId": {
+            "mode": "id",
+            "value": "claude-sonnet-4-20250514"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Erstelle eine SEO-Artikel-Gliederung.\n\nSPRACHE: Alle Überschriften und Stichpunkte auf {{ $('WF5 Variablen').first().json.content_sprache }}.\n\nSTRIKTE REGELN:\n- GENAU 1x h1 (Hauptueberschrift des gesamten Artikels)\n- Alle weiteren Sektionen sind h2 oder h3\n- Jede Sektion braucht basiert_auf: commodity, luecke, unique_angle ODER expert_take\n\nVERTEILUNG (PFLICHT):\n1. ALLE folgenden Pflichtthemen als eigene h2/h3 Sektionen mit basiert_auf=commodity:\n{{ $json.commodity_topics }}\n(Anzahl Pflichtthemen: {{ $json.commodity_count }})\n\n2. Waehle GENAU 3 Luecken-Themen aus der Analyse (basiert_auf=luecke):\n{{ $json.all_analyse }}\n\n3. GENAU 2 Unique Angles (basiert_auf=unique_angle):\n{{ $json.unique_angles }}\n\n4. GENAU 2 Expert Takes (basiert_auf=expert_take):\n{{ $json.expert_insights }}\n\n5. User-Fragen als FAQ-Sektion (basiert_auf=commodity):\n{{ $json.user_questions }}\n\nKEYWORDS zum Einbauen: {{ $json.selected_keywords }}\n\nBEISPIEL-OUTPUT:\n[{\"position\":1,\"ebene\":\"h1\",\"ueberschrift\":\"Haupttitel\",\"typ\":\"einleitung\",\"basiert_auf\":\"commodity\",\"stichpunkte\":\"...\"},\n{\"position\":2,\"ebene\":\"h2\",\"ueberschrift\":\"Pflichtthema 1\",\"typ\":\"hauptteil\",\"basiert_auf\":\"commodity\",\"stichpunkte\":\"...\"},\n{\"position\":3,\"ebene\":\"h2\",\"ueberschrift\":\"Luecke 1\",\"typ\":\"hauptteil\",\"basiert_auf\":\"luecke\",\"stichpunkte\":\"...\"}]",
+                "role": "user"
+              }
+            ]
+          },
+          "simplify": true,
+          "options": {
+            "system": "Du bist ein SEO-Content-Stratege. Erstelle eine Artikel-Gliederung als JSON-Array.\n\nSPRACHE: Verfasse alle Ueberschriften und Stichpunkte in {{ $('WF5 Variablen').first().json.content_sprache }}.\n\nUNVERHANDELBARE REGELN:\n1. GENAU 1x h1 - die Hauptueberschrift des Artikels\n2. Alle anderen Sektionen sind h2 oder h3 (NIEMALS weitere h1!)\n3. JEDE Sektion hat basiert_auf mit EXAKT einem dieser Werte: commodity, luecke, unique_angle, expert_take\n4. Commodity-Themen: ALLE muessen enthalten sein\n5. Luecke: GENAU 3 Sektionen\n6. Unique Angle: GENAU 2 Sektionen\n7. Expert Take: GENAU 2 Sektionen\n\nAntworte NUR mit dem JSON-Array, kein anderer Text:\n[{\"position\": 1, \"ebene\": \"h1|h2|h3\", \"ueberschrift\": \"...\", \"typ\": \"einleitung|kerninfo|hauptteil|fehler|faq|fazit\", \"basiert_auf\": \"commodity|luecke|unique_angle|expert_take\", \"stichpunkte\": \"Punkt 1; Punkt 2; Punkt 3\"}]",
+            "maxTokens": 4096
+          }
+        },
+        "credentials": {
+          "anthropicApi": {
+            "id": "xJGzDv9YCgZEHb2E",
+            "name": "Claude - 20260127"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000
+      },
+      {
+        "id": "parse-outline",
+        "name": "Gliederung parsen",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          0
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "const response = $input.first().json;\nconst spreadsheetId = $('WF5 Variablen').first().json.spreadsheet_id;\n\nlet content = '';\ntry {\n  content = response.content?.[0]?.text || response.content || '';\n} catch (e) {\n  content = JSON.stringify(response);\n}\n\nlet outline = [];\ntry {\n  const jsonMatch = content.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (jsonMatch) {\n    outline = JSON.parse(jsonMatch[0]);\n  } else {\n    outline = JSON.parse(content);\n  }\n} catch (e) {\n  outline = [{ position: 1, ebene: 'h1', ueberschrift: 'Parsing fehlgeschlagen', typ: 'hauptteil', basiert_auf: 'commodity', stichpunkte: content.slice(0, 500) }];\n}\n\n// Rule 1: Exactly ONE h1\nlet h1Found = false;\noutline = outline.map(item => {\n  if (item.ebene === 'h1') {\n    if (!h1Found) {\n      h1Found = true;\n      return item;\n    } else {\n      return { ...item, ebene: 'h2' };\n    }\n  }\n  return item;\n});\n\n// Rule 2: Validate basiert_auf values\nconst validBasis = ['commodity', 'luecke', 'unique_angle', 'expert_take'];\noutline = outline.map(item => {\n  if (!validBasis.includes(item.basiert_auf)) {\n    item.basiert_auf = 'commodity';\n  }\n  return item;\n});\n\n// Rule 3: Enforce distribution limits\nconst byCat = {};\nvalidBasis.forEach(cat => byCat[cat] = []);\noutline.forEach(item => byCat[item.basiert_auf].push(item));\n\nconst limits = { commodity: 999, luecke: 3, unique_angle: 2, expert_take: 2 };\nconst selected = [];\nfor (const cat of validBasis) {\n  const items = byCat[cat] || [];\n  selected.push(...items.slice(0, limits[cat]));\n}\n\nselected.sort((a, b) => Number(a.position) - Number(b.position));\n\nreturn selected.map((item, idx) => ({\n  json: {\n    position: idx + 1,\n    ebene: item.ebene || 'h2',\n    ueberschrift: item.ueberschrift || '',\n    typ: item.typ || 'hauptteil',\n    basiert_auf: item.basiert_auf || 'commodity',\n    stichpunkte: item.stichpunkte || '',\n    freigabe: 'nein',\n    spreadsheet_id: spreadsheetId\n  }\n}));"
+        }
+      },
+      {
+        "id": "collect-outline",
+        "name": "Gliederung sammeln",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1500,
+          0
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "const items = $input.all();\nconst spreadsheetId = items[0].json.spreadsheet_id;\n\nconst header = ['position', 'ebene', 'ueberschrift', 'typ', 'basiert_auf', 'stichpunkte', 'freigabe'];\nconst rows = items.map(item => [\n  String(item.json.position || ''),\n  item.json.ebene || '',\n  item.json.ueberschrift || '',\n  item.json.typ || '',\n  item.json.basiert_auf || '',\n  item.json.stichpunkte || '',\n  item.json.freigabe || 'nein'\n]);\n\nreturn [{\n  json: {\n    spreadsheet_id: spreadsheetId,\n    all_values: JSON.stringify({ values: [header, ...rows] }),\n    row_count: rows.length\n  }\n}];"
+        }
+      },
+      {
+        "id": "clear-outline-sheet",
+        "name": "Gliederung Sheet leeren",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1650,
+          0
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.spreadsheet_id }}/values/Gliederung:clear",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "{}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "id": "write-outline",
+        "name": "Sheets — Gliederung schreiben",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1800,
+          0
+        ],
+        "parameters": {
+          "method": "PUT",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Gliederung sammeln').first().json.spreadsheet_id }}/values/Gliederung!A1",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "valueInputOption",
+                "value": "USER_ENTERED"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $('Gliederung sammeln').first().json.all_values }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "id": "form-freigabe",
+        "name": "Gliederungs-Freigabe (Auto)",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2000,
+          0
+        ],
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "freigabe",
+                "name": "Gesamtfreigabe",
+                "value": "Freigegeben",
+                "type": "string"
+              },
+              {
+                "id": "kommentar",
+                "name": "Gesamtkommentar",
+                "value": "Auto-freigegeben (Sub-Workflow)",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "check-freigabe",
+        "name": "Freigabe prüfen",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          2250,
+          0
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "freigabe-check",
+                "leftValue": "={{ $json.Gesamtfreigabe }}",
+                "rightValue": "Freigegeben",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "update-freigabe-ja",
+        "name": "Sheets — Status auf schreiben",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2500,
+          -100
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('WF5 Variablen').first().json.spreadsheet_id }}/values/Projekt!A:C:append",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "valueInputOption",
+                "value": "USER_ENTERED"
+              },
+              {
+                "name": "insertDataOption",
+                "value": "INSERT_ROWS"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ values: [[$('WF5 Variablen').first().json.spreadsheet_id, 'schreiben', new Date().toISOString()]] }) }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "gw0DIdDENFkpE7ZW",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "id": "regenerate-outline",
+        "name": "Anpassung nötig — Hinweis",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2500,
+          100
+        ],
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "action",
+                "name": "action",
+                "value": "=Gliederung muss angepasst werden. Kommentar: {{ $json.Gesamtkommentar || 'Keine Details' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sticky-wf5",
+        "name": "WF5: Gliederung & Freigabe",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -200,
+          -350
+        ],
+        "parameters": {
+          "content": "## WF5: Gliederung & Freigabe\n\n**Zweck:** Generiere Artikel-Gliederung aus allen gesammelten Daten\n\n**Ablauf:**\n1. Lese Keywords, Semantische Analyse, User Insights\n2. Konsolidiere alle Daten in Claude-Prompt\n3. Claude generiert strukturierte Gliederung (JSON)\n4. Gliederung sammeln + Sheet leeren + PUT schreiben (mit Header)\n5. Auto-Freigabe (Sub-Workflow Modus)\n6. Status auf 'schreiben' setzen\n\n**Credentials:** Claude API + Google Sheets OAuth2"
+        }
+      }
+    ],
+    "connections": {
+      "Gliederungs-Trigger": {
+        "main": [
+          [
+            {
+              "node": "WF5 Variablen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WF5 Variablen": {
+        "main": [
+          [
+            {
+              "node": "Sheets — Keywords lesen",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sheets — Semantische Analyse lesen",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Sheets — User Insights lesen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sheets — Keywords lesen": {
+        "main": [
+          [
+            {
+              "node": "Alle Daten zusammenführen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sheets — Semantische Analyse lesen": {
+        "main": [
+          [
+            {
+              "node": "Alle Daten zusammenführen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sheets — User Insights lesen": {
+        "main": [
+          [
+            {
+              "node": "Alle Daten zusammenführen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Alle Daten zusammenführen": {
+        "main": [
+          [
+            {
+              "node": "Claude — Gliederung generieren",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude — Gliederung generieren": {
+        "main": [
+          [
+            {
+              "node": "Gliederung parsen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gliederung parsen": {
+        "main": [
+          [
+            {
+              "node": "Gliederung sammeln",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gliederung sammeln": {
+        "main": [
+          [
+            {
+              "node": "Gliederung Sheet leeren",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gliederung Sheet leeren": {
+        "main": [
+          [
+            {
+              "node": "Sheets — Gliederung schreiben",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sheets — Gliederung schreiben": {
+        "main": [
+          [
+            {
+              "node": "Gliederungs-Freigabe (Auto)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gliederungs-Freigabe (Auto)": {
+        "main": [
+          [
+            {
+              "node": "Freigabe prüfen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Freigabe prüfen": {
+        "main": [
+          [
+            {
+              "node": "Sheets — Status auf schreiben",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Anpassung nötig — Hinweis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Mark Niemann",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-09T15:01:31.344Z",
+        "id": 343,
+        "workflowId": "C7eK32G9cfcnFJ78",
+        "versionId": "65b536e4-8678-46b2-82a4-ee0bf7358d17",
+        "event": "activated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      },
+      {
+        "createdAt": "2026-03-09T15:01:31.243Z",
+        "id": 342,
+        "workflowId": "C7eK32G9cfcnFJ78",
+        "versionId": "65b536e4-8678-46b2-82a4-ee0bf7358d17",
+        "event": "deactivated",
+        "userId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    ]
   }
 }

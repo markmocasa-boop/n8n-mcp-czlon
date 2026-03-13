@@ -116,20 +116,14 @@
       "id": "wf2-exec-wf6-kalt",
       "name": "Execute WF6: Set Kalt Status",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 2,
+      "typeVersion": 1.2,
       "position": [1350, 150],
       "parameters": {
+        "source": "database",
         "workflowId": {
+          "__rl": true,
           "mode": "id",
           "value": "HxOD2a8He72tvKmR"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "lead_id": "={{ $json.lead_id }}",
-            "updates": "={{ JSON.stringify({ status: 'Kalt', score: $json.score, score_begründung: $json.score_begründung }) }}",
-            "log_eintrag": "={{ JSON.stringify({ aktion: 'scoring_abgeschlossen', inhalt: 'Score: ' + $json.score + ' → Kalt', status: 'ok' }) }}"
-          }
         },
         "options": {
           "waitForSubWorkflow": true
@@ -141,6 +135,66 @@
       "waitBetweenTries": 5000
     },
     {
+      "id": "wf2-set-kalt-payload",
+      "name": "Set: Kalt Payload for WF6",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1200, 150],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "stringValue",
+              "stringValue": "={{ $json.lead_id }}"
+            },
+            {
+              "name": "updates",
+              "type": "objectValue",
+              "objectValue": "={{ { status: 'Kalt', score: $json.score, score_begründung: $json.score_begründung } }}"
+            },
+            {
+              "name": "log_eintrag",
+              "type": "objectValue",
+              "objectValue": "={{ { aktion: 'scoring_abgeschlossen', inhalt: 'Score: ' + $json.score + ' → Kalt', status: 'ok' } }}"
+            },
+            {
+              "name": "_score",
+              "type": "numberValue",
+              "numberValue": "={{ $json.score }}"
+            },
+            {
+              "name": "_klassifikation",
+              "type": "stringValue",
+              "stringValue": "={{ $json.klassifikation }}"
+            },
+            {
+              "name": "_score_begründung",
+              "type": "stringValue",
+              "stringValue": "={{ $json.score_begründung }}"
+            },
+            {
+              "name": "_empfohlene_ansprache",
+              "type": "stringValue",
+              "stringValue": "={{ $json.empfohlene_ansprache }}"
+            },
+            {
+              "name": "_hauptschmerz",
+              "type": "stringValue",
+              "stringValue": "={{ $json.hauptschmerz }}"
+            },
+            {
+              "name": "_kaufmotiv",
+              "type": "stringValue",
+              "stringValue": "={{ $json.kaufmotiv }}"
+            }
+          ]
+        },
+        "options": {},
+        "include": "all"
+      }
+    },
+    {
       "id": "wf2-set-output-kalt",
       "name": "Set: Scoring Output (Kalt)",
       "type": "n8n-nodes-base.set",
@@ -149,7 +203,36 @@
       "parameters": {
         "fields": {
           "values": [
-            {"name": "routing", "value": "KALT_STOP"}
+            {
+              "name": "routing",
+              "type": "stringValue",
+              "stringValue": "KALT_STOP"
+            },
+            {
+              "name": "score",
+              "type": "numberValue",
+              "numberValue": "={{ $('Set: Kalt Payload for WF6').first().json._score }}"
+            },
+            {
+              "name": "klassifikation",
+              "type": "stringValue",
+              "stringValue": "={{ $('Set: Kalt Payload for WF6').first().json._klassifikation }}"
+            },
+            {
+              "name": "empfohlene_ansprache",
+              "type": "stringValue",
+              "stringValue": "={{ $('Set: Kalt Payload for WF6').first().json._empfohlene_ansprache }}"
+            },
+            {
+              "name": "hauptschmerz",
+              "type": "stringValue",
+              "stringValue": "={{ $('Set: Kalt Payload for WF6').first().json._hauptschmerz }}"
+            },
+            {
+              "name": "kaufmotiv",
+              "type": "stringValue",
+              "stringValue": "={{ $('Set: Kalt Payload for WF6').first().json._kaufmotiv }}"
+            }
           ]
         },
         "options": {},
@@ -195,7 +278,11 @@
       "parameters": {
         "fields": {
           "values": [
-            {"name": "routing", "value": "HEISS_PREMIUM"}
+            {
+              "name": "routing",
+              "type": "stringValue",
+              "stringValue": "HEISS_PREMIUM"
+            }
           ]
         },
         "options": {},
@@ -211,7 +298,11 @@
       "parameters": {
         "fields": {
           "values": [
-            {"name": "routing", "value": "WARM_STANDARD"}
+            {
+              "name": "routing",
+              "type": "stringValue",
+              "stringValue": "WARM_STANDARD"
+            }
           ]
         },
         "options": {},
@@ -247,8 +338,13 @@
     },
     "IF: Score < 30?": {
       "main": [
-        [{"node": "Execute WF6: Set Kalt Status", "type": "main", "index": 0}],
+        [{"node": "Set: Kalt Payload for WF6", "type": "main", "index": 0}],
         [{"node": "IF: Score >= 80?", "type": "main", "index": 0}]
+      ]
+    },
+    "Set: Kalt Payload for WF6": {
+      "main": [
+        [{"node": "Execute WF6: Set Kalt Status", "type": "main", "index": 0}]
       ]
     },
     "Execute WF6: Set Kalt Status": {
@@ -267,7 +363,8 @@
     "executionOrder": "v1",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
   },
   "staticData": null
 }

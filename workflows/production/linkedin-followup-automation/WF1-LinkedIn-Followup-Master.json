@@ -1,0 +1,1458 @@
+{
+  "name": "WF1 — LinkedIn Follow-up Automation",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "apify-start-actor",
+      "name": "HTTP Request: Start Actor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        350,
+        150
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/curious_coder~linkedin-profile-scraper/runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"cookie\": \"{{ $env.LINKEDIN_COOKIE }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "wait-initial",
+      "name": "Wait: Initial 20s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        150
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 20,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "merge-loop-entry",
+      "name": "Merge: Loop Entry",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        850,
+        150
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "input1"
+      }
+    },
+    {
+      "id": "apify-check-status",
+      "name": "HTTP Request: Check Actor Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        150
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/acts/curious_coder~linkedin-profile-scraper/runs/{{ $json.data.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "if-actor-done",
+      "name": "IF: Actor Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1350,
+        150
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "status-succeeded",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "if-max-attempts",
+      "name": "IF: Max Attempts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "max-attempts-reached",
+              "leftValue": "={{ $json.attemptCount ?? 0 }}",
+              "rightValue": 20,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "status-terminal-failure",
+              "leftValue": "={{ ['FAILED','TIMED-OUT','ABORTED'].includes($json.data.status) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "no-op-error",
+      "name": "No Operation: Skip Branch A",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        400
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "set-increment-counter",
+      "name": "Set: Increment Attempt Counter",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1850,
+        200
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "attempt-counter",
+              "name": "attemptCount",
+              "value": "={{ ($json.attemptCount ?? 0) + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "run-id-passthrough",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": false
+        }
+      }
+    },
+    {
+      "id": "wait-poll",
+      "name": "Wait: 15s Poll Interval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2100,
+        200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "apify-get-dataset",
+      "name": "HTTP Request: Get Dataset Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "clean",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "sheets-read-leads",
+      "name": "Google Sheets: Read Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1850,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {
+          "range": "A:M"
+        }
+      }
+    },
+    {
+      "id": "code-compare-urls",
+      "name": "Code: Compare URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2100,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Run Once For All Items\n// $input.all() = Google Sheets rows (existing Leads tab rows)\n// $('HTTP Request: Get Dataset Items').all() = Apify actor dataset items\n\nconst existingRows = $input.all();\nconst apifyItems = $('HTTP Request: Get Dataset Items').all();\n\nfunction normalizeUrl(url) {\n  if (!url) return '';\n  return url\n    .toLowerCase()\n    .replace(/^https?:\\/\\/(www\\.)?/, '')\n    .replace(/\\/$/, '')\n    .trim();\n}\n\n// Build a Set of normalized existing LinkedIn URLs\nconst existingUrls = new Set(\n  existingRows\n    .map(item => normalizeUrl(item.json.LinkedIn_URL))\n    .filter(url => url !== '')\n);\n\nconst today = $now.toFormat('yyyy-MM-dd');\nconst newLeads = [];\n\nfor (const item of apifyItems) {\n  // Try multiple field name variants from different Apify actor versions\n  const rawUrl = item.json.linkedInUrl\n    || item.json.profileUrl\n    || item.json.url\n    || item.json.linkedin_url\n    || item.json.LinkedInUrl\n    || '';\n\n  const normalizedUrl = normalizeUrl(rawUrl);\n\n  // Skip if URL is empty or already in the sheet\n  if (!normalizedUrl || existingUrls.has(normalizedUrl)) {\n    continue;\n  }\n\n  // Build the full name from available fields\n  const firstName = item.json.firstName || '';\n  const lastName = item.json.lastName || '';\n  const fullName = item.json.name\n    || item.json.fullName\n    || (firstName + ' ' + lastName).trim()\n    || '';\n\n  newLeads.push({\n    json: {\n      Name: fullName,\n      LinkedIn_URL: rawUrl,\n      Unternehmen: item.json.company\n        || item.json.companyName\n        || item.json.currentCompany\n        || '',\n      Position: item.json.position\n        || item.json.title\n        || item.json.headline\n        || '',\n      Erstkontakt_Datum: today,\n      Letzter_Reply_Datum: '',\n      Anzahl_Nachrichten: 0,\n      Status: 'Offen',\n      Stern: '',\n      Letzte_Kategorie: '',\n      Letzter_Report: '',\n      Zuletzt_gesehen: '',\n      Quelle: 'auto-import'\n    }\n  });\n}\n\nreturn newLeads;"
+      }
+    },
+    {
+      "id": "if-new-leads",
+      "name": "IF: New Leads Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2350,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-new-leads",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "no-op-skip",
+      "name": "No Operation: No New Leads",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2600,
+        150
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "sheets-append-leads",
+      "name": "Google Sheets: Append New Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2600,
+        -100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.Name }}",
+            "LinkedIn_URL": "={{ $json.LinkedIn_URL }}",
+            "Unternehmen": "={{ $json.Unternehmen }}",
+            "Position": "={{ $json.Position }}",
+            "Erstkontakt_Datum": "={{ $json.Erstkontakt_Datum }}",
+            "Letzter_Reply_Datum": "={{ $json.Letzter_Reply_Datum }}",
+            "Anzahl_Nachrichten": "={{ $json.Anzahl_Nachrichten }}",
+            "Status": "={{ $json.Status }}",
+            "Stern": "={{ $json.Stern }}",
+            "Letzte_Kategorie": "={{ $json.Letzte_Kategorie }}",
+            "Letzter_Report": "={{ $json.Letzter_Report }}",
+            "Zuletzt_gesehen": "={{ $json.Zuletzt_gesehen }}",
+            "Quelle": "={{ $json.Quelle }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "b01-read-all-leads",
+      "name": "Google Sheets: Read All Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        100,
+        700
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {
+          "range": "A:M"
+        }
+      }
+    },
+    {
+      "id": "b02-start-inbox-actor",
+      "name": "HTTP Request: Start Inbox Actor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        350,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/curious_coder~linkedin-messages-scraper/runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"cookie\": \"{{ $env.LINKEDIN_COOKIE }}\",\n  \"includeMessageHistory\": true\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b03-wait-inbox-initial",
+      "name": "Wait: Inbox Initial 20s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        700
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 20,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "b04-merge-inbox-loop",
+      "name": "Merge: Inbox Loop Entry",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        850,
+        700
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "input1"
+      }
+    },
+    {
+      "id": "b05-check-inbox-status",
+      "name": "HTTP Request: Check Inbox Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        700
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/acts/curious_coder~linkedin-messages-scraper/runs/{{ $json.data.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b06-if-inbox-done",
+      "name": "IF: Inbox Actor Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1350,
+        700
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "inbox-succeeded",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b07-if-inbox-max",
+      "name": "IF: Inbox Max Attempts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        850
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "inbox-max-attempts-reached",
+              "leftValue": "={{ $json.inboxAttemptCount ?? 0 }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "inbox-status-terminal",
+              "leftValue": "={{ ['FAILED','TIMED-OUT','ABORTED'].includes($json.data?.status ?? '') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b08-set-inbox-failed",
+      "name": "Set: Mark Inbox Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1850,
+        950
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "inbox-failed-flag",
+              "name": "inboxFailed",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "inbox-failed-data",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": false
+        }
+      }
+    },
+    {
+      "id": "b09-set-inbox-counter",
+      "name": "Set: Increment Inbox Counter",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1850,
+        750
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "inbox-attempt-counter",
+              "name": "inboxAttemptCount",
+              "value": "={{ ($json.inboxAttemptCount ?? 0) + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "inbox-data-passthrough",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": false
+        }
+      }
+    },
+    {
+      "id": "b10-wait-inbox-poll",
+      "name": "Wait: Inbox 15s Poll",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2100,
+        750
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "b11-get-inbox-dataset",
+      "name": "HTTP Request: Get Inbox Dataset",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        550
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.APIFY_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "clean",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b12-merge-categorize",
+      "name": "Code: Merge & Categorize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        550
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// INPUTS:\n// $input.all() = items from HTTP Request: Get Inbox Dataset (may be empty)\n// $('Google Sheets: Read All Leads').all() = sheet leads\n\nconst sheetLeads = $('Google Sheets: Read All Leads').all();\nconst inboxItems = $input.all();\n\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nfunction parseDate(str) {\n  if (!str) return null;\n  if (String(str).includes('.')) {\n    const parts = String(str).split('.');\n    if (parts.length === 3) {\n      const [d, m, y] = parts;\n      return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));\n    }\n  }\n  const parsed = new Date(str);\n  return isNaN(parsed) ? null : parsed;\n}\n\nfunction daysDiff(dateStr) {\n  const d = parseDate(dateStr);\n  if (!d || isNaN(d)) return null;\n  return Math.floor((today - d) / (1000 * 60 * 60 * 24));\n}\n\nfunction normalizeUrl(url) {\n  return (url || '').toLowerCase().replace(/\\/$/, '').trim();\n}\n\n// Build conversation map keyed by normalized profile URL\nconst convMap = {};\ninboxItems.forEach(item => {\n  const key = normalizeUrl(\n    item.json.participantProfileUrl || item.json.profileUrl || ''\n  );\n  if (key) convMap[key] = item.json;\n});\n\nconst results = {\n  stern: [],\n  unbeantwortet: [],\n  dreiTage: [],\n  fuenfTage: []\n};\n\nsheetLeads.forEach((leadItem, idx) => {\n  const lead = leadItem.json;\n  const url = normalizeUrl(lead.LinkedIn_URL);\n\n  // Skip leads with no URL or marked as Abgeschlossen\n  if (!url || (lead.Status || '').trim() === 'Abgeschlossen') return;\n\n  const conv = convMap[url];\n  const anzahlNachrichten = conv && conv.messages\n    ? conv.messages.length\n    : parseInt(lead.Anzahl_Nachrichten) || 0;\n\n  // Determine last reply date\n  let letzterReplyDatum = lead.Letzter_Reply_Datum || null;\n  if (conv && conv.messages) {\n    const incoming = conv.messages.filter(m => m.direction === 'incoming');\n    if (incoming.length > 0) {\n      const lastIncoming = incoming[incoming.length - 1];\n      letzterReplyDatum = new Date(lastIncoming.timestamp)\n        .toLocaleDateString('de-DE');\n    }\n  }\n\n  // Build conversation history excerpt (last 6 messages)\n  const messageHistory = conv && conv.messages\n    ? conv.messages\n        .slice(-6)\n        .map(m => `[${m.direction === 'outgoing' ? 'Ich' : (m.sender || 'Kontakt')}]: ${m.text || ''}`)\n        .join('\\n')\n    : 'Kein Gesprächsverlauf verfügbar';\n\n  const daysSinceReply = daysDiff(letzterReplyDatum);\n  const daysSinceFirst = daysDiff(lead.Erstkontakt_Datum);\n\n  const base = {\n    name: lead.Name || '',\n    linkedinUrl: lead.LinkedIn_URL || '',\n    unternehmen: lead.Unternehmen || '',\n    position: lead.Position || '',\n    erstkontaktDatum: lead.Erstkontakt_Datum || '',\n    letzterReplyDatum: letzterReplyDatum || '',\n    anzahlNachrichten,\n    messageHistory,\n    rowIndex: idx + 2  // 1-based, +1 for header row\n  };\n\n  // Categorization — Stern takes priority\n  if ((lead.Stern || '').toUpperCase() === 'JA') {\n    results.stern.push({ ...base, kategorie: 'Stern' });\n  } else if (!letzterReplyDatum && daysSinceFirst !== null && daysSinceFirst >= 3) {\n    results.unbeantwortet.push({ ...base, kategorie: 'Unbeantwortet' });\n  } else if (daysSinceReply !== null && daysSinceReply >= 2 && daysSinceReply <= 4) {\n    results.dreiTage.push({ ...base, kategorie: '3 Tage still' });\n  } else if (daysSinceReply !== null && daysSinceReply >= 4 && daysSinceReply <= 6) {\n    results.fuenfTage.push({ ...base, kategorie: '5 Tage still' });\n  }\n  // Leads matching none of these criteria are not in any follow-up category today\n});\n\nreturn [{ json: results }];"
+      }
+    },
+    {
+      "id": "b13-build-prompt",
+      "name": "Code: Build Anthropic Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2100,
+        550
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\nconst allContacts = [\n  ...data.stern,\n  ...data.unbeantwortet,\n  ...data.dreiTage,\n  ...data.fuenfTage\n];\n\nconst systemPrompt = `Du bist ein LinkedIn-Outreach-Experte und kennst die \"100 Million Leads\" Methode von Alex Hormozi auswendig.\n\nDeine Aufgabe: Analysiere LinkedIn-Gespräche und erstelle für jeden Kontakt:\n1. Eine kurze Zusammenfassung des bisherigen Gesprächs (max. 2 Sätze)\n2. Einen konkreten, personalisierten Nachrichtenvorschlag auf Deutsch\n\nDie Nachrichtenvorschläge folgen strikt der Hormozi-Methode:\n\nKATEGORIE \"Unbeantwortet\" → Hormozi \"Soft Opener\":\n- Kurze, neugierige Frage die keinen Druck aufbaut\n- Kein Pitch, keine langen Erklärungen\n\nKATEGORIE \"Stern\" → Hormozi \"High-Value Direct Opener\":\n- Direkt und spezifisch, zeigt echtes Interesse\n- Klarer konkreter nächster Schritt\n\nKATEGORIE \"3 Tage still\" → Hormozi \"Value Drop\":\n- Liefere echten Wert ohne Gegenleistung zu verlangen\n- Insight, Idee oder Ressource\n\nKATEGORIE \"5 Tage still\" → Hormozi \"Breakup Message\":\n- Freundlicher Abschluss ohne Vorwurf\n- Tür offen lassen\n\nWICHTIG:\n- Name, Unternehmen oder Position MÜSSEN im Vorschlag vorkommen\n- Maximal 3 Sätze pro Nachricht\n- Kein Corporate-Speak\n- Antworte NUR mit dem JSON-Array, kein erklärender Text, keine Backticks, kein Markdown`;\n\nconst userPrompt = `Analysiere diese LinkedIn-Kontakte und erstelle Zusammenfassungen + Nachrichtenvorschläge.\n\nGib deine Antwort als JSON-Array zurück. WICHTIG: Antworte NUR mit dem rohen JSON-Array, ohne Markdown, ohne Backticks, ohne Code-Blocks.\n\nFormat pro Kontakt:\n{\"linkedinUrl\":\"<url>\",\"zusammenfassung\":\"<max 2 Sätze>\",\"nachrichtenvorschlag\":\"<konkreter Text>\"}\n\nKontakte:\n${JSON.stringify(allContacts.map(k => ({\n  linkedinUrl: k.linkedinUrl,\n  name: k.name,\n  unternehmen: k.unternehmen,\n  position: k.position,\n  kategorie: k.kategorie,\n  anzahlNachrichten: k.anzahlNachrichten,\n  gespraechsverlauf: k.messageHistory\n})), null, 2)}`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userPrompt,\n    categorizedData: data,\n    totalContacts: allContacts.length\n  }\n}];"
+      }
+    },
+    {
+      "id": "b14-anthropic",
+      "name": "Anthropic: Hormozi Analysis",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1.7,
+      "position": [
+        2350,
+        550
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "nv6YXj42KhaG3WMp",
+          "name": "n8n-20260309"
+        }
+      },
+      "parameters": {
+        "model": "claude-sonnet-4-5",
+        "messages": {
+          "values": [
+            {
+              "type": "text",
+              "role": "system",
+              "message": "={{ $json.systemPrompt }}"
+            },
+            {
+              "type": "text",
+              "role": "user",
+              "message": "={{ $json.userPrompt }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokensToSample": 4000,
+          "temperature": 0.7
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b15-parse-ai",
+      "name": "Code: Parse AI Response & Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        550
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Access categorized data from the Code: Build Anthropic Prompt node\nconst promptData = $('Code: Build Anthropic Prompt').first().json;\nconst categorizedData = promptData.categorizedData;\n\n// Try to extract text from Anthropic response\n// Anthropic node can return content in multiple shapes\nconst aiResponseRaw =\n  $input.first().json?.content?.[0]?.text ||\n  $input.first().json?.completion ||\n  $input.first().json?.text ||\n  '';\n\nlet aiResults = [];\nif (aiResponseRaw) {\n  try {\n    // Remove markdown code blocks if present\n    const cleaned = aiResponseRaw\n      .replace(/```json\\s*/gi, '')\n      .replace(/```\\s*/g, '')\n      .trim();\n    aiResults = JSON.parse(cleaned);\n    if (!Array.isArray(aiResults)) aiResults = [];\n  } catch (e) {\n    // JSON parse failed — fallback to empty (B15 will use fallback texts)\n    aiResults = [];\n  }\n}\n\n// Build lookup map by normalized URL\nconst aiMap = {};\naiResults.forEach(r => {\n  const key = (r.linkedinUrl || '').toLowerCase().replace(/\\/$/, '').trim();\n  if (key) aiMap[key] = r;\n});\n\nfunction enrichWithAI(contacts) {\n  return contacts.map(contact => {\n    const key = (contact.linkedinUrl || '').toLowerCase().replace(/\\/$/, '').trim();\n    const ai = aiMap[key] || {};\n    return {\n      ...contact,\n      zusammenfassung: ai.zusammenfassung || 'Keine KI-Analyse verfügbar',\n      nachrichtenvorschlag: ai.nachrichtenvorschlag || 'Bitte manuell prüfen'\n    };\n  });\n}\n\nreturn [{\n  json: {\n    stern: enrichWithAI(categorizedData.stern),\n    unbeantwortet: enrichWithAI(categorizedData.unbeantwortet),\n    dreiTage: enrichWithAI(categorizedData.dreiTage),\n    fuenfTage: enrichWithAI(categorizedData.fuenfTage)\n  }\n}];"
+      }
+    },
+    {
+      "id": "b16-html-report",
+      "name": "Code: Generate HTML Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        550
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\nconst heute = new Date().toLocaleDateString('de-DE', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'\n});\n\nconst gesamt = data.stern.length + data.unbeantwortet.length +\n               data.dreiTage.length + data.fuenfTage.length;\n\n// Check if inbox failed — Set: Mark Inbox Failed sets inboxFailed:true\n// try/catch required: $('Set: Mark Inbox Failed').all() throws if node never ran\nlet inboxFailed = false;\ntry {\n  const inboxFailedItems = $('Set: Mark Inbox Failed').all();\n  inboxFailed = inboxFailedItems.length > 0;\n} catch (e) {\n  // Node not executed (inbox succeeded) — inboxFailed stays false\n  inboxFailed = false;\n}\n\nfunction buildTable(contacts, farbe, emoji) {\n  if (contacts.length === 0) {\n    return `<p style=\"color:#999;font-style:italic;\">Keine Kontakte in dieser Kategorie.</p>`;\n  }\n  return contacts.map(c => `\n  <div style=\"border:1px solid ${farbe};border-radius:8px;padding:16px;margin-bottom:12px;background:#fff;\">\n    <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n      <strong style=\"font-size:15px;\">\n        <a href=\"${c.linkedinUrl}\" style=\"color:#0077B5;text-decoration:none;\">${c.name}</a>\n      </strong>\n      <span style=\"color:#666;font-size:12px;\">${c.unternehmen || ''}${c.position ? ' · ' + c.position : ''}</span>\n    </div>\n    <div style=\"margin-top:8px;font-size:13px;color:#444;\">\n      <strong>Kontext:</strong> ${c.zusammenfassung}\n    </div>\n    <div style=\"margin-top:8px;background:#f8f9fa;border-left:3px solid ${farbe};padding:10px;border-radius:4px;font-size:13px;\">\n      <strong>Vorschlag:</strong> ${c.nachrichtenvorschlag}\n    </div>\n    <div style=\"margin-top:6px;font-size:11px;color:#999;\">\n      Nachrichten: ${c.anzahlNachrichten} · Erstkontakt: ${c.erstkontaktDatum} · Letzter Reply: ${c.letzterReplyDatum || 'nie'}\n    </div>\n  </div>`).join('');\n}\n\n// Warning banner HTML (only shown when inbox failed)\nconst warningBanner = inboxFailed ? `\n<div style=\"background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:14px 18px;margin-bottom:16px;color:#856404;\">\n  <strong>Hinweis:</strong> Apify Inbox Actor konnte nicht abgerufen werden. Der Report basiert auf den zuletzt gespeicherten Sheet-Daten. Gesprachsverlaeufe und Nachrichten-Counts koennen veraltet sein.\n</div>` : '';\n\nconst html = `<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>LinkedIn Follow-up Report ${heute}</title>\n</head>\n<body style=\"font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;background:#f4f4f4;\">\n\n<div style=\"background:#0077B5;color:white;padding:24px;border-radius:8px 8px 0 0;\">\n  <h1 style=\"margin:0;font-size:22px;\">LinkedIn Follow-up Report</h1>\n  <p style=\"margin:6px 0 0;opacity:0.9;\">${heute}</p>\n</div>\n\n<div style=\"background:#fff;padding:20px;border-left:1px solid #ddd;border-right:1px solid #ddd;\">\n  ${warningBanner}\n  <div style=\"display:flex;gap:16px;flex-wrap:wrap;\">\n    <div style=\"background:#fff9c4;padding:12px 20px;border-radius:6px;text-align:center;flex:1;\">\n      <div style=\"font-size:28px;font-weight:bold;color:#f59e0b;\">${data.stern.length}</div>\n      <div style=\"font-size:12px;color:#666;\">Stern</div>\n    </div>\n    <div style=\"background:#fee2e2;padding:12px 20px;border-radius:6px;text-align:center;flex:1;\">\n      <div style=\"font-size:28px;font-weight:bold;color:#ef4444;\">${data.unbeantwortet.length}</div>\n      <div style=\"font-size:12px;color:#666;\">Unbeantwortet</div>\n    </div>\n    <div style=\"background:#dbeafe;padding:12px 20px;border-radius:6px;text-align:center;flex:1;\">\n      <div style=\"font-size:28px;font-weight:bold;color:#3b82f6;\">${data.dreiTage.length}</div>\n      <div style=\"font-size:12px;color:#666;\">3 Tage still</div>\n    </div>\n    <div style=\"background:#f3e8ff;padding:12px 20px;border-radius:6px;text-align:center;flex:1;\">\n      <div style=\"font-size:28px;font-weight:bold;color:#8b5cf6;\">${data.fuenfTage.length}</div>\n      <div style=\"font-size:12px;color:#666;\">5 Tage still</div>\n    </div>\n  </div>\n  <p style=\"text-align:center;color:#666;font-size:13px;margin-top:12px;\">\n    Gesamt: <strong>${gesamt} Kontakte</strong> heute priorisiert\n  </p>\n</div>\n\n${data.stern.length > 0 ? `\n<div style=\"background:#fff;padding:20px;border-left:1px solid #ddd;border-right:1px solid #ddd;margin-top:2px;\">\n  <h2 style=\"color:#f59e0b;margin-top:0;border-bottom:2px solid #f59e0b;padding-bottom:8px;\">\n    Stern-Kontakte (${data.stern.length})\n  </h2>\n  ${buildTable(data.stern, '#f59e0b', 'Stern')}\n</div>` : ''}\n\n${data.unbeantwortet.length > 0 ? `\n<div style=\"background:#fff;padding:20px;border-left:1px solid #ddd;border-right:1px solid #ddd;margin-top:2px;\">\n  <h2 style=\"color:#ef4444;margin-top:0;border-bottom:2px solid #ef4444;padding-bottom:8px;\">\n    Unbeantwortet (${data.unbeantwortet.length})\n  </h2>\n  ${buildTable(data.unbeantwortet, '#ef4444', 'Unbeantwortet')}\n</div>` : ''}\n\n${data.dreiTage.length > 0 ? `\n<div style=\"background:#fff;padding:20px;border-left:1px solid #ddd;border-right:1px solid #ddd;margin-top:2px;\">\n  <h2 style=\"color:#3b82f6;margin-top:0;border-bottom:2px solid #3b82f6;padding-bottom:8px;\">\n    3 Tage still (${data.dreiTage.length})\n  </h2>\n  ${buildTable(data.dreiTage, '#3b82f6', '3 Tage')}\n</div>` : ''}\n\n${data.fuenfTage.length > 0 ? `\n<div style=\"background:#fff;padding:20px;border-left:1px solid #ddd;border-right:1px solid #ddd;margin-top:2px;\">\n  <h2 style=\"color:#8b5cf6;margin-top:0;border-bottom:2px solid #8b5cf6;padding-bottom:8px;\">\n    5 Tage still (${data.fuenfTage.length})\n  </h2>\n  ${buildTable(data.fuenfTage, '#8b5cf6', '5 Tage')}\n</div>` : ''}\n\n<div style=\"background:#374151;color:white;padding:16px;border-radius:0 0 8px 8px;text-align:center;font-size:12px;margin-top:2px;\">\n  Generiert am ${heute} · LinkedIn Follow-up Automation\n</div>\n\n</body>\n</html>`;\n\nreturn [{ json: { html, gesamt, heute, inboxFailed } }];"
+      }
+    },
+    {
+      "id": "b17-flatten-leads",
+      "name": "Code: Flatten Leads for Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3100,
+        700
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Read categorized + AI-enriched data\nconst data = $('Code: Parse AI Response & Merge').first().json;\n\nconst today = new Date().toLocaleDateString('de-DE');\n\nconst allLeads = [\n  ...data.stern,\n  ...data.unbeantwortet,\n  ...data.dreiTage,\n  ...data.fuenfTage\n];\n\nreturn allLeads.map(lead => ({\n  json: {\n    LinkedIn_URL: lead.linkedinUrl,\n    Anzahl_Nachrichten: lead.anzahlNachrichten,\n    Letzter_Reply_Datum: lead.letzterReplyDatum || '',\n    Letzte_Kategorie: lead.kategorie,\n    Letzter_Report: today,\n    Zuletzt_gesehen: today\n  }\n}));"
+      }
+    },
+    {
+      "id": "b18-gmail-send",
+      "name": "Gmail: Send Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3100,
+        550
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Kh7cApAx6TAe4Hpy",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $env.REPORT_EMAIL }}",
+        "subject": "={{ 'LinkedIn Report ' + new Date().toLocaleDateString('de-DE') + ' – ' + $('Code: Generate HTML Report').first().json.gesamt + ' Kontakte' }}",
+        "emailType": "html",
+        "message": "={{ $('Code: Generate HTML Report').first().json.html }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b19-update-leads",
+      "name": "Google Sheets: Update Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3350,
+        700
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "LinkedIn_URL": "={{ $json.LinkedIn_URL }}",
+            "Anzahl_Nachrichten": "={{ $json.Anzahl_Nachrichten }}",
+            "Letzter_Reply_Datum": "={{ $json.Letzter_Reply_Datum }}",
+            "Letzte_Kategorie": "={{ $json.Letzte_Kategorie }}",
+            "Letzter_Report": "={{ $json.Letzter_Report }}",
+            "Zuletzt_gesehen": "={{ $json.Zuletzt_gesehen }}"
+          },
+          "matchingColumns": [
+            "LinkedIn_URL"
+          ]
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b20-append-log",
+      "name": "Google Sheets: Append Report-Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3100,
+        400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Report-Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum": "={{ $json.Datum }}",
+            "Anzahl_Unbeantwortet": "={{ $json.Anzahl_Unbeantwortet }}",
+            "Anzahl_Stern": "={{ $json.Anzahl_Stern }}",
+            "Anzahl_3_Tage": "={{ $json.Anzahl_3_Tage }}",
+            "Anzahl_5_Tage": "={{ $json.Anzahl_5_Tage }}",
+            "Gesamt_Kontakte": "={{ $json.Gesamt_Kontakte }}",
+            "Report_gesendet": "={{ $json.Report_gesendet }}",
+            "Fehler": "={{ $json.Fehler }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "p3-error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        1100
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "p3-gmail-error",
+      "name": "Gmail: Send Error Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        350,
+        1100
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Kh7cApAx6TAe4Hpy",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $env.REPORT_EMAIL }}",
+        "subject": "={{ 'LinkedIn Automation Fehler - ' + new Date().toLocaleDateString('de-DE') }}",
+        "emailType": "text",
+        "message": "={{ 'Der LinkedIn Follow-up Workflow ist mit einem Fehler abgebrochen.\\n\\nFehler: ' + ($json.execution.error.message ?? 'Unbekannter Fehler') + '\\n\\nWorkflow-Ausfuehrung: ' + ($json.execution.id ?? '') + '\\n\\nBitte pruefen: meinoffice.app.n8n.cloud' }}",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p3-build-log-entry",
+      "name": "Code: Build Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Read report data from b16\nconst reportData = $('Code: Generate HTML Report').first().json;\n\n// Read categorized counts from b15\nconst categorizedData = $('Code: Parse AI Response & Merge').first().json;\n\n// Check if inbox failed — b16 passes through the inboxFailed flag\nconst inboxFailed = reportData.inboxFailed === true;\n\n// NOTE: ERR-05 (Report_gesendet: NEIN when Gmail fails) is deferred to v2.\n// This node runs in a parallel branch from b16, independent of Gmail success/failure.\n\nreturn [{\n  json: {\n    Datum: new Date().toLocaleDateString('de-DE'),\n    Anzahl_Unbeantwortet: (categorizedData.unbeantwortet || []).length,\n    Anzahl_Stern: (categorizedData.stern || []).length,\n    Anzahl_3_Tage: (categorizedData.dreiTage || []).length,\n    Anzahl_5_Tage: (categorizedData.fuenfTage || []).length,\n    Gesamt_Kontakte: reportData.gesamt || 0,\n    Report_gesendet: 'JA',\n    Fehler: inboxFailed ? 'Apify Inbox Actor fehlgeschlagen - Sheet-Daten verwendet' : ''\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Start Actor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets: Read All Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Start Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait: Initial 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Initial 20s": {
+      "main": [
+        [
+          {
+            "node": "Merge: Loop Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge: Loop Entry": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Check Actor Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Check Actor Status": {
+      "main": [
+        [
+          {
+            "node": "IF: Actor Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Actor Done?": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Get Dataset Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Max Attempts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Max Attempts?": {
+      "main": [
+        [
+          {
+            "node": "No Operation: Skip Branch A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set: Increment Attempt Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Increment Attempt Counter": {
+      "main": [
+        [
+          {
+            "node": "Wait: 15s Poll Interval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: 15s Poll Interval": {
+      "main": [
+        [
+          {
+            "node": "Merge: Loop Entry",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Get Dataset Items": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Read Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets: Read Leads": {
+      "main": [
+        [
+          {
+            "node": "Code: Compare URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Compare URLs": {
+      "main": [
+        [
+          {
+            "node": "IF: New Leads Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: New Leads Found?": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Append New Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation: No New Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets: Read All Leads": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Start Inbox Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Start Inbox Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait: Inbox Initial 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Inbox Initial 20s": {
+      "main": [
+        [
+          {
+            "node": "Merge: Inbox Loop Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge: Inbox Loop Entry": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Check Inbox Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Check Inbox Status": {
+      "main": [
+        [
+          {
+            "node": "IF: Inbox Actor Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Inbox Actor Done?": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Get Inbox Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Inbox Max Attempts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Inbox Max Attempts?": {
+      "main": [
+        [
+          {
+            "node": "Set: Mark Inbox Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set: Increment Inbox Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Mark Inbox Failed": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Get Inbox Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Increment Inbox Counter": {
+      "main": [
+        [
+          {
+            "node": "Wait: Inbox 15s Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Inbox 15s Poll": {
+      "main": [
+        [
+          {
+            "node": "Merge: Inbox Loop Entry",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Get Inbox Dataset": {
+      "main": [
+        [
+          {
+            "node": "Code: Merge & Categorize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Merge & Categorize": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Anthropic Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Anthropic Prompt": {
+      "main": [
+        [
+          {
+            "node": "Anthropic: Hormozi Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic: Hormozi Analysis": {
+      "main": [
+        [
+          {
+            "node": "Code: Parse AI Response & Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Parse AI Response & Merge": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate HTML Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate HTML Report": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code: Flatten Leads for Update",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code: Build Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Flatten Leads for Update": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Update Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Append Report-Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

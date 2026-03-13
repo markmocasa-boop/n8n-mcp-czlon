@@ -40,7 +40,8 @@
         "httpMethod": "POST",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "wf7-merge-trigger",
@@ -84,9 +85,8 @@
           "mode": "name",
           "value": "Konfig"
         },
-        "options": {
-          "range": "A:B"
-        }
+        "options": {},
+        "range": "A:B"
       }
     },
     {
@@ -228,7 +228,8 @@
               "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -351,7 +352,8 @@
               "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -462,7 +464,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ workflow_name: $json.workflow_name, workflow_id: $json.workflow_id, execution_id: $json.execution_id, project_name: $json.project_name, started_at: $json.started_at, finished_at: $json.finished_at, duration_seconds: $json.duration_seconds, status: $json.status, platforms_ok: $json.platforms_ok, platforms_error: $json.platforms_error, error_details: $json.error_details ? JSON.parse($json.error_details) : null, items_processed: $json.items_processed, notes: $json.notes }) }}",
-        "options": {}
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       }
     },
     {

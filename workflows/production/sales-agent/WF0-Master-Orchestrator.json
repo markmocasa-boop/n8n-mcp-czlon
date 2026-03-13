@@ -226,12 +226,64 @@
       }
     },
     {
+      "id": "if-a-rating",
+      "name": "IF: A-Rating (Score >= 70)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2350, 200],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-a-rating",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      }
+    },
+    {
+      "id": "exec-wfb-presentation",
+      "name": "Execute: WFB Präsentation",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [2600, 100],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "WFB_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "schema": [],
+          "mappingMode": "passthrough",
+          "value": {}
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
       "id": "if-status-new",
       "name": "IF: Status = Neu?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2350,
+        2850,
         200
       ],
       "parameters": {
@@ -570,7 +622,7 @@
       "main": [
         [
           {
-            "node": "IF: Status = Neu?",
+            "node": "IF: A-Rating (Score >= 70)?",
             "type": "main",
             "index": 0
           }
@@ -578,6 +630,35 @@
         [
           {
             "node": "Set: Kalt Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: A-Rating (Score >= 70)?": {
+      "main": [
+        [
+          {
+            "node": "Execute: WFB Präsentation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Status = Neu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute: WFB Präsentation": {
+      "main": [
+        [
+          {
+            "node": "IF: Status = Neu?",
             "type": "main",
             "index": 0
           }

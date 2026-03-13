@@ -113,8 +113,16 @@
       "parameters": {
         "fields": {
           "values": [
-            {"name": "unternehmens_beschreibung", "value": ""},
-            {"name": "aktuelle_herausforderungen", "value": ""}
+            {
+              "name": "unternehmens_beschreibung",
+              "type": "stringValue",
+              "stringValue": ""
+            },
+            {
+              "name": "aktuelle_herausforderungen",
+              "type": "stringValue",
+              "stringValue": ""
+            }
           ]
         },
         "options": {},
@@ -208,10 +216,26 @@
       "parameters": {
         "fields": {
           "values": [
-            {"name": "linkedin_headline", "value": ""},
-            {"name": "linkedin_about", "value": ""},
-            {"name": "linkedin_name", "value": ""},
-            {"name": "linkedin_current_company", "value": ""}
+            {
+              "name": "linkedin_headline",
+              "type": "stringValue",
+              "stringValue": ""
+            },
+            {
+              "name": "linkedin_about",
+              "type": "stringValue",
+              "stringValue": ""
+            },
+            {
+              "name": "linkedin_name",
+              "type": "stringValue",
+              "stringValue": ""
+            },
+            {
+              "name": "linkedin_current_company",
+              "type": "stringValue",
+              "stringValue": ""
+            }
           ]
         },
         "options": {},
@@ -238,7 +262,7 @@
       "position": [2600, 300],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const trigger = $('Execute Workflow Trigger').first().json;\nconst current = $input.first().json;\n\nlet websiteData = {};\ntry {\n  const websiteNode = $('Code: Merge Tavily Results').first().json;\n  websiteData = websiteNode;\n} catch(e) {\n  try {\n    const emptyWebsite = $('Set: Empty Website Data').first().json;\n    websiteData = emptyWebsite;\n  } catch(e2) {\n    websiteData = { unternehmens_beschreibung: '', aktuelle_herausforderungen: '' };\n  }\n}\n\nreturn [{\n  json: {\n    lead_id: trigger.lead_id,\n    angereichert: {\n      unternehmens_beschreibung: websiteData.unternehmens_beschreibung || '',\n      aktuelle_herausforderungen: websiteData.aktuelle_herausforderungen || '',\n      linkedin_headline: current.linkedin_headline || '',\n      linkedin_about: current.linkedin_about || '',\n      linkedin_name: current.linkedin_name || '',\n      linkedin_current_company: current.linkedin_current_company || ''\n    }\n  }\n}];"
+        "jsCode": "const trigger = $('Execute Workflow Trigger').first().json;\nconst current = $input.first().json;\n\nlet websiteData = {};\ntry {\n  const websiteNode = $('Code: Merge Tavily Results').first().json;\n  websiteData = websiteNode;\n} catch(e) {\n  try {\n    const emptyWebsite = $('Set: Empty Website Data').first().json;\n    websiteData = emptyWebsite;\n  } catch(e2) {\n    websiteData = { unternehmens_beschreibung: '', aktuelle_herausforderungen: '' };\n  }\n}\n\nreturn [{\n  json: {\n    ...trigger,\n    angereichert: {\n      unternehmens_beschreibung: websiteData.unternehmens_beschreibung || '',\n      aktuelle_herausforderungen: websiteData.aktuelle_herausforderungen || '',\n      linkedin_headline: current.linkedin_headline || '',\n      linkedin_about: current.linkedin_about || '',\n      linkedin_name: current.linkedin_name || '',\n      linkedin_current_company: current.linkedin_current_company || ''\n    }\n  }\n}];"
       }
     }
   ],
@@ -310,7 +334,8 @@
     "executionOrder": "v1",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
   },
   "staticData": null
 }

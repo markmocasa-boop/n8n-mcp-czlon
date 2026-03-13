@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Jeder qualifizierte Lead (Score ≥ 30) erhält automatisch eine personalisierte 4-E-Mail-Sequenz.
-**Current focus:** Phase 5 — Inbox & Calendar Manager (WF7) — DEPLOYED
+**Current focus:** Phase 5 — Inbox & Calendar Manager (WF7) — VERIFIED
 
 ## Current Position
 
 Phase: 5 of 5 (Inbox & Calendar Manager) — COMPLETE
-Workflow: WF7 Inbox & Calendar Manager — deployed (54 nodes, 2 trigger paths, n8n ID: wsAy4ROLYtgRfXyY)
-Status: ALL PHASES COMPLETE — project fully deployed
-Last activity: 2026-03-08 — Phase 5 deployed
+Workflow: WF7 Inbox & Calendar Manager — deployed + verified (54 nodes, 2 trigger paths, n8n ID: wsAy4ROLYtgRfXyY)
+Status: ALL PHASES COMPLETE — ALL WORKFLOWS VERIFIED
+Last activity: 2026-03-08 — Phase 5 verified
 
 Progress: [██████████] 100%
 
@@ -26,7 +26,7 @@ Progress: [██████████] 100%
 | WF3 | Sales Agent — WF3 E-Mail Sequenz Generator | uWkGHyQQ8FBeqErW | Inactive | 2026-03-08 | PASS |
 | WF4 | Sales Agent — WF4 E-Mail Sender | O2RnTBvoLAOV4agj | Inactive | 2026-03-08 | PASS (fixed) |
 | WF5 | Sales Agent — WF5 LinkedIn Content Generator | bQQfeZfngg6AyuwZ | Inactive | 2026-03-08 | PASS |
-| WF7 | Sales Agent — WF7 Inbox & Calendar Manager | wsAy4ROLYtgRfXyY | Inactive | 2026-03-08 | Deployed |
+| WF7 | Sales Agent — WF7 Inbox & Calendar Manager | wsAy4ROLYtgRfXyY | Inactive | 2026-03-08 | PASS |
 | WF0 | Sales Agent — WF0 Master Orchestrator | 58ysZ3NLKZfsMfND | Inactive | 2026-03-08 | PASS (updated Phase 4) |
 
 ## Local File Paths
@@ -40,16 +40,17 @@ Progress: [██████████] 100%
 | `production/sales-agent/WF4-Email-Sender.json` | Email Sender (Phase 3, fixed) |
 | `production/sales-agent/WF5-LinkedIn-Content-Generator.json` | LinkedIn Content Generator (Phase 4, verified) |
 | `production/sales-agent/WF0-Master-Orchestrator.json` | Master Orchestrator (updated Phase 4, verified) |
-| `production/sales-agent/WF7-Inbox-Calendar-Manager.json` | Inbox & Calendar Manager (deployed Phase 5) |
+| `production/sales-agent/WF7-Inbox-Calendar-Manager.json` | Inbox & Calendar Manager (deployed Phase 5, verified) |
 
 **Placeholders still needed (REQUIRED before live testing):**
-- `SALES_AGENT_SHEET_ID` in WF6 + WF0 — Google Sheet must be created first
+- `SALES_AGENT_SHEET_ID` in WF6, WF0, WF7 — Google Sheet must be created first (6 occurrences in WF7)
 
 **Credentials gesetzt (2026-03-08):**
 - Tavily: `a6ZN4T8aDN1bVzeY` (Tavily account) → WF1
-- Anthropic: `5LmibcuA2kdHKaqB` (Claude - 20260127) → WF2, WF3, WF5
+- Anthropic: `5LmibcuA2kdHKaqB` (Claude - 20260127) → WF2, WF3, WF5, WF7
 - Apify: `wWgQDWC9aV3UcUEJ` (Apify MN1975) → WF1
-- Gmail: `yv1FhLRO54A8dyzi` (Mark@mo-casa.com) → WF4
+- Gmail: `yv1FhLRO54A8dyzi` (Mark@mo-casa.com) → WF4, WF7
+- Google Calendar: `xhweiA0UKiD5rxB8` → WF7
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Progress: [██████████] 100%
 - WF3: 4 sequential Basic LLM Chain + Anthropic node pairs, Code: Build Output reads all 4 via $('NodeName').first().json
 - WF4: nächster_kontakt (with ä) must be preserved through all code paths — naechster_kontakt is wrong
 - Phase 4: WF4 Set:Success Output only returns 4 fields → added Set:Lead Context for WF5 node in WF0 to re-pass full lead context (from WF2 output + WF1 angereichert) before calling WF5
+- Phase 5: HTTP Request for freebusy kept (native Calendar node doesn't expose raw busy blocks needed for slot algorithm)
+- Phase 5: LLM: Terminwunsch Erkennung system prompt omits 5-Schichten framework intentionally — it's a classification task, not sales persuasion
 
 ### Validation Issues (Phase 1 — all resolved/accepted)
 
@@ -85,14 +88,20 @@ Progress: [██████████] 100%
 
 - WF5 local JSON had credential name "Anthropic account" while live shows "Claude - 20260127". Cosmetic only (credential ID 5LmibcuA2kdHKaqB is correct). Local JSON updated to match live.
 
+### Validation Issues (Phase 5 — none / 2 false positives accepted)
+
+- LLM: Terminwunsch Erkennung lacks 5-Schichten framework in system prompt — intentional design (classification task, not persuasion)
+- Execute WF6: Update Lead Termin has no explicit workflowInputs — uses item $json passthrough (include:all from Set: Map WF6 Termin Inputs), functionally equivalent
+
 ### Blockers/Concerns
 
-- **REQUIRED BEFORE LIVE TESTING**: Google Sheet + SALES_AGENT_SHEET_ID
-- Google OAuth2 Credential: gmail.modify + gmail.compose + calendar scopes — vor Phase 5 prüfen
+- **REQUIRED BEFORE LIVE TESTING**: Google Sheet + SALES_AGENT_SHEET_ID (affects WF6, WF0, WF7)
+- Google OAuth2 Credential: gmail.modify + gmail.compose + calendar scopes — verify before activation
 - Verify community nodes installed: `@tavily/n8n-nodes-tavily`, `@apify/n8n-nodes-apify`
+- Verify Gmail createDraft + markAsRead operation names work in live Gmail node v2.1
 
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Phase 5 deployed. WF7 (54 nodes, ID: wsAy4ROLYtgRfXyY) deployed via POST to n8n API.
-Next step: SALES_AGENT_SHEET_ID must be replaced in all workflows before live testing. Then activate workflows in order: WF6 → WF1 → WF2 → WF3 → WF4 → WF5 → WF7 → WF0.
+Stopped at: Phase 5 verified. All 8 workflows deployed and verified.
+Next step: SALES_AGENT_SHEET_ID must be replaced in WF6, WF0, WF7 before live testing. Then activate in order: WF6 → WF1 → WF2 → WF3 → WF4 → WF5 → WF7 → WF0.

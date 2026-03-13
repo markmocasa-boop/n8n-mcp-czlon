@@ -3,11 +3,95 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/czlonkowski/n8n-mcp?style=social)](https://github.com/czlonkowski/n8n-mcp)
 [![npm version](https://img.shields.io/npm/v/n8n-mcp.svg)](https://www.npmjs.com/package/n8n-mcp)
-[![codecov](https://codecov.io/gh/czlonkowski/n8n-mcp/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/czlonkowski/n8n-mcp)
-[![Tests](https://img.shields.io/badge/tests-3336%20passing-brightgreen.svg)](https://github.com/czlonkowski/n8n-mcp/actions)
-[![n8n version](https://img.shields.io/badge/n8n-2.3.3-orange.svg)](https://github.com/n8n-io/n8n)
-[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fczlonkowski%2Fn8n--mcp-green.svg)](https://github.com/czlonkowski/n8n-mcp/pkgs/container/n8n-mcp)
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/n8n-mcp?referralCode=n8n-mcp)
+
+---
+
+## Workflows
+
+Alle n8n Workflows sind unter `/workflows/` organisiert.
+
+### Verzeichnisstruktur
+
+```
+workflows/
+  production/          # Aktive Produktions-Workflows
+  drafts/              # Workflows in Entwicklung (BETA, Prototypen)
+```
+
+### Production Workflows
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `ai-coworker-workflow.json` | AI Coworker - Slack Assistant |
+| `angebots-verstaendlichkeits-checker.json` | Angebots-Verständlichkeits-Checker |
+| `auto-lead-closer-ki-lead-qualifier.json` | Auto-Lead-Closer – KI Lead-Qualifizierung & Follow-up |
+| `backlink-outreach-automation.json` | Backlink Outreach Automatisierung |
+| `bundesliga-region-classifier.json` | Bundesliga Region Classifier |
+| `cross-platform-comment-analysis.json` | Cross-Platform Comment Intelligence |
+| `dept-leader-agent-weekly-report.json` | Agent - Wöchentlicher Abteilungsleiter Report |
+| `dept-leader-telegram-interactive.json` | Agent - Abteilungsleiter Telegram Interaktiv |
+| `funnel-conversion-reporting-weekly.json` | Funnel- & Conversion-Reporting (Weekly) |
+| `gmail-classify-and-forward-workflow.json` | Gmail Klassifizierung & Weiterleitung |
+| `gmail-inbound-agent-workflow.json` | Gmail Inbound Agent - Effizienzheld |
+| `google-business-profil-audit.json` | Google Business Profil Audit — Lead Magnet |
+| `lead-magnet-workflow.json` | Lead Magnet Builder - Multi-Platform Distribution |
+| `linkedin-dm-tracking-workflow.json` | LinkedIn DM Follow-up Tracking - PhantomBuster |
+| `linkedin-message-monitoring.json` | LinkedIn Message Monitoring |
+| `linkedin-message-monitoring-phantombuster.json` | LinkedIn Message Monitoring (PhantomBuster) |
+| `linkedin-post-automation-workflow.json` | LinkedIn Post Automation - Daily Content System |
+| `seo-content-form-workflow.json` | SEO Content Planner - Form Based |
+| `seo-content-planning-workflow.json` | SEO Content Planning - Keyword Research & Content Strategy |
+| `social-media-content-automation.json` | Social Media Content Automation |
+| `sub-workflow-webhook-modifications.json` | Sub-Workflow Webhook Modifikationen (Referenz-Template) |
+| `youtube-dubbing-workflow.json` | YouTube Video Dubbing (DE) |
+
+### Production: SEO Content Agent (Multi-Workflow-System)
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `seo-content-agent/Master-Orchestrator.json` | SEO Content Agent — Master Orchestrator |
+| `seo-content-agent/WF1-Projekt-Setup-Keyword-Recherche.json` | WF1: Projekt-Setup & Keyword-Recherche |
+| `seo-content-agent/WF2-Keyword-Auswahl-SERP-Scraping.json` | WF2: Keyword-Auswahl & SERP-Scraping |
+| `seo-content-agent/WF3-Deep-Analyse-Semantik.json` | WF3: Deep Analyse (Semantik) |
+| `seo-content-agent/WF4-User-Insight-Mining.json` | WF4: User Insight Mining |
+| `seo-content-agent/WF5-Gliederung-Freigabe.json` | WF5: Gliederung & Freigabe |
+| `seo-content-agent/WF6-Content-Erstellung.json` | WF6: Content-Erstellung |
+| `seo-content-agent/WF7-QA-Sub-Agenten.json` | WF7: QA & Sub-Agenten |
+| `seo-content-agent/WF8-Finalisierung-Export.json` | WF8: Finalisierung & Export |
+
+### Production: SEO Marketing Scorecard (Multi-Workflow-System)
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `seo-marketing-scorecard/Main-SEO-Marketing-Scorecard.json` | SEO Marketing Scorecard — Hauptworkflow |
+| `seo-marketing-scorecard/SubWF1-GSC-GA4-Analyse.json` | Sub-WF 1: GSC + GA4 Analyse |
+| `seo-marketing-scorecard/SubWF2-Clarity-Analyse.json` | Sub-WF 2: Microsoft Clarity |
+| `seo-marketing-scorecard/SubWF3-DataForSEO-Keywords.json` | Sub-WF 3: DataForSEO Keyword-Tracking |
+| `seo-marketing-scorecard/SubWF4-Trends-YouTube-Reddit.json` | Sub-WF 4: Trend-Analyse (YouTube + Reddit) |
+| `seo-marketing-scorecard/SubWF5-Amazon-Reviews.json` | Sub-WF 5: Amazon Reviews Analyse |
+| `seo-marketing-scorecard/SubWF6-Facebook-Instagram.json` | Sub-WF 6: Facebook + Instagram Analyse |
+
+### Drafts (in Entwicklung)
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `BETA - Lead Generation & Video Outreach - Complete Pipeline.json` | Lead Generation & Video Outreach Pipeline |
+| `BETA - 2. Funnel- & Conversion-Reporting (Weekly) (1).json` | Funnel-Reporting (BETA-Version) |
+| `BETA - Cross-Platform Comment Intelligence.json` | Cross-Platform Comment Intelligence (BETA) |
+| `BETA - German Price Tracker v8 - ScrapingBee 20260122.json` | German Price Tracker mit ScrapingBee |
+| `BETA - Google Business Profil Audit — Lead Magnet (Native Nodes).json` | Google Business Audit (Native Nodes Variante) |
+| `BETA - Auto-Lead-Closer (AI Qualification + Follow-up) (2).json` | Auto-Lead-Closer (BETA) |
+| `MO - Social Media Content Automation - VaSi (1).json` | Social Media Content Automation (Original) |
+| `No Brainer Offer from URL v2.json` | No Brainer Offer Generator v2 |
+| `Social - Reddit Marketing Insights.json` | Reddit Marketing Insights |
+| `Tool - Backlink Outreach Automatisierung.json` | Backlink Outreach Tool |
+| `Tool - Google Maps Scraper - Async (100+ Results) (1).json` | Google Maps Scraper (Async, 100+ Results) |
+| `Tool - LinkedIn Post Automation - Daily Content System.json` | LinkedIn Post Automation (Original) |
+| `Tools - UGC Ads Veo 3.1 & Sora.json` | UGC Ads mit Veo 3.1 & Sora |
+| `VVV Sales Agent.json` | VVV Sales Agent |
+| `WhatsApp_KI_Chatbot_DE.json` | WhatsApp KI Chatbot (DE) |
+
+---
 
 A Model Context Protocol (MCP) server that provides AI assistants with comprehensive access to n8n node documentation, properties, and operations. Deploy in minutes to give Claude and other AI assistants deep knowledge about n8n's 1,084 workflow automation nodes (537 core + 547 community).
 

@@ -9,13 +9,29 @@
       "position": [100, 300],
       "parameters": {
         "formTitle": "LinkedIn Outreach Filter",
-        "formDescription": "Filtere deine LinkedIn-Connections f\u00fcr personalisierten Outreach",
+        "formDescription": "Filtere deine LinkedIn-Connections für personalisierten Outreach",
         "formFields": {
           "values": [
-            {"fieldLabel": "Position (enth\u00e4lt)", "fieldType": "text", "requiredField": false},
-            {"fieldLabel": "Region (enth\u00e4lt)", "fieldType": "text", "requiredField": false},
-            {"fieldLabel": "Branche (enth\u00e4lt)", "fieldType": "text", "requiredField": false},
-            {"fieldLabel": "Mitarbeiteranzahl (enth\u00e4lt)", "fieldType": "text", "requiredField": false}
+            {
+              "fieldLabel": "Position (enthält)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Region (enthält)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Branche (enthält)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Mitarbeiteranzahl (enthält)",
+              "fieldType": "text",
+              "requiredField": false
+            }
           ]
         },
         "responseMode": "onReceived",
@@ -28,11 +44,24 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [380, 300],
-      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
       "parameters": {
         "operation": "read",
-        "documentId": {"__rl": true, "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN", "mode": "id"},
-        "sheetName": {"__rl": true, "value": "Connections", "mode": "name"},
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Connections",
+          "mode": "name"
+        },
         "options": {}
       }
     },
@@ -44,12 +73,48 @@
       "position": [660, 300],
       "parameters": {
         "conditions": {
-          "options": {"caseSensitive": false, "leftValue": "", "typeValidation": "loose"},
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
           "conditions": [
-            {"id": "cond-position-pass", "leftValue": "={{ ($('Form Trigger').item.json['Position (enth\u00e4lt)'] === '' || $('Form Trigger').item.json['Position (enth\u00e4lt)'] === undefined || $('Form Trigger').item.json['Position (enth\u00e4lt)'] === null) || ($json['Position'] && $json['Position'].toLowerCase().includes(($('Form Trigger').item.json['Position (enth\u00e4lt)'] || '').toLowerCase())) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}},
-            {"id": "cond-region-pass", "leftValue": "={{ ($('Form Trigger').item.json['Region (enth\u00e4lt)'] === '' || $('Form Trigger').item.json['Region (enth\u00e4lt)'] === undefined || $('Form Trigger').item.json['Region (enth\u00e4lt)'] === null) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}},
-            {"id": "cond-branche-pass", "leftValue": "={{ ($('Form Trigger').item.json['Branche (enth\u00e4lt)'] === '' || $('Form Trigger').item.json['Branche (enth\u00e4lt)'] === undefined || $('Form Trigger').item.json['Branche (enth\u00e4lt)'] === null) || ($json['Company'] && $json['Company'].toLowerCase().includes(($('Form Trigger').item.json['Branche (enth\u00e4lt)'] || '').toLowerCase())) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}},
-            {"id": "cond-mitarbeiter-pass", "leftValue": "={{ ($('Form Trigger').item.json['Mitarbeiteranzahl (enth\u00e4lt)'] === '' || $('Form Trigger').item.json['Mitarbeiteranzahl (enth\u00e4lt)'] === undefined || $('Form Trigger').item.json['Mitarbeiteranzahl (enth\u00e4lt)'] === null) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}}
+            {
+              "id": "cond-position-pass",
+              "leftValue": "={{ ($('Form Trigger').item.json['Position (enthält)'] === '' || $('Form Trigger').item.json['Position (enthält)'] === undefined || $('Form Trigger').item.json['Position (enthält)'] === null) || ($json['Position'] && $json['Position'].toLowerCase().includes(($('Form Trigger').item.json['Position (enthält)'] || '').toLowerCase())) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-region-pass",
+              "leftValue": "={{ ($('Form Trigger').item.json['Region (enthält)'] === '' || $('Form Trigger').item.json['Region (enthält)'] === undefined || $('Form Trigger').item.json['Region (enthält)'] === null) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-branche-pass",
+              "leftValue": "={{ ($('Form Trigger').item.json['Branche (enthält)'] === '' || $('Form Trigger').item.json['Branche (enthält)'] === undefined || $('Form Trigger').item.json['Branche (enthält)'] === null) || ($json['Company'] && $json['Company'].toLowerCase().includes(($('Form Trigger').item.json['Branche (enthält)'] || '').toLowerCase())) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-mitarbeiter-pass",
+              "leftValue": "={{ ($('Form Trigger').item.json['Mitarbeiteranzahl (enthält)'] === '' || $('Form Trigger').item.json['Mitarbeiteranzahl (enthält)'] === undefined || $('Form Trigger').item.json['Mitarbeiteranzahl (enthält)'] === null) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
           ],
           "combinator": "and"
         },
@@ -65,8 +130,23 @@
       "position": [940, 300],
       "parameters": {
         "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
-          "conditions": [{"id": "cond-url-not-empty", "leftValue": "={{ $json['URL'] }}", "operator": {"type": "string", "operation": "isNotEmpty", "singleValue": true}}],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-url-not-empty",
+              "leftValue": "={{ $json['URL'] }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "singleValue": true
+              }
+            }
+          ],
           "combinator": "and"
         },
         "options": {}
@@ -78,12 +158,38 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [1220, 480],
-      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
       "parameters": {
         "operation": "append",
-        "documentId": {"__rl": true, "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN", "mode": "id"},
-        "sheetName": {"__rl": true, "value": "DM-Output", "mode": "name"},
-        "columns": {"mappingMode": "defineBelow", "value": {"FirstName": "={{ $json['First Name'] }}", "LastName": "={{ $json['Last Name'] }}", "Company": "={{ $json['Company'] }}", "Position": "={{ $json['Position'] }}", "LinkedInURL": "", "Status": "Kein URL", "GeneratedAt": "={{ $now.toISO() }}"}, "matchingColumns": [], "schema": []},
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "DM-Output",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FirstName": "={{ $json['First Name'] }}",
+            "LastName": "={{ $json['Last Name'] }}",
+            "Company": "={{ $json['Company'] }}",
+            "Position": "={{ $json['Position'] }}",
+            "LinkedInURL": "",
+            "Status": "Kein URL",
+            "GeneratedAt": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
         "options": {}
       }
     },
@@ -93,7 +199,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [1220, 300],
-      "parameters": {"batchSize": 1, "options": {}}
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
     },
     {
       "id": "node-scrape-linkedin",
@@ -102,7 +211,12 @@
       "typeVersion": 1,
       "position": [1500, 300],
       "onError": "continueErrorOutput",
-      "credentials": {"apifyApi": {"id": "wWgQDWC9aV3UcUEJ", "name": "Apify MN1975"}},
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      },
       "parameters": {
         "resource": "Actors",
         "operation": "Run an Actor and Get Dataset",
@@ -118,8 +232,23 @@
       "position": [1780, 300],
       "parameters": {
         "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
-          "conditions": [{"id": "cond-apify-has-data", "leftValue": "={{ $json.firstName !== undefined && $json.firstName !== null && $json.firstName !== '' }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}}],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-apify-has-data",
+              "leftValue": "={{ $json.firstName !== undefined && $json.firstName !== null && $json.firstName !== '' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
           "combinator": "and"
         },
         "options": {}
@@ -134,14 +263,40 @@
       "parameters": {
         "mode": "manual",
         "includeOtherFields": false,
-        "fields": {"values": [
-          {"name": "profileContext", "type": "string", "value": "={{ 'Name: ' + ($json.firstName || '') + ' ' + ($json.lastName || '') + '\\nHeadline: ' + ($json.headline || '') + '\\nZusammenfassung: ' + ($json.summary || '') + '\\nAktuelle Position: ' + (($json.positions && $json.positions[0]) ? ($json.positions[0].title + ' bei ' + $json.positions[0].companyName) : '') }}"},
-          {"name": "contactFirstName", "type": "string", "value": "={{ $('Loop Contacts').item.json['First Name'] }}"},
-          {"name": "contactLastName", "type": "string", "value": "={{ $('Loop Contacts').item.json['Last Name'] }}"},
-          {"name": "contactCompany", "type": "string", "value": "={{ $('Loop Contacts').item.json['Company'] }}"},
-          {"name": "contactPosition", "type": "string", "value": "={{ $('Loop Contacts').item.json['Position'] }}"},
-          {"name": "contactLinkedInURL", "type": "string", "value": "={{ $('Loop Contacts').item.json['URL'] }}"}
-        ]}
+        "fields": {
+          "values": [
+            {
+              "name": "profileContext",
+              "type": "string",
+              "value": "={{ 'Name: ' + ($json.firstName || '') + ' ' + ($json.lastName || '') + '\\nHeadline: ' + ($json.headline || '') + '\\nZusammenfassung: ' + ($json.summary || '') + '\\nAktuelle Position: ' + (($json.positions && $json.positions[0]) ? ($json.positions[0].title + ' bei ' + $json.positions[0].companyName) : '') }}"
+            },
+            {
+              "name": "contactFirstName",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['First Name'] }}"
+            },
+            {
+              "name": "contactLastName",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Last Name'] }}"
+            },
+            {
+              "name": "contactCompany",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Company'] }}"
+            },
+            {
+              "name": "contactPosition",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Position'] }}"
+            },
+            {
+              "name": "contactLinkedInURL",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['URL'] }}"
+            }
+          ]
+        }
       }
     },
     {
@@ -153,14 +308,40 @@
       "parameters": {
         "mode": "manual",
         "includeOtherFields": false,
-        "fields": {"values": [
-          {"name": "profileContext", "type": "string", "value": "={{ 'Name: ' + ($('Loop Contacts').item.json['First Name'] || '') + ' ' + ($('Loop Contacts').item.json['Last Name'] || '') + '\\nUnternehmen: ' + ($('Loop Contacts').item.json['Company'] || '') + '\\nPosition: ' + ($('Loop Contacts').item.json['Position'] || '') }}"},
-          {"name": "contactFirstName", "type": "string", "value": "={{ $('Loop Contacts').item.json['First Name'] }}"},
-          {"name": "contactLastName", "type": "string", "value": "={{ $('Loop Contacts').item.json['Last Name'] }}"},
-          {"name": "contactCompany", "type": "string", "value": "={{ $('Loop Contacts').item.json['Company'] }}"},
-          {"name": "contactPosition", "type": "string", "value": "={{ $('Loop Contacts').item.json['Position'] }}"},
-          {"name": "contactLinkedInURL", "type": "string", "value": "={{ $('Loop Contacts').item.json['URL'] }}"}
-        ]}
+        "fields": {
+          "values": [
+            {
+              "name": "profileContext",
+              "type": "string",
+              "value": "={{ 'Name: ' + ($('Loop Contacts').item.json['First Name'] || '') + ' ' + ($('Loop Contacts').item.json['Last Name'] || '') + '\\nUnternehmen: ' + ($('Loop Contacts').item.json['Company'] || '') + '\\nPosition: ' + ($('Loop Contacts').item.json['Position'] || '') }}"
+            },
+            {
+              "name": "contactFirstName",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['First Name'] }}"
+            },
+            {
+              "name": "contactLastName",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Last Name'] }}"
+            },
+            {
+              "name": "contactCompany",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Company'] }}"
+            },
+            {
+              "name": "contactPosition",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['Position'] }}"
+            },
+            {
+              "name": "contactLinkedInURL",
+              "type": "string",
+              "value": "={{ $('Loop Contacts').item.json['URL'] }}"
+            }
+          ]
+        }
       }
     },
     {
@@ -169,7 +350,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [2340, 160],
-      "parameters": {"promptType": "define", "text": "={{ 'Du bist ein professioneller LinkedIn-Outreach-Spezialist. Schreibe eine personalisierte LinkedIn-Direktnachricht (DM) auf Deutsch f\u00fcr Markus, der Unternehmen bei Prozessoptimierung und Effizienzsteigerung unterst\u00fctzt.\\n\\nProfil-Informationen:\\n' + $json.profileContext + '\\n\\nAnforderungen:\\n- Maximum 300 W\u00f6rter\\n- Pers\u00f6nlicher, professioneller Ton\\n- Beziehe dich auf konkrete Details aus dem Profil\\n- Identifiziere m\u00f6gliche Pain-Points des Kontakts\\n- Finde Gemeinsamkeiten oder Ankn\u00fcpfungspunkte\\n- Erw\u00e4hne, dass Markus bei Prozessoptimierung und Effizienzsteigerung helfen kann\\n- Schlie\u00dfe mit EINER einzigen offenen Frage ab\\n- Kein generisches Template, sondern wirklich personalisiert\\n\\nSchreibe NUR die DM-Nachricht, ohne Erkl\u00e4rungen oder Metakommentare.' }}"}
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Du bist ein professioneller LinkedIn-Outreach-Spezialist. Schreibe eine personalisierte LinkedIn-Direktnachricht (DM) auf Deutsch für Markus, der Unternehmen bei Prozessoptimierung und Effizienzsteigerung unterstützt.\\n\\nProfil-Informationen:\\n' + $json.profileContext + '\\n\\nAnforderungen:\\n- Maximum 300 Wörter\\n- Persönlicher, professioneller Ton\\n- Beziehe dich auf konkrete Details aus dem Profil\\n- Identifiziere mögliche Pain-Points des Kontakts\\n- Finde Gemeinsamkeiten oder Anknüpfungspunkte\\n- Erwähne, dass Markus bei Prozessoptimierung und Effizienzsteigerung helfen kann\\n- Schließe mit EINER einzigen offenen Frage ab\\n- Kein generisches Template, sondern wirklich personalisiert\\n\\nSchreibe NUR die DM-Nachricht, ohne Erklärungen oder Metakommentare.' }}"
+      }
     },
     {
       "id": "node-claude-full",
@@ -177,8 +361,16 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
       "position": [2340, 60],
-      "credentials": {"anthropicApi": {"id": "nv6YXj42KhaG3WMp", "name": "n8n-20260309"}},
-      "parameters": {"model": "claude-haiku-4-5-20251001", "options": {}}
+      "credentials": {
+        "anthropicApi": {
+          "id": "nv6YXj42KhaG3WMp",
+          "name": "n8n-20260309"
+        }
+      },
+      "parameters": {
+        "model": "claude-haiku-4-5-20251001",
+        "options": {}
+      }
     },
     {
       "id": "node-generate-dm-fallback",
@@ -186,7 +378,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [2340, 440],
-      "parameters": {"promptType": "define", "text": "={{ 'Du bist ein professioneller LinkedIn-Outreach-Spezialist. Schreibe eine personalisierte LinkedIn-Direktnachricht (DM) auf Deutsch f\u00fcr Markus, der Unternehmen bei Prozessoptimierung und Effizienzsteigerung unterst\u00fctzt.\\n\\nKontakt-Informationen:\\n' + $json.profileContext + '\\n\\nAnforderungen:\\n- Maximum 300 W\u00f6rter\\n- Professioneller, freundlicher Ton\\n- Beziehe dich auf Name, Unternehmen und Position\\n- Erw\u00e4hne, dass Markus bei Prozessoptimierung und Effizienzsteigerung helfen kann\\n- Schlie\u00dfe mit EINER einzigen offenen Frage ab\\n\\nSchreibe NUR die DM-Nachricht, ohne Erkl\u00e4rungen oder Metakommentare.' }}"}
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Du bist ein professioneller LinkedIn-Outreach-Spezialist. Schreibe eine personalisierte LinkedIn-Direktnachricht (DM) auf Deutsch für Markus, der Unternehmen bei Prozessoptimierung und Effizienzsteigerung unterstützt.\\n\\nKontakt-Informationen:\\n' + $json.profileContext + '\\n\\nAnforderungen:\\n- Maximum 300 Wörter\\n- Professioneller, freundlicher Ton\\n- Beziehe dich auf Name, Unternehmen und Position\\n- Erwähne, dass Markus bei Prozessoptimierung und Effizienzsteigerung helfen kann\\n- Schließe mit EINER einzigen offenen Frage ab\\n\\nSchreibe NUR die DM-Nachricht, ohne Erklärungen oder Metakommentare.' }}"
+      }
     },
     {
       "id": "node-claude-fallback",
@@ -194,8 +389,16 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
       "position": [2340, 340],
-      "credentials": {"anthropicApi": {"id": "nv6YXj42KhaG3WMp", "name": "n8n-20260309"}},
-      "parameters": {"model": "claude-haiku-4-5-20251001", "options": {}}
+      "credentials": {
+        "anthropicApi": {
+          "id": "nv6YXj42KhaG3WMp",
+          "name": "n8n-20260309"
+        }
+      },
+      "parameters": {
+        "model": "claude-haiku-4-5-20251001",
+        "options": {}
+      }
     },
     {
       "id": "node-set-full-output",
@@ -203,16 +406,54 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [2620, 160],
-      "parameters": {"mode": "manual", "includeOtherFields": false, "fields": {"values": [
-        {"name": "FirstName", "type": "string", "value": "={{ $('Prepare Full Context').item.json.contactFirstName }}"},
-        {"name": "LastName", "type": "string", "value": "={{ $('Prepare Full Context').item.json.contactLastName }}"},
-        {"name": "Company", "type": "string", "value": "={{ $('Prepare Full Context').item.json.contactCompany }}"},
-        {"name": "Position", "type": "string", "value": "={{ $('Prepare Full Context').item.json.contactPosition }}"},
-        {"name": "LinkedInURL", "type": "string", "value": "={{ $('Prepare Full Context').item.json.contactLinkedInURL }}"},
-        {"name": "GeneratedDM", "type": "string", "value": "={{ $json.text }}"},
-        {"name": "Status", "type": "string", "value": "Entwurf"},
-        {"name": "GeneratedAt", "type": "string", "value": "={{ $now.toISO() }}"}
-      ]}}
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "fields": {
+          "values": [
+            {
+              "name": "FirstName",
+              "type": "string",
+              "value": "={{ $('Prepare Full Context').item.json.contactFirstName }}"
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "value": "={{ $('Prepare Full Context').item.json.contactLastName }}"
+            },
+            {
+              "name": "Company",
+              "type": "string",
+              "value": "={{ $('Prepare Full Context').item.json.contactCompany }}"
+            },
+            {
+              "name": "Position",
+              "type": "string",
+              "value": "={{ $('Prepare Full Context').item.json.contactPosition }}"
+            },
+            {
+              "name": "LinkedInURL",
+              "type": "string",
+              "value": "={{ $('Prepare Full Context').item.json.contactLinkedInURL }}"
+            },
+            {
+              "name": "GeneratedDM",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "Status",
+              "type": "string",
+              "value": "Entwurf"
+            },
+            {
+              "name": "GeneratedAt",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      }
     },
     {
       "id": "node-set-fallback-output",
@@ -220,16 +461,54 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [2620, 440],
-      "parameters": {"mode": "manual", "includeOtherFields": false, "fields": {"values": [
-        {"name": "FirstName", "type": "string", "value": "={{ $('Prepare Fallback Context').item.json.contactFirstName }}"},
-        {"name": "LastName", "type": "string", "value": "={{ $('Prepare Fallback Context').item.json.contactLastName }}"},
-        {"name": "Company", "type": "string", "value": "={{ $('Prepare Fallback Context').item.json.contactCompany }}"},
-        {"name": "Position", "type": "string", "value": "={{ $('Prepare Fallback Context').item.json.contactPosition }}"},
-        {"name": "LinkedInURL", "type": "string", "value": "={{ $('Prepare Fallback Context').item.json.contactLinkedInURL }}"},
-        {"name": "GeneratedDM", "type": "string", "value": "={{ $json.text }}"},
-        {"name": "Status", "type": "string", "value": "Fallback"},
-        {"name": "GeneratedAt", "type": "string", "value": "={{ $now.toISO() }}"}
-      ]}}
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "fields": {
+          "values": [
+            {
+              "name": "FirstName",
+              "type": "string",
+              "value": "={{ $('Prepare Fallback Context').item.json.contactFirstName }}"
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "value": "={{ $('Prepare Fallback Context').item.json.contactLastName }}"
+            },
+            {
+              "name": "Company",
+              "type": "string",
+              "value": "={{ $('Prepare Fallback Context').item.json.contactCompany }}"
+            },
+            {
+              "name": "Position",
+              "type": "string",
+              "value": "={{ $('Prepare Fallback Context').item.json.contactPosition }}"
+            },
+            {
+              "name": "LinkedInURL",
+              "type": "string",
+              "value": "={{ $('Prepare Fallback Context').item.json.contactLinkedInURL }}"
+            },
+            {
+              "name": "GeneratedDM",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "Status",
+              "type": "string",
+              "value": "Fallback"
+            },
+            {
+              "name": "GeneratedAt",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      }
     },
     {
       "id": "node-merge-paths",
@@ -237,7 +516,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [2900, 300],
-      "parameters": {"mode": "append", "options": {}}
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      }
     },
     {
       "id": "node-write-output-sheet",
@@ -245,34 +527,252 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [3180, 300],
-      "credentials": {"googleSheetsOAuth2Api": {"id": "gw0DIdDENFkpE7ZW", "name": "Google Sheets account"}},
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      },
       "parameters": {
         "operation": "append",
-        "documentId": {"__rl": true, "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN", "mode": "id"},
-        "sheetName": {"__rl": true, "value": "DM-Output", "mode": "name"},
-        "columns": {"mappingMode": "defineBelow", "value": {"FirstName": "={{ $json.FirstName }}", "LastName": "={{ $json.LastName }}", "Company": "={{ $json.Company }}", "Position": "={{ $json.Position }}", "LinkedInURL": "={{ $json.LinkedInURL }}", "GeneratedDM": "={{ $json.GeneratedDM }}", "Status": "={{ $json.Status }}", "GeneratedAt": "={{ $json.GeneratedAt }}"}, "matchingColumns": [], "schema": []},
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_HIER_EINTRAGEN",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "DM-Output",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FirstName": "={{ $json.FirstName }}",
+            "LastName": "={{ $json.LastName }}",
+            "Company": "={{ $json.Company }}",
+            "Position": "={{ $json.Position }}",
+            "LinkedInURL": "={{ $json.LinkedInURL }}",
+            "GeneratedDM": "={{ $json.GeneratedDM }}",
+            "Status": "={{ $json.Status }}",
+            "GeneratedAt": "={{ $json.GeneratedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
         "options": {}
       }
     }
   ],
   "connections": {
-    "Form Trigger": {"main": [[{"node": "Read Connections Sheet", "type": "main", "index": 0}]]},
-    "Read Connections Sheet": {"main": [[{"node": "Filter Contacts", "type": "main", "index": 0}]]},
-    "Filter Contacts": {"main": [[{"node": "Check LinkedIn URL", "type": "main", "index": 0}]]},
-    "Check LinkedIn URL": {"main": [[{"node": "Loop Contacts", "type": "main", "index": 0}], [{"node": "Write Kein URL", "type": "main", "index": 0}]]},
-    "Loop Contacts": {"main": [[{"node": "Scrape LinkedIn Profile", "type": "main", "index": 0}]]},
-    "Scrape LinkedIn Profile": {"main": [[{"node": "Check Apify Data", "type": "main", "index": 0}], [{"node": "Prepare Fallback Context", "type": "main", "index": 0}]]},
-    "Check Apify Data": {"main": [[{"node": "Prepare Full Context", "type": "main", "index": 0}], [{"node": "Prepare Fallback Context", "type": "main", "index": 0}]]},
-    "Prepare Full Context": {"main": [[{"node": "Generate DM Full", "type": "main", "index": 0}]]},
-    "Claude Model Full": {"ai_languageModel": [[{"node": "Generate DM Full", "type": "ai_languageModel", "index": 0}]]},
-    "Generate DM Full": {"main": [[{"node": "Set Full Output", "type": "main", "index": 0}]]},
-    "Prepare Fallback Context": {"main": [[{"node": "Generate DM Fallback", "type": "main", "index": 0}]]},
-    "Claude Model Fallback": {"ai_languageModel": [[{"node": "Generate DM Fallback", "type": "ai_languageModel", "index": 0}]]},
-    "Generate DM Fallback": {"main": [[{"node": "Set Fallback Output", "type": "main", "index": 0}]]},
-    "Set Full Output": {"main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]},
-    "Set Fallback Output": {"main": [[{"node": "Merge Paths", "type": "main", "index": 1}]]},
-    "Merge Paths": {"main": [[{"node": "Write Output Sheet", "type": "main", "index": 0}]]},
-    "Write Output Sheet": {"main": [[{"node": "Loop Contacts", "type": "main", "index": 0}]]}
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Connections Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Connections Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Contacts": {
+      "main": [
+        [
+          {
+            "node": "Check LinkedIn URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check LinkedIn URL": {
+      "main": [
+        [
+          {
+            "node": "Loop Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write Kein URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Contacts": {
+      "main": [
+        [
+          {
+            "node": "Scrape LinkedIn Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape LinkedIn Profile": {
+      "main": [
+        [
+          {
+            "node": "Check Apify Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Fallback Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Apify Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare Full Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Fallback Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Full Context": {
+      "main": [
+        [
+          {
+            "node": "Generate DM Full",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model Full": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate DM Full",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate DM Full": {
+      "main": [
+        [
+          {
+            "node": "Set Full Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Fallback Context": {
+      "main": [
+        [
+          {
+            "node": "Generate DM Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model Fallback": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate DM Fallback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate DM Fallback": {
+      "main": [
+        [
+          {
+            "node": "Set Fallback Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Full Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fallback Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Paths": {
+      "main": [
+        [
+          {
+            "node": "Write Output Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Output Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "settings": {
     "executionOrder": "v1",
@@ -280,5 +780,9 @@
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true
   },
-  "tags": [{"name": "linkedin-outreach"}]
+  "tags": [
+    {
+      "name": "linkedin-outreach"
+    }
+  ]
 }

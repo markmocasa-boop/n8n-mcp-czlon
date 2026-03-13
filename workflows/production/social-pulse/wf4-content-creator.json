@@ -32,7 +32,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -109,7 +110,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -150,15 +152,15 @@
           "parameters": [
             {
               "name": "project_name",
-              "value": "=eq.{{ $json.projectName }}"
+              "value": "={{ 'eq.' + $json.projectName }}"
             },
             {
               "name": "calendar_week",
-              "value": "=eq.{{ $json.calendarWeek }}"
+              "value": "={{ 'eq.' + $json.calendarWeek }}"
             },
             {
               "name": "year",
-              "value": "=eq.{{ $json.year }}"
+              "value": "={{ 'eq.' + $json.year }}"
             },
             {
               "name": "select",
@@ -211,15 +213,15 @@
           "parameters": [
             {
               "name": "project_name",
-              "value": "=eq.{{ $json.projectName }}"
+              "value": "={{ 'eq.' + $json.projectName }}"
             },
             {
               "name": "calendar_week",
-              "value": "=eq.{{ $json.calendarWeek }}"
+              "value": "={{ 'eq.' + $json.calendarWeek }}"
             },
             {
               "name": "year",
-              "value": "=eq.{{ $json.year }}"
+              "value": "={{ 'eq.' + $json.year }}"
             },
             {
               "name": "select",
@@ -373,7 +375,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -394,48 +397,32 @@
     {
       "id": "wf4-imagen4",
       "name": "Imagen 4 Bild generieren",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
       "position": [
         3900,
         300
       ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GOOGLE_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini account"
+        }
+      },
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 10000,
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4:generateImages",
-        "authentication": "none",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "key",
-              "value": "GEMINI_API_KEY_PLACEHOLDER"
-            }
-          ]
+        "resource": "image",
+        "operation": "generate",
+        "modelId": {
+          "mode": "id",
+          "value": "imagen-4-0"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ instances: [{ prompt: ($json.generatedContent.image_prompt || 'Professional social media image') + '. Aspect ratio: ' + ($json.platformRules.imageResolution === '1200x627' ? '1.91:1 landscape' : ($json.platformRules.imageResolution === '1600x900' ? '16:9 landscape' : '4:5 portrait')) + '. High quality, professional, brand photography style.' }], parameters: { sampleCount: 1, aspectRatio: ($json.platformRules.imageResolution === '1200x627' ? '16:9' : ($json.platformRules.imageResolution === '1600x900' ? '16:9' : '3:4')) } }) }}",
+        "prompt": "={{ ($json.generatedContent.image_prompt || 'Professional social media image') + '. Aspect ratio: ' + ($json.platformRules.imageResolution === '1200x627' ? '1.91:1 landscape' : ($json.platformRules.imageResolution === '1600x900' ? '16:9 landscape' : '4:5 portrait')) + '. High quality, professional, brand photography style.' }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 120000
+          "sampleCount": 1
         }
       }
     },
@@ -481,7 +468,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -502,98 +490,32 @@
     {
       "id": "wf4-veo3-submit",
       "name": "Veo 3 Video generieren",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
       "position": [
         4680,
         300
       ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GOOGLE_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini account"
+        }
+      },
       "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 15000,
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3:generateVideos",
-        "authentication": "none",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "key",
-              "value": "GEMINI_API_KEY_PLACEHOLDER"
-            }
-          ]
+        "resource": "video",
+        "operation": "generate",
+        "modelId": {
+          "mode": "id",
+          "value": "veo-3"
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ instances: [{ prompt: ($json.generatedContent.video_prompt || 'Professional short-form video content') + '. Vertical 9:16 format. ' + ($json.platformRules.videoDuration || '15-30 seconds') + ' duration.' }], parameters: { aspectRatio: '9:16', durationSeconds: ($json.platform === 'tiktok' ? 20 : 30) } }) }}",
+        "prompt": "={{ ($json.generatedContent.video_prompt || 'Professional short-form video content') + '. Vertical 9:16 format. ' + ($json.platformRules.videoDuration || '15-30 seconds') + ' duration.' }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 120000
-        }
-      }
-    },
-    {
-      "id": "wf4-veo3-wait",
-      "name": "Veo 3 Wartezeit",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        4940,
-        300
-      ],
-      "parameters": {
-        "amount": 60,
-        "unit": "seconds"
-      }
-    },
-    {
-      "id": "wf4-veo3-poll",
-      "name": "Veo 3 Ergebnis abrufen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        5200,
-        300
-      ],
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 30000,
-      "parameters": {
-        "method": "GET",
-        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/' + ($('Veo 3 Video generieren').first().json.name || 'operations/placeholder') }}",
-        "authentication": "none",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "key",
-              "value": "GEMINI_API_KEY_PLACEHOLDER"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 60000
+          "durationSeconds": "={{ $json.platform === 'tiktok' ? 20 : 30 }}"
         }
       }
     },
@@ -1031,28 +953,6 @@
       ]
     },
     "Veo 3 Video generieren": {
-      "main": [
-        [
-          {
-            "node": "Veo 3 Wartezeit",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Veo 3 Wartezeit": {
-      "main": [
-        [
-          {
-            "node": "Veo 3 Ergebnis abrufen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Veo 3 Ergebnis abrufen": {
       "main": [
         [
           {

@@ -1,1 +1,458 @@
-{"updatedAt":"2026-03-05T06:11:51.203Z","createdAt":"2026-03-05T06:11:51.203Z","id":"M4kV1lH3OXtjMb2X","name":"SEO Content Audit — Batch Master","description":null,"active":false,"isArchived":false,"nodes":[{"id":"manual-trigger","name":"Audit starten","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[100,300],"parameters":{}},{"id":"konfiguration","name":"Konfiguration","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[340,300],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"quell_sheet_id","name":"quell_sheet_id","value":"QUELL_SPREADSHEET_ID_HIER_EINTRAGEN","type":"string"},{"id":"email_empfaenger","name":"email_empfaenger","value":"email@example.com","type":"string"},{"id":"zielsprache","name":"zielsprache","value":"DE","type":"string"}]},"options":{}}},{"id":"sheets-lesen","name":"Quell-Sheet lesen","type":"n8n-nodes-base.googleSheets","typeVersion":4.7,"position":[580,300],"parameters":{"operation":"read","documentId":{"__rl":true,"mode":"id","value":"={{ $json.quell_sheet_id }}"},"sheetName":{"__rl":true,"mode":"name","value":"URLs"},"range":"A:B","options":{}},"credentials":{"googleSheetsOAuth2Api":{"id":"gw0DIdDENFkpE7ZW","name":"Google Sheets account"}}},{"id":"loop-urls","name":"URL fuer URL verarbeiten","type":"n8n-nodes-base.splitInBatches","typeVersion":3,"position":[820,300],"parameters":{"batchSize":1,"options":{}}},{"id":"jina-scrape","name":"URL scrapen (Jina AI Reader)","type":"n8n-nodes-base.jinaAi","typeVersion":1,"position":[1060,200],"parameters":{"resource":"reader","operation":"read","url":"={{ $json.url }}","options":{}},"credentials":{"jinaAiApi":{"id":"JINA_AI_CREDENTIAL_ID_HIER_EINTRAGEN","name":"Jina AI account"}},"onError":"continueRegularOutput"},{"id":"content-extrahieren","name":"Content extrahieren","type":"n8n-nodes-base.code","typeVersion":2,"position":[1300,200],"parameters":{"jsCode":"const batchItem = $('URL fuer URL verarbeiten').first().json;\nconst scraped = $input.first();\nconst config = $('Konfiguration').first().json;\n\nconst url = batchItem.url || batchItem.URL || '';\nconst keyword = batchItem.keyword || batchItem.Keyword || '';\nconst email_empfaenger = config.email_empfaenger || '';\nconst zielsprache = config.zielsprache || 'DE';\n\n// Jina AI Reader (native Node): gibt Objekt mit 'content', 'text' oder 'data' zurueck\nconst s = scraped.json;\nlet original_content = s.content || s.text || s.data || s.markdown || '';\n\n// Fehler-Fallback\nif (!original_content || original_content.length < 50) {\n  original_content = `[Scraping fehlgeschlagen oder leerer Content fuer URL: ${url}]`;\n}\n\n// Auf max 15000 Zeichen begrenzen\nif (original_content.length > 15000) {\n  original_content = original_content.slice(0, 15000) + '\\n...[gekuerzt]';\n}\n\nreturn [{\n  json: {\n    url,\n    keyword,\n    original_content,\n    email_empfaenger,\n    zielsprache\n  }\n}];"}},{"id":"autopilot-starten","name":"SEO Autopilot aufrufen","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[1540,200],"parameters":{"source":"database","workflowId":"kkzX4OzH4SbIjJ2x","options":{"waitForSubWorkflow":true}}},{"id":"abschluss","name":"Alle URLs verarbeitet","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1060,400],"parameters":{"mode":"manual","duplicateItem":false,"assignments":{"assignments":[{"id":"status","name":"status","value":"Alle URLs verarbeitet. Reports wurden per Email verschickt.","type":"string"},{"id":"abgeschlossen_am","name":"abgeschlossen_am","value":"={{ new Date().toISOString() }}","type":"string"}]},"options":{}}},{"id":"sticky-setup","name":"Setup-Anleitung","type":"n8n-nodes-base.stickyNote","typeVersion":1,"position":[-140,0],"parameters":{"content":"## SEO Content Audit — Batch Master\n\n**Setup vor dem ersten Start:**\n\n1. **Konfiguration-Node anpassen:**\n   - `quell_sheet_id`: Google Sheets ID mit den 10 URLs\n   - `email_empfaenger`: E-Mail-Adresse für Reports\n\n2. **Quell-Sheet Struktur:**\n   - Tab-Name: `URLs`\n   - Spalte A: `url` (vollständige URL inkl. https://)\n   - Spalte B: `keyword` (Hauptkeyword)\n\n3. **Autopilot Workflow ID:**\n   - Nach Deployment des Autopilot-Workflows dessen ID hier eintragen\n   - Node: 'SEO Autopilot aufrufen' → workflowId\n\n4. **Credentials prüfen:**\n   - Google Sheets OAuth2 ✓ (bereits konfiguriert)\n   - Gmail OAuth2 → im Autopilot eintragen\n   - OpenAI API → im Autopilot eintragen\n\n**Laufzeit:** ca. 15-40 Min pro URL (volle WF1-WF8 Pipeline)"}}],"connections":{"Audit starten":{"main":[[{"node":"Konfiguration","type":"main","index":0}]]},"Konfiguration":{"main":[[{"node":"Quell-Sheet lesen","type":"main","index":0}]]},"Quell-Sheet lesen":{"main":[[{"node":"URL fuer URL verarbeiten","type":"main","index":0}]]},"URL fuer URL verarbeiten":{"main":[[{"node":"Alle URLs verarbeitet","type":"main","index":0}],[{"node":"URL scrapen (Jina AI Reader)","type":"main","index":0}]]},"URL scrapen (Jina AI Reader)":{"main":[[{"node":"Content extrahieren","type":"main","index":0}]]},"Content extrahieren":{"main":[[{"node":"SEO Autopilot aufrufen","type":"main","index":0}]]},"SEO Autopilot aufrufen":{"main":[[{"node":"URL fuer URL verarbeiten","type":"main","index":0}]]}},"settings":{"executionOrder":"v1","timezone":"Europe/Berlin","saveDataErrorExecution":"all","saveDataSuccessExecution":"all","callerPolicy":"workflowsFromSameOwner","availableInMCP":false},"staticData":null,"meta":null,"pinData":null,"versionId":"fb31ca74-c51f-408a-a21b-cd460d699ceb","activeVersionId":null,"versionCounter":1,"triggerCount":0,"shared":[{"updatedAt":"2026-03-05T06:11:51.206Z","createdAt":"2026-03-05T06:11:51.206Z","role":"workflow:owner","workflowId":"M4kV1lH3OXtjMb2X","projectId":"A3xoYVAJ1hf6LsPx","project":{"updatedAt":"2025-07-28T11:25:25.006Z","createdAt":"2025-07-28T11:25:22.410Z","id":"A3xoYVAJ1hf6LsPx","name":"Mark Niemann <mark@mo-casa.com>","type":"personal","icon":null,"description":null,"creatorId":"2d660193-6a6f-4adc-a8a9-5485fa23cfce"}}],"tags":[],"activeVersion":null}
+{
+  "updatedAt": "2026-03-09T06:04:03.591Z",
+  "createdAt": "2026-03-05T06:11:51.203Z",
+  "id": "M4kV1lH3OXtjMb2X",
+  "name": "SEO Content Audit Alfons KI Batch Master",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Audit starten",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "quell_sheet_id",
+              "name": "quell_sheet_id",
+              "value": "QUELL_SPREADSHEET_ID_HIER_EINTRAGEN",
+              "type": "string"
+            },
+            {
+              "id": "email_empfaenger",
+              "name": "email_empfaenger",
+              "value": "mark@mo-casa.com",
+              "type": "string"
+            },
+            {
+              "id": "zielsprache",
+              "name": "zielsprache",
+              "value": "DE",
+              "type": "string"
+            },
+            {
+              "id": "a51e2ea4-ac06-47a9-a37a-6657bf51aed6",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "konfiguration",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        352,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mntS61CB1SbEXRFMZodYAPIYtsAMxhAP8rj7xL8S2-A",
+          "mode": "list",
+          "cachedResultName": "URL Tabelle Alfons KI",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mntS61CB1SbEXRFMZodYAPIYtsAMxhAP8rj7xL8S2-A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mntS61CB1SbEXRFMZodYAPIYtsAMxhAP8rj7xL8S2-A/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "sheets-lesen",
+      "name": "Quell-Sheet lesen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gw0DIdDENFkpE7ZW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-urls",
+      "name": "URL fuer URL verarbeiten",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        832,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const batchItem = $('URL fuer URL verarbeiten').first().json;\nconst scraped = $input.first();\nconst config = $('Konfiguration').first().json;\n\nconst url = batchItem.url || batchItem.URL || batchItem.Url || '';\nconst keyword = batchItem.keyword || batchItem.Keyword || batchItem.KEYWORD || '';\nconst landescode = (batchItem.landescode || batchItem.Landescode || batchItem.LANDESCODE || 'DE').toUpperCase();\nconst email_empfaenger = config.email_empfaenger || '';\nconst zielsprache = config.zielsprache || 'DE';\n\nconst s = scraped.json;\nconst page_title = s.pageTitle || '';\n\nlet headings_structure = '';\nif (s.headings && Array.isArray(s.headings)) {\n  headings_structure = s.headings\n    .map(function(h) { return (h.tag || '').toUpperCase() + ': ' + (h.text || ''); })\n    .join(String.fromCharCode(10));\n}\n\nlet original_content = s.content || s.text || s.markdown || '';\nif (!original_content || original_content.length < 50) {\n  original_content = '[Scraping fehlgeschlagen fuer URL: ' + url + ']';\n}\nif (original_content.length > 12000) {\n  original_content = original_content.slice(0, 12000) + '...[gekuerzt]';\n}\n\nreturn [{ json: { url, keyword, landescode, original_content, headings_structure, page_title, email_empfaenger, zielsprache } }];"
+      },
+      "id": "content-extrahieren",
+      "name": "Content extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kkzX4OzH4SbIjJ2x",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kkzX4OzH4SbIjJ2x",
+          "cachedResultName": "SEO Content Audit Alfons KI— Autopilot"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "keyword",
+              "displayName": "keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "landescode",
+              "displayName": "landescode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "original_content",
+              "displayName": "original_content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email_empfaenger",
+              "displayName": "email_empfaenger",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "zielsprache",
+              "displayName": "zielsprache",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "headings_structure",
+              "displayName": "headings_structure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "page_title",
+              "displayName": "page_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "autopilot-starten",
+      "name": "SEO Autopilot aufrufen",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "Alle URLs verarbeitet. Reports wurden per Email verschickt.",
+              "type": "string"
+            },
+            {
+              "id": "abgeschlossen_am",
+              "name": "abgeschlossen_am",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "abschluss",
+      "name": "Alle URLs verarbeitet",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## SEO Content Audit â€” Batch Master\n\n**Setup vor dem ersten Start:**\n\n1. **Konfiguration-Node anpassen:**\n   - `quell_sheet_id`: Google Sheets ID mit den 10 URLs\n   - `email_empfaenger`: E-Mail-Adresse fÃ¼r Reports\n\n2. **Quell-Sheet Struktur:**\n   - Tab-Name: `URLs`\n   - Spalte A: `url` (vollstÃ¤ndige URL inkl. https://)\n   - Spalte B: `keyword` (Hauptkeyword)\n\n3. **Credentials prÃ¼fen:**\n   - Google Sheets OAuth2 âœ“ (bereits konfiguriert)\n   - Gmail OAuth2 â†’ im Autopilot eintragen\n   - OpenAI API â†’ im Autopilot eintragen\n\n**Laufzeit:** ca. 15-40 Min pro URL (volle WF1-WF8 Pipeline)",
+        "height": 848
+      },
+      "id": "sticky-setup",
+      "name": "Setup-Anleitung",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v2/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"url\": $json.URL || $json.url,\n  \"onlyMainContent\": true,\n  \"formats\": [\"markdown\"]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        704,
+        -80
+      ],
+      "id": "6d32b511-e774-46bb-a084-fd1dfc790940",
+      "name": "Firecrawl",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qGg62K7CEkkSYGhs",
+          "name": "Firecrawl"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "YrQuEkowkNCLdk4j2",
+          "mode": "list",
+          "cachedResultName": "Cheerio Scraper (apify/cheerio-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/YrQuEkowkNCLdk4j2/input"
+        },
+        "customBody": "={{\nJSON.stringify({\n  startUrls: [{\n    url: $json.URL,\n    userData: { serpTitle: $json.title, serpSnippet: $json.snippet }\n  }],\n  maxRequestsPerCrawl: 1,\n  excludes: [{ glob: \"/**/*.{png,jpg,jpeg,pdf,svg,gif,webp}\" }],\n  pageFunction: `async function pageFunction(context) {\n    const { $, request } = context;\n\n    // Raus mit Noise\n    $('script,style,noscript,svg,nav,footer,header,aside').remove();\n    const $scope = $('main').length ? $('main') : $('body');\n\n    // Headings\n    const headings = [];\n    $scope.find('h1,h2,h3').each((_, el) => {\n      const tag = (el.name || '').toLowerCase();\n      const text = $(el).text().trim().replace(/\\\\s+/g, ' ');\n      if (text) headings.push({ tag, text });\n    });\n\n    // Paragraph-Content + Wordcount\n    const paragraphs = $scope.find('p').map((i, el) => $(el).text().trim()).get();\n    const content = paragraphs.join(' ').replace(/\\\\s+/g, ' ').trim();\n    const wordCount = content ? content.split(/\\\\s+/).length : 0;\n\n    const { serpTitle, serpSnippet } = request.userData || {};\n    return {\n      url: request.url,\n      pageTitle: $('title').first().text().trim(),\n      serpTitle, serpSnippet,\n      headings,\n      content,\n      wordCount\n    };\n  }`\n})\n}}\n"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        208
+      ],
+      "id": "b5f446f8-cf6d-42a0-87ba-af379affd5a2",
+      "name": "Run an Actor and get dataset",
+      "credentials": {
+        "apifyApi": {
+          "id": "wWgQDWC9aV3UcUEJ",
+          "name": "Apify MN1975"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Audit starten": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Quell-Sheet lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quell-Sheet lesen": {
+      "main": [
+        [
+          {
+            "node": "URL fuer URL verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL fuer URL verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Alle URLs verarbeitet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run an Actor and get dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content extrahieren": {
+      "main": [
+        [
+          {
+            "node": "SEO Autopilot aufrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Autopilot aufrufen": {
+      "main": [
+        [
+          {
+            "node": "URL fuer URL verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firecrawl": {
+      "main": [
+        []
+      ]
+    },
+    "Run an Actor and get dataset": {
+      "main": [
+        [
+          {
+            "node": "Content extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "c4a92a14-b29b-4085-93c6-0298beebfb07",
+  "activeVersionId": null,
+  "versionCounter": 128,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-05T06:11:51.206Z",
+      "createdAt": "2026-03-05T06:11:51.206Z",
+      "role": "workflow:owner",
+      "workflowId": "M4kV1lH3OXtjMb2X",
+      "projectId": "A3xoYVAJ1hf6LsPx",
+      "project": {
+        "updatedAt": "2025-07-28T11:25:25.006Z",
+        "createdAt": "2025-07-28T11:25:22.410Z",
+        "id": "A3xoYVAJ1hf6LsPx",
+        "name": "Mark Niemann <mark@mo-casa.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "2d660193-6a6f-4adc-a8a9-5485fa23cfce"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

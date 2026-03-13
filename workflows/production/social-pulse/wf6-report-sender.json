@@ -16,7 +16,8 @@
         "httpMethod": "POST",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "wf6-dual-trigger",
@@ -32,7 +33,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -76,10 +78,12 @@
           "mode": "name",
           "value": "Konfig"
         },
-        "options": {
-          "range": "A:B"
-        }
-      }
+        "options": {},
+        "range": "A:B"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "wf6-standalone-prep",
@@ -142,6 +146,8 @@
       "maxTries": 3,
       "waitBetweenTries": 5000,
       "parameters": {
+        "resource": "message",
+        "operation": "send",
         "sendTo": "={{ $json.sendTo }}",
         "subject": "={{ $json.subject }}",
         "emailType": "html",
