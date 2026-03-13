@@ -6,9 +6,9 @@ Wir bauen einen einzelnen n8n-Workflow (`WF1`) mit zwei parallelen Branches. Bra
 
 ## Phases
 
-- [ ] **Phase 1: Branch A — Neue Leads erkennen** — Apify Connections Actor, Polling-Loop, Sheet-Abgleich, Auto-Import
-- [ ] **Phase 2: Branch B — Analyse & KI-Report** — Apify Inbox Actor, 4-Kategorien-Logik, GPT-4o Hormozi-Analyse, HTML-Report, Gmail, Sheet-Updates
-- [ ] **Phase 3: Integration & Error-Handling** — Parallele Branches zusammenführen, vollständiges Error-Handling, Error-Notification-Mail, finales Deploy + Verify
+- [x] **Phase 1: Branch A — Neue Leads erkennen** — Apify Connections Actor, Polling-Loop, Sheet-Abgleich, Auto-Import
+- [x] **Phase 2: Branch B — Analyse & KI-Report** — Apify Inbox Actor, 4-Kategorien-Logik, Anthropic Claude Hormozi-Analyse, HTML-Report, Gmail, Sheet-Updates
+- [x] **Phase 3: Integration & Error-Handling** — Parallele Branches zusammenführen, vollständiges Error-Handling, Error-Notification-Mail, finales Deploy + Verify
 
 ## Phase Details
 
@@ -28,10 +28,10 @@ Wir bauen einen einzelnen n8n-Workflow (`WF1`) mit zwei parallelen Branches. Bra
 6. Bei 0 neuen Leads: keine Aktion, kein Fehler
 
 **Tasks:**
-- [ ] 01-01: Templates und vorhandene LinkedIn-Workflows prüfen (`linkedin-dm-tracking-workflow.json`); Apify Actor-Slugs auf apify.com/store verifizieren
-- [ ] 01-02: Branch A Workflow JSON bauen (Schedule Trigger → HTTP Request Apify Start → Wait → Polling Loop [IF + Wait 15s + Merge] → HTTP Request Dataset → Code Abgleich → IF → Google Sheets Append)
-- [ ] 01-03: Node-Optimierung: HTTP Requests prüfen, ob nativer Apify-Node auf cloud verfügbar (INDEX.md); Credentials setzen
-- [ ] 01-04: Validate (n8n-MCP validate_workflow) + Deploy (n8n_create_workflow) + Test-Execution prüfen
+- [x] 01-01: Templates und vorhandene LinkedIn-Workflows prüfen (`linkedin-dm-tracking-workflow.json`); Apify Actor-Slugs auf apify.com/store verifizieren
+- [x] 01-02: Branch A Workflow JSON bauen (Schedule Trigger → HTTP Request Apify Start → Wait → Polling Loop [IF + Wait 15s + Merge] → HTTP Request Dataset → Code Abgleich → IF → Google Sheets Append)
+- [x] 01-03: Node-Optimierung: HTTP Requests prüfen, ob nativer Apify-Node auf cloud verfügbar (INDEX.md); Credentials setzen
+- [x] 01-04: Validate (n8n-MCP validate_workflow) + Deploy (n8n_create_workflow) + Test-Execution prüfen
 
 ---
 
@@ -53,10 +53,10 @@ Wir bauen einen einzelnen n8n-Workflow (`WF1`) mit zwei parallelen Branches. Bra
 8. Google Sheet `Report-Log`: neuer Eintrag mit korrekten Zählern
 
 **Tasks:**
-- [ ] 02-01: Apify Inbox Actor-Slug verifizieren; OpenAI Message-Node Parameter-Format aus Memory prüfen (fixedCollection kein `values`-Wrapper)
-- [ ] 02-02: Branch B Nodes bauen: Google Sheets Read → HTTP Request Apify Inbox → Wait → Polling Loop → HTTP Request Dataset → Code (Merge+Kategorisierung) → OpenAI Node → Code (Parse+Merge) → Code (HTML-Report) → Gmail Send + Google Sheets Update + Google Sheets Append
-- [ ] 02-03: Node-Optimierung: nativer Gmail-Node verwenden, nativer Google Sheets-Node verwenden, OpenAI native Node (`@n8n/n8n-nodes-langchain.openAi` oder `nodes-base.openAi`)
-- [ ] 02-04: Validate + Update Workflow (n8n_update_full_workflow) + Test mit Dummy-Daten
+- [x] 02-01: Apify Inbox Actor-Slug verifizieren; Anthropic native node `@n8n/n8n-nodes-langchain.anthropic` verwendet (user changed from OpenAI to Anthropic)
+- [x] 02-02: Branch B Nodes bauen: Google Sheets Read → HTTP Request Apify Inbox → Wait → Polling Loop → HTTP Request Dataset → Code (Merge+Kategorisierung) → Anthropic Node → Code (Parse+Merge) → Code (HTML-Report) → Gmail Send + Google Sheets Update + Google Sheets Append
+- [x] 02-03: Node-Optimierung: nativer Gmail-Node verwendet, nativer Google Sheets-Node verwendet, nativer Anthropic LangChain Node verwendet
+- [x] 02-04: Validate + Update Workflow (n8n_update_full_workflow) + Test mit Dummy-Daten
 
 ---
 
@@ -76,16 +76,16 @@ Wir bauen einen einzelnen n8n-Workflow (`WF1`) mit zwei parallelen Branches. Bra
 6. Lokale JSON-Datei gespeichert + GitHub Push
 
 **Tasks:**
-- [ ] 03-01: Parallele Branch-Architektur prüfen: Split nach Schedule Trigger, beide Branches unabhängig (kein gemeinsamer Merge am Ende nötig)
-- [ ] 03-02: Error-Handler-Node hinzufügen (Gmail Notification bei Fehler); Continue-on-Fail aktivieren für Apify Polling + GPT-4o
-- [ ] 03-03: Report-Log Fehler-Pfad implementieren (bei Apify FAILED: Report-Log mit `Report_gesendet: NEIN` + Fehlertext)
-- [ ] 03-04: Finales Validate (validate_workflow, alle Warnings gegen FALSE_POSITIVES prüfen) + Update Deploy
-- [ ] 03-05: JSON lokal speichern unter `workflows/production/linkedin-followup-automation/WF1-LinkedIn-Followup-Master.json` + GitHub Push
+- [x] 03-01: Parallele Branch-Architektur prüfen: Split nach Schedule Trigger, beide Branches unabhängig (kein gemeinsamer Merge am Ende nötig)
+- [x] 03-02: Error-Handler-Node hinzufügen (Gmail Notification bei Fehler); Continue-on-Fail aktivieren für Apify Polling + Anthropic Node
+- [x] 03-03: Report-Log Fehler-Pfad implementieren (inboxFailed flag + Code: Build Log Entry Node)
+- [x] 03-04: Finales Validate (validate_workflow, alle Warnings gegen FALSE_POSITIVES prüfen) + Update Deploy
+- [x] 03-05: JSON lokal gespeichert + GitHub Push (commit e332234) + Verify PASS WITH WARNINGS (2026-03-13)
 
 ## Progress
 
 | Phase | Workflows | Tasks | Status | Deployed |
 |---|---|---|---|---|
-| 1. Branch A — Neue Leads | WF1 (Branch A) | 0/4 | Not started | - |
-| 2. Branch B — KI-Report | WF1 (Branch B) | 0/4 | Not started | - |
-| 3. Integration & Error-Handling | WF1 (final) | 0/5 | Not started | - |
+| 1. Branch A — Neue Leads | WF1 (Branch A) | 4/4 | ✅ COMPLETE + VERIFIED | 2026-03-13 |
+| 2. Branch B — KI-Report | WF1 (Branch B) | 4/4 | ✅ COMPLETE + VERIFIED | 2026-03-13 |
+| 3. Integration & Error-Handling | WF1 (final) | 5/5 | ✅ COMPLETE + VERIFIED | 2026-03-13 |
